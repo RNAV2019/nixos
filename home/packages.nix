@@ -17,9 +17,9 @@
         owner = "aashish-thapa";
         repo  = "wlctl";
         rev   = "main";
-        hash  = "sha256-QQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        hash  = "sha256-94WfzaBBjzGIkgHlco8T3iQqsjyAWxG+dw0lAfsKsfQ=";
       };
-      cargoHash = "sha256-QQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      cargoHash = "sha256-JzYrQICduP1lgjfwGJlt6aUJfe5jG1wRVYbx5A8wtXg=";
     })
     bluetui
     wiremix
@@ -92,7 +92,6 @@
     haskellPackages.haskell-language-server
     go
     typescript-language-server
-    rust-analyzer
     jdt-language-server
     vscode-langservers-extracted
     tailwindcss-language-server

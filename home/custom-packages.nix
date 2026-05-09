@@ -8,9 +8,9 @@ let
       owner = "RNAV2019";
       repo = "quasar";
       rev = "main";
-      hash = "sha256-BBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-u3pUyvQhEYvQMceKfE33hfbI/JsVfRjvPTT/cTJ8KKQ=";
     };
-    vendorHash = null;
+    vendorHash = "sha256-U4HAzSi3BT4yPGceEPnvSyQkl1UoeP3mmSHZsgnEffw=";
   };
 
   project-picker = pkgs.rustPlatform.buildRustPackage {
@@ -20,9 +20,9 @@ let
       owner = "RNAV2019";
       repo = "project-picker";
       rev = "main";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-Ia+e7d4tYqoThYq3ngvUXn5UUFZJ4FJRdFAP5SXfhRM=";
     };
-    cargoHash = "sha256-DDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    cargoHash = "sha256-eGF9ASlbZaeg+2m0vEBZt0+1fGjWleUXkrTy+UbgW4A=";
   };
 
 in

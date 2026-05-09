@@ -60,6 +60,13 @@
     portalPackage = hyprland.packages.${pkgs.system}.xdg-desktop-portal-hyprland;
   };
 
+  # Override nixpkgs xdg-desktop-portal-hyprland with the flake version
+  nixpkgs.overlays = [
+    (final: prev: {
+      xdg-desktop-portal-hyprland = hyprland.packages.${prev.system}.xdg-desktop-portal-hyprland;
+    })
+  ];
+
   # UWSM
   programs.uwsm = {
     enable = true;
