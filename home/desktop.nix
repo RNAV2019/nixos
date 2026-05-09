@@ -23,7 +23,6 @@
         "cliphist wipe"
         "wl-paste --type text --watch cliphist store"
         "wl-paste --type image --watch cliphist store"
-        "hyprlock"
       ];
 
       # Environment variables
@@ -69,10 +68,12 @@
           passes = 2;
           vibrancy = 0.1696;
         };
-        drop_shadow = true;
-        shadow_range = 8;
-        shadow_render_power = 3;
-        "col.shadow" = "rgba(1a1a1aee)";
+        shadow = {
+          enabled = true;
+          range = 8;
+          render_power = 3;
+          color = "rgba(1a1a1aee)";
+        };
       };
 
       # Animations
@@ -91,9 +92,7 @@
 
       # Layouts
       dwindle = {
-        pseudotile = true;
         preserve_split = true;
-        force_split = 2;
       };
 
       # Misc
@@ -107,27 +106,27 @@
 
       bind = [
         # Apps
-        "$mod, Return, Terminal, exec, ghostty"
-        "$mod SHIFT, B, Browser, exec, helium"
-        "$mod SHIFT, F, File Manager, exec, nautilus"
+        "$mod, RETURN, exec, ghostty"
+        "$mod SHIFT, B, exec, helium"
+        "$mod SHIFT, F, exec, nautilus"
 
         # Window Management
-        "$mod, W, Close window, killactive"
-        "$mod, T, Toggle window, toggleFloating"
-        "$mod, J, Toggle window split, togglesplit"
-        "$mod, F, Fullscreen, fullscreen, 0"
+        "$mod, W, killactive"
+        "$mod, T, toggleFloating"
+        "$mod, J, layoutmsg, togglesplit"
+        "$mod, F, fullscreen, 0"
 
         # Focus
-        "$mod, LEFT, Focus on left window, movefocus, l"
-        "$mod, RIGHT, Focus on right window, movefocus, r"
-        "$mod, UP, Focus on above window, movefocus, u"
-        "$mod, DOWN, Focus on below window, movefocus, d"
+        "$mod, LEFT, movefocus, l"
+        "$mod, RIGHT, movefocus, r"
+        "$mod, UP, movefocus, u"
+        "$mod, DOWN, movefocus, d"
 
         # Move windows
-        "$mod SHIFT, LEFT, Swap left window, swapwindow, l"
-        "$mod SHIFT, RIGHT, Swap right window, swapwindow, r"
-        "$mod SHIFT, UP, Swap above window, swapwindow, u"
-        "$mod SHIFT, DOWN, Swap below window, swapwindow, d"
+        "$mod SHIFT, LEFT, swapwindow, l"
+        "$mod SHIFT, RIGHT, swapwindow, r"
+        "$mod SHIFT, UP, swapwindow, u"
+        "$mod SHIFT, DOWN, swapwindow, d"
 
         # Workspaces
         "$mod, 1, workspace, 1"
@@ -158,10 +157,10 @@
         "$mod, L, exec, hyprlock"
 
         # Logout menu
-        "$mod, ESCAPE, Logout menu, exec, wlogout"
+        "$mod, ESCAPE, exec, wlogout"
 
         # Clipboard history
-        "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
+        # "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
 
         # Laucher
         "$mod, SPACE, exec, vicinae toggle"
@@ -175,8 +174,8 @@
 
       # Mouse bindings
       bindm = [
-        "$mod, mouse:272, Move window, movewindow"
-        "$mod, mouse:273, Resize window, resizewindow"
+        "$mod, mouse:272, movewindow"
+        "$mod, mouse:273, resizewindow"
       ];
 
       # Media keys (repeatable)
@@ -195,7 +194,6 @@
         "match:class uk.co.ryannavsaria.project-picker, rounding 18"
 
         "match:class org.pwmt.zathura, no_initial_focus on"
-        "suppressevent maximize, match:class .*"
       ];
     };
   };

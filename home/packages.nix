@@ -25,6 +25,10 @@
     wiremix
     wlogout
 
+    # Terminal
+    ghostty
+    kitty
+
     # File manager
     nautilus
 
