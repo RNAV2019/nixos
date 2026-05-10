@@ -1,13 +1,12 @@
 { config, pkgs, ... }:
 {
-  # Add custom theme later
-  # xdg.configFile."helix/themes/onedark_transparent.toml".source = ./themes/onedark_transparent.toml;
-  
+  xdg.configFile."helix/themes/onedark_transparent.toml".source = ./themes/onedark_transparent.toml;
+
   programs.helix = {
     enable = true;
 
     settings = {
-      theme = "onedark"; # Add custom theme after onedark_transparent  
+      theme = "onedark_transparent";
 
       editor = {
         bufferline = "always";
@@ -25,7 +24,7 @@
         soft-wrap.enable = true;
         smart-tab.enable = false;
 
-        statuslines = {
+        statusline = {
           mode.normal = "NORMAL";
           mode.insert = "INSERT";
           mode.select = "SELECT";
@@ -89,9 +88,6 @@
           config = {};
         };
 
-        # Java
-        jdt-language-server = {};
-
         # LaTeX
         texlab = {
           config.texlab = {
@@ -138,7 +134,7 @@
         {
           name = "javascript";
           auto-format = true;
-          language-servers = [ "typescript-langage-server" ];
+          language-servers = [ "typescript-language-server" ];
         }
         {
           name = "nix";

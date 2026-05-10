@@ -19,7 +19,7 @@
   # SSH config
   programs.ssh = {
     enable = true;
-    addKeysToAgent = "yes";
+    matchBlocks."*".addKeysToAgent = "yes";
   };
 
   # Rustup config

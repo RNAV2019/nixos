@@ -1,5 +1,54 @@
 { pkgs, helium-browser, llm-agents, ... }:
 {
+  # GTK dark mode
+  gtk = {
+    enable = true;
+    theme = {
+      name = "Adwaita-dark";
+      package = pkgs.gnome-themes-extra;
+    };
+    iconTheme = {
+      name = "Papirus-Dark";
+      package = pkgs.papirus-icon-theme;
+    };
+    cursorTheme = {
+      name = "Bibata-Modern-Classic";
+      package = pkgs.bibata-cursors;
+      size = 24;
+    };
+    gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
+    gtk4.extraConfig.gtk-application-prefer-dark-theme = 1;
+    gtk4.theme = null;  # use libadwaita color-scheme instead of forcing GTK4 theme
+  };
+
+  # System-wide cursor (GTK + Wayland + X11)
+  home.pointerCursor = {
+    gtk.enable = true;
+    name = "Bibata-Modern-Classic";
+    package = pkgs.bibata-cursors;
+    size = 24;
+  };
+
+  # Qt follows GTK theme
+  qt = {
+    enable = true;
+    platformTheme.name = "gtk";
+  };
+
+  # GNOME color scheme for libadwaita/GTK4 apps
+  dconf.settings = {
+    "org/gnome/desktop/interface" = {
+      color-scheme = "prefer-dark";
+      icon-theme = "Papirus-Dark";
+      gtk-theme = "Adwaita-dark";
+      cursor-theme = "Bibata-Modern-Classic";
+      cursor-size = 24;
+    };
+  };
+
+  # Keep XDG user dirs session variables behaviour
+  xdg.userDirs.setSessionVariables = true;
+
   home.packages = with pkgs; [
     # Browsers
     helium-browser.packages.${pkgs.system}.default
@@ -16,7 +65,7 @@
       src = pkgs.fetchFromGitHub {
         owner = "aashish-thapa";
         repo  = "wlctl";
-        rev   = "main";
+        rev   = "4bfb8c28655cc2a7e0e67bfe3d5d76e8d632b1b6";
         hash  = "sha256-94WfzaBBjzGIkgHlco8T3iQqsjyAWxG+dw0lAfsKsfQ=";
       };
       cargoHash = "sha256-JzYrQICduP1lgjfwGJlt6aUJfe5jG1wRVYbx5A8wtXg=";
@@ -37,9 +86,6 @@
 
     # Ambient Sounds
     blanket
-
-    # PDF viewer
-    zathura
 
     # Controls
     brightnessctl
@@ -66,21 +112,13 @@
     bat
     fd
     ripgrep
-    fzf
     eza
-    zoxide
     tokei     # Line counter
     silicon   # Code screenshot generator
     glow      # Render markdown in terminal
     tealdeer  # TLDR man pages
-    btop
     just      # Command runner (better than make)
     hyperfine
-
-    # Git
-    lazygit
-    delta
-    gh
 
     # Fetcher
     nitch

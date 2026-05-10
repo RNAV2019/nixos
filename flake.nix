@@ -35,16 +35,10 @@
 
 		# LLM agents
 		llm-agents.url = "github:numtide/llm-agents.nix";
-
-		# Vicinae
-		vicinae = {
-			url = "github:vicinaehq/vicinae";
-			inputs.nixpkgs.follows = "nixpkgs";
-		};
 	};
 
 	# NixOS flake configuration for hyprland with home-manager
-	outputs = inputs@{ nixpkgs, home-manager, hyprland, helium-browser, llm-agents, vicinae, ... }: {
+	outputs = inputs@{ nixpkgs, home-manager, hyprland, helium-browser, llm-agents, ... }: {
 		nixosConfigurations = {
 			ryans-nixos = nixpkgs.lib.nixosSystem {
 				system = "x86_64-linux";
@@ -58,11 +52,11 @@
 						home-manager.useGlobalPkgs = true;
 						home-manager.useUserPackages = true;
 						home-manager.users.ryan = import ./home/default.nix;
-						home-manager.extraSpecialArgs = { inherit hyprland helium-browser llm-agents vicinae; };
+						home-manager.extraSpecialArgs = { inherit hyprland helium-browser llm-agents; };
 					}
 				];
-				specialArgs = { inherit hyprland helium-browser llm-agents vicinae; };
+				specialArgs = { inherit hyprland helium-browser llm-agents; };
 			};
-		};		
+		};
 	};
 }

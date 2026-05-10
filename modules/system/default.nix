@@ -50,7 +50,7 @@
     alsa.support32Bit = true;
     pulse.enable = true; 
   };
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
 
   # Hyprland at system level
   programs.hyprland = {
@@ -77,11 +77,19 @@
     };
   };
 
-  # SDDM display manager
-  services.displayManager.sddm = {
+  # greetd display manager — autologin as ryan, hyprlock handles the lock screen
+  services.greetd = {
     enable = true;
-    wayland.enable = true;
-    theme = "breeze";
+    settings = {
+      default_session = {
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd 'uwsm start hyprland-uwsm.desktop'";
+        user = "greeter";
+      };
+      initial_session = {
+        command = "uwsm start hyprland-uwsm.desktop";
+        user = "ryan";
+      };
+    };
   };
 
   # Fish shell
@@ -97,9 +105,23 @@
 
   # Fingerprint reader
   services.fprintd.enable = true;
-  
+
+  # PAM fingerprint auth for sudo, login, lock screen
+  security.pam.services.sudo.fprintAuth = true;
+  security.pam.services.login.fprintAuth = true;
+  security.pam.services.greetd.fprintAuth = true;
+  security.pam.services.hyprlock.fprintAuth = true;
+
   # Power profiles daemon
   services.power-profiles-daemon.enable = true;
+
+  # Helium browser extensions via Chromium managed policy
+  environment.etc."chromium/policies/managed/helium-extensions.json".text = builtins.toJSON {
+    ExtensionInstallForcelist = [
+      "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx"
+      "oemmndcbldboiebfnladdacbdfmadadm;https://clients2.google.com/service/update2/crx"
+    ];
+  };
 
   # Fonts
   fonts.packages = with pkgs; [
@@ -107,12 +129,13 @@
     nerd-fonts.fira-code
     noto-fonts
     noto-fonts-color-emoji
+    inter
   ];
 
   # XDG portal for file pickers, screen sharing etc
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-hyprland pkgs.xdg-desktop-portal-gtk ];
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
 
   # Polkit for privilege escalation in Wayland
@@ -120,9 +143,4 @@
 
   # Brightness/backlight control handled by brightnessctl in packages.nix
 
-  # Swap#
-  swapDevices = [{
-    device = "/var/lib/swapfile";
-    size = 8 * 1024;
-  }];
 }

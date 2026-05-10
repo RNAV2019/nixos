@@ -5,7 +5,7 @@
 
     interactiveShellInit = ''
       # Disable fish greeting
-      set fish_greeting = ""
+      set fish_greeting ""
 
       # Zoxide init
       zoxide init fish | source
@@ -19,8 +19,7 @@
       lt = "eza --tree --level=2 --long --icons --git";
       la = "eza -lha --group-directories-first --icons=auto";
 
-      rebuild = "sudo nixos-rebuild switch --flake ~/nixos-config#ryans-nixos";      
-      hm-switch = "home-manager switch --flake ~/nixos-config#ryan";
+      rebuild = "sudo nixos-rebuild switch --flake ~/nixos#ryans-nixos";
       nix-clean = "sudo nix-collect-garbage -d";
 
       grep = "rg";
@@ -49,8 +48,8 @@
       format = "$directory$git_branch$git_status$nix_shell$rust$nodejs$python$haskell$character";
 
       character = {
-        success_symbol = "[a](bold green)";
-        error_symbol   = "[b](bold red)";
+        success_symbol = "[❯](bold green)";
+        error_symbol   = "[❯](bold red)";
       };
 
       directory = {
@@ -60,33 +59,36 @@
       };
 
       git_branch = {
-        symbol = "gb";
+        symbol = " ";
         style = "bold purple";
       };
 
       git_status = {
-        symbol = "gs";
         style = "bold red";
       };
 
       nix_shell = {
-        symbol = "ns";
+        symbol = "❄ ";
         style = "bold cyan";
       };
 
       rust = {
-        symbol = "r";
+        symbol = " ";
         style = "bold orange";
       };
 
       nodejs = {
-        symbol = "n";
+        symbol = " ";
         style = "bold green";
       };
 
-      
+      python = {
+        symbol = " ";
+        style = "bold yellow";
+      };
+
       haskell = {
-        symbol = "h";
+        symbol = "λ ";
         style = "bold purple";
       };
     };
@@ -117,22 +119,26 @@
     defaultOptions = [
       "--height 40%"
       "--border"
-      "--color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,h1:#f38ba8"
+      "--color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8"
       "--color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc"
-      "--color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+#f38ba8" 
+      "--color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
     ];
   };
 
   # Git
   programs.git = {
     enable = true;
-    userName = "Ryan Navsaria";
-    userEmail = "ryannav2019@gmail.com";
-    delta.enable = true;
-    extraConfig = {
+    settings = {
+      user.name = "Ryan Navsaria";
+      user.email = "ryannav2019@gmail.com";
       init.defaultBranch = "main";
       pull.rebase = true;
       core.editor = "hx";
     };
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
   };
 }

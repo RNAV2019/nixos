@@ -1,7 +1,6 @@
-{ config, pkgs, hyprland, helium-browser, llm-agents, vicinae, ... }:
+{ config, pkgs, hyprland, helium-browser, llm-agents, ... }:
 {
   imports = [
-    vicinae.homeManagerModules.default
     ./packages.nix
     ./shell.nix
     ./terminal.nix
@@ -10,6 +9,7 @@
     ./programs.nix
     ./dev.nix
     ./custom-packages.nix
+    ./backgrounds.nix
   ];
 
   # Home Manager basics
