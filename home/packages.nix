@@ -8,12 +8,12 @@
   gtk = {
     enable = true;
     theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
+      name = "rose-pine";
+      package = pkgs.rose-pine-gtk-theme;
     };
     iconTheme = {
-      name = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme;
+      name = "rose-pine";
+      package = pkgs.rose-pine-icon-theme;
     };
     cursorTheme = {
       name = "Bibata-Modern-Classic";
@@ -43,8 +43,8 @@
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
-      icon-theme = "Papirus-Dark";
-      gtk-theme = "Adwaita-dark";
+      icon-theme = "rose-pine";
+      gtk-theme = "rose-pine";
       cursor-theme = "Bibata-Modern-Classic";
       cursor-size = 24;
     };

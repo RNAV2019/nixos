@@ -1,12 +1,12 @@
 { config, pkgs, ... }:
 {
-  xdg.configFile."helix/themes/onedark_transparent.toml".source = ./themes/onedark_transparent.toml;
+  xdg.configFile."helix/themes/rose_pine_transparent.toml".source = ./themes/rose_pine_transparent.toml;
 
   programs.helix = {
     enable = true;
 
     settings = {
-      theme = "onedark_transparent";
+      theme = "rose_pine_transparent";
 
       editor = {
         bufferline = "always";

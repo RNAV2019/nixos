@@ -1,0 +1,8 @@
+inherits = "rose_pine"
+
+"ui.background" = {}
+"ui.background.separator" = {}
+"ui.bufferline" = { fg = "muted" }
+"ui.bufferline.active" = { fg = "love", modifiers = ["bold"] }
+"ui.bufferline.background" = {}
+"ui.virtual.ruler" = {}

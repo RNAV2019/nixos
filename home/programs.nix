@@ -32,16 +32,17 @@
       };
     };
 
+    flavors = {
+      rose-pine = "${pkgs.fetchFromGitHub {
+        owner = "rose-pine";
+        repo = "yazi";
+        rev = "c89d745573d4fcfe0550fe6646f9f9ab1c0e51db";
+        hash = "sha256-9e3dXViWl1rK9BPrGAFfs9ZL/tsG6Njz6ksuU6AIrFY=";
+      }}/flavors/rose-pine.yazi";
+    };
+
     theme = {
-      filetype = {
-        rules = [
-          { mime = "image/*";          fg = "#c8c8c8"; }
-          { mime = "video/*";          fg = "#cc3333"; }
-          { mime = "audio/*";          fg = "#aaaaaa"; }
-          { mime = "application/zip";  fg = "#888888"; }
-          { mime = "application/gzip"; fg = "#888888"; }
-        ];
-      };
+      flavor.dark = "rose-pine";
     };
 
     keymap = {
@@ -55,22 +56,22 @@
   programs.zathura = {
     enable = true;
     options = {
-      default-bg                = "#0d0d0d";
-      default-fg                = "#c8c8c8";
-      statusbar-bg              = "#141414";
-      statusbar-fg              = "#c8c8c8";
-      inputbar-bg               = "#141414";
-      inputbar-fg               = "#c8c8c8";
-      notification-bg           = "#141414";
-      notification-fg           = "#c8c8c8";
-      notification-error-bg     = "#141414";
-      notification-error-fg     = "#cc3333";
-      notification-warning-bg   = "#141414";
-      notification-warning-fg   = "#aaaaaa";
-      highlight-color           = "rgba(204,51,51,0.4)";
-      highlight-active-color    = "rgba(200,200,200,0.4)";
-      recolor-lightcolor        = "#0d0d0d";
-      recolor-darkcolor         = "#c8c8c8";
+      default-bg                = "#191724";
+      default-fg                = "#e0def4";
+      statusbar-bg              = "#1f1d2e";
+      statusbar-fg              = "#e0def4";
+      inputbar-bg               = "#1f1d2e";
+      inputbar-fg               = "#e0def4";
+      notification-bg           = "#1f1d2e";
+      notification-fg           = "#e0def4";
+      notification-error-bg     = "#1f1d2e";
+      notification-error-fg     = "#eb6f92";
+      notification-warning-bg   = "#1f1d2e";
+      notification-warning-fg   = "#f6c177";
+      highlight-color           = "rgba(235,111,146,0.4)";
+      highlight-active-color    = "rgba(196,167,231,0.4)";
+      recolor-lightcolor        = "#191724";
+      recolor-darkcolor         = "#e0def4";
       recolor                   = true;
       recolor-keephue           = true;
 
@@ -95,9 +96,9 @@
     settings = {
       gui = {
         theme = {
-          activeBorderColor   = [ "#cc3333" "bold" ];
-          inactiveBorderColor = [ "#555555" ];
-          selectedLineBgColor = [ "#2a2a2a" ];
+          activeBorderColor   = [ "#eb6f92" "bold" ];
+          inactiveBorderColor = [ "#403d52" ];
+          selectedLineBgColor = [ "#26233a" ];
         };
         nerdFontsVersion = "3";
       };
@@ -111,7 +112,7 @@
   programs.btop = {
     enable = true;
     settings = {
-      color_theme      = "mono-red";
+      color_theme      = "rose-pine";
       theme_background = false;
       vim_keys         = true;
       rounded_corners  = true;
@@ -119,48 +120,48 @@
     };
   };
 
-  xdg.configFile."btop/themes/mono-red.theme".text = ''
-    theme[main_bg]="#0d0d0d"
-    theme[main_fg]="#c8c8c8"
-    theme[title]="#c8c8c8"
-    theme[hi_fg]="#cc3333"
-    theme[selected_bg]="#2a2a2a"
-    theme[selected_fg]="#c8c8c8"
-    theme[inactive_fg]="#555555"
-    theme[graph_text]="#c8c8c8"
-    theme[meter_bg]="#2a2a2a"
-    theme[proc_misc]="#c8c8c8"
-    theme[cpu_box]="#555555"
-    theme[mem_box]="#444444"
-    theme[net_box]="#666666"
-    theme[proc_box]="#cc3333"
-    theme[div_line]="#2a2a2a"
-    theme[temp_start]="#888888"
-    theme[temp_mid]="#aaaaaa"
-    theme[temp_end]="#cc3333"
-    theme[cpu_start]="#555555"
-    theme[cpu_mid]="#888888"
-    theme[cpu_end]="#cc3333"
-    theme[free_start]="#555555"
-    theme[free_mid]="#777777"
-    theme[free_end]="#aaaaaa"
-    theme[cached_start]="#444444"
-    theme[cached_mid]="#666666"
-    theme[cached_end]="#888888"
-    theme[available_start]="#888888"
-    theme[available_mid]="#aaaaaa"
-    theme[available_end]="#c8c8c8"
-    theme[used_start]="#cc3333"
-    theme[used_mid]="#aa2222"
-    theme[used_end]="#881111"
-    theme[download_start]="#555555"
-    theme[download_mid]="#888888"
-    theme[download_end]="#c8c8c8"
-    theme[upload_start]="#cc3333"
-    theme[upload_mid]="#aa2222"
-    theme[upload_end]="#881111"
-    theme[process_start]="#555555"
-    theme[process_mid]="#888888"
-    theme[process_end]="#cc3333"
+  xdg.configFile."btop/themes/rose-pine.theme".text = ''
+    theme[main_bg]="#191724"
+    theme[main_fg]="#e0def4"
+    theme[title]="#e0def4"
+    theme[hi_fg]="#eb6f92"
+    theme[selected_bg]="#26233a"
+    theme[selected_fg]="#eb6f92"
+    theme[inactive_fg]="#6e6a86"
+    theme[graph_text]="#908caa"
+    theme[meter_bg]="#26233a"
+    theme[proc_misc]="#c4a7e7"
+    theme[cpu_box]="#403d52"
+    theme[mem_box]="#403d52"
+    theme[net_box]="#403d52"
+    theme[proc_box]="#403d52"
+    theme[div_line]="#26233a"
+    theme[temp_start]="#9ccfd8"
+    theme[temp_mid]="#f6c177"
+    theme[temp_end]="#eb6f92"
+    theme[cpu_start]="#9ccfd8"
+    theme[cpu_mid]="#c4a7e7"
+    theme[cpu_end]="#eb6f92"
+    theme[free_start]="#31748f"
+    theme[free_mid]="#9ccfd8"
+    theme[free_end]="#e0def4"
+    theme[cached_start]="#403d52"
+    theme[cached_mid]="#6e6a86"
+    theme[cached_end]="#908caa"
+    theme[available_start]="#9ccfd8"
+    theme[available_mid]="#c4a7e7"
+    theme[available_end]="#e0def4"
+    theme[used_start]="#f6c177"
+    theme[used_mid]="#ebbcba"
+    theme[used_end]="#eb6f92"
+    theme[download_start]="#31748f"
+    theme[download_mid]="#9ccfd8"
+    theme[download_end]="#e0def4"
+    theme[upload_start]="#f6c177"
+    theme[upload_mid]="#ebbcba"
+    theme[upload_end]="#eb6f92"
+    theme[process_start]="#31748f"
+    theme[process_mid]="#c4a7e7"
+    theme[process_end]="#eb6f92"
   '';
 }

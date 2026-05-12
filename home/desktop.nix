@@ -57,8 +57,8 @@
 
         border_size = 2;
 
-        "col.active_border" = "rgba(444444ff) rgba(333333ff) 45deg";
-        "col.inactive_border" = "rgba(1e1e1eaa)";
+        "col.active_border" = "rgba(524f67aa)";
+        "col.inactive_border" = "rgba(26233aaa)";
 
         resize_on_border = false;
         layout = "dwindle";
@@ -254,13 +254,13 @@
         icons-enabled = "no";
       };
       colors = {
-        background = "0d0d0ddd";
-        text = "c8c8c8ff";
-        match = "cc3333ff";
-        selection = "2a2a2aff";
-        selection-text = "c8c8c8ff";
-        selection-match = "cc3333ff";
-        border = "2a2a2aff";
+        background = "191724dd";
+        text = "e0def4ff";
+        match = "eb6f92ff";
+        selection = "26233aff";
+        selection-text = "e0def4ff";
+        selection-match = "eb6f92ff";
+        border = "403d52ff";
       };
       border = {
         width = 1;
@@ -302,7 +302,7 @@
 
         mpris = {
           format = "󰎇 {dynamic}";
-          format-paused = "⏸ <i>{dynamic}</i>";
+          format-paused = "󰏤 {dynamic}";
           format-stopped = "";
           ignored-players = [
             "blanket"
@@ -325,7 +325,7 @@
         };
 
         clock = {
-          format = "  {:L%d %B %Y  %H:%M}";
+          format = "󰃭 {:L%d %B %Y   %H:%M}";
           tooltip = false;
         };
 
@@ -438,12 +438,12 @@
         min-height: 0;
         font-family: "JetBrainsMono Nerd Font";
         font-size: 12px;
-        color: #c8c8c8;
+        color: #e0def4;
       }
 
       .modules-left {
         border-radius: 999px;
-        margin-left: 4px;
+        margin-left: 3px;
       }
 
       .modules-center {
@@ -454,13 +454,13 @@
         border-radius: 999px;
         margin-right: 9px;
         padding: 0 8px;
-        background: #0d0d0d;
+        background: #191724;
       }
 
       #workspaces {
         padding: 5px 4px;
         border-radius: 18px;
-        background: #0d0d0d;
+        background: #191724;
       }
 
       #workspaces button {
@@ -468,22 +468,22 @@
         margin: 0 3px;
         min-width: 12px;
         border-radius: 16px;
-        background-color: #2a2a2a;
-        color: #666666;
+        background-color: #26233a;
+        color: #6e6a86;
         transition: all 150ms ease-in-out;
       }
 
       #workspaces button.active {
-        background-color: #cc3333;
-        color: #0d0d0d;
+        background-color: #eb6f92;
+        color: #191724;
         min-width: 28px;
         border-radius: 999px;
         transition: all 150ms ease-in-out;
       }
 
       #workspaces button:hover {
-        background-color: #3a3a3a;
-        color: #c8c8c8;
+        background-color: #403d52;
+        color: #e0def4;
       }
 
       #cpu,
@@ -506,14 +506,14 @@
       tooltip {
         border-radius: 8px;
         padding: 4px;
-        background: #0d0d0d;
-        border: 1px solid #2a2a2a;
+        background: #191724;
+        border: 1px solid #26233a;
       }
 
       #tray menu {
         border-radius: 8px;
         padding: 2px;
-        background: #0d0d0d;
+        background: #191724;
       }
 
       #mpris:not(.stopped) {
@@ -527,8 +527,8 @@
       #custom-nix {
         padding: 5px 7px;
         border-radius: 50%;
-        background: #0d0d0d;
-        color: #cc3333;
+        background: #191724;
+        color: #eb6f92;
         font-size: 15px;
         margin-left: 8px;
         margin-right: 8px;
@@ -538,18 +538,20 @@
       #clock {
         padding: 0 14px;
         border-radius: 999px;
-        background: #0d0d0d;
-        margin-right: 8px;
+        background: #191724;
+        color: #f6c177;
       }
 
       #mpris {
         border-radius: 999px;
+        color: #9ccfd8;
       }
 
       #mpris.playing,
       #mpris.paused {
         padding: 0 12px;
-        background: #0d0d0d;
+        background: #191724;
+        font-style: normal;
       }
     '';
   };
@@ -569,7 +571,7 @@
       background = [
         {
           monitor = "";
-          color = "rgba(13,13,13,1.0)";
+          color = "rgba(25,23,36,1.0)";
           path = "~/.local/share/wallpaper/current";
           blur_passes = 3;
           contrast = 0.8916;
@@ -589,7 +591,7 @@
         {
           monitor = "";
           text = ''cmd[update:1000] echo -e "$(date +"%A, %B, %d")"'';
-          color = "rgba(200,200,200,1.0)";
+          color = "rgba(224,222,244,1.0)";
           font_size = 25;
           font_family = "Inter Bold";
           position = "0, 250";
@@ -599,7 +601,7 @@
         {
           monitor = "";
           text = ''cmd[update:1000] echo -e "<span>$(date +"%H:%M")</span>"'';
-          color = "rgba(200,200,200,1.0)";
+          color = "rgba(224,222,244,1.0)";
           font_size = 150;
           font_family = "Inter Bold";
           position = "0, 135";
@@ -609,7 +611,7 @@
         {
           monitor = "";
           text = "cmd[update:1000] hyprlock-music";
-          color = "rgba(140,140,140,1.0)";
+          color = "rgba(144,140,170,1.0)";
           font_size = 18;
           font_family = "Inter Bold";
           position = "0, 50";
@@ -626,15 +628,15 @@
           halign = "center";
           valign = "center";
 
-          inner_color = "rgba(13,13,13,0.8)";
-          outer_color = "rgba(204,51,51,1.0)";
+          inner_color = "rgba(25,23,36,0.8)";
+          outer_color = "rgba(235,111,146,1.0)";
           outline_thickness = 2;
 
           font_family = "Inter Bold";
-          font_color = "rgba(200,200,200,1.0)";
+          font_color = "rgba(224,222,244,1.0)";
 
           placeholder_text = "<span>Enter Password  󰈷 </span>";
-          check_color = "rgba(150,150,150,1.0)";
+          check_color = "rgba(196,167,231,1.0)";
           fail_text = "<i>$FAIL ($ATTEMPTS)</i>";
           dots_spacing = 0.3;
           dots_size = 0.2;
@@ -652,9 +654,9 @@
   services.mako = {
     enable = true;
     settings = {
-      background-color = "#0d0d0d";
-      text-color = "#c8c8c8";
-      border-color = "#2a2a2a";
+      background-color = "#191724";
+      text-color = "#e0def4";
+      border-color = "#26233a";
       padding = "20,16";
       border-size = 1;
       border-radius = 4;
@@ -713,23 +715,23 @@
       }
 
       window {
-        background-color: rgba(13, 13, 13, 0.92);
+        background-color: rgba(25, 23, 36, 0.92);
         font-family: "JetBrainsMono Nerd Font", monospace;
       }
 
       button {
-        color: #666666;
+        color: #6e6a86;
         font-size: 20px;
         padding: 10px 24px;
         transition: color 150ms ease-in-out;
       }
 
       button:hover {
-        color: #c8c8c8;
+        color: #e0def4;
       }
 
       button:focus {
-        color: #cc3333;
+        color: #eb6f92;
       }
     '';
   };

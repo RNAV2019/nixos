@@ -51,7 +51,7 @@
             --header='↑↓ navigate · enter select · esc quit' \
             --border=rounded \
             --height=100% \
-            --color='bg:-1,bg+:-1,gutter:-1,preview-bg:-1,hl:red,fg+:white,pointer:red,prompt:red,info:gray,border:gray,header:gray'
+            --color='bg:-1,bg+:-1,gutter:-1,preview-bg:-1,hl:#eb6f92,fg+:#e0def4,pointer:#eb6f92,prompt:#eb6f92,info:#908caa,border:#403d52,header:#908caa'
       )
 
       [ -z "$selected" ] && exit 0

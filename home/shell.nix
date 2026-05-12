@@ -40,6 +40,15 @@
         name = "fzf-fish";
         src = pkgs.fishPlugins.fzf-fish.src; # FZF integration for fish
       }
+      {
+        name = "rose-pine";
+        src = pkgs.fetchFromGitHub {
+          owner = "rose-pine";
+          repo = "fish";
+          rev = "127a990e5ad4688118c950123787fb0686afa4c8";
+          hash = "sha256-3heI6nhItw5WfKGQT1FRQKfv+lONyn+DzwYjYqJjzLE=";
+        };
+      }
     ];
   };
 
@@ -53,15 +62,18 @@
       format = lib.concatStrings [
         "$directory"
         "$git_branch"
+        "$fill"
+        "$git_state"
+        "$git_status"
+        "$cmd_duration"
         "$line_break"
         "$character"
       ];
 
-      right_format = lib.concatStrings [
-        "$git_state"
-        "$git_status"
-        "$cmd_duration"
-      ];
+      fill = {
+        symbol = " ";
+        style = "";
+      };
 
       character = {
         success_symbol = "[➜](bold green)";
@@ -96,18 +108,19 @@
       };
 
       git_status = {
-        style = "bold red";
-        format = "[\\[$all_status$ahead_behind\\]]($style) ";
-        conflicted = "⬢";
-        ahead = "▲\${count}";
-        behind = "▼\${count}";
-        diverged = "◆▲\${ahead_count}▼\${behind_count}";
-        untracked = "○";
-        stashed = "◇";
-        modified = "●";
-        staged = "■";
-        renamed = "▷";
-        deleted = "✖";
+        style = "";
+        format = "([ $ahead_behind$all_status]($style))";
+        conflicted = "[!](bold fg:#eb6f92)";
+        ahead = "[⇡\${count}](bold fg:#9ccfd8)";
+        behind = "[⇣\${count}](bold fg:#f6c177)";
+        diverged = "[⇡\${ahead_count}⇣\${behind_count}](bold fg:#f6c177)";
+        up_to_date = "";
+        untracked = "[?\${count} ](fg:#6e6a86)";
+        stashed = "[\$\${count} ](fg:#c4a7e7)";
+        modified = "[!\${count} ](fg:#f6c177)";
+        staged = "[+\${count} ](fg:#9ccfd8)";
+        renamed = "[»\${count} ](fg:#c4a7e7)";
+        deleted = "[✗\${count} ](fg:#eb6f92)";
       };
 
       git_state = {
@@ -195,9 +208,9 @@
     defaultOptions = [
       "--height 40%"
       "--border"
-      "--color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8"
-      "--color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc"
-      "--color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
+      "--color=bg+:#26233a,bg:#191724,spinner:#ebbcba,hl:#eb6f92"
+      "--color=fg:#e0def4,header:#eb6f92,info:#c4a7e7,pointer:#ebbcba"
+      "--color=marker:#ebbcba,fg+:#e0def4,prompt:#c4a7e7,hl+:#eb6f92"
     ];
   };
 
