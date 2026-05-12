@@ -77,6 +77,7 @@
     bluetui
     wiremix
     wlogout
+    tree
 
     # Terminal
     ghostty

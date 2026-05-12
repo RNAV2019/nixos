@@ -15,10 +15,9 @@
       # Monitor - auto-detect
       monitor = ",preferred,auto,1.60";
 
-      # Autostart
+      # Autostart — hyprlock paints first so there's no flash of unlocked desktop.
       exec-once = [
-        "hyprlock"
-        "awww-daemon"
+        "hyprlock & sleep 0.2 && awww-daemon"
         "awww img ~/.local/share/wallpaper/current"
         "waybar"
         "swayosd-server"
@@ -116,6 +115,8 @@
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
+        # Rose Pine base — covers any frame before hyprlock/wallpaper paint
+        background_color = "rgba(191724ff)";
       };
 
       # Keybinds
@@ -167,9 +168,9 @@
         "$mod SHIFT, 9, movetoworkspace, 9"
 
         # Screenshots
-        ", Print, exec, hyprshot -m region"
+        ", Print, exec, hyprshot -m window"
         "SHIFT, Print, exec, hyprshot -m output"
-        "$mod, Print, exec, hyprshot -m window"
+        "$mod, Print, exec, hyprshot -m region"
 
         # Lock screen
         "$mod, L, exec, hyprlock"
@@ -565,6 +566,7 @@
         disable_loading_bar = true;
         hide_cursor = true;
         no_fade_in = false;
+        no_fade_out = false;
         grace = 0;
       };
 
@@ -664,10 +666,53 @@
       default-timeout = 5000;
       width = 420;
       max-icon-size = 32;
+      max-visible = 3;
+      group-by = "app-name";
+      margin = "12,16,0,0";
+      outer-margin = "0";
       font = "JetBrainsMono Nerd Font";
       on-button-left = "invoke-default-action";
     };
   };
+
+  # SwayOSD — volume/brightness OSD theming
+  xdg.configFile."swayosd/style.css".text = ''
+    window#osd {
+      background: rgba(25, 23, 36, 0.95);
+      border: 1px solid #403d52;
+      border-radius: 16px;
+      padding: 14px 20px;
+    }
+
+    window#osd image,
+    window#osd label {
+      color: #e0def4;
+    }
+
+    window#osd progressbar {
+      min-height: 6px;
+      border: none;
+      border-radius: 999px;
+      background-color: #26233a;
+    }
+
+    window#osd progressbar trough,
+    window#osd progressbar trough progress {
+      background-color: transparent;
+      border: none;
+    }
+
+    window#osd progressbar progress {
+      background-color: #eb6f92;
+      border-radius: 999px;
+    }
+
+    window#osd.muted progressbar progress,
+    window#osd.muted image {
+      color: #6e6a86;
+      background-color: #6e6a86;
+    }
+  '';
 
   # Hypridle
   services.hypridle = {

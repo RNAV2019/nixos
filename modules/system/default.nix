@@ -78,18 +78,14 @@ in
   # UWSM (hyprland-uwsm.desktop is provided by programs.hyprland.withUWSM)
   programs.uwsm.enable = true;
 
-  # greetd display manager — autologin as ryan, hyprlock handles the lock screen
+  # greetd — autologin straight into Hyprland; hyprlock handles the lock screen.
+  # No tuigreet UI on the path from Plymouth to lockscreen. Recovery: pick an
+  # older generation in GRUB, or Ctrl+Alt+F2 for a TTY.
   services.greetd = {
     enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd '${start-hyprland}/bin/start-hyprland'";
-        user = "greeter";
-      };
-      initial_session = {
-        command = "${start-hyprland}/bin/start-hyprland";
-        user = "ryan";
-      };
+    settings.default_session = {
+      command = "${start-hyprland}/bin/start-hyprland";
+      user = "ryan";
     };
   };
 
@@ -142,6 +138,10 @@ in
   xdg.portal = {
     enable = true;
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+    config.common = {
+      default = [ "hyprland" "gtk" ];
+      "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+    };
   };
 
   # Polkit for privilege escalation in Wayland

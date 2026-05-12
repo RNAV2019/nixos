@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 {
-  # Grub Bootloader
+  # Grub Bootloader — hidden by default; hold Shift at boot to access the menu.
   boot.loader.grub = {
     enable = true;
     device = "nodev";
@@ -12,16 +12,29 @@
     fontSize = 48;
   };
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.timeout = 1;
 
-  # Suppress kernel/udev log spam during boot
-  boot.kernelParams = [ "quiet" "splash" "loglevel=3" "rd.udev.log_level=3" ];
+  # Suppress kernel/udev log spam and TTY artefacts; hand off cleanly to Plymouth.
+  boot.kernelParams = [
+    "quiet"
+    "splash"
+    "loglevel=3"
+    "rd.udev.log_level=3"
+    "rd.systemd.show_status=auto"
+    "udev.log_priority=3"
+    "vt.global_cursor_default=0"
+    "fbcon=nodefer"
+  ];
   boot.consoleLogLevel = 3;
   boot.initrd.verbose = false;
+  # systemd in initrd is required for the shutdown/reboot Plymouth splash.
+  boot.initrd.systemd.enable = true;
 
-  # Plymouth splash screen
+  # Plymouth splash. `bgrt` shows the firmware logo on black — neutral against
+  # Rose Pine. TODO: ship a custom Rose Pine theme package and switch to it.
   boot.plymouth = {
     enable = true;
-    theme = "spinner";
+    theme = "bgrt";
   };
 
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
