@@ -8,8 +8,21 @@
     efiSupport = true;
     useOSProber = true;
     configurationLimit = 10;
+    font = "${pkgs.unifont}/share/fonts/opentype/unifont.otf";
+    fontSize = 48;
   };
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # Suppress kernel/udev log spam during boot
+  boot.kernelParams = [ "quiet" "splash" "loglevel=3" "rd.udev.log_level=3" ];
+  boot.consoleLogLevel = 3;
+  boot.initrd.verbose = false;
+
+  # Plymouth splash screen
+  boot.plymouth = {
+    enable = true;
+    theme = "spinner";
+  };
 
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   networking.hostName = "nixos";

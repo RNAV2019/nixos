@@ -19,9 +19,8 @@
       exec-once = [
         "hyprlock"
         "awww-daemon"
-        "awww img ~/Pictures/backgrounds/ching-yeh.png"
+        "awww img ~/.local/share/wallpaper/current"
         "waybar"
-        "mako"
         "swayosd-server"
         "nm-applet --indicator"
         "cliphist wipe"
@@ -35,6 +34,7 @@
         "XCURSOR_THEME,Bibata-Modern-Classic"
         "HYPRCURSOR_SIZE,24"
         "NIXOS_OZONE_WL,1"
+        "HYPRSHOT_DIR,$HOME/Pictures/screenshots"
       ];
 
       # Input
@@ -66,7 +66,7 @@
 
       # Decoration
       decoration = {
-        rounding = 10;
+        rounding = 6;
         blur = {
           enabled = true;
           size = 8;
@@ -89,7 +89,7 @@
         animation = [
           "global, 1, 10, default"
           "border, 1, 5.39, easeOutQuint"
-          "windows, 1, 3.79, easeOutQuint"
+          "windows, 1, 4.79, easeOutQuint"
           "windowsIn, 1, 4.1, easeOutQuint, popin 87%"
           "windowsOut, 1, 1.49, linear, popin 87%"
           "fadeIn, 1, 1.73, almostLinear"
@@ -101,7 +101,8 @@
           "fadeLayersIn, 1, 1.79, almostLinear"
           "fadeLayersOut, 1, 1.39, almostLinear"
           "workspaces, 0, 1, default"
-          "specialWorkspace, 1, 3, easeOutQuint, slidevert"
+          "workspacesIn, 0, 1, default"
+          "workspacesOut, 0, 1, default"
         ];
       };
 
@@ -166,20 +167,24 @@
         "$mod SHIFT, 9, movetoworkspace, 9"
 
         # Screenshots
-        ", Print, exec, grimblast copy area"
-        "SHIFT, Print, exec, grimblast copy screen"
+        ", Print, exec, hyprshot -m region"
+        "SHIFT, Print, exec, hyprshot -m output"
+        "$mod, Print, exec, hyprshot -m window"
 
         # Lock screen
         "$mod, L, exec, hyprlock"
 
         # Logout menu
-        "$mod, ESCAPE, exec, pkill wlogout || wlogout"
+        "$mod, ESCAPE, exec, pkill wlogout || wlogout --buttons-per-row 1 --column-spacing 0 --row-spacing 4 --margin-top 450 --margin-bottom 450 --margin-left 0 --margin-right 0"
 
         # Clipboard history
         # "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
 
         # Launcher (toggle)
         "$mod, SPACE, exec, pkill fuzzel || fuzzel"
+
+        # Wallpaper picker
+        "CTRL SUPER, SPACE, exec, pkill fuzzel || fuzzel-bg-switch"
 
         # Media keys
         ", XF86AudioMute, exec, swayosd-client --output-volume mute-toggle"
@@ -211,21 +216,25 @@
 
         "match:class org.pwmt.zathura, no_initial_focus on"
 
-        "match:class bluetui-popup, float on"
-        "match:class bluetui-popup, center on"
-        "match:class bluetui-popup, size 900 600"
+        "match:class uk.co.ryannavsaria.bluetui-popup, float on"
+        "match:class uk.co.ryannavsaria.bluetui-popup, center on"
+        "match:class uk.co.ryannavsaria.bluetui-popup, size 900 600"
 
-        "match:class btop-popup, float on"
-        "match:class btop-popup, center on"
-        "match:class btop-popup, size 900 600"
+        "match:class uk.co.ryannavsaria.btop-popup, float on"
+        "match:class uk.co.ryannavsaria.btop-popup, center on"
+        "match:class uk.co.ryannavsaria.btop-popup, size 900 600"
 
-        "match:class wlctl-popup, float on"
-        "match:class wlctl-popup, center on"
-        "match:class wlctl-popup, size 900 600"
+        "match:class uk.co.ryannavsaria.wlctl-popup, float on"
+        "match:class uk.co.ryannavsaria.wlctl-popup, center on"
+        "match:class uk.co.ryannavsaria.wlctl-popup, size 900 600"
 
-        "match:class wiremix-popup, float on"
-        "match:class wiremix-popup, center on"
-        "match:class wiremix-popup, size 900 600"
+        "match:class uk.co.ryannavsaria.wiremix-popup, float on"
+        "match:class uk.co.ryannavsaria.wiremix-popup, center on"
+        "match:class uk.co.ryannavsaria.wiremix-popup, size 900 600"
+      ];
+
+      layerrule = [
+        "blur on, match:namespace wlogout"
       ];
     };
   };
@@ -241,8 +250,8 @@
         horizontal-pad = 14;
         vertical-pad = 8;
         inner-pad = 4;
-        outer-pad = 8;
         placeholder = "Launch or calculate...";
+        icons-enabled = "no";
       };
       colors = {
         background = "0d0d0ddd";
@@ -256,9 +265,6 @@
       border = {
         width = 1;
         radius = 8;
-      };
-      icons = {
-        enabled = false;
       };
     };
   };
@@ -315,7 +321,7 @@
         cpu = {
           interval = 5;
           format = "󰍛";
-          on-click = "ghostty --class=btop-popup -e btop";
+          on-click = "ghostty --class=uk.co.ryannavsaria.btop-popup -e btop";
         };
 
         clock = {
@@ -334,7 +340,7 @@
           tooltip-format-disconnected = "Disconnected";
           interval = 3;
           spacing = 1;
-          on-click = "ghostty --class=wlctl-popup -e wlctl";
+          on-click = "ghostty --class=uk.co.ryannavsaria.wlctl-popup -e wlctl";
         };
 
         battery = {
@@ -385,12 +391,12 @@
           format-connected = "󰂱";
           format-no-controller = "";
           tooltip-format = "Devices connected: {num_connections}";
-          on-click = "ghostty --class=bluetui-popup -e bluetui";
+          on-click = "ghostty --class=uk.co.ryannavsaria.bluetui-popup -e bluetui";
         };
 
         pulseaudio = {
           format = "{icon}";
-          on-click = "ghostty --class=wiremix-popup -e wiremix";
+          on-click = "ghostty --class=uk.co.ryannavsaria.wiremix-popup -e wiremix";
           tooltip-format = "Playing at {volume}%";
           scroll-step = 5;
           format-muted = "";
@@ -489,11 +495,11 @@
       }
 
       #tray {
-        margin-right: 10px;
+        margin-right: 6px;
       }
 
       #custom-expand-icon {
-        margin-right: 14px;
+        margin-right: 6px;
         margin-left: 4px;
       }
 
@@ -511,7 +517,7 @@
       }
 
       #mpris:not(.stopped) {
-        margin-left: 7.5px;
+        margin-left: 8px;
       }
 
       .hidden {
@@ -525,7 +531,7 @@
         color: #cc3333;
         font-size: 15px;
         margin-left: 8px;
-        margin-right: 7.5px;
+        margin-right: 8px;
         min-width: 15px;
       }
 
@@ -533,7 +539,7 @@
         padding: 0 14px;
         border-radius: 999px;
         background: #0d0d0d;
-        margin-right: 7.5px;
+        margin-right: 8px;
       }
 
       #mpris {
@@ -564,7 +570,7 @@
         {
           monitor = "";
           color = "rgba(13,13,13,1.0)";
-          path = "~/Pictures/backgrounds/ching-yeh.png";
+          path = "~/.local/share/wallpaper/current";
           blur_passes = 3;
           contrast = 0.8916;
           brightness = 0.8172;
@@ -602,7 +608,7 @@
         }
         {
           monitor = "";
-          text = ''cmd[update:1000] echo -e "$(playerctl metadata --format '{{title}} - {{artist}}')"'';
+          text = "cmd[update:1000] hyprlock-music";
           color = "rgba(140,140,140,1.0)";
           font_size = 18;
           font_family = "Inter Bold";
@@ -627,7 +633,7 @@
           font_family = "Inter Bold";
           font_color = "rgba(200,200,200,1.0)";
 
-          placeholder_text = "<span> Enter Password </span>";
+          placeholder_text = "<span>Enter Password  󰈷 </span>";
           check_color = "rgba(150,150,150,1.0)";
           fail_text = "<i>$FAIL ($ATTEMPTS)</i>";
           dots_spacing = 0.3;
@@ -657,6 +663,7 @@
       width = 420;
       max-icon-size = 32;
       font = "JetBrainsMono Nerd Font";
+      on-button-left = "invoke-default-action";
     };
   };
 
@@ -680,59 +687,50 @@
       {
         label = "lock";
         action = "hyprlock";
-        text = "Lock";
+        text = "󰌾  Lock";
         keybind = "l";
-      }
-      {
-        label = "logout";
-        action = "uwsm stop";
-        text = "Logout";
-        keybind = "e";
       }
       {
         label = "reboot";
         action = "systemctl reboot";
-        text = "Reboot";
+        text = "󰜉  Reboot";
         keybind = "r";
       }
       {
         label = "shutdown";
         action = "systemctl poweroff";
-        text = "Shutdown";
+        text = "󰐥  Shutdown";
         keybind = "s";
       }
     ];
 
     style = ''
       * {
-        background-image: none;
-        font-family: "JetBrainsMono Nerd Font";
-        color: #c8c8c8;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        outline: none;
       }
 
       window {
-        background-color: rgba(13,13,13,0.9);
+        background-color: rgba(13, 13, 13, 0.92);
+        font-family: "JetBrainsMono Nerd Font", monospace;
       }
 
       button {
-        background-color: rgba(20,20,20,0.8);
-        border: 2px solid #2a2a2a;
-        border-radius: 8px;
-        margin: 8px;
-        font-size: 14px;
-        transition: all 0.2s ease;
+        color: #666666;
+        font-size: 20px;
+        padding: 10px 24px;
+        transition: color 150ms ease-in-out;
       }
 
       button:hover {
-        background-color: rgba(204,51,51,0.15);
-        border-color: #cc3333;
-        color: #cc3333;
+        color: #c8c8c8;
       }
 
-      #lock { background-image: url("icons/lock.png"); }
-      #logout { background-image: url("icons/logout.png"); }
-      #reboot { background-image: url("icons/reboot.png"); }
-      #shutdown { background-image: url("icons/shutdown.png"); }
+      button:focus {
+        color: #cc3333;
+      }
     '';
   };
 }

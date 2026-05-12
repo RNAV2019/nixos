@@ -1,5 +1,9 @@
-{ pkgs, helium-browser, llm-agents, ... }:
 {
+  pkgs,
+  helium-browser,
+  llm-agents,
+  ...
+}: {
   # GTK dark mode
   gtk = {
     enable = true;
@@ -18,7 +22,7 @@
     };
     gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
     gtk4.extraConfig.gtk-application-prefer-dark-theme = 1;
-    gtk4.theme = null;  # use libadwaita color-scheme instead of forcing GTK4 theme
+    gtk4.theme = null; # use libadwaita color-scheme instead of forcing GTK4 theme
   };
 
   # System-wide cursor (GTK + Wayland + X11)
@@ -51,22 +55,22 @@
 
   home.packages = with pkgs; [
     # Browsers
-    helium-browser.packages.${pkgs.system}.default
+    helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
     firefox
 
     # LLM agents
-    llm-agents.packages.${pkgs.system}.claude-code
-    llm-agents.packages.${pkgs.system}.opencode
+    llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
+    llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.opencode
 
     # TUI system tools
     (pkgs.rustPlatform.buildRustPackage {
-      pname   = "wlctl";
+      pname = "wlctl";
       version = "unstable";
       src = pkgs.fetchFromGitHub {
         owner = "aashish-thapa";
-        repo  = "wlctl";
-        rev   = "4bfb8c28655cc2a7e0e67bfe3d5d76e8d632b1b6";
-        hash  = "sha256-94WfzaBBjzGIkgHlco8T3iQqsjyAWxG+dw0lAfsKsfQ=";
+        repo = "wlctl";
+        rev = "4bfb8c28655cc2a7e0e67bfe3d5d76e8d632b1b6";
+        hash = "sha256-94WfzaBBjzGIkgHlco8T3iQqsjyAWxG+dw0lAfsKsfQ=";
       };
       cargoHash = "sha256-JzYrQICduP1lgjfwGJlt6aUJfe5jG1wRVYbx5A8wtXg=";
     })
@@ -80,6 +84,9 @@
 
     # File manager
     nautilus
+
+    # File sharing
+    localsend
 
     # Wallpaper
     awww
@@ -106,22 +113,24 @@
     swayosd
 
     # Screenshot tool
-    grimblast
+    hyprshot
 
     # Terminal Utils
     bat
     fd
     ripgrep
     eza
-    tokei     # Line counter
-    silicon   # Code screenshot generator
-    glow      # Render markdown in terminal
-    tealdeer  # TLDR man pages
-    just      # Command runner (better than make)
+    tokei # Line counter
+    silicon # Code screenshot generator
+    glow # Render markdown in terminal
+    just # Command runner (better than make)
     hyperfine
 
     # Fetcher
     nitch
+
+    # Tmux
+    tmux
 
     # Development Utils
     rustup
@@ -141,8 +150,8 @@
     haskellPackages.fourmolu
     texlab
     tectonic
-    nixd      # Nix language server
+    nixd # Nix language server
     alejandra # Nix formatter
-    gnumake   # Make
+    gnumake # Make
   ];
 }

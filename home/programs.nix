@@ -1,5 +1,16 @@
 { config, pkgs, ... }:
 {
+  # Tealdeer (tldr) — auto-update cache so pages are always available
+  programs.tealdeer = {
+    enable = true;
+    settings = {
+      updates = {
+        auto_update = true;
+        auto_update_interval_hours = 168;
+      };
+    };
+  };
+
   # Yazi
   programs.yazi = {
     enable = true;
@@ -91,12 +102,7 @@
         nerdFontsVersion = "3";
       };
       git = {
-        pagers = [
-          {
-            colorArg = "always";
-            pager    = "delta --dark --paging=never";
-          }
-        ];
+        pager = "delta --dark --paging=never";
       };
     };
   };

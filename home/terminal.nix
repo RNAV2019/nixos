@@ -27,6 +27,7 @@
     palette = 15=#f0f0f0
 
     # Font
+    font-family = JetBrainsMono Nerd Font
     font-style = Regular
     font-size = 9
 

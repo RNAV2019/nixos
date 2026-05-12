@@ -1,4 +1,12 @@
 { config, pkgs, hyprland, ... }:
+let
+  start-hyprland = pkgs.writeShellApplication {
+    name = "start-hyprland";
+    text = ''
+      exec uwsm start hyprland-uwsm.desktop
+    '';
+  };
+in
 {
   # Locale, timezone and keymaps
   time.timeZone = "Europe/London";
@@ -56,37 +64,30 @@
   programs.hyprland = {
     enable = true;
     withUWSM = true;
-    package = hyprland.packages.${pkgs.system}.hyprland;
-    portalPackage = hyprland.packages.${pkgs.system}.xdg-desktop-portal-hyprland;
+    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+    portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
   # Override nixpkgs xdg-desktop-portal-hyprland with the flake version
   nixpkgs.overlays = [
     (final: prev: {
-      xdg-desktop-portal-hyprland = hyprland.packages.${prev.system}.xdg-desktop-portal-hyprland;
+      xdg-desktop-portal-hyprland = hyprland.packages.${prev.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
     })
   ];
 
-  # UWSM
-  programs.uwsm = {
-    enable = true;
-    waylandCompositors.hyprland = {
-      prettyName = "Hyprland";
-      comment = "Hyprland compositor managed by UWSM";
-      binPath = "/run/current-system/sw/bin/Hyprland";
-    };
-  };
+  # UWSM (hyprland-uwsm.desktop is provided by programs.hyprland.withUWSM)
+  programs.uwsm.enable = true;
 
   # greetd display manager — autologin as ryan, hyprlock handles the lock screen
   services.greetd = {
     enable = true;
     settings = {
       default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd 'uwsm start hyprland-uwsm.desktop'";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd '${start-hyprland}/bin/start-hyprland'";
         user = "greeter";
       };
       initial_session = {
-        command = "uwsm start hyprland-uwsm.desktop";
+        command = "${start-hyprland}/bin/start-hyprland";
         user = "ryan";
       };
     };
@@ -101,16 +102,21 @@
     wget
     curl
     vim
+    start-hyprland
   ];
 
   # Fingerprint reader
   services.fprintd.enable = true;
 
-  # PAM fingerprint auth for sudo, login, lock screen
+  # PAM fingerprint auth for sudo, login, lock screen, and GUI privilege prompts
   security.pam.services.sudo.fprintAuth = true;
   security.pam.services.login.fprintAuth = true;
   security.pam.services.greetd.fprintAuth = true;
-  security.pam.services.hyprlock.fprintAuth = true;
+  # hyprlock talks to fprintd directly via its own `auth.fingerprint` block;
+  # enabling fprintAuth here too makes PAM also grab the reader and blocks
+  # password input until the fingerprint scan finishes.
+  security.pam.services.hyprlock.fprintAuth = false;
+  security.pam.services.polkit-1.fprintAuth = true;
 
   # Power profiles daemon
   services.power-profiles-daemon.enable = true;
@@ -140,6 +146,9 @@
 
   # Polkit for privilege escalation in Wayland
   security.polkit.enable = true;
+
+  # dconf — required for GTK/libadwaita apps (Nautilus) to read color-scheme
+  programs.dconf.enable = true;
 
   # Brightness/backlight control handled by brightnessctl in packages.nix
 

@@ -1,5 +1,8 @@
-{ config, pkgs, ... }:
 {
+  pkgs,
+  lib,
+  ...
+}: {
   programs.fish = {
     enable = true;
 
@@ -11,7 +14,7 @@
       zoxide init fish | source
 
       # Atuin init (shell history)
-      atuin init fish | source 
+      atuin init fish | source
     '';
 
     shellAliases = {
@@ -25,6 +28,7 @@
       grep = "rg";
       find = "fd";
       top = "btop";
+      cd = "z";
     };
 
     plugins = [
@@ -39,57 +43,129 @@
     ];
   };
 
-  # Starship terminal prompt
+  # Starship terminal prompt — configured to mimic spaceship-prompt
   programs.starship = {
     enable = true;
     enableFishIntegration = true;
     settings = {
       add_newline = true;
-      format = "$directory$git_branch$git_status$nix_shell$rust$nodejs$python$haskell$character";
+
+      format = lib.concatStrings [
+        "$directory"
+        "$git_branch"
+        "$line_break"
+        "$character"
+      ];
+
+      right_format = lib.concatStrings [
+        "$git_state"
+        "$git_status"
+        "$cmd_duration"
+      ];
 
       character = {
-        success_symbol = "[❯](bold green)";
-        error_symbol   = "[❯](bold red)";
+        success_symbol = "[➜](bold green)";
+        error_symbol = "[➜](bold red)";
+        vimcmd_symbol = "[➜](bold yellow)";
+      };
+
+      username = {
+        style_user = "bold yellow";
+        style_root = "bold red";
+        format = "[$user]($style) ";
+        show_always = false;
+      };
+
+      hostname = {
+        ssh_only = true;
+        format = "[$hostname](bold green) ";
       };
 
       directory = {
-        style = "bold blue";
+        style = "bold cyan";
         truncation_length = 3;
-        truncate_to_repo = true;
+        truncate_to_repo = false;
+        format = "[$path]($style)[$read_only]($read_only_style)";
+        read_only = " ";
       };
 
       git_branch = {
-        symbol = " ";
-        style = "bold purple";
+        symbol = "";
+        style = "bold magenta";
+        format = "[ in ](bold white)[$branch]($style)";
       };
 
       git_status = {
         style = "bold red";
+        format = "[\\[$all_status$ahead_behind\\]]($style) ";
+        conflicted = "⬢";
+        ahead = "▲\${count}";
+        behind = "▼\${count}";
+        diverged = "◆▲\${ahead_count}▼\${behind_count}";
+        untracked = "○";
+        stashed = "◇";
+        modified = "●";
+        staged = "■";
+        renamed = "▷";
+        deleted = "✖";
+      };
+
+      git_state = {
+        format = "[\\($state( $progress_current/$progress_total)\\)]($style) ";
+        style = "bold yellow";
+      };
+
+      cmd_duration = {
+        min_time = 2000;
+        format = "[$duration](bold yellow) ";
       };
 
       nix_shell = {
         symbol = "❄ ";
         style = "bold cyan";
+        format = "[$symbol$state( \\($name\\))]($style) ";
       };
 
       rust = {
         symbol = " ";
-        style = "bold orange";
+        style = "bold red";
+        format = "[$symbol($version )]($style)";
       };
 
       nodejs = {
         symbol = " ";
         style = "bold green";
+        format = "[$symbol($version )]($style)";
       };
 
       python = {
         symbol = " ";
         style = "bold yellow";
+        format = "[$symbol($version )(\\($virtualenv\\) )]($style)";
       };
 
       haskell = {
         symbol = "λ ";
-        style = "bold purple";
+        style = "bold magenta";
+        format = "[$symbol($version )]($style)";
+      };
+
+      golang = {
+        symbol = " ";
+        style = "bold cyan";
+        format = "[$symbol($version )]($style)";
+      };
+
+      package = {
+        symbol = " ";
+        style = "bold red";
+        format = "[$symbol$version]($style) ";
+      };
+
+      jobs = {
+        symbol = "✦";
+        style = "bold blue";
+        format = "[$symbol$number]($style) ";
       };
     };
   };
