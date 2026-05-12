@@ -42,6 +42,18 @@
     resize-overlay = never
   '';
 
-  # Setup tmux after
-  # programs.tmux = {};  
+  programs.tmux = {
+    enable = true;
+    mouse = true;
+    keyMode = "vi";
+    terminal = "tmux-256color";
+    plugins = with pkgs.tmuxPlugins; [
+      {
+        plugin = rose-pine;
+        extraConfig = ''
+          set -g @rose_pine_variant 'main'
+        '';
+      }
+    ];
+  };
 }

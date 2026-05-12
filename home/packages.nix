@@ -130,9 +130,6 @@
     # Fetcher
     nitch
 
-    # Tmux
-    tmux
-
     # Development Utils
     rustup
     nodejs_24
