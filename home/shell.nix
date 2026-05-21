@@ -230,4 +230,15 @@
     enable = true;
     enableGitIntegration = true;
   };
+
+  # bat — Rose Pine themed syntax highlighting.
+  # Theme from https://github.com/drluckyspin/rose-pine-bat (vendored under ./themes).
+  programs.bat = {
+    enable = true;
+    config.theme = "Rose-Pine-Moon";
+    themes."Rose-Pine-Moon" = {
+      src = ./themes;
+      file = "Rose-Pine-Moon.tmTheme";
+    };
+  };
 }

@@ -1,5 +1,11 @@
-{ config, pkgs, hyprland, helium-browser, llm-agents, ... }:
 {
+  config,
+  pkgs,
+  hyprland,
+  helium-browser,
+  llm-agents,
+  ...
+}: {
   imports = [
     ./packages.nix
     ./shell.nix
@@ -24,10 +30,10 @@
     enable = true;
     createDirectories = true;
     documents = "${config.home.homeDirectory}/Documents";
-    download  = "${config.home.homeDirectory}/Downloads";
-    pictures  = "${config.home.homeDirectory}/Pictures";
-    music     = "${config.home.homeDirectory}/Music";
-    videos    = "${config.home.homeDirectory}/Videos";
+    download = "${config.home.homeDirectory}/Downloads";
+    pictures = "${config.home.homeDirectory}/Pictures";
+    music = "${config.home.homeDirectory}/Music";
+    videos = "${config.home.homeDirectory}/Videos";
   };
 
   # Session variables

@@ -1,20 +1,42 @@
-{ config, pkgs, ... }:
-
 {
-  # Grub Bootloader — always shown, no timeout, manual selection required.
-  boot.loader.grub = {
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
+  # Limine bootloader — Rose Pine themed, manual selection (no auto-boot).
+  boot.loader.limine = {
     enable = true;
-    device = "nodev";
     efiSupport = true;
-    useOSProber = true;
-    configurationLimit = 10;
-    font = "${pkgs.unifont}/share/fonts/opentype/unifont.otf";
-    fontSize = 48;
-    gfxmodeEfi = "auto";
-    splashImage = null;
+    maxGenerations = 5;
+    enableEditor = false;
+
+    style = {
+      # Drop the module's default NixOS gray wallpaper — its dimensions don't
+      # match the panel and leave uncleared framebuffer slices at screen edges.
+      # Solid backdrop fills the whole screen cleanly.
+      wallpapers = lib.mkForce [];
+      backdrop = "191724";
+      interface = {
+        branding = "NixOS";
+        brandingColor = "eb6f92";
+        helpColor = "9ccfd8";
+        helpColorBright = "c4a7e7";
+      };
+      graphicalTerminal = {
+        font.scale = "2x2";
+        background = "191724";
+        foreground = "e0def4";
+        brightBackground = "6e6a86";
+        brightForeground = "e0def4";
+        palette = "191724;eb6f92;9ccfd8;f6c177;31748f;c4a7e7;9ccfd8;e0def4";
+        brightPalette = "6e6a86;eb6f92;9ccfd8;f6c177;31748f;c4a7e7;9ccfd8;e0def4";
+      };
+    };
   };
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.timeout = null;
+  # Very large timeout effectively waits for manual selection (Limine has no "no timeout").
+  boot.loader.timeout = 1000000;
 
   # Suppress kernel/udev log spam and TTY artefacts; hand off cleanly to Plymouth.
   boot.kernelParams = [
@@ -32,17 +54,10 @@
   # systemd in initrd is required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
-  # Plymouth splash — custom Rose Pine theme (base #191724) so Plymouth →
   # Hyprland → hyprlock is one continuous colour with no firmware-logo flash.
   boot.plymouth = {
     enable = true;
-    theme = "rose-pine";
-    themePackages = [
-      (pkgs.runCommand "rose-pine-plymouth" {} ''
-        mkdir -p $out/share/plymouth/themes/rose-pine
-        cp -r ${./plymouth/rose-pine}/. $out/share/plymouth/themes/rose-pine/
-      '')
-    ];
+    theme = "bgrt";
   };
 
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -52,14 +67,14 @@
   users.users.ryan = {
     isNormalUser = true;
     description = "ryan";
-    extraGroups = [ "networkmanager" "wheel" "video" "audio" ];
+    extraGroups = ["networkmanager" "wheel" "video" "audio"];
     shell = pkgs.fish;
   };
 
   # Allow brightnessctl to control backlight without sudo
   services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"    
-    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"    
+    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
+    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
   '';
 
   # This value determines the NixOS release from which the default
@@ -69,5 +84,4 @@
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.11"; # Did you read the comment?
-
 }

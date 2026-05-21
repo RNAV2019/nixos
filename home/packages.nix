@@ -118,7 +118,7 @@
     hyprshot
 
     # Terminal Utils
-    bat
+    # bat is configured via programs.bat in shell.nix (Rose Pine theme)
     fd
     ripgrep
     eza
@@ -135,6 +135,7 @@
     rustup
     nodejs_24
     bun
+    openssl
     jdk21
     ghc
     cabal-install
@@ -149,6 +150,7 @@
     haskellPackages.fourmolu
     texlab
     tectonic
+    stripe-cli
     nixd # Nix language server
     alejandra # Nix formatter
     gnumake # Make

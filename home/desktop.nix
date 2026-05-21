@@ -12,8 +12,15 @@
     systemd.enable = false;
 
     settings = {
-      # Monitor - auto-detect
-      monitor = ",preferred,auto,1.60";
+      # Monitor configuration
+      monitor = [
+        "eDP-1,2880x1800@60,0x0,1.6"
+        "DP-2,2560x1440@60,auto,1"
+      ];
+
+      workspace = [
+        "5,monitor:DP-2"
+      ];
 
       # Autostart — hyprlock paints first so there's no flash of unlocked desktop.
       exec-once = [
@@ -405,7 +412,7 @@
           format-muted = "";
           format-icons = {
             headphone = "";
-            default = ["" "" ""];
+            default = ["" " " " "];
           };
         };
 
@@ -679,40 +686,26 @@
 
   # SwayOSD — volume/brightness OSD theming
   xdg.configFile."swayosd/style.css".text = ''
-    window#osd {
+    window {
       background: rgba(25, 23, 36, 0.95);
       border: 1px solid #403d52;
-      border-radius: 16px;
-      padding: 14px 20px;
+      border-radius: 999px;
+      padding: 10px;
     }
 
-    window#osd image,
-    window#osd label {
+    image,
+    label {
       color: #e0def4;
     }
 
-    window#osd progressbar {
-      min-height: 6px;
-      border: none;
+    progressbar {
       border-radius: 999px;
       background-color: #26233a;
     }
 
-    window#osd progressbar trough,
-    window#osd progressbar trough progress {
-      background-color: transparent;
-      border: none;
-    }
-
-    window#osd progressbar progress {
+    progress {
       background-color: #eb6f92;
       border-radius: 999px;
-    }
-
-    window#osd.muted progressbar progress,
-    window#osd.muted image {
-      color: #6e6a86;
-      background-color: #6e6a86;
     }
   '';
 

@@ -84,7 +84,7 @@ in
 
   # greetd — autologin straight into Hyprland; hyprlock handles the lock screen.
   # No tuigreet UI on the path from Plymouth to lockscreen. Recovery: pick an
-  # older generation in GRUB, or Ctrl+Alt+F2 for a TTY.
+  # older generation in the Limine menu, or Ctrl+Alt+F2 for a TTY.
   services.greetd = {
     enable = true;
     settings.default_session = {
@@ -120,6 +120,10 @@ in
 
   # Power profiles daemon
   services.power-profiles-daemon.enable = true;
+
+  # UPower — battery/AC state via D-Bus. Required for `upower` CLI and
+  # battery indicators in waybar/etc. to query device state.
+  services.upower.enable = true;
 
   # Helium browser extensions via Chromium managed policy
   environment.etc."chromium/policies/managed/helium-extensions.json".text = builtins.toJSON {
