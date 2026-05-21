@@ -353,7 +353,15 @@
               fi
 
               # ── display panel ────────────────────────────────────────────────────────
+<<<<<<< Updated upstream
               S_DISP=$(gum style --foreground "$RP_TEXT" --bold "$subject")
+=======
+              W=72
+              S_DISP=$(gum style --foreground "$RP_TEXT" --bold --width $W "$subject")
+              files_text=$(printf '%s files changed\n%s' "$file_count" "$status_summary")
+              F_DISP=$(gum style --foreground "$RP_PINE" --width $W "$files_text")
+              R_DISP=$(gum style --foreground "$RP_MUTED" --italic --width $W "$reasoning")
+>>>>>>> Stashed changes
 
               # Body: first sentence only
               body_short=""
