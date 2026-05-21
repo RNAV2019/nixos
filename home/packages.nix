@@ -78,6 +78,7 @@
     wiremix
     wlogout
     tree
+    upower
 
     # Terminal
     ghostty

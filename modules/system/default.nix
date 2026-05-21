@@ -43,6 +43,10 @@ in
   # Networking
   networking.networkmanager.enable = true;
 
+  # LocalSend (discovery + transfer on port 53317)
+  networking.firewall.allowedTCPPorts = [ 53317 ];
+  networking.firewall.allowedUDPPorts = [ 53317 ];
+
   # Bluetooth
   hardware.bluetooth = {
     enable = true;
@@ -141,6 +145,7 @@ in
     config.common = {
       default = [ "hyprland" "gtk" ];
       "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+      "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
     };
   };
 
@@ -149,6 +154,9 @@ in
 
   # dconf — required for GTK/libadwaita apps (Nautilus) to read color-scheme
   programs.dconf.enable = true;
+
+  # gvfs — provides trash://, recent://, and mount support for Nautilus
+  services.gvfs.enable = true;
 
   # Brightness/backlight control handled by brightnessctl in packages.nix
 

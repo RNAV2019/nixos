@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 {
-  # Grub Bootloader — hidden by default; hold Shift at boot to access the menu.
+  # Grub Bootloader — always shown, no timeout, manual selection required.
   boot.loader.grub = {
     enable = true;
     device = "nodev";
@@ -10,9 +10,11 @@
     configurationLimit = 10;
     font = "${pkgs.unifont}/share/fonts/opentype/unifont.otf";
     fontSize = 48;
+    gfxmodeEfi = "auto";
+    splashImage = null;
   };
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.timeout = 1;
+  boot.loader.timeout = null;
 
   # Suppress kernel/udev log spam and TTY artefacts; hand off cleanly to Plymouth.
   boot.kernelParams = [
@@ -20,21 +22,27 @@
     "splash"
     "loglevel=3"
     "rd.udev.log_level=3"
-    "rd.systemd.show_status=auto"
+    "rd.systemd.show_status=false"
+    "udev.log_level=3"
     "udev.log_priority=3"
     "vt.global_cursor_default=0"
-    "fbcon=nodefer"
   ];
   boot.consoleLogLevel = 3;
   boot.initrd.verbose = false;
   # systemd in initrd is required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
-  # Plymouth splash. `bgrt` shows the firmware logo on black — neutral against
-  # Rose Pine. TODO: ship a custom Rose Pine theme package and switch to it.
+  # Plymouth splash — custom Rose Pine theme (base #191724) so Plymouth →
+  # Hyprland → hyprlock is one continuous colour with no firmware-logo flash.
   boot.plymouth = {
     enable = true;
-    theme = "bgrt";
+    theme = "rose-pine";
+    themePackages = [
+      (pkgs.runCommand "rose-pine-plymouth" {} ''
+        mkdir -p $out/share/plymouth/themes/rose-pine
+        cp -r ${./plymouth/rose-pine}/. $out/share/plymouth/themes/rose-pine/
+      '')
+    ];
   };
 
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.

@@ -17,7 +17,7 @@
 
       # Autostart — hyprlock paints first so there's no flash of unlocked desktop.
       exec-once = [
-        "hyprlock & sleep 0.2 && awww-daemon"
+        "hyprlock --grace 0 & sleep 0.2 && awww-daemon"
         "awww img ~/.local/share/wallpaper/current"
         "waybar"
         "swayosd-server"
@@ -115,6 +115,7 @@
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
+        disable_splash_rendering = true;
         # Rose Pine base — covers any frame before hyprlock/wallpaper paint
         background_color = "rgba(191724ff)";
       };
@@ -317,6 +318,7 @@
         "custom/nix" = {
           format = "❄";
           tooltip = false;
+          on-click = "pkill wlogout || wlogout --buttons-per-row 1 --column-spacing 0 --row-spacing 4 --margin-top 450 --margin-bottom 450 --margin-left 0 --margin-right 0";
         };
 
         cpu = {
