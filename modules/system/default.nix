@@ -1,32 +1,35 @@
-{ config, pkgs, hyprland, ... }:
-let
+{
+  config,
+  pkgs,
+  hyprland,
+  ...
+}: let
   start-hyprland = pkgs.writeShellApplication {
     name = "start-hyprland";
     text = ''
       exec uwsm start hyprland-uwsm.desktop
     '';
   };
-in
-{
+in {
   # Locale, timezone and keymaps
   time.timeZone = "Europe/London";
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
-    LC_ADDRESS        = "en_GB.UTF-8";
+    LC_ADDRESS = "en_GB.UTF-8";
     LC_IDENTIFICATION = "en_GB.UTF-8";
-    LC_MEASUREMENT    = "en_GB.UTF-8";
-    LC_MONETARY       = "en_GB.UTF-8";
-    LC_NAME           = "en_GB.UTF-8";
-    LC_NUMERIC        = "en_GB.UTF-8";
-    LC_PAPER          = "en_GB.UTF-8";
-    LC_TELEPHONE      = "en_GB.UTF-8";
-    LC_TIME           = "en_GB.UTF-8";
+    LC_MEASUREMENT = "en_GB.UTF-8";
+    LC_MONETARY = "en_GB.UTF-8";
+    LC_NAME = "en_GB.UTF-8";
+    LC_NUMERIC = "en_GB.UTF-8";
+    LC_PAPER = "en_GB.UTF-8";
+    LC_TELEPHONE = "en_GB.UTF-8";
+    LC_TIME = "en_GB.UTF-8";
   };
   console.keyMap = "uk";
 
   # Nix settings
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = ["nix-command" "flakes"];
     auto-optimise-store = true;
   };
 
@@ -44,8 +47,8 @@ in
   networking.networkmanager.enable = true;
 
   # LocalSend (discovery + transfer on port 53317)
-  networking.firewall.allowedTCPPorts = [ 53317 ];
-  networking.firewall.allowedUDPPorts = [ 53317 ];
+  networking.firewall.allowedTCPPorts = [53317];
+  networking.firewall.allowedUDPPorts = [53317];
 
   # Bluetooth
   hardware.bluetooth = {
@@ -55,12 +58,15 @@ in
   };
   services.blueman.enable = true;
 
+  # Bluetooth HID devices (e.g. MX Master 2S) to produce input events.
+  services.libinput.enable = true;
+
   # Sound
   services.pipewire = {
     enable = true;
     alsa.enable = true;
     alsa.support32Bit = true;
-    pulse.enable = true; 
+    pulse.enable = true;
   };
   services.pulseaudio.enable = false;
 
@@ -145,11 +151,11 @@ in
   # XDG portal for file pickers, screen sharing etc
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+    extraPortals = [pkgs.xdg-desktop-portal-gtk];
     config.common = {
-      default = [ "hyprland" "gtk" ];
-      "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
-      "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
+      default = ["hyprland" "gtk"];
+      "org.freedesktop.impl.portal.FileChooser" = ["gtk"];
+      "org.freedesktop.impl.portal.Settings" = ["gtk"];
     };
   };
 
@@ -163,5 +169,4 @@ in
   services.gvfs.enable = true;
 
   # Brightness/backlight control handled by brightnessctl in packages.nix
-
 }

@@ -336,7 +336,19 @@
 
         clock = {
           format = "󰃭 {:L%d %B %Y   %H:%M}";
-          tooltip = false;
+          tooltip-format = "<tt><small>{calendar}</small></tt>";
+          calendar = {
+            mode = "month";
+            on-scroll = 1;
+            on-click-right = "mode";
+            format = {
+              months = "<span color='#f6c177'><b>{}</b></span>";
+              days = "<span color='#e0def4'><b>{}</b></span>";
+              weeks = "<span color='#9ccfd8'><b>W{}</b></span>";
+              weekdays = "<span color='#908caa'><b>{}</b></span>";
+              today = "<span color='#eb6f92'><b><u>{}</u></b></span>";
+            };
+          };
         };
 
         network = {
@@ -515,9 +527,10 @@
 
       tooltip {
         border-radius: 8px;
-        padding: 4px;
+        padding: 10px 14px;
         background: #191724;
         border: 1px solid #26233a;
+        font-size: 13px;
       }
 
       #tray menu {

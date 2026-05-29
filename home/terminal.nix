@@ -1,5 +1,87 @@
 { config, pkgs, ... }:
 {
+  home.file.".config/tmux/plugins/tmux-which-key/config.yaml".text = ''
+    command_alias_start_index: 200
+    keybindings:
+      prefix_table: Space
+    title:
+      style: align=centre,bold
+      prefix: " C-a "
+      prefix_style: fg=green,align=centre,bold
+    position:
+      x: R
+      y: P
+    custom_variables: []
+    macros: []
+    items:
+      - name: Run command
+        key: space
+        command: command-prompt
+      - name: Last window
+        key: tab
+        command: last-window
+      - separator: true
+      - name: +Panes
+        key: p
+        menu:
+          - name: Split vertical
+            key: v
+            command: "split-window -h -c #{pane_current_path}"
+          - name: Split horizontal
+            key: s
+            command: "split-window -v -c #{pane_current_path}"
+          - separator: true
+          - name: Left
+            key: h
+            command: select-pane -L
+          - name: Down
+            key: j
+            command: select-pane -D
+          - name: Up
+            key: k
+            command: select-pane -U
+          - name: Right
+            key: l
+            command: select-pane -R
+          - separator: true
+          - name: Resize left
+            key: H
+            command: resize-pane -L 5
+          - name: Resize down
+            key: J
+            command: resize-pane -D 5
+          - name: Resize up
+            key: K
+            command: resize-pane -U 5
+          - name: Resize right
+            key: L
+            command: resize-pane -R 5
+      - name: +Windows
+        key: w
+        menu:
+          - name: New window
+            key: c
+            command: "new-window -c #{pane_current_path}"
+          - name: Move left
+            key: <
+            command: swap-window -d -t -1
+          - name: Move right
+            key: ">"
+            command: swap-window -d -t +1
+      - name: Sessions
+        key: S
+        command: choose-tree -Zs
+      - name: Copy mode
+        key: c
+        command: copy-mode
+      - name: Reload config
+        key: r
+        command: "source-file ~/.config/tmux/tmux.conf"
+      - name: Send C-a
+        key: a
+        command: send-prefix
+  '';
+
   # Ghostty terminal config stored at ~/.config/ghostty/config
   home.file.".config/ghostty/config".text = ''
     # Rose Pine theme (Ghostty built-in)
@@ -62,6 +144,12 @@
         '';
       }
       yank
+      {
+        plugin = tmux-which-key;
+        extraConfig = ''
+          set -g @tmux-which-key-xdg-enable 1
+        '';
+      }
     ];
     extraConfig = ''
       setw -g pane-base-index 1
