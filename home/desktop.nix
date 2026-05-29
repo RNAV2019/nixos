@@ -241,6 +241,9 @@
         "match:class uk.co.ryannavsaria.wiremix-popup, float on"
         "match:class uk.co.ryannavsaria.wiremix-popup, center on"
         "match:class uk.co.ryannavsaria.wiremix-popup, size 900 600"
+
+        "match:class mpv, float on"
+        "match:class mpv, center on"
       ];
 
       layerrule = [

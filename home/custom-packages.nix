@@ -97,17 +97,30 @@
     '';
   };
 
-  quasar = pkgs.buildGoModule {
-    pname = "quasar";
-    version = "1.0.0";
-    src = pkgs.fetchFromGitHub {
-      owner = "RNAV2019";
-      repo = "quasar";
-      rev = "9ff1c7a5b72ed2876d9ceffe1a6fde6ab0303b30";
-      hash = "sha256-wlFt3OpZfPsssDW/Di6uirhusEQjUB/WoQAnvTFHXtU=";
+  quasar = let
+    quasar-bin = pkgs.buildGoModule {
+      pname = "quasar";
+      version = "1.0.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "RNAV2019";
+        repo = "quasar";
+        rev = "9ff1c7a5b72ed2876d9ceffe1a6fde6ab0303b30";
+        hash = "sha256-wlFt3OpZfPsssDW/Di6uirhusEQjUB/WoQAnvTFHXtU=";
+      };
+      vendorHash = "sha256-U4HAzSi3BT4yPGceEPnvSyQkl1UoeP3mmSHZsgnEffw=";
     };
-    vendorHash = "sha256-U4HAzSi3BT4yPGceEPnvSyQkl1UoeP3mmSHZsgnEffw=";
-  };
+    tex = pkgs.texlive.combine {inherit (pkgs.texlive) scheme-basic l3kernel dvipng pgf pgfplots standalone preview;};
+    runtimeDeps = [tex pkgs.git pkgs.poppler-utils pkgs.wl-clipboard];
+  in
+    pkgs.symlinkJoin {
+      name = "quasar";
+      paths = [quasar-bin];
+      buildInputs = [pkgs.makeWrapper];
+      postBuild = ''
+        wrapProgram $out/bin/quasar \
+          --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps}
+      '';
+    };
 
   project-picker = pkgs.rustPlatform.buildRustPackage {
     pname = "project-picker";

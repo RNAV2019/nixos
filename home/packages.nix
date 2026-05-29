@@ -100,6 +100,7 @@
     brightnessctl
     playerctl
     pavucontrol
+    mpv
 
     # Clipboard
     wl-clipboard
@@ -151,6 +152,7 @@
     haskellPackages.fourmolu
     texlab
     tectonic
+    typst
     stripe-cli
     nixd # Nix language server
     alejandra # Nix formatter
