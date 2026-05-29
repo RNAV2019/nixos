@@ -40,7 +40,7 @@
         "XCURSOR_THEME,Bibata-Modern-Classic"
         "HYPRCURSOR_SIZE,24"
         "NIXOS_OZONE_WL,1"
-        "HYPRSHOT_DIR,$HOME/Pictures/screenshots"
+        "XDG_SCREENSHOTS_DIR,$HOME/Pictures/screenshots"
       ];
 
       # Input
@@ -175,10 +175,11 @@
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
 
-        # Screenshots
-        ", Print, exec, hyprshot -m window"
-        "SHIFT, Print, exec, hyprshot -m output"
-        "$mod, Print, exec, hyprshot -m region"
+        # Screenshots (matching omarchy keybinds)
+        ", Print, exec, grimblast --notify copysave area"
+        "ALT, Print, exec, grimblast --notify copysave output"
+        "$mod, Print, exec, pkill hyprpicker || hyprpicker -a"
+        "$mod CTRL, Print, exec, grimblast --notify copysave screen"
 
         # Lock screen
         "$mod, L, exec, hyprlock"

@@ -117,7 +117,7 @@
         diverged = "[⇡\${ahead_count}⇣\${behind_count}](bold fg:#f6c177)";
         up_to_date = "";
         untracked = "[?\${count} ](fg:#6e6a86)";
-        stashed = "[\$\$\${count} ](fg:#c4a7e7)";
+        stashed = "[⊙\${count} ](fg:#c4a7e7)";
         modified = "[!\${count} ](fg:#f6c177)";
         staged = "[+\${count} ](fg:#9ccfd8)";
         renamed = "[»\${count} ](fg:#c4a7e7)";

@@ -114,8 +114,9 @@
     # Volume/brightness on-Screen display
     swayosd
 
-    # Screenshot tool
-    hyprshot
+    # Screenshot tools
+    grimblast
+    hyprpicker
 
     # Terminal Utils
     # bat is configured via programs.bat in shell.nix (Rose Pine theme)
