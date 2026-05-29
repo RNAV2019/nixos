@@ -9,13 +9,6 @@
     interactiveShellInit = ''
       # Disable fish greeting
       set fish_greeting ""
-
-      # Zoxide init
-      zoxide init fish | source
-
-      # Atuin init (shell history)
-      atuin init fish | source
-
     '';
 
     shellAliases = {
