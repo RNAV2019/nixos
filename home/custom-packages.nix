@@ -12,7 +12,7 @@
     key=$(printf '%s_%s_%sx%s' "$file" "$mtime" "$FZF_PREVIEW_COLUMNS" "$FZF_PREVIEW_LINES" | sha256sum | cut -d' ' -f1)
     cache_file="$cache_dir/$key"
     if [ ! -s "$cache_file" ]; then
-      ${pkgs.chafa}/bin/chafa --size="$FZF_PREVIEW_COLUMNS"x"$FZF_PREVIEW_LINES" "$file" > "$cache_file"
+      ${pkgs.chafa}/bin/chafa --size="$FZF_PREVIEW_COLUMNS"x"$FZF_PREVIEW_LINES" --bg '#191724' "$file" > "$cache_file"
     fi
     cat "$cache_file"
   '';
@@ -122,16 +122,30 @@
       '';
     };
 
-  project-picker = pkgs.rustPlatform.buildRustPackage {
+  project-picker = let
+    runtimeLibs = [
+      pkgs.wayland
+      pkgs.libxkbcommon
+      pkgs.vulkan-loader
+    ];
+  in pkgs.rustPlatform.buildRustPackage {
     pname = "project-picker";
     version = "1.0.0";
     src = pkgs.fetchFromGitHub {
       owner = "RNAV2019";
       repo = "project-picker";
-      rev = "428b15e90d2a2ce388e64c8d2a547bb03f013fa0";
-      hash = "sha256-Ia+e7d4tYqoThYq3ngvUXn5UUFZJ4FJRdFAP5SXfhRM=";
+      rev = "456587bfd166c644220a769ef6a177d908d4b77c";
+      hash = "sha256-IoHwdW5TwKqaJoFGT0lrbGpfB3RelXT2TaV7MBUKKOs=";
     };
     cargoHash = "sha256-eGF9ASlbZaeg+2m0vEBZt0+1fGjWleUXkrTy+UbgW4A=";
+
+    buildInputs = runtimeLibs;
+    nativeBuildInputs = [pkgs.makeWrapper];
+
+    postInstall = ''
+      wrapProgram $out/bin/project-picker \
+        --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
+    '';
   };
 
   # Isolated curl helper so gum spin can call it across a subshell boundary.

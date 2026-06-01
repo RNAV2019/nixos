@@ -140,6 +140,7 @@
     openssl
     jdk21
     ghc
+    gcc
     cabal-install
     stack
     haskellPackages.haskell-language-server

@@ -135,6 +135,7 @@
         "$mod, RETURN, exec, ghostty"
         "$mod SHIFT, B, exec, helium"
         "$mod SHIFT, F, exec, nautilus"
+        "$mod, P, exec, project-picker --toggle"
 
         # Window Management
         "$mod, W, killactive"
@@ -263,7 +264,7 @@
         horizontal-pad = 14;
         vertical-pad = 8;
         inner-pad = 4;
-        placeholder = "Launch or calculate...";
+        placeholder = "Launch...";
         icons-enabled = "no";
       };
       colors = {
