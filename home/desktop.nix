@@ -32,6 +32,7 @@
         "cliphist wipe"
         "wl-paste --type text --watch cliphist store"
         "wl-paste --type image --watch cliphist store"
+        "mycelium"
       ];
 
       # Environment variables
@@ -41,6 +42,7 @@
         "HYPRCURSOR_SIZE,24"
         "NIXOS_OZONE_WL,1"
         "XDG_SCREENSHOTS_DIR,$HOME/Pictures/screenshots"
+        "LD_LIBRARY_PATH,${pkgs.lib.makeLibraryPath [pkgs.wayland pkgs.libxkbcommon pkgs.vulkan-loader]}"
       ];
 
       # Input
@@ -192,7 +194,7 @@
         # "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
 
         # Launcher (toggle)
-        "$mod, SPACE, exec, pkill fuzzel || fuzzel"
+        "$mod, SPACE, exec, mycelium --toggle"
 
         # Wallpaper picker
         "CTRL SUPER, SPACE, exec, pkill fuzzel || fuzzel-bg-switch"
@@ -224,6 +226,11 @@
         "match:class uk.co.ryannavsaria.project-picker, center on"
         "match:class uk.co.ryannavsaria.project-picker, border_size 0"
         "match:class uk.co.ryannavsaria.project-picker, rounding 18"
+
+        "match:class uk.co.ryannavsaria.mycelium, float on"
+        "match:class uk.co.ryannavsaria.mycelium, center on"
+        "match:class uk.co.ryannavsaria.mycelium, border_size 0"
+        "match:class uk.co.ryannavsaria.mycelium, rounding 18"
 
         "match:class org.pwmt.zathura, no_initial_focus on"
 

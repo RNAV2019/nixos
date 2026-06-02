@@ -128,22 +128,50 @@
       pkgs.libxkbcommon
       pkgs.vulkan-loader
     ];
-  in pkgs.rustPlatform.buildRustPackage {
-    pname = "project-picker";
-    version = "1.0.0";
     src = pkgs.fetchFromGitHub {
       owner = "RNAV2019";
       repo = "project-picker";
-      rev = "456587bfd166c644220a769ef6a177d908d4b77c";
-      hash = "sha256-IoHwdW5TwKqaJoFGT0lrbGpfB3RelXT2TaV7MBUKKOs=";
+      rev = "590f5c9931ae852b81efef94db6988e1cf23957f";
+      hash = "sha256-aOzgjytqZhfnW9QiWZdEoUpP1/8W5kdnDtnaZrVTjEI=";
     };
-    cargoHash = "sha256-eGF9ASlbZaeg+2m0vEBZt0+1fGjWleUXkrTy+UbgW4A=";
+  in pkgs.rustPlatform.buildRustPackage {
+    pname = "project-picker";
+    version = "1.0.0";
+    inherit src;
+    cargoLock.lockFile = "${src}/Cargo.lock";
 
     buildInputs = runtimeLibs;
     nativeBuildInputs = [pkgs.makeWrapper];
 
     postInstall = ''
       wrapProgram $out/bin/project-picker \
+        --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
+    '';
+  };
+
+  mycelium = let
+    runtimeLibs = [
+      pkgs.wayland
+      pkgs.libxkbcommon
+      pkgs.vulkan-loader
+    ];
+    src = pkgs.fetchFromGitHub {
+      owner = "RNAV2019";
+      repo = "mycelium";
+      rev = "2229b3992861c0c2ad901d192d50e0e3155765bd";
+      hash = "sha256-W8/TiYPMrTAGQsGdW2/62Tx1oC1rcFxiWVEkKePTj4Y=";
+    };
+  in pkgs.rustPlatform.buildRustPackage {
+    pname = "mycelium";
+    version = "0.1.0";
+    inherit src;
+    cargoLock.lockFile = "${src}/Cargo.lock";
+
+    buildInputs = runtimeLibs;
+    nativeBuildInputs = [pkgs.makeWrapper];
+
+    postInstall = ''
+      wrapProgram $out/bin/mycelium \
         --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
     '';
   };
@@ -494,6 +522,7 @@ in {
     hyprlock-music
     quasar
     project-picker
+    mycelium
     gen-commit
   ];
 }

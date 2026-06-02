@@ -1,5 +1,9 @@
-{ config, pkgs, ... }:
 {
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
   # Direnv - auto-load .envrc files per project
   programs.direnv = {
     enable = true;
@@ -25,8 +29,8 @@
 
   # Rustup config
   home.file.".cargo/config.toml".text = ''
-       [net]
-       git-fetch-with-cli = true
+    [net]
+    git-fetch-with-cli = true
   '';
 
   # Environment variables for development
@@ -34,6 +38,8 @@
     CARGO_HOME = "$HOME/.cargo";
     GOPATH = "$HOME/go";
     GOBIN = "$HOME/go/bin";
+    # winit/wgpu use dlopen for wayland, xkbcommon, and vulkan — needed to run GUI binaries outside nix-shell
+    LD_LIBRARY_PATH = lib.makeLibraryPath [pkgs.wayland pkgs.libxkbcommon pkgs.vulkan-loader];
   };
 
   # Add language bin dirs to PATH via fish
@@ -42,7 +48,7 @@
     fish_add_path $HOME/.cargo/bin
 
     # Go
-    fish_add_path $HOME/go/bin    
+    fish_add_path $HOME/go/bin
 
     # Bun
     fish_add_path $HOME/.bun/bin

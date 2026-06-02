@@ -102,6 +102,10 @@
     pavucontrol
     mpv
 
+    # Wayland runtime libs (needed by locally-built Rust apps using dlopen, e.g. mycelium)
+    wayland
+    libxkbcommon
+
     # Clipboard
     wl-clipboard
     cliphist
