@@ -88,6 +88,11 @@
           config = {};
         };
 
+        # Typst
+        tinymist = {
+          command = "tinymist";
+        };
+
         # LaTeX
         texlab = {
           config.texlab = {
@@ -179,6 +184,11 @@
         {
           name  = "latex";
           language-servers = [ "texlab" ];
+        }
+        {
+          name = "typst";
+          auto-format = true;
+          language-servers = [ "tinymist" ];
         }
       ];
     };

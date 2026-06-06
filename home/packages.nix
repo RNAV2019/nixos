@@ -79,6 +79,10 @@
     wlogout
     tree
     upower
+    speedtest-cli
+
+    # Anime
+    ani-cli
 
     # Terminal
     ghostty
@@ -158,6 +162,7 @@
     texlab
     tectonic
     typst
+    tinymist
     stripe-cli
     nixd # Nix language server
     alejandra # Nix formatter
