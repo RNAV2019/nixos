@@ -66,22 +66,26 @@
             typst watch $typ_file >/dev/null 2>&1 &
             set -l watch_pid $last_pid
 
-            if test -f $pdf_file
-                # PDF already exists — open Zathura immediately
-                zathura $pdf_file &
-            else
-                # Wait up to 30 s for the first compilation, then open Zathura
-                fish -c "
-                    set -l ticks 0
-                    while not test -f '$pdf_file'
-                        sleep 0.5
-                        set ticks (math \$ticks + 1)
-                        if test \$ticks -ge 60
-                            exit 1
+            # Only open Zathura if it isn't already displaying this PDF
+            set -l abs_pdf (realpath $pdf_file 2>/dev/null; or echo $pdf_file)
+            if not pgrep -f "zathura.*$abs_pdf" >/dev/null 2>&1
+                if test -f $pdf_file
+                    # PDF already exists — open Zathura immediately
+                    zathura $pdf_file &
+                else
+                    # Wait up to 30 s for the first compilation, then open Zathura
+                    fish -c "
+                        set -l ticks 0
+                        while not test -f '$pdf_file'
+                            sleep 0.5
+                            set ticks (math \$ticks + 1)
+                            if test \$ticks -ge 60
+                                exit 1
+                            end
                         end
-                    end
-                    zathura '$pdf_file'
-                " &
+                        zathura '$pdf_file'
+                    " &
+                end
             end
 
             # Run Helix in the foreground

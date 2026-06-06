@@ -72,8 +72,8 @@
       highlight-active-color    = "rgba(196,167,231,0.4)";
       recolor-lightcolor        = "#191724";
       recolor-darkcolor         = "#e0def4";
-      recolor                   = true;
-      recolor-keephue           = true;
+      recolor                   = false;
+      recolor-keephue           = false;
 
       scroll-step = 50;
       zoom-min    = 10;
