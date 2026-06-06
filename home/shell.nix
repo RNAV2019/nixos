@@ -63,7 +63,7 @@
             set -l pdf_file (string replace -r '\.typ$' '.pdf' -- $typ_file)
 
             # Start typst watch for automatic recompilation on every save
-            typst watch $typ_file &
+            typst watch $typ_file >/dev/null 2>&1 &
             set -l watch_pid $last_pid
 
             if test -f $pdf_file
