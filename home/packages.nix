@@ -33,10 +33,20 @@
     size = 24;
   };
 
-  # Qt follows GTK theme
+  # Qt theming via Kvantum (Rose Pine, Qt5 + Qt6)
   qt = {
     enable = true;
-    platformTheme.name = "gtk";
+    platformTheme.name = "qtct";
+    style.name = "kvantum";
+  };
+
+  # Rose Pine "love" Kvantum theme for Qt apps
+  xdg.configFile = {
+    "Kvantum/kvantum.kvconfig".text = ''
+      [General]
+      theme=rose-pine-love
+    '';
+    "Kvantum/rose-pine-love".source = "${pkgs.rose-pine-kvantum}/share/Kvantum/themes/rose-pine-love";
   };
 
   # GNOME color scheme for libadwaita/GTK4 apps
@@ -113,6 +123,9 @@
     # Clipboard
     wl-clipboard
     cliphist
+
+    # XDG portal GTK backend (prefer-dark for libadwaita apps)
+    xdg-desktop-portal-gtk
 
     # Networking
     networkmanagerapplet

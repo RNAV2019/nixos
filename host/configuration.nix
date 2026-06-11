@@ -9,7 +9,7 @@
     enable = true;
     efiSupport = true;
     maxGenerations = 5;
-    enableEditor = false;
+    enableEditor = true;
 
     style = {
       # Drop the module's default NixOS gray wallpaper — its dimensions don't
@@ -39,17 +39,19 @@
   boot.loader.timeout = 1000000;
 
   # Suppress kernel/udev log spam and TTY artefacts; hand off cleanly to Plymouth.
+  # consoleLogLevel 0 hides even kernel errors from the console (they remain in
+  # the journal); systemd.show_status=false covers stage-2, notably shutdown.
   boot.kernelParams = [
     "quiet"
     "splash"
-    "loglevel=3"
     "rd.udev.log_level=3"
     "rd.systemd.show_status=false"
+    "systemd.show_status=false"
     "udev.log_level=3"
     "udev.log_priority=3"
     "vt.global_cursor_default=0"
   ];
-  boot.consoleLogLevel = 3;
+  boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
   # systemd in initrd is required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
