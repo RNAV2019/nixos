@@ -180,5 +180,6 @@
     nixd # Nix language server
     alejandra # Nix formatter
     gnumake # Make
+    espeak-ng
   ];
 }

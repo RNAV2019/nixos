@@ -73,6 +73,8 @@
     shell = pkgs.fish;
   };
 
+  services.fwupd.enable = true;
+
   # Allow brightnessctl to control backlight without sudo
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
