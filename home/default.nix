@@ -26,6 +26,22 @@
 
   # XDG directories
   xdg.enable = true;
+
+  # Make Helium the default browser so http(s)/html links don't fall back to Firefox
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/html" = "helium.desktop";
+      "x-scheme-handler/http" = "helium.desktop";
+      "x-scheme-handler/https" = "helium.desktop";
+      "x-scheme-handler/about" = "helium.desktop";
+      "x-scheme-handler/unknown" = "helium.desktop";
+      "application/xhtml+xml" = "helium.desktop";
+      # Preserve Claude Code's login/OAuth deep-link handler
+      "x-scheme-handler/claude-cli" = "claude-code-url-handler.desktop";
+    };
+  };
+
   xdg.userDirs = {
     enable = true;
     createDirectories = true;

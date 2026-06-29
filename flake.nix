@@ -45,6 +45,8 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            # Back up pre-existing unmanaged dotfiles instead of failing activation
+            home-manager.backupFileExtension = "hm-backup";
             home-manager.users.ryan = import ./home/default.nix;
             home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents;};
           }
