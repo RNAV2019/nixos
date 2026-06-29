@@ -16,7 +16,7 @@
 | Compositor | Hyprland (UWSM session) |
 | Display mgr | greetd, autologin |
 | Lock / idle | hyprlock + hypridle |
-| Bar / launcher / notifs | waybar · fuzzel · mako |
+| Bar / launcher / notifs | waybar · mycelium · mako |
 | Wallpaper | awww |
 | Shell | fish + starship + atuin + zoxide + fzf |
 | Terminal | ghostty |
@@ -100,7 +100,8 @@ nix-clean         # garbage-collect old generations
 | Key | Action |
 |---|---|
 | `Super + Return` | Terminal |
-| `Super + Space` | App launcher (fuzzel) |
+| `Super + Space` | App launcher (mycelium) |
+| `Super + P` | Project picker |
 | `Super + W` | Close window |
 | `Super + L` | Lock |
 | `Super + Escape` | Logout menu |
