@@ -205,7 +205,7 @@
             RP_PINE="#3e8fb0"
             RP_IRIS="#c4a7e7"
 
-            MODEL="deepseek/deepseek-v4-flash"
+            MODEL="google/gemini-2.5-flash-lite"
             MAX_ITER=5
 
             while [[ $# -gt 0 ]]; do
