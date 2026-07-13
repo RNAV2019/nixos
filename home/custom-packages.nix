@@ -176,6 +176,16 @@
     '';
   };
 
+  ani-cli = pkgs.ani-cli.overrideAttrs {
+    version = "4.14";
+    src = pkgs.fetchFromGitHub {
+      owner = "pystardust";
+      repo = "ani-cli";
+      tag = "v4.14";
+      hash = "sha256-OyCKDN89sBz59+3JncMDyNOq8UMqqjara+A0Owo3oko=";
+    };
+  };
+
   # Isolated curl helper so gum spin can call it across a subshell boundary.
   gen-commit-api = pkgs.writeShellScript "gen-commit-api" ''
     set -euo pipefail
@@ -333,9 +343,11 @@
       Diff:
       $diff_content"
 
+            prompt_file="$tmpdir/prompt.txt"
+            printf '%s' "$initial_prompt" > "$prompt_file"
             messages=$(jq -n \
               --arg sys "$SYSTEM_PROMPT" \
-              --arg usr "$initial_prompt" \
+              --rawfile usr "$prompt_file" \
               '[{role:"system",content:$sys},{role:"user",content:$usr}]')
 
             iteration=0
@@ -345,10 +357,9 @@
 
             # ── main loop ──────────────────────────────────────────────────────────────
             while true; do
-              jq -n \
-                --argjson msgs "$messages" \
+              printf '%s' "$messages" | jq \
                 --arg model "$MODEL" \
-                '{model:$model,messages:$msgs,response_format:{type:"json_object"},max_tokens:2048,temperature:0.3}' \
+                '{model:$model,messages:.,response_format:{type:"json_object"},max_tokens:2048,temperature:0.3}' \
                 > "$body_file"
 
               response=$(gum spin \
@@ -517,6 +528,7 @@
   };
 in {
   home.packages = [
+    ani-cli
     bg-switch
     fuzzel-bg-switch
     hyprlock-music

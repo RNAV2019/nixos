@@ -91,9 +91,6 @@
     upower
     speedtest-cli
 
-    # Anime
-    ani-cli
-
     # Terminal
     ghostty
     kitty
@@ -176,7 +173,17 @@
     tectonic
     typst
     tinymist
-    stripe-cli
+    # Pinned newer than nixpkgs (1.37.2)
+    (stripe-cli.overrideAttrs (finalAttrs: _prev: {
+      version = "1.43.7";
+      src = pkgs.fetchFromGitHub {
+        owner = "stripe";
+        repo = "stripe-cli";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-2rjjMbghE8S496gFGBY7XJOrmQXC7LflKHquBoqDQgY=";
+      };
+      vendorHash = "sha256-RYbwc7QuYSwUX42AM1YSOx+JvsPf2aLScX+2XN0SeYQ=";
+    }))
     nixd # Nix language server
     alejandra # Nix formatter
     gnumake # Make
