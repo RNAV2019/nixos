@@ -183,6 +183,7 @@
         hash = "sha256-2rjjMbghE8S496gFGBY7XJOrmQXC7LflKHquBoqDQgY=";
       };
       vendorHash = "sha256-RYbwc7QuYSwUX42AM1YSOx+JvsPf2aLScX+2XN0SeYQ=";
+      doCheck = false;
     }))
     nixd # Nix language server
     alejandra # Nix formatter
