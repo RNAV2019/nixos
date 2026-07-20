@@ -281,8 +281,6 @@
   };
 
   # bat — Rose Pine themed syntax highlighting.
-  xdg.configFile."fish/completions/quasar.fish".source = ./quasar.fish;
-
   # Theme from https://github.com/drluckyspin/rose-pine-bat (vendored under ./themes).
   programs.bat = {
     enable = true;

@@ -104,6 +104,9 @@
     # Wallpaper
     awww
 
+    # Screen recording
+    openscreen
+
     # Ambient Sounds
     blanket
 

@@ -33,6 +33,7 @@
         "wl-paste --type text --watch cliphist store"
         "wl-paste --type image --watch cliphist store"
         "mycelium"
+        "cherry"
       ];
 
       # Environment variables
@@ -197,7 +198,7 @@
         "$mod, SPACE, exec, mycelium --toggle"
 
         # Wallpaper picker
-        "CTRL SUPER, SPACE, exec, pkill fuzzel || fuzzel-bg-switch"
+        "CTRL SUPER, SPACE, exec, cherry --toggle"
 
         # Media keys
         ", XF86AudioMute, exec, swayosd-client --output-volume mute-toggle"
@@ -231,6 +232,11 @@
         "match:class uk.co.ryannavsaria.mycelium, center on"
         "match:class uk.co.ryannavsaria.mycelium, border_size 0"
         "match:class uk.co.ryannavsaria.mycelium, rounding 18"
+
+        "match:class uk.co.ryannavsaria.cherry, float on"
+        "match:class uk.co.ryannavsaria.cherry, center on"
+        "match:class uk.co.ryannavsaria.cherry, border_size 0"
+        "match:class uk.co.ryannavsaria.cherry, rounding 18"
 
         "match:class org.pwmt.zathura, no_initial_focus on"
 
