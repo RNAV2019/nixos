@@ -47,60 +47,6 @@
     ];
   };
 
-  programs.fish.functions = {
-    hx = {
-      body = ''
-        # Find the first .typ file argument
-        set -l typ_file ""
-        for arg in $argv
-            if string match -q "*.typ" -- $arg; and test -f $arg
-                set typ_file $arg
-                break
-            end
-        end
-
-        if test -n "$typ_file"
-            set -l pdf_file (string replace -r '\.typ$' '.pdf' -- $typ_file)
-
-            # Start typst watch for automatic recompilation on every save
-            typst watch $typ_file >/dev/null 2>&1 &
-            set -l watch_pid $last_pid
-
-            # Only open Zathura if it isn't already displaying this PDF
-            set -l abs_pdf (realpath $pdf_file 2>/dev/null; or echo $pdf_file)
-            if not pgrep -f "zathura.*$abs_pdf" >/dev/null 2>&1
-                if test -f $pdf_file
-                    # PDF already exists — open Zathura immediately
-                    zathura $pdf_file &
-                else
-                    # Wait up to 30 s for the first compilation, then open Zathura
-                    fish -c "
-                        set -l ticks 0
-                        while not test -f '$pdf_file'
-                            sleep 0.5
-                            set ticks (math \$ticks + 1)
-                            if test \$ticks -ge 60
-                                exit 1
-                            end
-                        end
-                        zathura '$pdf_file'
-                    " &
-                end
-            end
-
-            # Run Helix in the foreground
-            command hx $argv
-
-            # Kill the watcher when Helix exits
-            kill $watch_pid 2>/dev/null
-            true
-        else
-            command hx $argv
-        end
-      '';
-    };
-  };
-
   # Starship terminal prompt — configured to mimic spaceship-prompt
   programs.starship = {
     enable = true;

@@ -1,5 +1,8 @@
-{ config, pkgs, ... }:
 {
+  config,
+  pkgs,
+  ...
+}: {
   xdg.configFile."helix/themes/rose_pine_transparent.toml".source = ./themes/rose_pine_transparent.toml;
 
   programs.helix = {
@@ -28,9 +31,9 @@
           mode.normal = "NORMAL";
           mode.insert = "INSERT";
           mode.select = "SELECT";
-          left = [ "mode" "spinner" ];
-          center = [ "file-name" ];
-          right = [ "diagnostics" "position" "version-control" "file-type" ];
+          left = ["mode" "spinner"];
+          center = ["file-name"];
+          right = ["diagnostics" "position" "version-control" "file-type"];
         };
 
         lsp.display-color-swatches = true;
@@ -63,19 +66,19 @@
         # Typescript
         typescript-language-server = {
           command = "typescript-language-server";
-          args = [ "--stdio" ];
+          args = ["--stdio"];
         };
 
         # TailwindCSS
         tailwindcss-ls = {
           command = "tailwindcss-language-server";
-          args = [ "--stdio" ];
+          args = ["--stdio"];
         };
 
         # Python
         pyright = {
           command = "basedpyright-langserver";
-          args = [ "--stdio" ];
+          args = ["--stdio"];
           config = {
             python.analysis.typeCheckingMode = "basic";
           };
@@ -84,13 +87,20 @@
         # Haskell
         haskell-language-server = {
           command = "haskell-language-server-wrapper";
-          args = [ "--lsp" ];
+          args = ["--lsp"];
           config = {};
         };
 
         # Typst
         tinymist = {
           command = "tinymist";
+          config.preview.background = {
+            enabled = true;
+            args = [
+              "--data-plane-host=127.0.0.1:23635"
+              "--invert-colors=never"
+            ];
+          };
         };
 
         # LaTeX
@@ -102,16 +112,18 @@
             };
             forwardSearch = {
               executable = "zathura";
-              args = [ "--synctex-forward" "%l:1:%f" "%p" ];
+              args = ["--synctex-forward" "%l:1:%f" "%p"];
             };
             build = {
               forwardSearchAfter = false;
               onSave = true;
               executable = "tectonic";
               args = [
-                "-X" "compile"
+                "-X"
+                "compile"
                 "--synctex"
-                "-Z" "shell-escape"
+                "-Z"
+                "shell-escape"
                 "%f"
               ];
               auxDirectory = "_build";
@@ -125,70 +137,76 @@
         {
           name = "rust";
           auto-format = true;
-          language-servers = [ "rust-analyzer" ];
+          language-servers = ["rust-analyzer"];
         }
         {
           name = "typescript";
           auto-format = true;
-          language-servers = [ "typescript-language-server" ];
+          language-servers = ["typescript-language-server"];
           formatter = {
             command = "prettier";
-            args = [ "--parser" "typescript" ];
+            args = ["--parser" "typescript"];
           };
         }
         {
           name = "javascript";
           auto-format = true;
-          language-servers = [ "typescript-language-server" ];
+          language-servers = ["typescript-language-server"];
         }
         {
           name = "nix";
           auto-format = true;
-          language-servers = [ "nixd" ];
+          language-servers = ["nixd"];
           formatter.command = "alejandra";
         }
         {
           name = "html";
-          language-servers = [ "vscode-html-language-server" "tailwindcss-ls" ];
+          language-servers = ["vscode-html-language-server" "tailwindcss-ls"];
         }
         {
           name = "css";
           language-servers = [
             "vscode-css-language-server"
-            { name = "hx-lsp"; only-features = [ "document-colors" ]; }
+            {
+              name = "hx-lsp";
+              only-features = ["document-colors"];
+            }
           ];
         }
         {
           name = "python";
-          language-servers = [ "pyright" ];
-          roots = [ "app.py" "requirements.txt" ];
-          indent = { tab-width = 4; unit = "t"; };
+          language-servers = ["pyright"];
+          roots = ["app.py" "requirements.txt"];
+          indent = {
+            tab-width = 4;
+            unit = "t";
+          };
         }
         {
           name = "haskell";
           scope = "source.haskell";
           injection-regex = "haskell";
-          file-types = [ "hs" ];
-          roots = [ "Setup.hs" "stack.yaml" "*.cabal" "cabal.project" "package.yaml" ];
+          file-types = ["hs"];
+          roots = ["Setup.hs" "stack.yaml" "*.cabal" "cabal.project" "package.yaml"];
           auto-format = true;
-          language-servers = [ "haskell-language-server" ];
+          language-servers = ["haskell-language-server"];
           formatter = {
             command = "fourmolu";
-            args = [ "--stdin-input-file" "%{buffer_name}" ];
+            args = ["--stdin-input-file" "%{buffer_name}"];
           };
         }
         {
           name = "java";
-          language-servers = [ "jdt-language-server" ];
+          language-servers = ["jdt-language-server"];
         }
         {
-          name  = "latex";
-          language-servers = [ "texlab" ];
+          name = "latex";
+          language-servers = ["texlab"];
         }
         {
           name = "typst";
           auto-format = true;
-          language-servers = [ "tinymist" ];
+          language-servers = ["tinymist"];
         }
       ];
     };

@@ -53,6 +53,10 @@
   ];
   boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
+
+  # KVM for the Android TV emulator: the x86 system images Google publishes refuse
+  # to start without hardware acceleration. AMD host (Ryzen 7 PRO 6860Z).
+  boot.kernelModules = ["kvm-amd"];
   # systemd in initrd is required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
@@ -69,7 +73,8 @@
   users.users.ryan = {
     isNormalUser = true;
     description = "ryan";
-    extraGroups = ["networkmanager" "wheel" "video" "audio"];
+    # "kvm" grants access to /dev/kvm without sudo (Android emulator).
+    extraGroups = ["networkmanager" "wheel" "video" "audio" "kvm"];
     shell = pkgs.fish;
   };
 
