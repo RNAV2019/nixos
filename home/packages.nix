@@ -152,6 +152,7 @@
     nitch
 
     # Development Utils
+    cloudflared
     rustup
     nodejs_24
     bun
