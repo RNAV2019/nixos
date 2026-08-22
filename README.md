@@ -96,6 +96,50 @@ nix-clean         # garbage-collect old generations
 
 <br>
 
+## AI Commit Messages
+
+`gen-commit` generates a Conventional Commit message from the staged Git
+snapshot and commits it only after explicit confirmation. Repository status
+and diff content are sent to OpenRouter.
+
+Set up the API key without placing it directly in shell history:
+
+```bash
+read -rsp "OpenRouter API key: " key; echo
+gen-commit --key "$key"
+unset key
+```
+
+Run it inside a Git working tree:
+
+```bash
+gen-commit
+gen-commit --model google/gemini-2.5-flash-lite
+```
+
+The interaction follows these rules:
+
+- Existing staged changes are the complete commit scope; unstaged and
+  untracked changes are reported but excluded.
+- With an empty index, choose either `Stage all and continue` or `Cancel`.
+- `Edit with AI` requests a refinement and returns to the preview.
+- `Edit manually` opens the configured Git editor and returns to the preview.
+- The fullscreen TUI redraws after each action and after returning from the
+  configured editor, without leaving duplicate previews in shell history.
+- Only `Commit` creates a commit, and the full message is shown beforehand.
+- Cancelling after `Stage all and continue` leaves those changes staged.
+- The commit is blocked if the staged snapshot changes while the UI is open.
+- Normal Git hooks still run and may reject or adjust the final commit.
+
+Use `gen-commit --debug` to preserve temporary API diagnostics after the
+command exits. Run its integration tests with:
+
+```bash
+nix build 'path:.#checks.x86_64-linux.gen-commit'
+```
+
+<br>
+
 ## Keybinds
 
 | Key | Action |

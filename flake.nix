@@ -26,10 +26,24 @@
     helium-browser,
     llm-agents,
     ...
-  }: {
+  }: let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs {inherit system;};
+    gen-commit = import ./home/gen-commit.nix {inherit pkgs;};
+  in {
+    packages.${system} = {
+      inherit gen-commit;
+      default = gen-commit;
+    };
+
+    checks.${system}.gen-commit = import ./tests/gen-commit.nix {
+      inherit pkgs;
+      genCommit = gen-commit;
+    };
+
     nixosConfigurations = {
       ryans-nixos = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
         modules = [
           ./host/configuration.nix
           ./host/hardware-configuration.nix
