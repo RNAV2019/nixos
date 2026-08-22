@@ -8,8 +8,7 @@ import Quickshell.Services.Pam
 import Quickshell.Wayland
 import qs.Commons
 
-// Fingerprint and password are two separate PAM conversations running side by
-// side so pam_fprintd cannot block password entry.
+// Separate PAM conversations prevent pam_fprintd from blocking passwords.
 Scope {
   id: root
 
@@ -27,7 +26,6 @@ Scope {
   readonly property int blurMax: 48
   readonly property int blurPad: blurMax * 2
 
-  // The lock content is composited once and faded as a single texture.
   property real reveal: 0
 
   readonly property int revealDuration: 450
@@ -60,8 +58,7 @@ Scope {
     root.statusIsError = false;
     root.busy = false;
     Bus.sessionReady = true;
-    // The surface has to stay up while it fades, so the session lock is only
-    // actually released once the ramp has finished.
+    // Keep the session locked until its surface finishes fading.
     root.reveal = 0;
     revealOut.restart();
   }
@@ -88,7 +85,7 @@ Scope {
     root.busy = true;
     root.status = "";
     root.statusIsError = false;
-    // The context is waiting on the password prompt it raised on start.
+    // start() leaves PAM waiting for this password response.
     if (passwordPam.responseRequired)
       passwordPam.respond(root.password);
   }
@@ -101,7 +98,7 @@ Scope {
     }
   }
 
-  // Lock until this compositor instance has completed its first secure lock.
+  // Lock until this compositor instance completes its first secure lock.
   Process {
     id: markerCheck
 
@@ -140,7 +137,7 @@ Scope {
         return;
       }
       root.fail(result === PamResult.MaxTries ? "Too many attempts" : "Authentication failed");
-      // The conversation ends with the attempt, so start a fresh one.
+      // Each failed attempt ends the PAM conversation.
       passwordPam.start();
     }
 
@@ -162,8 +159,7 @@ Scope {
         root.unlock();
         return;
       }
-      // pam_fprintd gives up after a few bad reads. Restart it so the reader
-      // keeps working for as long as the screen is locked.
+      // Restart pam_fprintd after it gives up on repeated bad reads.
       fingerprintRetry.restart();
     }
 
@@ -222,7 +218,7 @@ Scope {
         acceptedButtons: Qt.NoButton
       }
 
-      // Keep a sharp copy beneath the lock for the cross-fade.
+      // Keep an unblurred wallpaper beneath the lock for the cross-fade.
       Image {
         id: wallpaper
         anchors.fill: parent
@@ -232,7 +228,7 @@ Scope {
         asynchronous: false
       }
 
-      // Composite the finished lock once instead of animating an expensive blur.
+      // Fade the composited layer instead of the full-screen blur.
       Item {
         id: content
 
@@ -240,11 +236,10 @@ Scope {
         opacity: root.reveal
         layer.enabled: true
 
-        // Begin only after the compositor creates the lock surface.
+        // Reveal only after the compositor creates the lock surface.
         Component.onCompleted: root.reveal = 1
 
-        // MultiEffect samples transparent pixels outside its source. Overscan and
-        // clipping prevent an unblurred frame around the screen.
+        // Overscan and clip MultiEffect's transparent edge samples.
         Item {
           anchors.fill: parent
           clip: true
@@ -258,12 +253,11 @@ Scope {
             fillMode: Image.PreserveAspectCrop
             cache: false
             asynchronous: false
-            // MultiEffect consumes this layer instead of drawing a second image.
+            // Expose this layer as MultiEffect's texture source.
             layer.enabled: true
           }
 
-          // Brightness is multiplied by the black overlay below because
-          // MultiEffect's brightness control is additive.
+          // Use the black overlay for dimming; effect brightness is additive.
           MultiEffect {
             anchors.fill: blurSource
             source: blurSource
@@ -350,7 +344,7 @@ Scope {
             }
           }
 
-          // Avoid a field-width binding loop when status text expands it.
+          // Measure errors separately to avoid a field-width binding loop.
           TextMetrics {
             id: statusMetrics
             font: statusText.font
@@ -364,7 +358,7 @@ Scope {
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: 80
 
-            // Grow to fit long PAM errors while preserving the measured padding.
+            // Preserve the field padding as PAM errors widen it.
             width: Math.max(417, statusMetrics.width + 99)
             height: 104
             radius: height / 2
@@ -395,7 +389,7 @@ Scope {
 
               focus: true
               enabled: !root.busy
-              // Password dots are drawn below with fixed geometry.
+              // Render fixed-geometry password dots separately.
               echoMode: TextInput.NoEcho
               // TextInput restores its caret on focus unless the delegate is empty.
               cursorVisible: false
@@ -426,14 +420,13 @@ Scope {
               }
             }
 
-            // Fixed slots avoid rebuilding every dot when the password length
-            // changes, allowing only the new or removed dot to animate.
+            // Fixed slots rebuild and animate only the changed dot.
             Row {
               id: dots
 
               anchors.verticalCenter: parent.verticalCenter
               anchors.horizontalCenter: parent.horizontalCenter
-              // Compensate for the trailing gap included by each slot.
+              // Center the dots despite each slot's trailing gap.
               anchors.horizontalCenterOffset: root.dotGap / 2
               spacing: 0
 

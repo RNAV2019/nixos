@@ -4,12 +4,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Quickshell has no brightness service. Watch sysfs for immediate OSD updates
-// without polling; use brightnessctl so writes use the existing permissions.
+// Watch sysfs for brightness events and write through brightnessctl.
 Singleton {
   id: root
 
-  // 0..1
   property real value: 0
   property bool available: false
 

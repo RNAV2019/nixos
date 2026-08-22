@@ -54,28 +54,22 @@
       };
     };
 
-    # Languages
     languages = {
       language-server = {
-        # Rust
         rust-analyzer.config.check.command = "clippy";
 
-        # Nix
         nixd.command = "nixd";
 
-        # Typescript
         typescript-language-server = {
           command = "typescript-language-server";
           args = ["--stdio"];
         };
 
-        # TailwindCSS
         tailwindcss-ls = {
           command = "tailwindcss-language-server";
           args = ["--stdio"];
         };
 
-        # Python
         pyright = {
           command = "basedpyright-langserver";
           args = ["--stdio"];
@@ -84,14 +78,12 @@
           };
         };
 
-        # Haskell
         haskell-language-server = {
           command = "haskell-language-server-wrapper";
           args = ["--lsp"];
           config = {};
         };
 
-        # Typst
         tinymist = {
           command = "tinymist";
           config.preview.background = {
@@ -103,7 +95,6 @@
           };
         };
 
-        # LaTeX
         texlab = {
           config.texlab = {
             chktex = {

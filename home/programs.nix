@@ -1,6 +1,5 @@
 { config, pkgs, ... }:
 {
-  # Tealdeer (tldr) — auto-update cache so pages are always available
   programs.tealdeer = {
     enable = true;
     settings = {
@@ -11,7 +10,6 @@
     };
   };
 
-  # Yazi
   programs.yazi = {
     enable = true;
     enableFishIntegration = true;
@@ -52,7 +50,6 @@
     };
   };
 
-  # Zathura
   programs.zathura = {
     enable = true;
     options = {
@@ -90,7 +87,6 @@
     };
   };
 
-  # Lazygit
   programs.lazygit = {
     enable = true;
     settings = {
@@ -108,7 +104,6 @@
     };
   };
 
-  # Btop
   programs.btop = {
     enable = true;
     settings = {

@@ -4,13 +4,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Fn+Space is handled by firmware and emits no input event or watchable kernel
-// notification. Poll sysfs for firmware changes and watch it for userspace
-// writes. LED writes require a udev rule, so this service is read-only.
+// Firmware emits no Fn+Space event, so poll sysfs. LED writes need a udev rule.
 Singleton {
   id: root
 
-  // 0..1
   readonly property real value: _max > 0 ? level / _max : 0
   property int level: 0
   property bool available: false

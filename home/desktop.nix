@@ -4,7 +4,6 @@
   hyprland,
   ...
 }: {
-  # Hyprland config
   wayland.windowManager.hyprland = {
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
@@ -13,18 +12,15 @@
     systemd.enable = false;
 
     settings = {
-      # Monitor configuration
       monitor = [
         "eDP-1,2880x1800@60,0x0,1.6"
       ];
 
-      # Keep keybinds and desktop helpers unavailable until the compositor has
-      # confirmed that Quickshell securely covers every output.
+      # Block bindings and helpers until Quickshell secures every output.
       exec-once = [
         "hyprctl dispatch submap lockdown && start-desktop"
       ];
 
-      # Environment variables
       env = [
         "XCURSOR_SIZE,24"
         "XCURSOR_THEME,Bibata-Modern-Classic"
@@ -34,7 +30,6 @@
         "LD_LIBRARY_PATH,${pkgs.lib.makeLibraryPath [pkgs.wayland pkgs.libxkbcommon pkgs.vulkan-loader]}"
       ];
 
-      # Input
       input = {
         kb_layout = "gb";
         follow_mouse = 1;
@@ -47,7 +42,6 @@
         sensitivity = 0;
       };
 
-      # General appearance
       general = {
         gaps_in = 5;
         gaps_out = 10;
@@ -61,7 +55,6 @@
         layout = "dwindle";
       };
 
-      # Decoration
       decoration = {
         rounding = 6;
         blur = {
@@ -73,7 +66,7 @@
         shadow.enabled = false;
       };
 
-      # Animations (Omarchy)
+      # Omarchy preset.
       animations = {
         enabled = true;
         bezier = [
@@ -103,13 +96,11 @@
         ];
       };
 
-      # Layouts
       dwindle = {
         preserve_split = true;
         force_split = 2;
       };
 
-      # Misc
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
@@ -118,35 +109,29 @@
         background_color = "rgba(191724ff)";
       };
 
-      # Keybinds
       "$mod" = "SUPER";
 
       bind = [
-        # Apps
         "$mod, RETURN, exec, ghostty"
         "$mod SHIFT, B, exec, helium"
         "$mod SHIFT, F, exec, nautilus"
         "$mod, P, exec, project-picker --toggle"
 
-        # Window Management
         "$mod, W, killactive"
         "$mod, T, toggleFloating"
         "$mod, J, layoutmsg, togglesplit"
         "$mod, F, fullscreen, 0"
 
-        # Focus
         "$mod, LEFT, movefocus, l"
         "$mod, RIGHT, movefocus, r"
         "$mod, UP, movefocus, u"
         "$mod, DOWN, movefocus, d"
 
-        # Move windows
         "$mod SHIFT, LEFT, swapwindow, l"
         "$mod SHIFT, RIGHT, swapwindow, r"
         "$mod SHIFT, UP, swapwindow, u"
         "$mod SHIFT, DOWN, swapwindow, d"
 
-        # Workspaces
         "$mod, 1, workspace, 1"
         "$mod, 2, workspace, 2"
         "$mod, 3, workspace, 3"
@@ -167,19 +152,17 @@
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
 
-        # Screenshots (matching omarchy keybinds)
+        # Match Omarchy screenshot bindings.
         ", Print, exec, grimblast --notify copysave area"
         "ALT, Print, exec, grimblast --notify copysave output"
         "$mod, Print, exec, pkill hyprpicker || hyprpicker -a"
         "$mod CTRL, Print, exec, grimblast --notify copysave screen"
 
-        # Lock screen
         "$mod, L, exec, lock-session"
 
-        # Session menu
         "$mod, ESCAPE, exec, qs ipc call session toggle"
 
-        # Control panels, mirroring the bar icons
+        # Match bar panel shortcuts.
         "$mod CTRL, A, exec, qs ipc call panels toggle audio"
         "$mod CTRL, W, exec, qs ipc call panels toggle network"
         "$mod CTRL, B, exec, qs ipc call panels toggle bluetooth"
@@ -187,32 +170,22 @@
         "$mod CTRL, S, exec, qs ipc call panels toggle system"
         "$mod CTRL, C, exec, qs ipc call panels toggle clock"
 
-        # Clipboard history
-        # "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
-
-        # Launcher (toggle)
         "$mod, SPACE, exec, mycelium --toggle"
 
-        # Wallpaper picker
         "CTRL SUPER, SPACE, exec, cherry --toggle"
 
-        # Media keys
         ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
         ", XF86AudioPlay, exec, playerctl play-pause"
         ", XF86AudioNext, exec, playerctl next"
         ", XF86AudioPrev, exec, playerctl previous"
       ];
 
-      # Mouse bindings
       bindm = [
         "$mod, mouse:272, movewindow"
         "$mod, mouse:273, resizewindow"
       ];
 
-      # Media keys (repeatable)
-      # Volume and brightness are changed directly rather than through an OSD
-      # client; Quickshell watches Pipewire and the backlight and draws the OSD
-      # itself when either moves.
+      # Quickshell watches these controls and renders the OSD.
       bindel = [
         ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"
         ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
@@ -220,7 +193,6 @@
         ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
       ];
 
-      # Window rules
       windowrule = [
         "match:class uk.co.ryannavsaria.project-picker, float on"
         "match:class uk.co.ryannavsaria.project-picker, center on"
@@ -243,16 +215,13 @@
         "match:class mpv, center on"
       ];
 
-      # The bar panels are xdg popups parented to the bar surface rather than
-      # layer surfaces of their own, so they need no rule here (and are opaque
-      # anyway). Only the full-screen session menu is translucent.
+      # Bar panels are opaque xdg popups; only the session layer needs blur.
       layerrule = [
         "blur on, match:namespace quickshell-session"
       ];
     };
 
-    # Hyprland only registers a submap that contains a bind. The catchall both
-    # registers this startup submap and suppresses normal keybinds.
+    # The catchall registers lockdown and blocks normal startup bindings.
     extraConfig = ''
       submap = lockdown
       bind = , catchall, exec, true
@@ -260,7 +229,6 @@
     '';
   };
 
-  # Fuzzel
   programs.fuzzel = {
     enable = true;
     settings = {
@@ -290,13 +258,11 @@
     };
   };
 
-  # Hypridle
   services.hypridle = {
     enable = true;
     settings = {
       general = {
-        # Raised by `loginctl lock-session`, which is what before_sleep_cmd
-        # below asks for.
+        # before_sleep_cmd raises the event that runs lock_cmd.
         lock_cmd = "lock-session";
         before_sleep_cmd = "loginctl lock-session";
         after_sleep_cmd = "hyprctl dispatch dpms on";
@@ -304,8 +270,7 @@
     };
   };
 
-  # The config is symlinked out of the store rather than copied into it so QML
-  # edits hot-reload without a rebuild.
+  # Out-of-store symlink enables QML hot reload without rebuilding.
   programs.quickshell.enable = true;
 
   xdg.configFile."quickshell".source =

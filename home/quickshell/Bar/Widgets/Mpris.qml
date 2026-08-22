@@ -38,8 +38,7 @@ Item {
     return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r;
   }
 
-  // Fit fields in priority order within 40 content characters; separators do
-  // not count toward the budget.
+  // Fit fields by priority into 40 characters, excluding separators.
   readonly property string dynamic: {
     if (!player)
       return "";
@@ -64,7 +63,6 @@ Item {
       used += value.length;
     }
 
-    // A title too long to fit on its own is truncated rather than dropped.
     var s = keep["title"] ? title : title.substring(0, budget - 1) + "…";
     if (keep["artist"])
       s += " - " + artist;
@@ -78,8 +76,7 @@ Item {
     return s;
   }
 
-  // Quickshell refreshes MPRIS position only when positionChanged() is called.
-  // Refresh paused players too because their position remains visible.
+  // positionChanged() refreshes visible positions, including paused players.
   Timer {
     running: root.active
     repeat: true

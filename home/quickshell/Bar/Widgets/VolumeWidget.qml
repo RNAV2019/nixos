@@ -15,7 +15,7 @@ IconWidget {
     objects: root.sink ? [root.sink] : []
   }
 
-  // Pipewire omits device.form-factor here, so infer headphones from metadata.
+  // PipeWire omits device.form-factor; infer headphones from metadata.
   readonly property bool isHeadphone: {
     if (!sink)
       return false;
@@ -39,7 +39,6 @@ IconWidget {
 
   readonly property string tooltip: muted ? "Muted" : "Playing at " + percent + "%"
 
-  // Adjust by five percentage points per wheel step.
   onScrolled: function (delta) {
     if (!sinkAudio)
       return;

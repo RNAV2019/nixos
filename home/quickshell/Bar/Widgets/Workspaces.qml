@@ -6,7 +6,6 @@ import qs.Commons
 Rectangle {
   id: root
 
-  // Always show workspaces 1-5 on every output.
   readonly property int persistent: 5
 
   readonly property var ids: {

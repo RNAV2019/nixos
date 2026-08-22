@@ -25,7 +25,6 @@ Scope {
     onNotification: function (notification) {
       notification.tracked = true;
 
-      // Keep only the newest notification from each application on screen.
       var next = shown.slice();
       for (var i = 0; i < next.length; i++) {
         if (next[i].appName === notification.appName) {
@@ -96,7 +95,7 @@ Scope {
           border.width: 1
           border.color: Theme.overlay
 
-          // A timeout of 0 means the notification does not expire.
+          // Per spec, 0 never expires and negatives use the default.
           Timer {
             running: card.modelData.expireTimeout !== 0
             interval: card.modelData.expireTimeout > 0 ? card.modelData.expireTimeout : root.defaultTimeout
@@ -113,8 +112,7 @@ Scope {
             anchors.verticalCenter: parent.verticalCenter
             width: 32
             height: 32
-            // Also hide when the named icon fails to resolve, so a broken lookup
-            // does not leave an empty 32px gutter next to the text.
+            // Hide unresolved icons to avoid an empty 32 px gutter.
             visible: source !== "" && backer.status !== Image.Error && backer.status !== Image.Null
             source: card.modelData.image !== "" ? card.modelData.image : (card.modelData.appIcon !== "" ? card.modelData.appIcon : "")
           }

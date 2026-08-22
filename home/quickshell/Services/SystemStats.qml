@@ -4,8 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Read /proc and /sys directly. Subscribers use the fast polling interval;
-// otherwise polling drops to the idle interval.
+// Poll rapidly only while subscribed to reduce idle work.
 Singleton {
   id: root
 
@@ -21,18 +20,17 @@ Singleton {
     subscribers = Math.max(0, subscribers - 1);
   }
 
-  // Aggregate usage, 0..1.
+  // CPU values are normalized; cores follow /proc/stat order.
   property real cpuUsage: 0
-  // Per-core usage, 0..1, in /proc/stat order.
   property var coreUsage: []
 
   property var _prevTotals: []
   property var _prevIdles: []
 
-  property real memoryUsage: 0      // 0..1
+  property real memoryUsage: 0
   property real memoryUsedKb: 0
   property real memoryTotalKb: 0
-  property real swapUsage: 0        // 0..1
+  property real swapUsage: 0
   property real swapUsedKb: 0
   property real swapTotalKb: 0
 
@@ -132,7 +130,7 @@ Singleton {
       var total = 0;
       for (var j = 1; j < f.length; j++)
         total += parseInt(f[j]) || 0;
-      // fields: user nice system idle iowait ...
+      // f[4] and f[5] are idle and iowait in /proc/stat.
       var idle = (parseInt(f[4]) || 0) + (parseInt(f[5]) || 0);
       totals.push(total);
       idles.push(idle);

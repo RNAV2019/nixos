@@ -4,7 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Keep `ps` polling idle until a subscriber activates the service.
+// Skip process sampling without active subscribers.
 Singleton {
   id: root
 

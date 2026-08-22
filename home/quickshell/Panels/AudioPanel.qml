@@ -11,7 +11,6 @@ PanelContent {
   readonly property var sink: Pipewire.defaultAudioSink
   readonly property var source: Pipewire.defaultAudioSource
 
-  // Exclude stream nodes from the device selectors.
   readonly property var sinks: {
     var out = [];
     for (var i = 0; i < Pipewire.nodes.values.length; i++) {
@@ -32,7 +31,7 @@ PanelContent {
     return out;
   }
 
-  // PipeWire properties stay unbound unless their nodes are tracked.
+  // PipeWire properties update only for tracked nodes.
   PwObjectTracker {
     objects: root.sinks.concat(root.sources)
   }

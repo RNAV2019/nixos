@@ -5,8 +5,7 @@
 }: let
   gen-commit = import ./gen-commit.nix {inherit pkgs;};
 
-  # Starts Quickshell if needed and returns only after the compositor confirms
-  # that every output is covered by the session lock.
+  # Start Quickshell if needed and wait until every output is locked.
   lock-session = pkgs.writeShellApplication {
     name = "lock-session";
     runtimeInputs = [pkgs.quickshell pkgs.coreutils];
@@ -176,13 +175,9 @@
     '';
   };
 
-  # T3 Code nightly. Upstream only ships an AppImage for Linux nightlies, so we
-  # wrap that rather than building from source like nixpkgs' stable t3code does.
-  #
-  # To bump, find the newest nightly tag:
-  #   gh api repos/pingdotgg/t3code/releases -q '.[0].tag_name'
-  # then update `version` below and re-fetch the hash:
-  #   nix store prefetch-file "https://github.com/pingdotgg/t3code/releases/download/v<version>/T3-Code-<version>-x86_64.AppImage"
+  # T3 Code nightlies are AppImage-only.
+  # Update `version` from `gh api repos/pingdotgg/t3code/releases -q '.[0].tag_name'`, then run:
+  # nix store prefetch-file "https://github.com/pingdotgg/t3code/releases/download/v<version>/T3-Code-<version>-x86_64.AppImage"
   t3code-nightly = let
     pname = "t3code-nightly";
     version = "0.0.34-nightly.20260820.1146";
@@ -195,9 +190,7 @@
     pkgs.appimageTools.wrapType2 {
       inherit pname version src;
 
-      # --no-sandbox is required: chrome-sandbox needs setuid root, which it
-      # cannot have inside the FHS env. Wayland needs no flags here because
-      # NIXOS_OZONE_WL=1 is already set in home/default.nix.
+      # The FHS environment cannot provide a setuid chrome-sandbox.
       extraInstallCommands = ''
         install -Dm644 ${appimageContents}/t3code.desktop \
           $out/share/applications/${pname}.desktop

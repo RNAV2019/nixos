@@ -4,7 +4,6 @@
   llm-agents,
   ...
 }: {
-  # GTK dark mode
   gtk = {
     enable = true;
     theme = {
@@ -22,10 +21,10 @@
     };
     gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
     gtk4.extraConfig.gtk-application-prefer-dark-theme = 1;
-    gtk4.theme = null; # use libadwaita color-scheme instead of forcing GTK4 theme
+    gtk4.theme = null; # Let libadwaita control GTK 4.
   };
 
-  # System-wide cursor (GTK + Wayland + X11)
+  # Cursor across GTK, Wayland, and X11.
   home.pointerCursor = {
     gtk.enable = true;
     name = "Bibata-Modern-Classic";
@@ -33,14 +32,13 @@
     size = 24;
   };
 
-  # Qt theming via Kvantum (Rose Pine, Qt5 + Qt6)
+  # Rose Pine via Kvantum for Qt 5/6.
   qt = {
     enable = true;
     platformTheme.name = "qtct";
     style.name = "kvantum";
   };
 
-  # Rose Pine "love" Kvantum theme for Qt apps
   xdg.configFile = {
     "Kvantum/kvantum.kvconfig".text = ''
       [General]
@@ -49,7 +47,7 @@
     "Kvantum/rose-pine-love".source = "${pkgs.rose-pine-kvantum}/share/Kvantum/themes/rose-pine-love";
   };
 
-  # GNOME color scheme for libadwaita/GTK4 apps
+  # libadwaita/GTK 4 color scheme.
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
@@ -60,78 +58,61 @@
     };
   };
 
-  # Keep XDG user dirs session variables behaviour
   xdg.userDirs.setSessionVariables = true;
 
   home.packages = with pkgs; [
-    # Browsers
     helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
     firefox
 
-    # LLM agents
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.opencode
 
-    # System utilities
     tree
     upower
     speedtest-cli
 
-    # Terminal
     ghostty
     kitty
 
-    # File manager
     nautilus
 
-    # File sharing
     localsend
 
-    # Wallpaper
     awww
 
-    # Ambient Sounds
     blanket
 
-    # Controls
     brightnessctl
     playerctl
     pavucontrol
     mpv
 
-    # Wayland runtime libs (needed by locally-built Rust apps using dlopen, e.g. mycelium)
+    # dlopen dependencies for locally built Wayland apps.
     wayland
     libxkbcommon
 
-    # Clipboard
     wl-clipboard
     cliphist
 
-    # XDG portal GTK backend (prefer-dark for libadwaita apps)
+    # GTK portal for libadwaita dark mode.
     xdg-desktop-portal-gtk
 
-    # Networking
     networkmanagerapplet
 
-    # Screenshot tools
     grimblast
     hyprpicker
 
-    # Terminal Utils
-    # bat is configured via programs.bat in shell.nix (Rose Pine theme)
     fd
     ripgrep
     eza
     tokei # Line counter
     silicon # Code screenshot generator
     glow # Render markdown in terminal
-    just # Command runner (better than make)
+    just # Command runner
     hyperfine
 
-    # Fetcher
     nitch
 
-    # Development Utils
     cloudflared
     rustup
     nodejs_24
@@ -169,7 +150,7 @@
     }))
     nixd # Nix language server
     alejandra # Nix formatter
-    gnumake # Make
+    gnumake
     espeak-ng
   ];
 }

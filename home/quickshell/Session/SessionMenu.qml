@@ -136,7 +136,6 @@ Scope {
             required property var modelData
             required property int index
 
-            // Keep pointer and keyboard selection synchronized.
             readonly property bool active: root.current === entry.index
 
             width: 240

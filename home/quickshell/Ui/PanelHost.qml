@@ -3,12 +3,10 @@ import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
 
-// Hosts multiple panel contents in one popup so card geometry can animate
-// between them.
+// Reusing one popup lets geometry animate between panels.
 PopupWindow {
   id: root
 
-  // Anchor and coordinate space for card positioning.
   required property Item barItem
   property string activePanel: ""
 
@@ -132,8 +130,7 @@ PopupWindow {
 
     opacity: root.open ? 1 : 0
 
-    // Animate geometry only while visible to avoid opening from the last card's
-    // position.
+    // Avoid opening from the last card's geometry.
     readonly property bool morphing: opacity > 0.01
 
     Behavior on x {

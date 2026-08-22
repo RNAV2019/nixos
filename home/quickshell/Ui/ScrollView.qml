@@ -48,8 +48,7 @@ Item {
 
       width: view.width
       implicitHeight: childrenRect.height
-      // Fill non-scrolling views so nested lists can anchor below fixed content
-      // without a circular height dependency.
+      // Fill static views without creating a circular height dependency.
       height: root.scrollable ? implicitHeight : view.height
     }
   }

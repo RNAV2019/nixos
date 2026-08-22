@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Shared state and signals for shell components.
 Singleton {
   id: root
 

@@ -65,9 +65,7 @@ PanelContent {
     id: nmcli
   }
 
-  // Toggling NetworkManager scanning blocks briefly. Delay enable until the
-  // open animation finishes, and linger on disable to avoid UI stalls and
-  // scanner churn when the panel is reopened.
+  // Delay blocking scan toggles to avoid UI stalls and quick-reopen churn.
   onActiveChanged: {
     if (active) {
       scannerOff.stop();
@@ -96,9 +94,7 @@ PanelContent {
   preferredWidth: Theme.panelWidthWide
   scrollable: false
 
-  // Derive list space without depending on ScrollView height, which would
-  // create a binding loop. Hold the panel at full height while Wi-Fi is on
-  // because delayed scan results arrive after opening.
+  // Avoid a ScrollView binding loop and reserve room for delayed scan results.
   readonly property int headerHeight: header.implicitHeight
   readonly property int listHeight: list.implicitHeight
   readonly property int maxBodyHeight: availableHeight - Theme.panelPadding * 2

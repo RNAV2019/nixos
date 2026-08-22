@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Shared Rose Pine palette and shell metrics.
 Singleton {
   id: root
 
@@ -28,7 +27,6 @@ Singleton {
 
   readonly property color lockFail: "#cc2222"
 
-  // Shared alpha levels keep panel interaction states consistent.
   readonly property real fillNormal: 0.04
   readonly property real fillHover: 0.08
   readonly property real fillSelected: 0.18

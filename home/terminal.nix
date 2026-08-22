@@ -82,27 +82,21 @@
         command: send-prefix
   '';
 
-  # Ghostty terminal config stored at ~/.config/ghostty/config
   home.file.".config/ghostty/config".text = ''
-    # Rose Pine theme (Ghostty built-in)
     theme = Rose Pine
 
-    # Font
     font-family = JetBrainsMono Nerd Font
     font-style = Regular
     font-size = 9
 
-    # Window
     window-theme = ghostty
     window-padding-x = 14
     window-padding-y = 14
     confirm-close-surface = false
     gtk-toolbar-style = flat
 
-    # Opacity
     background-opacity = 0.75
 
-    # Cursor Styling
     cursor-style = "block"
     cursor-style-blink = false
 
@@ -115,10 +109,9 @@
     keybind = super+control+shift+alt+arrow_left=resize_split:left,100
     keybind = super+control+shift+alt+arrow_right=resize_split:right,100
 
-    # Slowdown mouse scrolling
     mouse-scroll-multiplier = 0.95
 
-    # Fix slowness on hyprland
+    # Work around Hyprland latency.
     async-backend = epoll
 
     resize-overlay = never
@@ -167,26 +160,21 @@
       # New window in current path
       bind c new-window -c "#{pane_current_path}"
 
-      # Pane navigation
       bind h select-pane -L
       bind j select-pane -D
       bind k select-pane -U
       bind l select-pane -R
 
-      # Pane resize
       bind -r H resize-pane -L 5
       bind -r J resize-pane -D 5
       bind -r K resize-pane -U 5
       bind -r L resize-pane -R 5
 
-      # Reload config
       bind r source-file ~/.config/tmux/tmux.conf \; display-message "tmux.conf reloaded"
 
-      # Window movement
       bind -r "<" swap-window -d -t -1
       bind -r ">" swap-window -d -t +1
 
-      # Session picker
       bind S choose-tree -Zs
 
       # Copy mode — helix-style

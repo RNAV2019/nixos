@@ -7,11 +7,10 @@
   start-hyprland = pkgs.writeShellApplication {
     name = "start-hyprland";
     text = ''
-      exec uwsm start hyprland-uwsm.desktop
+      exec uwsm start hyprland-uwsm.desktop >/dev/null 2>&1
     '';
   };
 in {
-  # Locale, timezone and keymaps
   time.timeZone = "Europe/London";
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
@@ -27,30 +26,25 @@ in {
   };
   console.keyMap = "uk";
 
-  # Nix settings
   nix.settings = {
     experimental-features = ["nix-command" "flakes"];
     auto-optimise-store = true;
   };
 
-  # Garbage collector for older generations
   nix.gc = {
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 30d";
   };
 
-  # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # Networking
   networking.networkmanager.enable = true;
 
   # LocalSend (discovery + transfer on port 53317)
   networking.firewall.allowedTCPPorts = [53317];
   networking.firewall.allowedUDPPorts = [53317];
 
-  # Bluetooth
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
@@ -58,10 +52,9 @@ in {
   };
   services.blueman.enable = true;
 
-  # Bluetooth HID devices (e.g. MX Master 2S) to produce input events.
+  # Required for Bluetooth HID input.
   services.libinput.enable = true;
 
-  # Sound
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -70,7 +63,6 @@ in {
   };
   services.pulseaudio.enable = false;
 
-  # Hyprland at system level
   programs.hyprland = {
     enable = true;
     withUWSM = true;
@@ -78,14 +70,12 @@ in {
     portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
-  # Override nixpkgs xdg-desktop-portal-hyprland with the flake version
   nixpkgs.overlays = [
     (final: prev: {
       xdg-desktop-portal-hyprland = hyprland.packages.${prev.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
     })
   ];
 
-  # UWSM (hyprland-uwsm.desktop is provided by programs.hyprland.withUWSM)
   programs.uwsm.enable = true;
 
   # Quickshell locks the autologin session before desktop helpers start.
@@ -97,10 +87,8 @@ in {
     };
   };
 
-  # Fish shell
   programs.fish.enable = true;
 
-  # Essential system packages
   environment.systemPackages = with pkgs; [
     git
     wget
@@ -109,10 +97,9 @@ in {
     start-hyprland
   ];
 
-  # Fingerprint reader
   services.fprintd.enable = true;
 
-  # PAM fingerprint auth for sudo, login, lock screen, and GUI privilege prompts
+  # Fingerprint auth for login and privileged prompts.
   security.pam.services.sudo.fprintAuth = true;
   security.pam.services.login.fprintAuth = true;
   security.pam.services.greetd.fprintAuth = true;
@@ -129,14 +116,12 @@ in {
     fprintAuth = true;
   };
 
-  # Power profiles daemon
   services.power-profiles-daemon.enable = true;
 
-  # UPower — battery/AC state via D-Bus. Required for `upower` CLI and
-  # the battery panel in the shell to query device state.
+  # D-Bus power state for the shell and upower CLI.
   services.upower.enable = true;
 
-  # Helium browser extensions via Chromium managed policy
+  # Force-install Helium extensions through Chromium policy.
   environment.etc."chromium/policies/managed/helium-extensions.json".text = builtins.toJSON {
     ExtensionInstallForcelist = [
       "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx"
@@ -144,7 +129,6 @@ in {
     ];
   };
 
-  # Fonts
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
@@ -153,7 +137,6 @@ in {
     inter
   ];
 
-  # XDG portal for file pickers, screen sharing etc
   xdg.portal = {
     enable = true;
     extraPortals = [pkgs.xdg-desktop-portal-gtk];
@@ -164,14 +147,12 @@ in {
     };
   };
 
-  # Polkit for privilege escalation in Wayland
+  # Wayland privilege prompts.
   security.polkit.enable = true;
 
-  # dconf — required for GTK/libadwaita apps (Nautilus) to read color-scheme
+  # GTK/libadwaita color-scheme support.
   programs.dconf.enable = true;
 
-  # gvfs — provides trash://, recent://, and mount support for Nautilus
+  # Nautilus trash, recent files, and mounts.
   services.gvfs.enable = true;
-
-  # Brightness/backlight control handled by brightnessctl in packages.nix
 }

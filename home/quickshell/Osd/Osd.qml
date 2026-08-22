@@ -12,12 +12,10 @@ Scope {
   readonly property int dwell: 1500
   readonly property int startupGrace: 1500
 
-  // "volume", "brightness" or "kbd"
   property string mode: ""
   property bool showing: false
 
-  // A grace period avoids startup flashes without swallowing the first real
-  // change when an initial value emits no signal.
+  // Suppress startup signals without discarding the first later change.
   property bool ready: false
 
   Timer {
@@ -56,7 +54,7 @@ Scope {
     target: Brightness
 
     function onValueChanged() {
-      // `available` suppresses the initial zero-to-real value change.
+      // available filters the initial zero-to-real transition.
       if (root.ready && Brightness.available)
         root.flash("brightness");
     }

@@ -4,7 +4,6 @@
   lib,
   ...
 }: {
-  # Limine bootloader — Rose Pine themed, manual selection (no auto-boot).
   boot.loader.limine = {
     enable = true;
     efiSupport = true;
@@ -12,9 +11,7 @@
     enableEditor = true;
 
     style = {
-      # Drop the module's default NixOS gray wallpaper — its dimensions don't
-      # match the panel and leave uncleared framebuffer slices at screen edges.
-      # Solid backdrop fills the whole screen cleanly.
+      # Avoid framebuffer edges left by the mismatched default wallpaper.
       wallpapers = lib.mkForce [];
       backdrop = "191724";
       interface = {
@@ -35,12 +32,9 @@
     };
   };
   boot.loader.efi.canTouchEfiVariables = true;
-  # Very large timeout effectively waits for manual selection (Limine has no "no timeout").
-  boot.loader.timeout = 1000000;
+  boot.loader.timeout = 3;
 
-  # Suppress kernel/udev log spam and TTY artefacts; hand off cleanly to Plymouth.
-  # consoleLogLevel 0 hides even kernel errors from the console (they remain in
-  # the journal); systemd.show_status=false covers stage-2, notably shutdown.
+  # Hide boot output during the Plymouth handoff; errors remain in the journal.
   boot.kernelParams = [
     "quiet"
     "splash"
@@ -54,43 +48,40 @@
   boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
 
-  # KVM for the Android TV emulator: the x86 system images Google publishes refuse
-  # to start without hardware acceleration. AMD host (Ryzen 7 PRO 6860Z).
+  # Android x86 emulation requires AMD KVM acceleration.
   boot.kernelModules = ["kvm-amd"];
-  # systemd in initrd is required for the shutdown/reboot Plymouth splash.
+  # Required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
-  # Keep the boot splash behind Hyprland's lock-screen handoff.
   boot.plymouth = {
     enable = true;
     theme = "bgrt";
   };
 
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # Release DRM without exposing the VT before Hyprland paints.
+  systemd.services.plymouth-quit.serviceConfig.ExecStart = lib.mkForce [
+    ""
+    "${config.boot.plymouth.package}/bin/plymouth quit --retain-splash"
+  ];
+
   networking.hostName = "nixos";
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.ryan = {
     isNormalUser = true;
     description = "ryan";
-    # "kvm" grants access to /dev/kvm without sudo (Android emulator).
+    # kvm grants passwordless /dev/kvm access for Android emulation.
     extraGroups = ["networkmanager" "wheel" "video" "audio" "kvm"];
     shell = pkgs.fish;
   };
 
   services.fwupd.enable = true;
 
-  # Allow brightnessctl to control backlight without sudo
+  # Allow brightnessctl to control the backlight without sudo.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
   '';
 
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.11"; # Did you read the comment?
+  # Keep at the initial release; changing it alters stateful-data defaults.
+  system.stateVersion = "25.11";
 }

@@ -197,7 +197,6 @@ PanelContent {
     }
   }
 
-  // Wheel events page between months.
   MouseArea {
     anchors.fill: parent
     acceptedButtons: Qt.NoButton

@@ -18,16 +18,14 @@
     ./backgrounds.nix
   ];
 
-  # Home Manager basics
   home.username = "ryan";
   home.homeDirectory = "/home/ryan";
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;
 
-  # XDG directories
   xdg.enable = true;
 
-  # Make Helium the default browser so http(s)/html links don't fall back to Firefox
+  # Prevent web links from falling back to Firefox.
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
@@ -37,7 +35,7 @@
       "x-scheme-handler/about" = "helium.desktop";
       "x-scheme-handler/unknown" = "helium.desktop";
       "application/xhtml+xml" = "helium.desktop";
-      # Preserve Claude Code's login/OAuth deep-link handler
+      # Preserve Claude Code's OAuth handler.
       "x-scheme-handler/claude-cli" = "claude-code-url-handler.desktop";
     };
   };
@@ -52,18 +50,16 @@
     videos = "${config.home.homeDirectory}/Videos";
   };
 
-  # Session variables
   home.sessionVariables = {
     EDITOR = "hx";
     VISUAL = "hx";
     BROWSER = "helium";
     TERMINAL = "ghostty";
 
-    # Wayland-specific
     NIXOS_OZONE_WL = "1";
     MOZ_ENABLE_WAYLAND = "1";
   };
 
-  # UWSM environment forwarding
+  # Forward Home Manager variables into UWSM.
   xdg.configFile."uwsm/env".source = "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
 }

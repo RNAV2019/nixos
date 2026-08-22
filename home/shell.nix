@@ -7,7 +7,6 @@
     enable = true;
 
     interactiveShellInit = ''
-      # Disable fish greeting
       set fish_greeting ""
     '';
 
@@ -33,7 +32,7 @@
       }
       {
         name = "fzf-fish";
-        src = pkgs.fishPlugins.fzf-fish.src; # FZF integration for fish
+        src = pkgs.fishPlugins.fzf-fish.src;
       }
       {
         name = "rose-pine";
@@ -47,7 +46,7 @@
     ];
   };
 
-  # Starship terminal prompt — configured to mimic spaceship-prompt
+  # Match spaceship-prompt.
   programs.starship = {
     enable = true;
     enableFishIntegration = true;
@@ -178,25 +177,22 @@
     };
   };
 
-  # Zoxide
   programs.zoxide = {
     enable = true;
     enableFishIntegration = true;
   };
 
-  # Atuin - shell history with search
   programs.atuin = {
     enable = true;
     enableFishIntegration = true;
     settings = {
-      auto_sync = false; # cloud sync
+      auto_sync = false;
       update_check = false;
       style = "compact";
       filter_mode_shell_up_key_binding = "session";
     };
   };
 
-  # FZF
   programs.fzf = {
     enable = true;
     enableFishIntegration = true;
@@ -209,7 +205,6 @@
     ];
   };
 
-  # Git
   programs.git = {
     enable = true;
     settings = {
@@ -226,8 +221,7 @@
     enableGitIntegration = true;
   };
 
-  # bat — Rose Pine themed syntax highlighting.
-  # Theme from https://github.com/drluckyspin/rose-pine-bat (vendored under ./themes).
+  # Theme vendored from github.com/drluckyspin/rose-pine-bat.
   programs.bat = {
     enable = true;
     config.theme = "Rose-Pine-Moon";

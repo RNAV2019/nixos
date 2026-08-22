@@ -17,10 +17,9 @@ Variants {
 
     required property var modelData
 
-    // Which panel this bar currently shows, "" for none. Only one at a time.
     property string openPanel: ""
 
-    // Panels raised over IPC land on whichever monitor has focus.
+    // IPC panel requests target the focused monitor.
     readonly property bool focused: Hyprland.focusedMonitor !== null && Hyprland.focusedMonitor.name === bar.screen.name
 
     function toggle(name) {
@@ -60,8 +59,7 @@ Variants {
       }
     }
 
-    // Everything the bar draws, in one item. The panel host anchors to this
-    // and positions its card in this item's coordinate space.
+    // PanelHost cards use this item's coordinate space.
     Item {
       id: barBody
 
@@ -110,7 +108,7 @@ Variants {
         Row {
           id: rightRow
           anchors.centerIn: parent
-          // Zero: each widget already carries barIconPadding on both sides.
+          // Widgets already own both side paddings.
           spacing: 0
 
           BluetoothWidget {
@@ -145,9 +143,7 @@ Variants {
         }
       }
 
-      // One host per side. Panels within a host morph into each other; the two
-      // sides are independent, so opening the clock while the network panel is
-      // up does not send a card sliding the width of the screen.
+      // Separate hosts keep panel morphs from crossing the screen.
       PanelHost {
         barItem: barBody
         activePanel: bar.openPanel
@@ -190,8 +186,7 @@ Variants {
         }
       }
 
-      // Suppressed while a panel is open: the panel already says everything the
-      // tooltip would, and the two would overlap.
+      // Open panels duplicate and overlap these tooltips.
       BarTooltip {
         anchorItem: bluetoothWidget
         text: bluetoothWidget.tooltip

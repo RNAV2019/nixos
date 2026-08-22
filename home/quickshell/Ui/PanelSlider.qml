@@ -63,7 +63,7 @@ Item {
         apply(mouse.x);
     }
 
-    // Scrolling over a slider should scroll the panel, not fight it.
+    // Let the panel's Flickable handle wheel events.
     onWheel: function (wheel) {
       wheel.accepted = false;
     }

@@ -54,7 +54,6 @@ in
               esac
             done
 
-            # ── git validation ─────────────────────────────────────────────────────────
             if ! git rev-parse --git-dir > /dev/null 2>&1; then
               gum style --foreground "$RP_LOVE" "  Not a git repository"
               exit 1
@@ -69,7 +68,6 @@ in
               exit 0
             fi
 
-            # ── diff collection ────────────────────────────────────────────────────────
             diff_source="staged"
             if [[ -z "$staged" ]]; then
               gum style --foreground "$RP_GOLD" "  No staged changes"
@@ -90,7 +88,7 @@ in
             status_summary=$(git status --short)
             file_count=$(printf '%s' "$status_summary" | awk 'END{print NR}')
 
-            # Truncate diffs that would blow the model context
+            # Keep diffs within the model context window.
             MAX_DIFF=12000
             truncation_note=""
             if [[ ''${#diff_content} -gt $MAX_DIFF ]]; then
@@ -103,7 +101,6 @@ in
               ")
             fi
 
-            # ── api key ────────────────────────────────────────────────────────────────
             api_key=""
             if [[ -n "''${OPENROUTER_API_KEY:-}" ]]; then
               api_key="$OPENROUTER_API_KEY"
@@ -127,14 +124,12 @@ in
               exit 1
             fi
 
-            # ── temp workspace ─────────────────────────────────────────────────────────
             tmpdir=$(mktemp -d /tmp/gen-commit-XXXXXX)
             body_file="$tmpdir/request.json"
             msg_file="$tmpdir/message.txt"
             log_file="$tmpdir/debug.log"
             printf 'gen-commit log: %s\n' "$tmpdir" >&2
 
-            # ── system prompt ──────────────────────────────────────────────────────────
             SYSTEM_PROMPT=$(cat <<SYSPROMPT
       You are an expert git commit message writer following the Conventional Commits specification.
       Return ONLY valid JSON with exactly these three keys:
@@ -167,7 +162,6 @@ in
             body_text=""
             reasoning=""
 
-            # ── main loop ──────────────────────────────────────────────────────────────
             while true; do
               printf '%s' "$messages" | jq \
                 --arg model "$MODEL" \
@@ -214,7 +208,6 @@ in
                 printf '%s\n' "reasoning:" "$reasoning"
               } >> "$log_file"
 
-              # Validate subject
               if [[ -z "$subject" || ''${#subject} -gt 72 ]]; then
                 if [[ $iteration -ge 1 ]]; then
                   gum style --foreground "$RP_LOVE" \
@@ -230,10 +223,8 @@ in
                 continue
               fi
 
-              # ── display panel ────────────────────────────────────────────────────────
               S_DISP=$(gum style --foreground "$RP_TEXT" --bold "$subject")
 
-              # Body: first sentence only
               body_short=""
               if [[ -n "$body_text" ]]; then
                 body_short="''${body_text%%.*}."
@@ -241,12 +232,10 @@ in
                 B_DISP=$(gum style --foreground "$RP_SUBTLE" "$body_short")
               fi
 
-              # Files: compact single line
               files_inline=$(printf '%s' "$status_summary" | head -3 | awk '{print $2}' | paste -sd ', ')
               [[ $file_count -gt 3 ]] && files_inline="$files_inline +$((file_count - 3)) more"
               F_DISP=$(gum style --foreground "$RP_PINE" "$file_count files  $files_inline")
 
-              # Reasoning: one short line
               reasoning_short="''${reasoning:0:72}"
               [[ ''${#reasoning} -gt 72 ]] && reasoning_short="''${reasoning_short}..."
               R_DISP=$(gum style --foreground "$RP_MUTED" --italic "$reasoning_short")
@@ -267,7 +256,6 @@ in
                 --width 76 \
                 "$PANEL"
 
-              # ── action menu ──────────────────────────────────────────────────────────
               action=$(gum choose \
                 --header=" What would you like to do?" \
                 --header.foreground="$RP_MUTED" \
@@ -325,7 +313,6 @@ in
               esac
             done
 
-            # ── commit ─────────────────────────────────────────────────────────────────
             if [[ -n "$body_text" ]]; then
               git commit -m "$subject" -m "$body_text"
             else
