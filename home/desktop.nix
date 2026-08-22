@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   hyprland,
   ...
@@ -8,32 +9,19 @@
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
 
-    # Prevent conflict with UWSM and systemd
+    # UWSM owns the user systemd session.
     systemd.enable = false;
 
     settings = {
       # Monitor configuration
       monitor = [
         "eDP-1,2880x1800@60,0x0,1.6"
-        "DP-2,2560x1440@60,auto,1"
       ];
 
-      workspace = [
-        "5,monitor:DP-2"
-      ];
-
-      # Autostart — hyprlock paints first so there's no flash of unlocked desktop.
+      # Keep keybinds and desktop helpers unavailable until the compositor has
+      # confirmed that Quickshell securely covers every output.
       exec-once = [
-        "hyprlock --grace 0 & sleep 0.2 && awww-daemon"
-        "awww img ~/.local/share/wallpaper/current"
-        "waybar"
-        "swayosd-server"
-        "nm-applet --indicator"
-        "cliphist wipe"
-        "wl-paste --type text --watch cliphist store"
-        "wl-paste --type image --watch cliphist store"
-        "mycelium"
-        "cherry"
+        "hyprctl dispatch submap lockdown && start-desktop"
       ];
 
       # Environment variables
@@ -126,7 +114,7 @@
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
         disable_splash_rendering = true;
-        # Rose Pine base — covers any frame before hyprlock/wallpaper paint
+        # Covers the handoff from Plymouth to the lock surface.
         background_color = "rgba(191724ff)";
       };
 
@@ -186,10 +174,18 @@
         "$mod CTRL, Print, exec, grimblast --notify copysave screen"
 
         # Lock screen
-        "$mod, L, exec, hyprlock"
+        "$mod, L, exec, lock-session"
 
-        # Logout menu
-        "$mod, ESCAPE, exec, pkill wlogout || wlogout --buttons-per-row 1 --column-spacing 0 --row-spacing 4 --margin-top 450 --margin-bottom 450 --margin-left 0 --margin-right 0"
+        # Session menu
+        "$mod, ESCAPE, exec, qs ipc call session toggle"
+
+        # Control panels, mirroring the bar icons
+        "$mod CTRL, A, exec, qs ipc call panels toggle audio"
+        "$mod CTRL, W, exec, qs ipc call panels toggle network"
+        "$mod CTRL, B, exec, qs ipc call panels toggle bluetooth"
+        "$mod CTRL, P, exec, qs ipc call panels toggle battery"
+        "$mod CTRL, S, exec, qs ipc call panels toggle system"
+        "$mod CTRL, C, exec, qs ipc call panels toggle clock"
 
         # Clipboard history
         # "$mod, C, cliphist list | fzf | cliphist decode | wl-copy"
@@ -201,7 +197,7 @@
         "CTRL SUPER, SPACE, exec, cherry --toggle"
 
         # Media keys
-        ", XF86AudioMute, exec, swayosd-client --output-volume mute-toggle"
+        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
         ", XF86AudioPlay, exec, playerctl play-pause"
         ", XF86AudioNext, exec, playerctl next"
         ", XF86AudioPrev, exec, playerctl previous"
@@ -214,11 +210,14 @@
       ];
 
       # Media keys (repeatable)
+      # Volume and brightness are changed directly rather than through an OSD
+      # client; Quickshell watches Pipewire and the backlight and draws the OSD
+      # itself when either moves.
       bindel = [
-        ", XF86AudioRaiseVolume, exec, swayosd-client --output-volume raise"
-        ", XF86AudioLowerVolume, exec, swayosd-client --output-volume lower"
-        ", XF86MonBrightnessUp, exec, swayosd-client --brightness raise"
-        ", XF86MonBrightnessDown, exec, swayosd-client --brightness lower"
+        ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"
+        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+"
+        ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
       ];
 
       # Window rules
@@ -240,30 +239,25 @@
 
         "match:class org.pwmt.zathura, no_initial_focus on"
 
-        "match:class uk.co.ryannavsaria.bluetui-popup, float on"
-        "match:class uk.co.ryannavsaria.bluetui-popup, center on"
-        "match:class uk.co.ryannavsaria.bluetui-popup, size 900 600"
-
-        "match:class uk.co.ryannavsaria.btop-popup, float on"
-        "match:class uk.co.ryannavsaria.btop-popup, center on"
-        "match:class uk.co.ryannavsaria.btop-popup, size 900 600"
-
-        "match:class uk.co.ryannavsaria.wlctl-popup, float on"
-        "match:class uk.co.ryannavsaria.wlctl-popup, center on"
-        "match:class uk.co.ryannavsaria.wlctl-popup, size 900 600"
-
-        "match:class uk.co.ryannavsaria.wiremix-popup, float on"
-        "match:class uk.co.ryannavsaria.wiremix-popup, center on"
-        "match:class uk.co.ryannavsaria.wiremix-popup, size 900 600"
-
         "match:class mpv, float on"
         "match:class mpv, center on"
       ];
 
+      # The bar panels are xdg popups parented to the bar surface rather than
+      # layer surfaces of their own, so they need no rule here (and are opaque
+      # anyway). Only the full-screen session menu is translucent.
       layerrule = [
-        "blur on, match:namespace wlogout"
+        "blur on, match:namespace quickshell-session"
       ];
     };
+
+    # Hyprland only registers a submap that contains a bind. The catchall both
+    # registers this startup submap and suppresses normal keybinds.
+    extraConfig = ''
+      submap = lockdown
+      bind = , catchall, exec, true
+      submap = reset
+    '';
   };
 
   # Fuzzel
@@ -296,514 +290,24 @@
     };
   };
 
-  # Waybar
-  programs.waybar = {
-    enable = true;
-    settings = {
-      mainBar = {
-        reload_style_on_change = true;
-        layer = "top";
-        position = "top";
-        spacing = 0;
-        height = 26;
-        margin-top = 6;
-
-        modules-left = ["custom/nix" "clock" "mpris"];
-        modules-center = ["hyprland/workspaces"];
-        modules-right = ["group/tray-expander" "bluetooth" "network" "pulseaudio" "cpu" "battery"];
-
-        "hyprland/workspaces" = {
-          on-click = "activate";
-          format = "{icon}";
-          format-icons = {
-            default = "";
-            active = "";
-            urgent = "";
-          };
-          persistent-workspaces = {
-            "*" = [1 2 3 4 5];
-          };
-          all-outputs = true;
-          sort-by-number = true;
-        };
-
-        mpris = {
-          format = "󰎇 {dynamic}";
-          format-paused = "󰏤 {dynamic}";
-          format-stopped = "";
-          ignored-players = [
-            "blanket"
-            "Blanket"
-            "com.rafaelmardojai.Blanket"
-          ];
-          dynamic-len = 40;
-          dynamic-importance-order = ["title" "artist" "position" "length"];
-        };
-
-        "custom/nix" = {
-          format = "❄";
-          tooltip = false;
-          on-click = "pkill wlogout || wlogout --buttons-per-row 1 --column-spacing 0 --row-spacing 4 --margin-top 450 --margin-bottom 450 --margin-left 0 --margin-right 0";
-        };
-
-        cpu = {
-          interval = 5;
-          format = "󰍛";
-          on-click = "ghostty --class=uk.co.ryannavsaria.btop-popup -e btop";
-        };
-
-        clock = {
-          format = "󰃭 {:L%d %B %Y   %H:%M}";
-          tooltip-format = "<tt><small>{calendar}</small></tt>";
-          calendar = {
-            mode = "month";
-            on-scroll = 1;
-            on-click-right = "mode";
-            format = {
-              months = "<span color='#f6c177'><b>{}</b></span>";
-              days = "<span color='#e0def4'><b>{}</b></span>";
-              weeks = "<span color='#9ccfd8'><b>W{}</b></span>";
-              weekdays = "<span color='#908caa'><b>{}</b></span>";
-              today = "<span color='#eb6f92'><b><u>{}</u></b></span>";
-            };
-          };
-        };
-
-        network = {
-          format-icons = ["󰤯" "󰤟" "󰤢" "󰤥" "󰤨"];
-          format = "{icon}  {essid}";
-          format-wifi = "{icon}  {essid}";
-          format-ethernet = "󰀂";
-          format-disconnected = "󰤮";
-          tooltip-format-wifi = "{essid} ({frequency} GHz)";
-          tooltip-format-ethernet = "Connected";
-          tooltip-format-disconnected = "Disconnected";
-          interval = 3;
-          spacing = 1;
-          on-click = "ghostty --class=uk.co.ryannavsaria.wlctl-popup -e wlctl";
-        };
-
-        battery = {
-          format = "{capacity}% {icon}";
-          format-discharging = "{capacity}% {icon}";
-          format-charging = "{icon}";
-          format-plugged = "";
-          format-fill = "󰂅";
-          format-icons = {
-            charging = [
-              "󰢜"
-              "󰂆"
-              "󰂇"
-              "󰂈"
-              "󰢝"
-              "󰂉"
-              "󰢞"
-              "󰂊"
-              "󰂋"
-              "󰂅"
-            ];
-            default = [
-              "󰁺"
-              "󰁻"
-              "󰁼"
-              "󰁽"
-              "󰁾"
-              "󰁿"
-              "󰂀"
-              "󰂁"
-              "󰂂"
-              "󰁹"
-            ];
-          };
-          tooltip-format-discharging = "{power:>1.0f}W↓ {capacity}%";
-          tooltip-format-charging = "{power:>1.0f}W↑ {capacity}%";
-          interval = 5;
-          states = {
-            warning = 20;
-            critical = 10;
-          };
-        };
-
-        bluetooth = {
-          format = "";
-          format-disabled = "󰂲";
-          format-off = "󰂲";
-          format-connected = "󰂱";
-          format-no-controller = "";
-          tooltip-format = "Devices connected: {num_connections}";
-          on-click = "ghostty --class=uk.co.ryannavsaria.bluetui-popup -e bluetui";
-        };
-
-        pulseaudio = {
-          format = "{icon}";
-          on-click = "ghostty --class=uk.co.ryannavsaria.wiremix-popup -e wiremix";
-          tooltip-format = "Playing at {volume}%";
-          scroll-step = 5;
-          format-muted = "";
-          format-icons = {
-            headphone = "";
-            default = ["" " " " "];
-          };
-        };
-
-        "group/tray-expander" = {
-          orientation = "inherit";
-          drawer = {
-            transition-duration = 600;
-            children-class = "tray-group-item";
-          };
-          modules = [
-            "custom/expand-icon"
-            "tray"
-          ];
-        };
-
-        "custom/expand-icon" = {
-          format = "";
-          tooltip = false;
-        };
-
-        tray = {
-          icon-size = 12;
-          spacing = 17;
-        };
-      };
-    };
-
-    style = ''
-      * {
-        background: transparent;
-        border: none;
-        border-radius: 0;
-        min-height: 0;
-        font-family: "JetBrainsMono Nerd Font";
-        font-size: 12px;
-        color: #e0def4;
-      }
-
-      .modules-left {
-        border-radius: 999px;
-        margin-left: 3px;
-      }
-
-      .modules-center {
-        border-radius: 999px;
-      }
-
-      .modules-right {
-        border-radius: 999px;
-        margin-right: 9px;
-        padding: 0 8px;
-        background: #191724;
-      }
-
-      #workspaces {
-        padding: 5px 4px;
-        border-radius: 18px;
-        background: #191724;
-      }
-
-      #workspaces button {
-        padding: 0 4px;
-        margin: 0 3px;
-        min-width: 12px;
-        border-radius: 16px;
-        background-color: #26233a;
-        color: #6e6a86;
-        transition: all 150ms ease-in-out;
-      }
-
-      #workspaces button.active {
-        background-color: #eb6f92;
-        color: #191724;
-        min-width: 28px;
-        border-radius: 999px;
-        transition: all 150ms ease-in-out;
-      }
-
-      #workspaces button:hover {
-        background-color: #403d52;
-        color: #e0def4;
-      }
-
-      #cpu,
-      #battery,
-      #pulseaudio,
-      #network,
-      #bluetooth {
-        margin: 0 6px;
-      }
-
-      #tray {
-        margin-right: 6px;
-      }
-
-      #custom-expand-icon {
-        margin-right: 6px;
-        margin-left: 4px;
-      }
-
-      tooltip {
-        border-radius: 8px;
-        padding: 10px 14px;
-        background: #191724;
-        border: 1px solid #26233a;
-        font-size: 13px;
-      }
-
-      #tray menu {
-        border-radius: 8px;
-        padding: 2px;
-        background: #191724;
-      }
-
-      #mpris:not(.stopped) {
-        margin-left: 8px;
-      }
-
-      .hidden {
-        opacity: 0;
-      }
-
-      #custom-nix {
-        padding: 5px 7px;
-        border-radius: 50%;
-        background: #191724;
-        color: #eb6f92;
-        font-size: 15px;
-        margin-left: 8px;
-        margin-right: 8px;
-        min-width: 15px;
-      }
-
-      #clock {
-        padding: 0 14px;
-        border-radius: 999px;
-        background: #191724;
-        color: #f6c177;
-      }
-
-      #mpris {
-        border-radius: 999px;
-        color: #9ccfd8;
-      }
-
-      #mpris.playing,
-      #mpris.paused {
-        padding: 0 12px;
-        background: #191724;
-        font-style: normal;
-      }
-    '';
-  };
-
-  # Hyprlock
-  programs.hyprlock = {
-    enable = true;
-    settings = {
-      general = {
-        ignore_empty_input = true;
-        disable_loading_bar = true;
-        hide_cursor = true;
-        no_fade_in = false;
-        no_fade_out = false;
-        grace = 0;
-      };
-
-      background = [
-        {
-          monitor = "";
-          color = "rgba(25,23,36,1.0)";
-          path = "~/.local/share/wallpaper/current";
-          blur_passes = 3;
-          contrast = 0.8916;
-          brightness = 0.8172;
-          vibrancy = 0.1696;
-          vibrancy_darkness = 0;
-        }
-      ];
-
-      animations = [
-        {
-          enabled = true;
-        }
-      ];
-
-      label = [
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo -e "$(date +"%A, %B, %d")"'';
-          color = "rgba(224,222,244,1.0)";
-          font_size = 25;
-          font_family = "Inter Bold";
-          position = "0, 250";
-          halign = "center";
-          valign = "center";
-        }
-        {
-          monitor = "";
-          text = ''cmd[update:1000] echo -e "<span>$(date +"%H:%M")</span>"'';
-          color = "rgba(224,222,244,1.0)";
-          font_size = 150;
-          font_family = "Inter Bold";
-          position = "0, 135";
-          halign = "center";
-          valign = "center";
-        }
-        {
-          monitor = "";
-          text = "cmd[update:1000] hyprlock-music";
-          color = "rgba(144,140,170,1.0)";
-          font_size = 18;
-          font_family = "Inter Bold";
-          position = "0, 50";
-          halign = "center";
-          valign = "bottom";
-        }
-      ];
-
-      input-field = [
-        {
-          monitor = "";
-          size = "400, 100";
-          position = "0, -80";
-          halign = "center";
-          valign = "center";
-
-          inner_color = "rgba(25,23,36,0.8)";
-          outer_color = "rgba(235,111,146,1.0)";
-          outline_thickness = 2;
-
-          font_family = "Inter Bold";
-          font_color = "rgba(224,222,244,1.0)";
-
-          placeholder_text = "<span>Enter Password  󰈷 </span>";
-          check_color = "rgba(196,167,231,1.0)";
-          fail_text = "<i>$FAIL ($ATTEMPTS)</i>";
-          dots_spacing = 0.3;
-          dots_size = 0.2;
-
-          shadow_passes = 0;
-          fade_on_empty = false;
-        }
-      ];
-
-      auth."fingerprint:enabled" = true;
-    };
-  };
-
-  # Mako - notification daemon
-  services.mako = {
-    enable = true;
-    settings = {
-      background-color = "#191724";
-      text-color = "#e0def4";
-      border-color = "#26233a";
-      padding = "20,16";
-      border-size = 1;
-      border-radius = 4;
-      anchor = "top-right";
-      default-timeout = 5000;
-      width = 420;
-      max-icon-size = 32;
-      max-visible = 3;
-      group-by = "app-name";
-      margin = "12,16,0,0";
-      outer-margin = "0";
-      font = "JetBrainsMono Nerd Font";
-      on-button-left = "invoke-default-action";
-    };
-  };
-
-  # SwayOSD — volume/brightness OSD theming
-  xdg.configFile."swayosd/style.css".text = ''
-    window {
-      background: rgba(25, 23, 36, 0.95);
-      border: 1px solid #403d52;
-      border-radius: 999px;
-      padding: 10px;
-    }
-
-    image,
-    label {
-      color: #e0def4;
-    }
-
-    progressbar {
-      border-radius: 999px;
-      background-color: #26233a;
-    }
-
-    progress {
-      background-color: #eb6f92;
-      border-radius: 999px;
-    }
-  '';
-
   # Hypridle
   services.hypridle = {
     enable = true;
     settings = {
       general = {
-        lock_cmd = "pidof hyprlock || hyprlock";
+        # Raised by `loginctl lock-session`, which is what before_sleep_cmd
+        # below asks for.
+        lock_cmd = "lock-session";
         before_sleep_cmd = "loginctl lock-session";
         after_sleep_cmd = "hyprctl dispatch dpms on";
       };
     };
   };
 
-  # Wlogout
-  programs.wlogout = {
-    enable = true;
+  # The config is symlinked out of the store rather than copied into it so QML
+  # edits hot-reload without a rebuild.
+  programs.quickshell.enable = true;
 
-    layout = [
-      {
-        label = "lock";
-        action = "hyprlock";
-        text = "󰌾  Lock";
-        keybind = "l";
-      }
-      {
-        label = "reboot";
-        action = "systemctl reboot";
-        text = "󰜉  Reboot";
-        keybind = "r";
-      }
-      {
-        label = "shutdown";
-        action = "systemctl poweroff";
-        text = "󰐥  Shutdown";
-        keybind = "s";
-      }
-    ];
-
-    style = ''
-      * {
-        background: transparent;
-        border: none;
-        box-shadow: none;
-        outline: none;
-      }
-
-      window {
-        background-color: rgba(25, 23, 36, 0.92);
-        font-family: "JetBrainsMono Nerd Font", monospace;
-      }
-
-      button {
-        color: #6e6a86;
-        font-size: 20px;
-        padding: 10px 24px;
-        transition: color 150ms ease-in-out;
-      }
-
-      button:hover {
-        color: #e0def4;
-      }
-
-      button:focus {
-        color: #eb6f92;
-      }
-    '';
-  };
+  xdg.configFile."quickshell".source =
+    config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/home/quickshell";
 }

@@ -15,8 +15,8 @@
 | OS | NixOS unstable, flakes |
 | Compositor | Hyprland (UWSM session) |
 | Display mgr | greetd, autologin |
-| Lock / idle | hyprlock + hypridle |
-| Bar / launcher / notifs | waybar · mycelium · mako |
+| Lock / idle | quickshell + hypridle |
+| Shell (bar, panels, notifs, OSD, lock) | quickshell · mycelium |
 | Wallpaper | awww |
 | Shell | fish + starship + atuin + zoxide + fzf |
 | Terminal | ghostty |
@@ -53,7 +53,7 @@
 ├── modules/system/                # greetd, hyprland, fonts, …
 └── home/
     ├── default.nix                # entry point, XDG, session vars
-    ├── desktop.nix                # hyprland, waybar, mako, hyprlock, hypridle
+    ├── desktop.nix                # hyprland, quickshell, hypridle, fuzzel
     ├── shell.nix                  # fish, starship, atuin, zoxide, fzf, git
     ├── terminal.nix               # ghostty
     ├── editors.nix                # helix
@@ -61,6 +61,7 @@
     ├── dev.nix                    # languages & toolchains
     ├── packages.nix               # flat user package list
     ├── custom-packages.nix
+    ├── quickshell/                # QML shell: bar, panels, notifs, OSD, lock
     ├── themes/                    # Rose Pine Moon colour files
     └── backgrounds.nix            # wallpaper install + default symlink
 ```

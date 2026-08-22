@@ -88,9 +88,7 @@ in {
   # UWSM (hyprland-uwsm.desktop is provided by programs.hyprland.withUWSM)
   programs.uwsm.enable = true;
 
-  # greetd — autologin straight into Hyprland; hyprlock handles the lock screen.
-  # No tuigreet UI on the path from Plymouth to lockscreen. Recovery: pick an
-  # older generation in the Limine menu, or Ctrl+Alt+F2 for a TTY.
+  # Quickshell locks the autologin session before desktop helpers start.
   services.greetd = {
     enable = true;
     settings.default_session = {
@@ -118,17 +116,24 @@ in {
   security.pam.services.sudo.fprintAuth = true;
   security.pam.services.login.fprintAuth = true;
   security.pam.services.greetd.fprintAuth = true;
-  # hyprlock talks to fprintd directly via its own `auth.fingerprint` block;
-  # enabling fprintAuth here too makes PAM also grab the reader and blocks
-  # password input until the fingerprint scan finishes.
-  security.pam.services.hyprlock.fprintAuth = false;
   security.pam.services.polkit-1.fprintAuth = true;
+
+  # Separate stacks keep pam_fprintd from blocking password entry.
+  security.pam.services.quickshell-password = {
+    unixAuth = true;
+    fprintAuth = false;
+    nodelay = true;
+  };
+  security.pam.services.quickshell-fingerprint = {
+    unixAuth = false;
+    fprintAuth = true;
+  };
 
   # Power profiles daemon
   services.power-profiles-daemon.enable = true;
 
   # UPower — battery/AC state via D-Bus. Required for `upower` CLI and
-  # battery indicators in waybar/etc. to query device state.
+  # the battery panel in the shell to query device state.
   services.upower.enable = true;
 
   # Helium browser extensions via Chromium managed policy

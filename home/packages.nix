@@ -72,21 +72,7 @@
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.opencode
 
-    # TUI system tools
-    (pkgs.rustPlatform.buildRustPackage {
-      pname = "wlctl";
-      version = "unstable";
-      src = pkgs.fetchFromGitHub {
-        owner = "aashish-thapa";
-        repo = "wlctl";
-        rev = "4bfb8c28655cc2a7e0e67bfe3d5d76e8d632b1b6";
-        hash = "sha256-94WfzaBBjzGIkgHlco8T3iQqsjyAWxG+dw0lAfsKsfQ=";
-      };
-      cargoHash = "sha256-JzYrQICduP1lgjfwGJlt6aUJfe5jG1wRVYbx5A8wtXg=";
-    })
-    bluetui
-    wiremix
-    wlogout
+    # System utilities
     tree
     upower
     speedtest-cli
@@ -127,12 +113,6 @@
     # Networking
     networkmanagerapplet
 
-    # Notification daemon
-    mako
-
-    # Volume/brightness on-Screen display
-    swayosd
-
     # Screenshot tools
     grimblast
     hyprpicker
@@ -156,6 +136,7 @@
     rustup
     nodejs_24
     bun
+    jq
     openssl
     jdk21
     ghc

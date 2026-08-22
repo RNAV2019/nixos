@@ -5,14 +5,39 @@
 }: let
   gen-commit = import ./gen-commit.nix {inherit pkgs;};
 
-  hyprlock-music = pkgs.writeShellApplication {
-    name = "hyprlock-music";
-    runtimeInputs = [pkgs.playerctl];
+  # Starts Quickshell if needed and returns only after the compositor confirms
+  # that every output is covered by the session lock.
+  lock-session = pkgs.writeShellApplication {
+    name = "lock-session";
+    runtimeInputs = [pkgs.quickshell pkgs.coreutils];
     text = ''
-      status=$(playerctl status 2>/dev/null || true)
-      if [ "$status" = "Playing" ] || [ "$status" = "Paused" ]; then
-        playerctl metadata --format "{{title}} - {{artist}}" 2>/dev/null || true
+      if ! qs ipc call lock lock >/dev/null 2>&1; then
+        quickshell --daemonize --no-duplicate >/dev/null 2>&1 || true
+
+        accepted=false
+        for _ in $(seq 1 100); do
+          sleep 0.1
+          if qs ipc call lock lock >/dev/null 2>&1; then
+            accepted=true
+            break
+          fi
+        done
+
+        if [[ "$accepted" != true ]]; then
+          echo "lock-session: quickshell did not accept a lock request" >&2
+          exit 1
+        fi
       fi
+
+      for _ in $(seq 1 100); do
+        if [[ "$(qs ipc call lock secure 2>/dev/null || true)" == true ]]; then
+          exit 0
+        fi
+        sleep 0.1
+      done
+
+      echo "lock-session: compositor did not secure the session" >&2
+      exit 1
     '';
   };
 
@@ -116,6 +141,41 @@
       '';
     };
 
+  # Desktop helpers are held until the lock has securely covered every output.
+  start-desktop = pkgs.writeShellApplication {
+    name = "start-desktop";
+    runtimeInputs = [
+      lock-session
+      pkgs.awww
+      pkgs.cliphist
+      pkgs.coreutils
+      pkgs.networkmanagerapplet
+      pkgs.wl-clipboard
+      cherry
+      mycelium
+    ];
+    text = ''
+      lock-session
+
+      awww-daemon &
+      for _ in $(seq 1 50); do
+        if awww query >/dev/null 2>&1; then
+          awww img "$HOME/.local/share/wallpaper/current"
+          break
+        fi
+        sleep 0.1
+      done
+
+      nm-applet --indicator &
+      cliphist wipe || true
+      wl-paste --type text --watch cliphist store &
+      wl-paste --type image --watch cliphist store &
+      mycelium &
+      cherry &
+      wait
+    '';
+  };
+
   # T3 Code nightly. Upstream only ships an AppImage for Linux nightlies, so we
   # wrap that rather than building from source like nixpkgs' stable t3code does.
   #
@@ -162,9 +222,10 @@ in {
   home.packages = [
     ani-cli
     cherry
-    hyprlock-music
+    lock-session
     project-picker
     mycelium
+    start-desktop
     gen-commit
     forward-dev
     t3code-nightly

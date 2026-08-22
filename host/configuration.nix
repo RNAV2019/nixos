@@ -60,7 +60,7 @@
   # systemd in initrd is required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
-  # Hyprland → hyprlock is one continuous colour with no firmware-logo flash.
+  # Keep the boot splash behind Hyprland's lock-screen handoff.
   boot.plymouth = {
     enable = true;
     theme = "bgrt";
