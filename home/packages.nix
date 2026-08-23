@@ -3,12 +3,43 @@
   helium-browser,
   llm-agents,
   ...
-}: {
+}: let
+  # Dropped from nixpkgs in 2026-08 along with its GTK2 murrine dependency.
+  # Only the GTK3/GTK4 assets are used here, so it is vendored without the
+  # GTK2 engines the old derivation pulled in.
+  rose-pine-gtk-theme = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
+    pname = "rose-pine-gtk-theme";
+    version = "2.2.0";
+
+    src = pkgs.fetchFromGitHub {
+      owner = "rose-pine";
+      repo = "gtk";
+      tag = "v${finalAttrs.version}";
+      hash = "sha256-vCWs+TOVURl18EdbJr5QAHfB+JX9lYJ3TPO6IklKeFE=";
+    };
+
+    dontBuild = true;
+
+    installPhase = ''
+      runHook preInstall
+
+      for n in rose-pine rose-pine-dawn rose-pine-moon; do
+        mkdir -p "$out/share/themes/$n/gtk-4.0"
+        cp -r "$src/gtk3/$n-gtk"/* "$out/share/themes/$n"
+        cp -r "$src/gtk4/$n.css" "$out/share/themes/$n/gtk-4.0/gtk.css"
+      done
+
+      runHook postInstall
+    '';
+
+    meta.description = "Rosé Pine theme for GTK";
+  });
+in {
   gtk = {
     enable = true;
     theme = {
       name = "rose-pine";
-      package = pkgs.rose-pine-gtk-theme;
+      package = rose-pine-gtk-theme;
     };
     iconTheme = {
       name = "rose-pine";
@@ -115,8 +146,23 @@
 
     cloudflared
     rustup
-    nodejs_24
-    bun
+    nodejs_latest
+    # Pinned newer than nixpkgs (1.32.0)
+    (aube.overrideAttrs (finalAttrs: _prev: {
+      version = "1.41.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "endevco";
+        repo = "aube";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-CtqKNNKj4QUz6nZU/PVL/b8nnmBh6Lahj+ngUl34iVg=";
+      };
+      # buildRustPackage bakes cargoHash into the vendor derivation before
+      # overrideAttrs runs, so the vendored deps have to be replaced directly.
+      cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+        inherit (finalAttrs) src;
+        hash = "sha256-Pj7TBxzaCJMP3AcDWMlG1iE+nlSzx0NjU6aFVV5kGrc=";
+      };
+    }))
     jq
     openssl
     jdk21
@@ -136,16 +182,16 @@
     tectonic
     typst
     tinymist
-    # Pinned newer than nixpkgs (1.37.2)
+    # Pinned newer than nixpkgs (1.43.2)
     (stripe-cli.overrideAttrs (finalAttrs: _prev: {
-      version = "1.43.7";
+      version = "1.50.4";
       src = pkgs.fetchFromGitHub {
         owner = "stripe";
         repo = "stripe-cli";
         tag = "v${finalAttrs.version}";
-        hash = "sha256-2rjjMbghE8S496gFGBY7XJOrmQXC7LflKHquBoqDQgY=";
+        hash = "sha256-PEhVz8vKhnaCAfFeDovp3pTV50UzPzDLygZtUUeaStA=";
       };
-      vendorHash = "sha256-RYbwc7QuYSwUX42AM1YSOx+JvsPf2aLScX+2XN0SeYQ=";
+      vendorHash = "sha256-ab3um1ewUzTUGUlIsm8ed8xtDKulmXiRN+HJK2wP2h8=";
       doCheck = false;
     }))
     nixd # Nix language server

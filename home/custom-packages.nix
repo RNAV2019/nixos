@@ -120,8 +120,8 @@
     src = pkgs.fetchFromGitHub {
       owner = "RNAV2019";
       repo = "cherry";
-      rev = "e28da24ff0c1732cf9fe7bcdefe3f25f68fed477";
-      hash = "sha256-ywUSrmo5GDdn0j5/9u0B8WCDQc010qHl2mXXv5JQh8I=";
+      rev = "c9242329ea16a2da857d5b231702d07cb041813d";
+      hash = "sha256-nMM04+ki4ckS57YKMexgHiNMy2g0PtIoU7N0poLnxo8=";
     };
   in
     pkgs.rustPlatform.buildRustPackage {
@@ -180,10 +180,10 @@
   # nix store prefetch-file "https://github.com/pingdotgg/t3code/releases/download/v<version>/T3-Code-<version>-x86_64.AppImage"
   t3code-nightly = let
     pname = "t3code-nightly";
-    version = "0.0.34-nightly.20260820.1146";
+    version = "0.0.34-nightly.20260822.1160";
     src = pkgs.fetchurl {
       url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-      hash = "sha256-kZcyVxYUCeBdUHO66JqNDi/YDfEjFQj9vyNslfLWwF0=";
+      hash = "sha256-+K9iXlXHKsUA5Fh3hD3wvL+Csm1rAmI/XwzcCORInFU=";
     };
     appimageContents = pkgs.appimageTools.extract {inherit pname version src;};
   in
@@ -203,12 +203,12 @@
     };
 
   ani-cli = pkgs.ani-cli.overrideAttrs {
-    version = "4.14";
+    version = "5.0";
     src = pkgs.fetchFromGitHub {
       owner = "pystardust";
       repo = "ani-cli";
-      tag = "v4.14";
-      hash = "sha256-OyCKDN89sBz59+3JncMDyNOq8UMqqjara+A0Owo3oko=";
+      tag = "v5.0";
+      hash = "sha256-rRQESi0Skoyf1jy/dRRK6ooKRPQhkak107kk5ulwZYI=";
     };
   };
 in {
