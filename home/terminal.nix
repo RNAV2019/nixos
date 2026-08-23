@@ -79,7 +79,7 @@
         run-shell -b "tmux-whichkey watch '#{client_name}' prefix 'C-a'"
       }
 
-      set -g @which-key-delay 500
+      set -g @which-key-delay 800
       set -g @which-key-max-height 14
       # Defaults that duplicate the bindings below or are never reached for,
       # plus the yank plugin's bindings, which carry no description.

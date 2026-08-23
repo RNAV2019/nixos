@@ -1,12 +1,46 @@
 {
   config,
   pkgs,
+  helix-steel,
   ...
-}: {
+}: let
+  # Cogs the Steel module resolver finds under $STEEL_HOME/cogs. Vendored here
+  # rather than installed with `forge`, so activation stays declarative.
+  notify-hx = pkgs.fetchFromGitHub {
+    owner = "chuwy";
+    repo = "notify.hx";
+    rev = "0a328073e6d3e5041346374ae747c275ab8ce746";
+    hash = "sha256-shKUVnJw2j0yYO+mTHsKie+d1VrJGWDTRul+PTpqlhs=";
+  };
+
+  glyph-hx = pkgs.fetchFromGitHub {
+    owner = "Ra77a3l3-jar";
+    repo = "glyph.hx";
+    rev = "1e63ccbc8f17511543412c955879ba672f3f8ec1"; # 0.2.0
+    hash = "sha256-TpYnGqROkKfoB9G+JTjADWvMtpRJbv4NVaTqiUfW1Eg=";
+  };
+in {
   xdg.configFile."helix/themes/rose_pine_transparent.toml".source = ./themes/rose_pine_transparent.toml;
+
+  # Steel looks for `helix.scm` first and writes an empty one if it is missing;
+  # keep it managed so nothing lands in the config dir at startup.
+  xdg.configFile."helix/helix.scm".text = "";
+  xdg.configFile."helix/init.scm".source = ./helix/init.scm;
+
+  # `(require "forest/forest.scm")` resolves relative to the requiring file, then
+  # against $STEEL_HOME/cogs. $STEEL_HOME defaults to $XDG_DATA_HOME/steel unless
+  # ~/.steel exists, so pin it rather than depend on which one wins.
+  home.sessionVariables.STEEL_HOME = "${config.xdg.dataHome}/steel";
+
+  xdg.dataFile = {
+    "steel/cogs/forest".source = ./helix/forest;
+    "steel/cogs/notify".source = notify-hx;
+    "steel/cogs/glyph".source = glyph-hx;
+  };
 
   programs.helix = {
     enable = true;
+    package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
     settings = {
       theme = "rose_pine_transparent";

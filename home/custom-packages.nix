@@ -226,7 +226,7 @@
   tmux-whichkey = let
     src = builtins.fetchGit {
       url = "file:///home/ryan/Projects/tmux-whichkey";
-      rev = "8d25544a3f7c6e6eb2701b0f2993aa5540b23048";
+      rev = "37175b2cf2f1ae6c7ee26995f8bc4bf54761a07a";
     };
   in
     pkgs.rustPlatform.buildRustPackage {

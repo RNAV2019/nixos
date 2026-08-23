@@ -19,6 +19,9 @@
 (define *forest-header-height* 1)
 (define *forest-side* 'left) ; left or right set with forest-configure!
 (define *forest-show-separator?* #t)
+(define *forest-separator-color* #f)
+;; matches the node name helix shows over its own which-key box
+(define *forest-help-title* "Space")
 (define *forest-bg-focused* #f)
 (define *forest-bg-unfocused* #f)
 
@@ -115,7 +118,10 @@
         'wider "+"
         'narrower "-"
         'menu " " ; space key
-        'quit "q"))
+        ;; the fg component owns every keypress while the tree holds focus, so the
+        ;; global space+e toggle cannot reach helix's keymap layer from in here.
+        ;; binding quit to the same key closes the tree from both sides.
+        'quit "e"))
 
 (define *forest-keybinds* *forest-default-keybinds*)
 
@@ -130,10 +136,12 @@
 
 (provide forest-open)
 (provide forest-close)
+(provide forest-toggle)
 (provide forest-configure!)
 (provide forest-set-style!)
 (provide forest-set-keybinds!)
 (provide forest-set-sidebar-bg!)
+(provide forest-set-separator-color!)
 (provide forest-snacks-active?)
 (provide forest-snacks-side)
 (provide forest-snacks-width)
@@ -183,6 +191,12 @@
 ;; #rrggbb string to a Color, or #f on anything unparseable
 (define (forest-hex->color hex)
   (and (string? hex) (with-handler (lambda (_) #f) (glyph-hex->color hex))))
+
+;;@doc
+;; Colour of the vertical divider between the sidebar and the buffer, as #rrggbb.
+;; Applied as a foreground only, so the panel background is left untouched.
+(define (forest-set-separator-color! hex)
+  (set! *forest-separator-color* (forest-hex->color hex)))
 
 ;;@doc
 ;; Give the snacks sidebar its own background per focus state
@@ -303,6 +317,10 @@
 
   (buffer/clear-with frame box bg-style)
   (block/render frame box (make-block bg-style border-style "all" "plain"))
+
+  ;; helix draws the pending-key node name over the top border, one column in
+  (when (> w (+ (string-length *forest-help-title*) 2))
+    (frame-set-string! frame (+ x 1) y *forest-help-title* text-style))
 
   (let loop ([rs rows] [row 0])
     (when (and (pair? rs) (< row (- h 2)))
@@ -490,8 +508,8 @@
     [(not entry) event-result/consume]
     [(is-file? (car entry))
      (define path (car entry))
-     ;; hand focus to the buffer about to open
-     (set! *forest-focused* #f)
+     ;; close the panel behind the buffer about to open, the same way mini does
+     (forest-close!)
      (enqueue-thread-local-callback (lambda () (helix.open path)))
      event-result/close]
     [(is-dir? (car entry))
@@ -525,11 +543,11 @@
 
 (define (forest-wider!)
   (set! *forest-width* (min *forest-max-width* (+ *forest-width* 2)))
-  (helix.redraw '()))
+  (helix.redraw))
 
 (define (forest-narrower!)
   (set! *forest-width* (max *forest-min-width* (- *forest-width* 2)))
-  (helix.redraw '()))
+  (helix.redraw))
 
 (define *forest-modal-open?* #f)
 (define *forest-modal-mode* 'input)
@@ -888,8 +906,11 @@
   (define panel-area (area x0 y0 w panel-h))
   (buffer/clear-with frame panel-area bg-style)
 
-  ;; border matches bg so it blends in instead of clashing across themes;
-  (define border-style bg-style)
+  ;; the divider keeps the panel background (so a transparent theme stays
+  ;; transparent) and takes only a foreground: the configured colour if there is
+  ;; one, otherwise the fg helix uses for its own split dividers
+  (define sep-fg (or *forest-separator-color* (style->fg (theme-scope-ref "ui.window"))))
+  (define border-style (if sep-fg (style-fg bg-style sep-fg) bg-style))
 
   ;; on the divider side reserve the last column for the line
   ;; entries stay flush left and fill up to one gap column before it
@@ -996,7 +1017,7 @@
     [dir
      ;; scrolling over the panel reads as inspecting it, not entering it
      (forest-debounce-scroll! (lambda () (forest-scroll-by! dir *forest-scroll-amount*)))
-     (helix.redraw '()) ; unfocused, so consuming alone won't re-render
+     (helix.redraw) ; unfocused, so consuming alone won't re-render
      event-result/consume]
     [else event-result/ignore]))
 
@@ -1696,3 +1717,8 @@
     (if (equal? *forest-style* 'mini)
         (forest-mini-close!)
         (forest-close!))))
+
+;;@doc
+;; Toggle the file tree open or closed
+(define (forest-toggle)
+  (if *forest-active* (forest-close) (forest-open)))
