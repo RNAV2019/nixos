@@ -57,6 +57,7 @@ in {
 
   # Cursor across GTK, Wayland, and X11.
   home.pointerCursor = {
+    enable = true;
     gtk.enable = true;
     name = "Bibata-Modern-Classic";
     package = pkgs.bibata-cursors;
@@ -143,12 +144,13 @@ in {
     hyperfine
 
     nitch
+    fetch
 
     cloudflared
     rustup
     nodejs_latest
     # Pinned newer than nixpkgs (1.32.0)
-    (aube.overrideAttrs (finalAttrs: _prev: {
+    (aube.overrideAttrs (finalAttrs: prev: {
       version = "1.41.0";
       src = pkgs.fetchFromGitHub {
         owner = "endevco";
@@ -162,6 +164,20 @@ in {
         inherit (finalAttrs) src;
         hash = "sha256-Pj7TBxzaCJMP3AcDWMlG1iE+nlSzx0NjU6aFVV5kGrc=";
       };
+      # The lifecycle-script tests run `node`, which is not otherwise in the
+      # build sandbox.
+      nativeCheckInputs = prev.nativeCheckInputs ++ [pkgs.nodejs];
+      checkFlags = [
+        # Upstream's .cargo/config.toml sets RUST_TEST_THREADS=1 because the
+        # aube-util killswitch tests mutate process env; the cargo setup hook
+        # replaces that config, so the serialization has to be restored here.
+        "--test-threads=1"
+        # Wants the release-only generated popularity corpus; the source
+        # tarball ships without it, so the lookup returns nothing.
+        "--skip=commands::add_supply_chain::tests::bundled_corpus_detects_common_package_typo"
+        # Execs /bin/echo, which does not exist in the Nix build sandbox.
+        "--skip=commands::exec::tests::bin_command_executes_native_target_behind_generated_shim"
+      ];
     }))
     jq
     openssl

@@ -21,7 +21,7 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks."*".addKeysToAgent = "yes";
+    settings."*".AddKeysToAgent = "yes";
   };
 
   home.file.".cargo/config.toml".text = ''

@@ -59,10 +59,16 @@
   };
 
   # Release DRM without exposing the VT before Hyprland paints.
-  systemd.services.plymouth-quit.serviceConfig.ExecStart = lib.mkForce [
-    ""
-    "${config.boot.plymouth.package}/bin/plymouth quit --retain-splash"
-  ];
+  # The leading "-" keeps activation green when no splash is running
+  # (plymouth quit exits 1), and the unit is boot-only so nixos-rebuild
+  # switch must not re-run it.
+  systemd.services.plymouth-quit = {
+    restartIfChanged = false;
+    serviceConfig.ExecStart = lib.mkForce [
+      ""
+      "-${config.boot.plymouth.package}/bin/plymouth quit --retain-splash"
+    ];
+  };
 
   networking.hostName = "nixos";
 

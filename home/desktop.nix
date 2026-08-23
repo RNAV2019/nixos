@@ -1,232 +1,381 @@
 {
   config,
+  lib,
   pkgs,
   hyprland,
   ...
-}: {
+}: let
+  inherit (lib.generators) mkLuaInline;
+
+  mod = "SUPER";
+
+  # `hl.bind(keys, dispatcher[, opts])`. The dispatcher is raw Lua.
+  bind = keys: dispatcher: {_args = [keys (mkLuaInline dispatcher)];};
+  bindWith = opts: keys: dispatcher: {_args = [keys (mkLuaInline dispatcher) opts];};
+
+  exec = cmd: "hl.dsp.exec_cmd(${builtins.toJSON cmd})";
+
+  # Volume and brightness keys repeat and work while the session is locked.
+  bindel = bindWith {
+    locked = true;
+    repeating = true;
+  };
+  bindm = bindWith {mouse = true;};
+
+  workspaces = lib.range 1 9;
+
+  # Rose Pine floating overlays share the same shape.
+  floatingOverlay = class: {
+    match.class = class;
+    float = true;
+    center = true;
+    border_size = 0;
+    rounding = 18;
+  };
+in {
   wayland.windowManager.hyprland = {
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+    configType = "lua";
 
     # UWSM owns the user systemd session.
     systemd.enable = false;
 
     settings = {
       monitor = [
-        "eDP-1,2880x1800@60,0x0,1.6"
-      ];
-
-      # Block bindings and helpers until Quickshell secures every output.
-      exec-once = [
-        "hyprctl dispatch submap lockdown && start-desktop"
+        {
+          output = "eDP-1";
+          mode = "2880x1800@60";
+          position = "0x0";
+          scale = 1.6;
+        }
       ];
 
       env = [
-        "XCURSOR_SIZE,24"
-        "XCURSOR_THEME,Bibata-Modern-Classic"
-        "HYPRCURSOR_SIZE,24"
-        "NIXOS_OZONE_WL,1"
-        "XDG_SCREENSHOTS_DIR,$HOME/Pictures/screenshots"
-        "LD_LIBRARY_PATH,${pkgs.lib.makeLibraryPath [pkgs.wayland pkgs.libxkbcommon pkgs.vulkan-loader]}"
+        {_args = ["XCURSOR_SIZE" "24"];}
+        {_args = ["XCURSOR_THEME" "Bibata-Modern-Classic"];}
+        {_args = ["HYPRCURSOR_SIZE" "24"];}
+        {_args = ["NIXOS_OZONE_WL" "1"];}
+        {_args = ["XDG_SCREENSHOTS_DIR" "$HOME/Pictures/screenshots"];}
+        {
+          _args = [
+            "LD_LIBRARY_PATH"
+            (lib.makeLibraryPath [pkgs.wayland pkgs.libxkbcommon pkgs.vulkan-loader])
+          ];
+        }
       ];
 
-      input = {
-        kb_layout = "gb";
-        follow_mouse = 1;
-        mouse_refocus = false;
-        touchpad = {
-          natural_scroll = false;
-          tap-to-click = true;
-          scroll_factor = 0.5;
+      config = {
+        input = {
+          kb_layout = "gb";
+          follow_mouse = 1;
+          mouse_refocus = false;
+          touchpad = {
+            natural_scroll = false;
+            tap_to_click = true;
+            scroll_factor = 0.5;
+          };
+          sensitivity = 0;
         };
-        sensitivity = 0;
-      };
 
-      general = {
-        gaps_in = 5;
-        gaps_out = 10;
+        general = {
+          gaps_in = 5;
+          gaps_out = 10;
 
-        border_size = 2;
+          border_size = 2;
 
-        "col.active_border" = "rgba(524f67aa)";
-        "col.inactive_border" = "rgba(26233aaa)";
+          col = {
+            active_border = "rgba(524f67aa)";
+            inactive_border = "rgba(26233aaa)";
+          };
 
-        resize_on_border = false;
-        layout = "dwindle";
-      };
-
-      decoration = {
-        rounding = 6;
-        blur = {
-          enabled = true;
-          size = 8;
-          passes = 3;
-          vibrancy = 0.1696;
+          resize_on_border = false;
+          layout = "dwindle";
         };
-        shadow.enabled = false;
+
+        decoration = {
+          rounding = 6;
+          blur = {
+            enabled = true;
+            size = 8;
+            passes = 3;
+            vibrancy = 0.1696;
+          };
+          shadow.enabled = false;
+        };
+
+        animations.enabled = true;
+
+        dwindle = {
+          preserve_split = true;
+          force_split = 2;
+        };
+
+        misc = {
+          force_default_wallpaper = 0;
+          disable_hyprland_logo = true;
+          disable_splash_rendering = true;
+          # Covers the handoff from Plymouth to the lock surface.
+          background_color = "rgba(191724ff)";
+        };
       };
 
       # Omarchy preset.
-      animations = {
-        enabled = true;
-        bezier = [
-          "easeOutQuint, 0.23, 1, 0.32, 1"
-          "easeInOutCubic, 0.65, 0.05, 0.36, 1"
-          "linear, 0, 0, 1, 1"
-          "almostLinear, 0.5, 0.5, 0.75, 1.0"
-          "quick, 0.15, 0, 0.1, 1"
+      curve = [
+        {
+          _args = [
+            "easeOutQuint"
+            {
+              type = "bezier";
+              points = [[0.23 1] [0.32 1]];
+            }
+          ];
+        }
+        {
+          _args = [
+            "easeInOutCubic"
+            {
+              type = "bezier";
+              points = [[0.65 0.05] [0.36 1]];
+            }
+          ];
+        }
+        {
+          _args = [
+            "linear"
+            {
+              type = "bezier";
+              points = [[0 0] [1 1]];
+            }
+          ];
+        }
+        {
+          _args = [
+            "almostLinear"
+            {
+              type = "bezier";
+              points = [[0.5 0.5] [0.75 1.0]];
+            }
+          ];
+        }
+        {
+          _args = [
+            "quick"
+            {
+              type = "bezier";
+              points = [[0.15 0] [0.1 1]];
+            }
+          ];
+        }
+      ];
+
+      animation = [
+        {
+          leaf = "global";
+          enabled = true;
+          speed = 10;
+          bezier = "default";
+        }
+        {
+          leaf = "border";
+          enabled = true;
+          speed = 5.39;
+          bezier = "easeOutQuint";
+        }
+        {
+          leaf = "windows";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+        }
+        {
+          leaf = "windowsIn";
+          enabled = true;
+          speed = 4.1;
+          bezier = "easeOutQuint";
+          style = "popin 87%";
+        }
+        {
+          leaf = "windowsOut";
+          enabled = true;
+          speed = 1.49;
+          bezier = "linear";
+          style = "popin 87%";
+        }
+        {
+          leaf = "fadeIn";
+          enabled = true;
+          speed = 1.73;
+          bezier = "almostLinear";
+        }
+        {
+          leaf = "fadeOut";
+          enabled = true;
+          speed = 1.46;
+          bezier = "almostLinear";
+        }
+        {
+          leaf = "fade";
+          enabled = true;
+          speed = 3.03;
+          bezier = "quick";
+        }
+        {
+          leaf = "layers";
+          enabled = true;
+          speed = 3.81;
+          bezier = "easeOutQuint";
+        }
+        {
+          leaf = "layersIn";
+          enabled = true;
+          speed = 4;
+          bezier = "easeOutQuint";
+          style = "fade";
+        }
+        {
+          leaf = "layersOut";
+          enabled = true;
+          speed = 1.5;
+          bezier = "linear";
+          style = "fade";
+        }
+        {
+          leaf = "fadeLayersIn";
+          enabled = true;
+          speed = 1.79;
+          bezier = "almostLinear";
+        }
+        {
+          leaf = "fadeLayersOut";
+          enabled = true;
+          speed = 1.39;
+          bezier = "almostLinear";
+        }
+        {
+          leaf = "workspaces";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
+        }
+        {
+          leaf = "workspacesIn";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
+        }
+        {
+          leaf = "workspacesOut";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
+        }
+      ];
+
+      bind =
+        [
+          (bind "${mod} + RETURN" (exec "ghostty"))
+          (bind "${mod} + SHIFT + B" (exec "helium"))
+          (bind "${mod} + SHIFT + F" (exec "nautilus"))
+          (bind "${mod} + P" (exec "project-picker --toggle"))
+
+          (bind "${mod} + W" "hl.dsp.window.close()")
+          (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')
+          (bind "${mod} + J" ''hl.dsp.layout("togglesplit")'')
+          (bind "${mod} + F" "hl.dsp.window.fullscreen()")
+
+          (bind "${mod} + LEFT" ''hl.dsp.focus({ direction = "left" })'')
+          (bind "${mod} + RIGHT" ''hl.dsp.focus({ direction = "right" })'')
+          (bind "${mod} + UP" ''hl.dsp.focus({ direction = "up" })'')
+          (bind "${mod} + DOWN" ''hl.dsp.focus({ direction = "down" })'')
+
+          (bind "${mod} + SHIFT + LEFT" ''hl.dsp.window.swap({ direction = "left" })'')
+          (bind "${mod} + SHIFT + RIGHT" ''hl.dsp.window.swap({ direction = "right" })'')
+          (bind "${mod} + SHIFT + UP" ''hl.dsp.window.swap({ direction = "up" })'')
+          (bind "${mod} + SHIFT + DOWN" ''hl.dsp.window.swap({ direction = "down" })'')
+        ]
+        ++ map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces
+        ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
+        ++ [
+          # Match Omarchy screenshot bindings.
+          (bind "Print" (exec "grimblast --notify copysave area"))
+          (bind "ALT + Print" (exec "grimblast --notify copysave output"))
+          (bind "${mod} + Print" (exec "pkill hyprpicker || hyprpicker -a"))
+          (bind "${mod} + CTRL + Print" (exec "grimblast --notify copysave screen"))
+
+          (bind "${mod} + L" (exec "lock-session"))
+
+          (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
+
+          # Match bar panel shortcuts.
+          (bind "${mod} + CTRL + A" (exec "qs ipc call panels toggle audio"))
+          (bind "${mod} + CTRL + W" (exec "qs ipc call panels toggle network"))
+          (bind "${mod} + CTRL + B" (exec "qs ipc call panels toggle bluetooth"))
+          (bind "${mod} + CTRL + P" (exec "qs ipc call panels toggle battery"))
+          (bind "${mod} + CTRL + S" (exec "qs ipc call panels toggle system"))
+          (bind "${mod} + CTRL + C" (exec "qs ipc call panels toggle clock"))
+
+          (bind "${mod} + SPACE" (exec "mycelium --toggle"))
+
+          (bind "CTRL + ${mod} + SPACE" (exec "cherry --toggle"))
+
+          (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
+          (bind "XF86AudioPlay" (exec "playerctl play-pause"))
+          (bind "XF86AudioNext" (exec "playerctl next"))
+          (bind "XF86AudioPrev" (exec "playerctl previous"))
+
+          (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
+          (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
+
+          # Quickshell watches these controls and renders the OSD.
+          (bindel "XF86AudioRaiseVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"))
+          (bindel "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
+          (bindel "XF86MonBrightnessUp" (exec "brightnessctl set 5%+"))
+          (bindel "XF86MonBrightnessDown" (exec "brightnessctl set 5%-"))
         ];
-        animation = [
-          "global, 1, 10, default"
-          "border, 1, 5.39, easeOutQuint"
-          "windows, 1, 4.79, easeOutQuint"
-          "windowsIn, 1, 4.1, easeOutQuint, popin 87%"
-          "windowsOut, 1, 1.49, linear, popin 87%"
-          "fadeIn, 1, 1.73, almostLinear"
-          "fadeOut, 1, 1.46, almostLinear"
-          "fade, 1, 3.03, quick"
-          "layers, 1, 3.81, easeOutQuint"
-          "layersIn, 1, 4, easeOutQuint, fade"
-          "layersOut, 1, 1.5, linear, fade"
-          "fadeLayersIn, 1, 1.79, almostLinear"
-          "fadeLayersOut, 1, 1.39, almostLinear"
-          "workspaces, 0, 1, default"
-          "workspacesIn, 0, 1, default"
-          "workspacesOut, 0, 1, default"
-        ];
-      };
 
-      dwindle = {
-        preserve_split = true;
-        force_split = 2;
-      };
+      window_rule = [
+        (floatingOverlay "uk.co.ryannavsaria.project-picker")
+        (floatingOverlay "uk.co.ryannavsaria.mycelium")
+        (floatingOverlay "uk.co.ryannavsaria.cherry")
 
-      misc = {
-        force_default_wallpaper = 0;
-        disable_hyprland_logo = true;
-        disable_splash_rendering = true;
-        # Covers the handoff from Plymouth to the lock surface.
-        background_color = "rgba(191724ff)";
-      };
+        {
+          match.class = "org.pwmt.zathura";
+          no_initial_focus = true;
+        }
 
-      "$mod" = "SUPER";
-
-      bind = [
-        "$mod, RETURN, exec, ghostty"
-        "$mod SHIFT, B, exec, helium"
-        "$mod SHIFT, F, exec, nautilus"
-        "$mod, P, exec, project-picker --toggle"
-
-        "$mod, W, killactive"
-        "$mod, T, toggleFloating"
-        "$mod, J, layoutmsg, togglesplit"
-        "$mod, F, fullscreen, 0"
-
-        "$mod, LEFT, movefocus, l"
-        "$mod, RIGHT, movefocus, r"
-        "$mod, UP, movefocus, u"
-        "$mod, DOWN, movefocus, d"
-
-        "$mod SHIFT, LEFT, swapwindow, l"
-        "$mod SHIFT, RIGHT, swapwindow, r"
-        "$mod SHIFT, UP, swapwindow, u"
-        "$mod SHIFT, DOWN, swapwindow, d"
-
-        "$mod, 1, workspace, 1"
-        "$mod, 2, workspace, 2"
-        "$mod, 3, workspace, 3"
-        "$mod, 4, workspace, 4"
-        "$mod, 5, workspace, 5"
-        "$mod, 6, workspace, 6"
-        "$mod, 7, workspace, 7"
-        "$mod, 8, workspace, 8"
-        "$mod, 9, workspace, 9"
-
-        "$mod SHIFT, 1, movetoworkspace, 1"
-        "$mod SHIFT, 2, movetoworkspace, 2"
-        "$mod SHIFT, 3, movetoworkspace, 3"
-        "$mod SHIFT, 4, movetoworkspace, 4"
-        "$mod SHIFT, 5, movetoworkspace, 5"
-        "$mod SHIFT, 6, movetoworkspace, 6"
-        "$mod SHIFT, 7, movetoworkspace, 7"
-        "$mod SHIFT, 8, movetoworkspace, 8"
-        "$mod SHIFT, 9, movetoworkspace, 9"
-
-        # Match Omarchy screenshot bindings.
-        ", Print, exec, grimblast --notify copysave area"
-        "ALT, Print, exec, grimblast --notify copysave output"
-        "$mod, Print, exec, pkill hyprpicker || hyprpicker -a"
-        "$mod CTRL, Print, exec, grimblast --notify copysave screen"
-
-        "$mod, L, exec, lock-session"
-
-        "$mod, ESCAPE, exec, qs ipc call session toggle"
-
-        # Match bar panel shortcuts.
-        "$mod CTRL, A, exec, qs ipc call panels toggle audio"
-        "$mod CTRL, W, exec, qs ipc call panels toggle network"
-        "$mod CTRL, B, exec, qs ipc call panels toggle bluetooth"
-        "$mod CTRL, P, exec, qs ipc call panels toggle battery"
-        "$mod CTRL, S, exec, qs ipc call panels toggle system"
-        "$mod CTRL, C, exec, qs ipc call panels toggle clock"
-
-        "$mod, SPACE, exec, mycelium --toggle"
-
-        "CTRL SUPER, SPACE, exec, cherry --toggle"
-
-        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-        ", XF86AudioPlay, exec, playerctl play-pause"
-        ", XF86AudioNext, exec, playerctl next"
-        ", XF86AudioPrev, exec, playerctl previous"
-      ];
-
-      bindm = [
-        "$mod, mouse:272, movewindow"
-        "$mod, mouse:273, resizewindow"
-      ];
-
-      # Quickshell watches these controls and renders the OSD.
-      bindel = [
-        ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"
-        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+"
-        ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
-      ];
-
-      windowrule = [
-        "match:class uk.co.ryannavsaria.project-picker, float on"
-        "match:class uk.co.ryannavsaria.project-picker, center on"
-        "match:class uk.co.ryannavsaria.project-picker, border_size 0"
-        "match:class uk.co.ryannavsaria.project-picker, rounding 18"
-
-        "match:class uk.co.ryannavsaria.mycelium, float on"
-        "match:class uk.co.ryannavsaria.mycelium, center on"
-        "match:class uk.co.ryannavsaria.mycelium, border_size 0"
-        "match:class uk.co.ryannavsaria.mycelium, rounding 18"
-
-        "match:class uk.co.ryannavsaria.cherry, float on"
-        "match:class uk.co.ryannavsaria.cherry, center on"
-        "match:class uk.co.ryannavsaria.cherry, border_size 0"
-        "match:class uk.co.ryannavsaria.cherry, rounding 18"
-
-        "match:class org.pwmt.zathura, no_initial_focus on"
-
-        "match:class mpv, float on"
-        "match:class mpv, center on"
+        {
+          match.class = "mpv";
+          float = true;
+          center = true;
+        }
       ];
 
       # Bar panels are opaque xdg popups; only the session layer needs blur.
-      layerrule = [
-        "blur on, match:namespace quickshell-session"
+      layer_rule = [
+        {
+          match.namespace = "quickshell-session";
+          blur = true;
+        }
       ];
+
+      # Block bindings and helpers until Quickshell secures every output.
+      on = {
+        _args = [
+          "hyprland.start"
+          (mkLuaInline ''
+            function()
+              hl.dispatch(hl.dsp.submap("lockdown"))
+              hl.exec_cmd("start-desktop")
+            end'')
+        ];
+      };
     };
 
     # The catchall registers lockdown and blocks normal startup bindings.
-    extraConfig = ''
-      submap = lockdown
-      bind = , catchall, exec, true
-      submap = reset
-    '';
+    submaps.lockdown.settings.bind = [
+      (bind "catchall" "hl.dsp.no_op()")
+    ];
   };
 
   programs.fuzzel = {
@@ -265,7 +414,7 @@
         # before_sleep_cmd raises the event that runs lock_cmd.
         lock_cmd = "lock-session";
         before_sleep_cmd = "loginctl lock-session";
-        after_sleep_cmd = "hyprctl dispatch dpms on";
+        after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'";
       };
     };
   };

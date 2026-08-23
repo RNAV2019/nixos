@@ -150,13 +150,11 @@
       pkgs.coreutils
       pkgs.networkmanagerapplet
       pkgs.wl-clipboard
-      cherry
-      mycelium
     ];
     text = ''
       lock-session
 
-      awww-daemon &
+      # awww-daemon is a systemd user unit; just wait for its socket.
       for _ in $(seq 1 50); do
         if awww query >/dev/null 2>&1; then
           awww img "$HOME/.local/share/wallpaper/current"
@@ -169,8 +167,6 @@
       cliphist wipe || true
       wl-paste --type text --watch cliphist store &
       wl-paste --type image --watch cliphist store &
-      mycelium &
-      cherry &
       wait
     '';
   };
@@ -202,6 +198,52 @@
       '';
     };
 
+  # Hyprland's misc:initial_workspace_tracking pins the first window of an
+  # exec'd process to the workspace that was active at spawn time. These
+  # launchers are daemons that map their window lazily on the first toggle, so
+  # a login-time exec left them opening on workspace 1 forever after. systemd
+  # spawns them outside that tracking, so every window follows the active
+  # workspace — including the first.
+  launcherDaemon = name: pkg: {
+    Unit = {
+      Description = "${name} launcher daemon";
+      PartOf = ["graphical-session.target"];
+      After = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkg}/bin/${name}";
+      # `--kill` is an intentional exit; only restart on a crash.
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+
+    Install.WantedBy = ["graphical-session.target"];
+  };
+
+  # Helix-style which-key popover for tmux. Still developed locally; swap `src`
+  # for a `pkgs.fetchFromGitHub` once the repo is pushed.
+  tmux-whichkey = let
+    src = builtins.fetchGit {
+      url = "file:///home/ryan/Projects/tmux-whichkey";
+      rev = "8d25544a3f7c6e6eb2701b0f2993aa5540b23048";
+    };
+  in
+    pkgs.rustPlatform.buildRustPackage {
+      pname = "tmux-whichkey";
+      version = "0.1.0";
+      inherit src;
+      cargoLock.lockFile = "${src}/Cargo.lock";
+
+      nativeBuildInputs = [pkgs.makeWrapper];
+
+      # Every stage of the popover shells out to tmux.
+      postInstall = ''
+        wrapProgram $out/bin/tmux-whichkey \
+          --prefix PATH : ${pkgs.lib.makeBinPath [pkgs.tmux]}
+      '';
+    };
+
   ani-cli = pkgs.ani-cli.overrideAttrs {
     version = "5.0";
     src = pkgs.fetchFromGitHub {
@@ -222,5 +264,12 @@ in {
     gen-commit
     forward-dev
     t3code-nightly
+    tmux-whichkey
   ];
+
+  systemd.user.services = {
+    cherry = launcherDaemon "cherry" cherry;
+    mycelium = launcherDaemon "mycelium" mycelium;
+    project-picker = launcherDaemon "project-picker" project-picker;
+  };
 }

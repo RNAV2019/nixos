@@ -196,6 +196,8 @@
   programs.fzf = {
     enable = true;
     enableFishIntegration = true;
+    # Atuin owns Ctrl-R; fzf keeps Ctrl-T and Alt-C.
+    historyWidget.command = "";
     defaultOptions = [
       "--height 40%"
       "--border"

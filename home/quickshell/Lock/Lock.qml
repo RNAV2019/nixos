@@ -121,7 +121,7 @@ Scope {
 
   Process {
     id: submapReset
-    command: ["hyprctl", "dispatch", "submap", "reset"]
+    command: ["hyprctl", "dispatch", "hl.dsp.submap(\"reset\")"]
   }
 
   PamContext {

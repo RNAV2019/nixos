@@ -81,7 +81,7 @@ Rectangle {
           anchors.fill: parent
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
-          onClicked: Hyprland.dispatch("workspace " + dot.modelData)
+          onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + dot.modelData + " })")
         }
       }
     }

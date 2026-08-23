@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: {
   home.file."Pictures/backgrounds/ching-yeh.png".source = ../backgrounds/rosepine/ching-yeh.png;
@@ -14,4 +15,22 @@
       ln -sf "$HOME/Pictures/backgrounds/ching-yeh.png" "$HOME/.local/share/wallpaper/current"
     fi
   '';
+
+  # A bare `awww-daemon &` from start-desktop dies unsupervised, and every
+  # later `awww img` then fails with exit 1. systemd owns it instead.
+  systemd.user.services.awww-daemon = {
+    Unit = {
+      Description = "awww wallpaper daemon";
+      PartOf = ["graphical-session.target"];
+      After = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.awww}/bin/awww-daemon";
+      Restart = "always";
+      RestartSec = 1;
+    };
+
+    Install.WantedBy = ["graphical-session.target"];
+  };
 }

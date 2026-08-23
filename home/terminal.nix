@@ -1,87 +1,5 @@
 { config, pkgs, ... }:
 {
-  home.file.".config/tmux/plugins/tmux-which-key/config.yaml".text = ''
-    command_alias_start_index: 200
-    keybindings:
-      prefix_table: Space
-    title:
-      style: align=centre,bold
-      prefix: " C-a "
-      prefix_style: fg=green,align=centre,bold
-    position:
-      x: R
-      y: P
-    custom_variables: []
-    macros: []
-    items:
-      - name: Run command
-        key: space
-        command: command-prompt
-      - name: Last window
-        key: tab
-        command: last-window
-      - separator: true
-      - name: +Panes
-        key: p
-        menu:
-          - name: Split vertical
-            key: v
-            command: "split-window -h -c #{pane_current_path}"
-          - name: Split horizontal
-            key: s
-            command: "split-window -v -c #{pane_current_path}"
-          - separator: true
-          - name: Left
-            key: h
-            command: select-pane -L
-          - name: Down
-            key: j
-            command: select-pane -D
-          - name: Up
-            key: k
-            command: select-pane -U
-          - name: Right
-            key: l
-            command: select-pane -R
-          - separator: true
-          - name: Resize left
-            key: H
-            command: resize-pane -L 5
-          - name: Resize down
-            key: J
-            command: resize-pane -D 5
-          - name: Resize up
-            key: K
-            command: resize-pane -U 5
-          - name: Resize right
-            key: L
-            command: resize-pane -R 5
-      - name: +Windows
-        key: w
-        menu:
-          - name: New window
-            key: c
-            command: "new-window -c #{pane_current_path}"
-          - name: Move left
-            key: <
-            command: swap-window -d -t -1
-          - name: Move right
-            key: ">"
-            command: swap-window -d -t +1
-      - name: Sessions
-        key: S
-        command: choose-tree -Zs
-      - name: Copy mode
-        key: c
-        command: copy-mode
-      - name: Reload config
-        key: r
-        command: "source-file ~/.config/tmux/tmux.conf"
-      - name: Send C-a
-        key: a
-        command: send-prefix
-  '';
-
   home.file.".config/ghostty/config".text = ''
     theme = Rose Pine
 
@@ -137,45 +55,64 @@
         '';
       }
       yank
-      {
-        plugin = tmux-which-key;
-        extraConfig = ''
-          set -g @tmux-which-key-xdg-enable 1
-        '';
-      }
     ];
     extraConfig = ''
       setw -g pane-base-index 1
       set -g renumber-windows on
 
-      # Send literal Ctrl+a (beginning-of-line) with prefix+a
-      bind a send-prefix
+      # rose-pine sets the message styles without a `fill`, and tmux clears the
+      # status line behind the command prompt only as far as the fill reaches —
+      # without it the window list and status-right stay visible under `:`.
+      set -ag message-style ",fill=#191724"
+      set -ag message-command-style ",fill=#f6c177"
+
+      # tmux-whichkey: pause after C-a and the pending bindings appear in a
+      # Helix-style box in the bottom right. Descriptions come from the `-N`
+      # notes below, so these bindings are the only place they are written down.
+      #
+      # tmux resolves the prefix key before it consults the root table, so C-a
+      # can only reach this binding with prefix handling off. Every
+      # `bind -T prefix ...` below is unaffected and still fires at full speed.
+      set -g prefix None
+      bind -n C-a {
+        switch-client -T prefix
+        run-shell -b "tmux-whichkey watch '#{client_name}' prefix 'C-a'"
+      }
+
+      set -g @which-key-delay 500
+      set -g @which-key-max-height 14
+      # Defaults that duplicate the bindings below or are never reached for,
+      # plus the yank plugin's bindings, which carry no description.
+      set -g @which-key-hide "# ' ( ) * - . / 0 1 2 3 4 5 6 7 8 9 ; = C D E M i m o q t y Y { } ~ DC PPage Up Down Left Right M-1 M-2 M-3 M-4 M-5 M-6 M-7 M-n M-o M-p M-Up M-Down M-Left M-Right C-a C-o C-z C-Up C-Down C-Left C-Right S-Up S-Down S-Left S-Right"
+
+      # send-prefix does nothing while the prefix is off, so send the key itself.
+      bind -N "Send C-a" a send-keys C-a
 
       # Splits in current working directory
-      bind v split-window -h -c "#{pane_current_path}"
-      bind s split-window -v -c "#{pane_current_path}"
+      bind -N "Split vertical" v split-window -h -c "#{pane_current_path}"
+      bind -N "Split horizontal" s split-window -v -c "#{pane_current_path}"
       unbind '"'
       unbind %
 
       # New window in current path
-      bind c new-window -c "#{pane_current_path}"
+      bind -N "New window" c new-window -c "#{pane_current_path}"
 
-      bind h select-pane -L
-      bind j select-pane -D
-      bind k select-pane -U
-      bind l select-pane -R
+      bind -N "Go left" h select-pane -L
+      bind -N "Go down" j select-pane -D
+      bind -N "Go up" k select-pane -U
+      bind -N "Go right" l select-pane -R
 
-      bind -r H resize-pane -L 5
-      bind -r J resize-pane -D 5
-      bind -r K resize-pane -U 5
-      bind -r L resize-pane -R 5
+      bind -r -N "Resize left" H resize-pane -L 5
+      bind -r -N "Resize down" J resize-pane -D 5
+      bind -r -N "Resize up" K resize-pane -U 5
+      bind -r -N "Resize right" L resize-pane -R 5
 
-      bind r source-file ~/.config/tmux/tmux.conf \; display-message "tmux.conf reloaded"
+      bind -N "Reload config" r source-file ~/.config/tmux/tmux.conf \; display-message "tmux.conf reloaded"
 
-      bind -r "<" swap-window -d -t -1
-      bind -r ">" swap-window -d -t +1
+      bind -r -N "Move window left" "<" swap-window -d -t -1
+      bind -r -N "Move window right" ">" swap-window -d -t +1
 
-      bind S choose-tree -Zs
+      bind -N "Sessions" S choose-tree -Zs
 
       # Copy mode — helix-style
       bind -T copy-mode-vi v send-keys -X begin-selection
