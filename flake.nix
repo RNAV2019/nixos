@@ -25,6 +25,13 @@
     };
 
     oh-my-pi.url = "github:can1357/oh-my-pi";
+
+    # Rust toolchains straight from the upstream release manifests, so every
+    # component is pinned to one release rather than to the nixpkgs bump.
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
@@ -35,6 +42,7 @@
     llm-agents,
     helix-steel,
     oh-my-pi,
+    fenix,
     ...
   }: let
     system = "x86_64-linux";
@@ -66,11 +74,11 @@
             # Preserve unmanaged files during activation.
             home-manager.backupFileExtension = "hm-backup";
             home-manager.users.ryan = import ./home/default.nix;
-            home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel;};
+            home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel fenix;};
             home-manager.sharedModules = [oh-my-pi.homeManagerModules.default];
           }
         ];
-        specialArgs = {inherit hyprland helium-browser llm-agents helix-steel;};
+        specialArgs = {inherit hyprland helium-browser llm-agents helix-steel fenix;};
       };
     };
   };

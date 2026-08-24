@@ -22,6 +22,15 @@
   };
   bindm = bindWith {mouse = true;};
 
+  # Window resize keys repeat while held.
+  binde = bindWith {repeating = true;};
+
+  # Grow/shrink the focused window. On a US layout `SUPER + "+"` reaches the
+  # compositor as SUPER + SHIFT + plus, so bind the shifted symbols too.
+  resizeStep = 60;
+  resizeBinds = delta:
+    map (keys: binde keys "hl.dsp.window.resize({ x = ${toString delta}, y = ${toString delta}, relative = true })");
+
   workspaces = lib.range 1 9;
 
   # Rose Pine floating overlays share the same shape.
@@ -283,7 +292,10 @@ in {
           (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')
           (bind "${mod} + J" ''hl.dsp.layout("togglesplit")'')
           (bind "${mod} + F" "hl.dsp.window.fullscreen()")
-
+        ]
+        ++ resizeBinds resizeStep ["${mod} + EQUAL" "${mod} + SHIFT + PLUS"]
+        ++ resizeBinds (-resizeStep) ["${mod} + MINUS" "${mod} + SHIFT + UNDERSCORE"]
+        ++ [
           (bind "${mod} + LEFT" ''hl.dsp.focus({ direction = "left" })'')
           (bind "${mod} + RIGHT" ''hl.dsp.focus({ direction = "right" })'')
           (bind "${mod} + UP" ''hl.dsp.focus({ direction = "up" })'')

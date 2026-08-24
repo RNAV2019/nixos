@@ -147,7 +147,9 @@ in {
     fetch
 
     cloudflared
-    rustup
+    # cargo/rustc/clippy/rustfmt/rust-src/rust-analyzer, all one stable
+    # release. Defined in modules/system/default.nix.
+    rustToolchain
     nodejs_latest
     # Pinned newer than nixpkgs (1.32.0)
     (aube.overrideAttrs (finalAttrs: prev: {

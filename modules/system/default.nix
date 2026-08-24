@@ -2,6 +2,7 @@
   config,
   pkgs,
   hyprland,
+  fenix,
   ...
 }: let
   start-hyprland = pkgs.writeShellApplication {
@@ -73,6 +74,23 @@ in {
   nixpkgs.overlays = [
     (final: prev: {
       xdg-desktop-portal-hyprland = hyprland.packages.${prev.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+    })
+
+    fenix.overlays.default
+
+    # One derivation holding the whole Rust toolchain, every component taken
+    # from the same upstream stable manifest. Single source of truth so the
+    # editor's rust-analyzer can never drift from the compiler it analyses
+    # against; bump it with `nix flake update fenix`.
+    (final: _prev: {
+      rustToolchain = final.fenix.combine (with final.fenix.stable; [
+        cargo
+        clippy
+        rust-analyzer
+        rust-src
+        rustc
+        rustfmt
+      ]);
     })
   ];
 

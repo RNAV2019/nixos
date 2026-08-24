@@ -90,7 +90,12 @@ in {
 
     languages = {
       language-server = {
-        rust-analyzer.config.check.command = "clippy";
+        # Taken from the pinned toolchain rather than resolved from PATH, so
+        # it always matches the compiler it analyses against.
+        rust-analyzer = {
+          command = "${pkgs.rustToolchain}/bin/rust-analyzer";
+          config.check.command = "clippy";
+        };
 
         nixd.command = "nixd";
 
