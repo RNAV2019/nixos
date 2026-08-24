@@ -23,6 +23,7 @@
   home.homeDirectory = "/home/ryan";
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;
+  programs.omp.enable = true;
   # Migrated from ~/.omp/agent/config.yml. The module installs this as a
   # writable copy; runtime edits survive until the next rebuild.
   programs.omp.settings = {
@@ -42,7 +43,6 @@
 
     tui.resizeScrollback = "preserve";
     hideThinkingBlock = true;
-    enable = true;
   };
 
   home.file.".omp/agent/themes/dark-rose-pine-omp.json".source = ./themes/dark-rose-pine-omp.json;
