@@ -20,10 +20,12 @@ tmpdir=""
 staged_by_tool=false
 request_number=0
 tui_active=false
+tty_state=""
 notice_level=""
 notice_message=""
 
 cleanup() {
+  unmute_tty
   leave_tui
   if [[ -z "$tmpdir" ]]; then
     return
@@ -115,6 +117,26 @@ leave_tui() {
     printf '\033[?1049l' >/dev/tty 2>/dev/null || true
     tui_active=false
   fi
+}
+
+# gum (bubbletea) probes the terminal for kitty-keyboard support at startup, but a
+# short run exits before the reply lands; the tty then echoes the stray answer
+# (ESC [ ? 1 u) straight after the spinner title. Mute echo while gum runs and
+# swallow whatever the terminal sent back.
+mute_tty() {
+  tty_state=""
+  [[ -e /dev/tty ]] || return 0
+  tty_state=$(stty -g </dev/tty 2>/dev/null) || tty_state=""
+  [[ -n "$tty_state" ]] || return 0
+  stty -echo </dev/tty 2>/dev/null || true
+}
+
+unmute_tty() {
+  local discard=""
+  [[ -n "$tty_state" ]] || return 0
+  while IFS= read -rsn 256 -t 0.05 discard </dev/tty 2>/dev/null; do : "$discard"; done
+  stty "$tty_state" </dev/tty 2>/dev/null || true
+  tty_state=""
 }
 
 clear_tui() {
@@ -327,14 +349,16 @@ request_candidate() {
     fi
 
     request_number=$((request_number + 1))
+    mute_tty
     if response=$(OPENROUTER_API_KEY="$api_key" gum spin \
       --spinner dot \
       --title "  Generating commit message..." \
       --spinner.foreground="$RP_IRIS" \
       -- "$GEN_COMMIT_API_CLIENT" "$body_file"); then
-      :
+      unmute_tty
     else
       request_status=$?
+      unmute_tty
       if ((request_status == 130)); then
         REQUEST_ERROR="AI generation was cancelled."
       else
