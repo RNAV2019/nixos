@@ -347,6 +347,15 @@ in {
         ];
 
       window_rule = [
+        # Electron restores a saved maximized state on launch, which leaves the
+        # window tiled in the dwindle tree but drawn over the whole workspace on
+        # top of its neighbours. A tiled layout has no use for client-requested
+        # maximize, so drop the request for everything.
+        {
+          match.class = ".*";
+          suppress_event = "maximize";
+        }
+
         (floatingOverlay "uk.co.ryannavsaria.project-picker")
         (floatingOverlay "uk.co.ryannavsaria.mycelium")
         (floatingOverlay "uk.co.ryannavsaria.cherry")

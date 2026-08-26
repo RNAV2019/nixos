@@ -46,6 +46,11 @@ in {
       theme = "rose_pine_transparent";
 
       editor = {
+        # Helix prefers the tmux paste buffer over Wayland whenever $TMUX is
+        # set, so a yank inside tmux never reaches wl-clipboard or cliphist.
+        # Pin the provider so every Helix shares the one system clipboard.
+        clipboard-provider = "wayland";
+
         bufferline = "always";
         auto-format = true;
         line-number = "relative";
