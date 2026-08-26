@@ -2,6 +2,7 @@
   pkgs,
   helium-browser,
   llm-agents,
+  note-tui,
   ...
 }: let
   # Dropped from nixpkgs in 2026-08 along with its GTK2 murrine dependency.
@@ -200,6 +201,9 @@ in {
     tectonic
     typst
     tinymist
+    # Typst notes TUI. Its live preview needs typst/tinymist above and the
+    # helium launcher, and reads the tinymist data-plane host set in editors.nix.
+    note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
     # Pinned newer than nixpkgs (1.43.2)
     (stripe-cli.overrideAttrs (finalAttrs: _prev: {
       version = "1.50.4";

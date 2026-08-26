@@ -26,6 +26,13 @@
 
     oh-my-pi.url = "github:can1357/oh-my-pi";
 
+    # Typst notes TUI, installed as the `note` command. The tinymist preview
+    # it drives is configured in home/editors.nix.
+    note-tui = {
+      url = "github:RNAV2019/note-tui";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Rust toolchains straight from the upstream release manifests, so every
     # component is pinned to one release rather than to the nixpkgs bump.
     fenix = {
@@ -42,6 +49,7 @@
     llm-agents,
     helix-steel,
     oh-my-pi,
+    note-tui,
     fenix,
     ...
   }: let
@@ -74,11 +82,11 @@
             # Preserve unmanaged files during activation.
             home-manager.backupFileExtension = "hm-backup";
             home-manager.users.ryan = import ./home/default.nix;
-            home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel fenix;};
+            home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
             home-manager.sharedModules = [oh-my-pi.homeManagerModules.default];
           }
         ];
-        specialArgs = {inherit hyprland helium-browser llm-agents helix-steel fenix;};
+        specialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
       };
     };
   };
