@@ -111,6 +111,11 @@ Variants {
           // Widgets already own both side paddings.
           spacing: 0
 
+          ClaudeWidget {
+            id: claudeWidget
+            anchors.verticalCenter: parent.verticalCenter
+          }
+
           BluetoothWidget {
             id: bluetoothWidget
             anchors.verticalCenter: parent.verticalCenter
@@ -187,6 +192,12 @@ Variants {
       }
 
       // Open panels duplicate and overlap these tooltips.
+      BarTooltip {
+        anchorItem: claudeWidget
+        text: claudeWidget.tooltip
+        show: claudeWidget.hovered && bar.openPanel === ""
+      }
+
       BarTooltip {
         anchorItem: bluetoothWidget
         text: bluetoothWidget.tooltip

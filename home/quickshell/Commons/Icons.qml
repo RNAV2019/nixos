@@ -9,6 +9,7 @@ Singleton {
   readonly property string calendar: "󰃭"
   readonly property string clock: ""
   readonly property string cpu: "󰍛"
+  readonly property string claude: ""
 
   readonly property string mprisPlaying: "󰎇"
   readonly property string mprisPaused: "󰏤"
