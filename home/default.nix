@@ -17,6 +17,7 @@
     ./custom-packages.nix
     ./backgrounds.nix
     ./claude.nix
+    ./opencode.nix
   ];
 
   home.username = "ryan";
