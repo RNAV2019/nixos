@@ -74,6 +74,7 @@
           ./host/configuration.nix
           ./host/hardware-configuration.nix
           ./modules/system/default.nix
+          ./modules/system/sof-sdw-ptl-rt721.nix
 
           home-manager.nixosModules.home-manager
           {

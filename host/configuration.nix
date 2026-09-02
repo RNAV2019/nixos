@@ -48,8 +48,8 @@
   boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
 
-  # Android x86 emulation requires AMD KVM acceleration.
-  boot.kernelModules = ["kvm-amd"];
+  # Android x86 emulation requires Intel KVM acceleration.
+  boot.kernelModules = ["kvm-intel"];
   # Required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 
@@ -88,6 +88,6 @@
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
   '';
 
-  # Keep at the initial release; changing it alters stateful-data defaults.
-  system.stateVersion = "25.11";
+  # Keep at this machine's initial release; changing it alters stateful-data defaults
+  system.stateVersion = "26.05";
 }

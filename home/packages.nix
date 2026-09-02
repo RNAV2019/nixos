@@ -5,6 +5,16 @@
   note-tui,
   ...
 }: let
+  # The upstream wrapper passes --disable-background-networking, which also
+  # disables the extension updater that policy-forced installs go through, so
+  # the managed extensions never download. Auto-update and component update
+  # stay off via their own flags.
+  helium = (helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default).overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      sed -i 's/ --disable-background-networking//' $out/bin/helium
+    '';
+  });
+
   # Dropped from nixpkgs in 2026-08 along with its GTK2 murrine dependency.
   # Only the GTK3/GTK4 assets are used here, so it is vendored without the
   # GTK2 engines the old derivation pulled in.
@@ -94,7 +104,7 @@ in {
   xdg.userDirs.setSessionVariables = true;
 
   home.packages = with pkgs; [
-    helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    helium
     firefox
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code

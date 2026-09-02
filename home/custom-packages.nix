@@ -221,29 +221,6 @@
     Install.WantedBy = ["graphical-session.target"];
   };
 
-  # Helix-style which-key popover for tmux. Still developed locally; swap `src`
-  # for a `pkgs.fetchFromGitHub` once the repo is pushed.
-  tmux-whichkey = let
-    src = builtins.fetchGit {
-      url = "file:///home/ryan/Projects/tmux-whichkey";
-      rev = "37175b2cf2f1ae6c7ee26995f8bc4bf54761a07a";
-    };
-  in
-    pkgs.rustPlatform.buildRustPackage {
-      pname = "tmux-whichkey";
-      version = "0.1.0";
-      inherit src;
-      cargoLock.lockFile = "${src}/Cargo.lock";
-
-      nativeBuildInputs = [pkgs.makeWrapper];
-
-      # Every stage of the popover shells out to tmux.
-      postInstall = ''
-        wrapProgram $out/bin/tmux-whichkey \
-          --prefix PATH : ${pkgs.lib.makeBinPath [pkgs.tmux]}
-      '';
-    };
-
   ani-cli = pkgs.ani-cli.overrideAttrs {
     version = "5.0";
     src = pkgs.fetchFromGitHub {
@@ -264,7 +241,6 @@ in {
     gen-commit
     forward-dev
     t3code-nightly
-    tmux-whichkey
   ];
 
   systemd.user.services = {

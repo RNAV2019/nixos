@@ -115,36 +115,44 @@ in {
     start-hyprland
   ];
 
-  services.fprintd.enable = true;
-
-  # Fingerprint auth for login and privileged prompts.
-  security.pam.services.sudo.fprintAuth = true;
-  security.pam.services.login.fprintAuth = true;
-  security.pam.services.greetd.fprintAuth = true;
-  security.pam.services.polkit-1.fprintAuth = true;
-
-  # Separate stacks keep pam_fprintd from blocking password entry.
+  # Dedicated stack so the lock screen skips the failure delay
   security.pam.services.quickshell-password = {
     unixAuth = true;
-    fprintAuth = false;
     nodelay = true;
   };
-  security.pam.services.quickshell-fingerprint = {
-    unixAuth = false;
-    fprintAuth = true;
+
+  # Panther Lake Xe3 needs a current kernal; there is no i915 fallback
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [intel-media-driver vpl-gpu-rt];
   };
+  
+  services.thermald.enable = true;
 
   services.power-profiles-daemon.enable = true;
 
   # D-Bus power state for the shell and upower CLI.
   services.upower.enable = true;
 
-  # Force-install Helium extensions through Chromium policy.
+  # Declarative Helium extensions, via Chromium enterprise policy. Helium keeps
+  # Chromium's policy directory name, so /etc/chromium/policies/managed is read.
   environment.etc."chromium/policies/managed/helium-extensions.json".text = builtins.toJSON {
-    ExtensionInstallForcelist = [
-      "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx"
-      "oemmndcbldboiebfnladdacbdfmadadm;https://clients2.google.com/service/update2/crx"
-    ];
+    ExtensionSettings =
+      {
+        # Leave hand-installing from the web store available.
+        "*".installation_mode = "allowed";
+      }
+      // pkgs.lib.genAttrs [
+        "effdbpeggelllpfkjppbokhmmiinhlmg" # Better Lyrics (Lyrics for YouTube Music)
+        "mffpncjphfmkppebdoaehdlnagnlpfai" # Better Lyrics Shaders
+        "nngceckbapebfimnlniiiahkandclblb" # Bitwarden Password Manager
+        "oemmndcbldboiebfnladdacbdfmadadm" # PDF Viewer (pdfjs.robwu.nl)
+      ] (_: {
+        installation_mode = "force_installed";
+        update_url = "https://clients2.google.com/service/update2/crx";
+      });
   };
 
   fonts.packages = with pkgs; [
@@ -154,6 +162,21 @@ in {
     noto-fonts-color-emoji
     inter
   ];
+
+  fonts.fontconfig = {
+    # Subpixel rendering; the NixOS default is grayscale, which reads soft on eDP-1.
+    subpixel.rgba = "rgb";
+    subpixel.lcdfilter = "default";
+    hinting = {
+      enable = true;
+      style = "full";
+    };
+    defaultFonts = {
+      sansSerif = ["Inter" "Noto Sans"];
+      monospace = ["JetBrainsMono Nerd Font"];
+      emoji = ["Noto Color Emoji"];
+    };
+  };
 
   xdg.portal = {
     enable = true;

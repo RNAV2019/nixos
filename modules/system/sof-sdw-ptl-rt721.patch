@@ -1,0 +1,89 @@
+Add a Panther Lake SoundWire machine entry for rt721 + rt1320 on link 3.
+
+The Lenovo Yoga Slim 7 14IPH11 (LNVNB161216) reports three SoundWire
+peripherals on link 3 in ACPI -- rt721, rt1320 and rt722 -- but only rt721
+and rt1320 are actually fitted.  rt722 never attaches:
+
+  $ cat /sys/bus/soundwire/devices/sdw:0:3:025d:0722:01/status
+  UNATTACHED
+
+There is no match-table entry for rt721 on any platform, so
+hda_sdw_machine_select() falls through to the generic SDCA path, which
+builds DAI links for every ACPI-reported peripheral.  The jack and speaker
+functions land on the absent rt722 and every non-HDMI PCM fails:
+
+  rt722-sdca sdw:0:3:025d:0722:01: DPN_PortCtrl register write failed for port 1
+  soundwire sdw-master-0-3: Program params failed: -61
+   SDW3-Playback-SimpleJack: ASoC error (-61): at snd_soc_link_prepare()
+
+snd_soc_acpi_sdw_link_slaves_found() only requires that the peripherals the
+machine entry expects are present -- extra reported peripherals are ignored
+-- so an explicit entry listing just rt721 and rt1320 matches, takes
+priority over the generic fallback, and rt722 never gets a DAI link.
+
+Modelled on the existing ptl_sdw_rt712_vb_l3_rt1320_l3 entry: rt721 carries
+the jack, the group-1 left amp and the DMICs, rt1320 the right amp.
+
+No monolithic topology is named.  sof-firmware ships nothing for this
+combination, and sof_test_topology_file() aborts the probe when the file a
+match entry names is missing -- unless the name contains "dummy", which also
+tells snd_soc_tplg_component_load() that the SDCA per-function topologies are
+required with no fallback.  That is the same escape hatch the generic machine
+driver uses, and the per-function fragments this machine needs (sdca-jack-id0,
+sdca-2amp-id2, sdca-mic-id4, ptl-dmic-4ch-id5, hdmi-pcm5-id7) are all present.
+sof_sdw_get_tplg_files() still parses the platform out of the name, so the
+"sof-ptl-" prefix has to stay.
+
+--- a/sound/soc/intel/common/soc-acpi-intel-ptl-match.c
++++ b/sound/soc/intel/common/soc-acpi-intel-ptl-match.c
+@@ -229,6 +229,15 @@
+ 	}
+ };
+ 
++static const struct snd_soc_acpi_adr_device rt721_3_group1_adr[] = {
++	{
++		.adr = 0x000330025D072101ull,
++		.num_endpoints = ARRAY_SIZE(jack_amp_g1_dmic_endpoints),
++		.endpoints = jack_amp_g1_dmic_endpoints,
++		.name_prefix = "rt721"
++	}
++};
++
+ static const struct snd_soc_acpi_adr_device rt1320_3_group1_adr[] = {
+ 	{
+ 		.adr = 0x000330025D132001ull,
+@@ -423,6 +432,20 @@
+ 	{}
+ };
+ 
++static const struct snd_soc_acpi_link_adr ptl_sdw_rt721_l3_rt1320_l3[] = {
++	{
++		.mask = BIT(3),
++		.num_adr = ARRAY_SIZE(rt721_3_group1_adr),
++		.adr_d = rt721_3_group1_adr,
++	},
++	{
++		.mask = BIT(3),
++		.num_adr = ARRAY_SIZE(rt1320_3_group1_adr),
++		.adr_d = rt1320_3_group1_adr,
++	},
++	{}
++};
++
+ static const struct snd_soc_acpi_link_adr ptl_sdw_rt712_vb_l3_rt1320_l3[] = {
+ 	{
+ 		.mask = BIT(3),
+@@ -525,6 +548,13 @@
+ 	},
+ 	{
+ 		.link_mask = BIT(3),
++		.links = ptl_sdw_rt721_l3_rt1320_l3,
++		.drv_name = "sof_sdw",
++		.sof_tplg_filename = "sof-ptl-dummy.tplg",
++		.get_function_tplg_files = sof_sdw_get_tplg_files,
++	},
++	{
++		.link_mask = BIT(3),
+ 		.links = ptl_sdw_rt712_vb_l3_rt1320_l3,
+ 		.drv_name = "sof_sdw",
+ 		.machine_check = snd_soc_acpi_intel_sdca_is_device_rt712_vb,

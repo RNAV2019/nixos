@@ -8,7 +8,6 @@ import Quickshell.Services.Pam
 import Quickshell.Wayland
 import qs.Commons
 
-// Separate PAM conversations prevent pam_fprintd from blocking passwords.
 Scope {
   id: root
 
@@ -47,12 +46,10 @@ Scope {
     root.reveal = 0;
     lockContext.locked = true;
     passwordPam.start();
-    fingerprintPam.start();
   }
 
   function unlock() {
     passwordPam.abort();
-    fingerprintPam.abort();
     root.password = "";
     root.status = "";
     root.statusIsError = false;
@@ -145,32 +142,6 @@ Scope {
       root.busy = false;
       root.statusIsError = true;
       root.status = "Authentication unavailable";
-    }
-  }
-
-  PamContext {
-    id: fingerprintPam
-
-    configDirectory: "/etc/pam.d"
-    config: "quickshell-fingerprint"
-
-    onCompleted: function (result) {
-      if (result === PamResult.Success) {
-        root.unlock();
-        return;
-      }
-      // Restart pam_fprintd after it gives up on repeated bad reads.
-      fingerprintRetry.restart();
-    }
-
-    // Ignore informational prompts and idle timeouts from pam_fprintd.
-    onPamMessage: {
-      if (fingerprintPam.messageIsError)
-        root.fail(fingerprintPam.message);
-    }
-
-    onError: function (err) {
-      fingerprintRetry.restart();
     }
   }
 
