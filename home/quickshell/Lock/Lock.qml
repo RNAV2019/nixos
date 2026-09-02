@@ -18,9 +18,6 @@ Scope {
   property int attempts: 0
   readonly property bool secure: lockContext.secure
 
-  readonly property int dotSize: 20
-  readonly property int dotGap: dotSize * 0.3
-
   // Overscan by twice the blur radius to avoid transparent edge samples.
   readonly property int blurMax: 48
   readonly property int blurPad: blurMax * 2
@@ -159,15 +156,6 @@ Scope {
     interval: 500
   }
 
-  Timer {
-    id: fingerprintRetry
-    interval: 1000
-    onTriggered: {
-      if (lockContext.locked)
-        fingerprintPam.start();
-    }
-  }
-
   WlSessionLock {
     id: lockContext
 
@@ -262,6 +250,13 @@ Scope {
             return surface.screen ? surface.screen.devicePixelRatio : 1;
           }
 
+          // Layout constants were authored against a 2880x1800 panel; scale them
+          // by the output height so smaller panels keep the same proportions.
+          readonly property real ui: height / 1800
+
+          readonly property int dotSize: Math.round(20 * ui)
+          readonly property int dotGap: Math.round(dotSize * 0.3)
+
           width: surface.width * outputScale
           height: surface.height * outputScale
           transformOrigin: Item.TopLeft
@@ -270,36 +265,36 @@ Scope {
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -250
+            anchors.verticalCenterOffset: -250 * canvas.ui
             text: Qt.formatDate(clock.date, "dddd, MMMM, dd")
             color: Theme.text
             font.family: Theme.displayFont
             renderType: Text.QtRendering
             font.bold: true
-            font.pixelSize: 34
+            font.pixelSize: Math.round(34 * canvas.ui)
           }
 
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -135
+            anchors.verticalCenterOffset: -135 * canvas.ui
             text: Qt.formatDateTime(clock.date, "HH:mm")
             color: Theme.text
             font.family: Theme.displayFont
             renderType: Text.QtRendering
             font.bold: true
-            font.pixelSize: 204
+            font.pixelSize: Math.round(204 * canvas.ui)
           }
 
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 50
+            anchors.bottomMargin: 50 * canvas.ui
             color: Theme.subtle
             font.family: Theme.displayFont
             renderType: Text.QtRendering
             font.bold: true
-            font.pixelSize: 24
+            font.pixelSize: Math.round(24 * canvas.ui)
             text: {
               for (var i = 0; i < Mpris.players.values.length; i++) {
                 var p = Mpris.players.values[i];
@@ -327,11 +322,11 @@ Scope {
 
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: 80
+            anchors.verticalCenterOffset: 80 * canvas.ui
 
             // Preserve the field padding as PAM errors widen it.
-            width: Math.max(417, statusMetrics.width + 99)
-            height: 104
+            width: Math.max(417 * canvas.ui, statusMetrics.width + 99 * canvas.ui)
+            height: Math.round(104 * canvas.ui)
             radius: height / 2
 
             Behavior on width {
@@ -354,7 +349,7 @@ Scope {
               id: input
 
               anchors.fill: parent
-              anchors.margins: 20
+              anchors.margins: Math.round(20 * canvas.ui)
               verticalAlignment: TextInput.AlignVCenter
               horizontalAlignment: TextInput.AlignHCenter
 
@@ -370,7 +365,7 @@ Scope {
               renderType: Text.QtRendering
               font.family: Theme.displayFont
               font.bold: true
-              font.pixelSize: 34
+              font.pixelSize: Math.round(34 * canvas.ui)
 
               text: root.password
               onTextChanged: root.password = text
@@ -398,7 +393,7 @@ Scope {
               anchors.verticalCenter: parent.verticalCenter
               anchors.horizontalCenter: parent.horizontalCenter
               // Center the dots despite each slot's trailing gap.
-              anchors.horizontalCenterOffset: root.dotGap / 2
+              anchors.horizontalCenterOffset: canvas.dotGap / 2
               spacing: 0
 
               Repeater {
@@ -409,8 +404,8 @@ Scope {
 
                   readonly property bool filled: index < input.text.length
 
-                  width: filled ? root.dotSize + root.dotGap : 0
-                  height: root.dotSize
+                  width: filled ? canvas.dotSize + canvas.dotGap : 0
+                  height: canvas.dotSize
 
                   Behavior on width {
                     NumberAnimation {
@@ -420,8 +415,8 @@ Scope {
                   }
 
                   Rectangle {
-                    width: root.dotSize
-                    height: root.dotSize
+                    width: canvas.dotSize
+                    height: canvas.dotSize
                     radius: width / 2
                     color: Theme.text
 
@@ -450,7 +445,7 @@ Scope {
 
       SystemClock {
         id: clock
-        precision: SystemClock.Seconds
+        precision: SystemClock.Minutes
       }
     }
   }

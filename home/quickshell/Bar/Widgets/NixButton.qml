@@ -6,6 +6,11 @@ Rectangle {
 
   signal activated
 
+  // See IconWidget.triggerPress.
+  function triggerPress(button) {
+    root.activated();
+  }
+
   implicitWidth: Theme.barNixMinWidth + Theme.barNixPadding * 2
   implicitHeight: Theme.barHeight
   radius: height / 2

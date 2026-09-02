@@ -5,7 +5,9 @@
 
     font-family = JetBrainsMono Nerd Font
     font-style = Regular
-    font-size = 11
+    # 163 DPI draws a glyph with well under half the pixels the old 2880x1800
+    # panel gave it, so buy some of them back with size.
+    font-size = 12
 
     window-theme = ghostty
     window-padding-x = 14
@@ -14,7 +16,9 @@
     gtk-toolbar-style = flat
 
     background-opacity = 0.75
-    # Native blending keeps glyphs from thinning out over the translucent background.
+    # Must stay `native`: linear modes blend the background-opacity into an
+    # opaque intermediate buffer, and the compositor only sees a uniform alpha
+    # with no per-pixel edges, so Hyprland's blur never applies to the window.
     alpha-blending = native
     minimum-contrast = 1.1
 

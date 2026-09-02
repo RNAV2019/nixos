@@ -17,6 +17,15 @@ Singleton {
 
   property int _max: 0
 
+  // Polling exists only to catch keypresses, and those arrive in bursts. Idle
+  // slowly, then drop to 100 ms for a few seconds after any observed change.
+  // Adjusting the backlight means tapping the key several times, so every press
+  // after the first lands twice as fast as the old flat 200 ms, and the session
+  // pays 2.5x fewer idle wakeups for it.
+  readonly property int idleInterval: 400
+  readonly property int burstInterval: 100
+  readonly property int burstDuration: 3000
+
   Process {
     id: findDevice
     running: true
@@ -42,6 +51,7 @@ Singleton {
     id: currentFile
 
     path: root.devicePath === "" ? "" : root.devicePath + "/brightness"
+    // inotify does not fire on sysfs, so this never substitutes for the poll.
     watchChanges: true
 
     onFileChanged: currentFile.reload()
@@ -52,15 +62,22 @@ Singleton {
       var current = parseInt(currentFile.text());
       if (!isFinite(current))
         return;
+      // Re-enter the fast window on every real change, including the first.
+      if (current !== root.level || !root.available)
+        burst.restart();
       root.level = current;
       root.available = true;
     }
   }
 
-  // A 200 ms poll keeps OSD feedback tied to firmware keypresses.
+  Timer {
+    id: burst
+    interval: root.burstDuration
+  }
+
   Timer {
     running: root.devicePath !== ""
-    interval: 200
+    interval: burst.running ? root.burstInterval : root.idleInterval
     repeat: true
     onTriggered: currentFile.reload()
   }

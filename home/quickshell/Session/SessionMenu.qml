@@ -64,109 +64,120 @@ Scope {
     }
   }
 
-  PanelWindow {
-    id: window
+  // Dim every output, but only the focused one shows and owns the menu.
+  Variants {
+    model: Quickshell.screens
 
-    visible: root.open
-    color: "transparent"
+    PanelWindow {
+      id: window
 
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "quickshell-session"
-    WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      required property var modelData
 
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
+      readonly property bool focused: Monitors.isFocused(window.screen)
 
-    exclusionMode: ExclusionMode.Ignore
+      screen: modelData
+      visible: root.open
+      color: "transparent"
 
-    Rectangle {
-      anchors.fill: parent
-      color: Theme.withAlpha(Theme.base, 0.65)
+      WlrLayershell.layer: WlrLayer.Overlay
+      WlrLayershell.namespace: "quickshell-session"
+      WlrLayershell.keyboardFocus: root.open && focused ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-      MouseArea {
-        anchors.fill: parent
-        onClicked: root.open = false
+      anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
       }
-    }
 
-    Item {
-      anchors.fill: parent
-      focus: root.open
+      exclusionMode: ExclusionMode.Ignore
 
-      Keys.onEscapePressed: root.open = false
-      Keys.onUpPressed: root.move(-1)
-      Keys.onDownPressed: root.move(1)
-      Keys.onReturnPressed: root.run(root.current)
-      Keys.onEnterPressed: root.run(root.current)
+      Rectangle {
+        anchors.fill: parent
+        color: Theme.withAlpha(Theme.base, 0.65)
 
-      Keys.onPressed: function (event) {
-        if (event.key === Qt.Key_K) {
-          root.move(-1);
-          event.accepted = true;
-          return;
+        MouseArea {
+          anchors.fill: parent
+          onClicked: root.open = false
         }
-        if (event.key === Qt.Key_J) {
-          root.move(1);
-          event.accepted = true;
-          return;
-        }
-        for (var i = 0; i < root.actions.length; i++) {
-          if (event.text === root.actions[i].key) {
-            root.run(i);
+      }
+
+      Item {
+        anchors.fill: parent
+        focus: root.open && window.focused
+        visible: window.focused
+
+        Keys.onEscapePressed: root.open = false
+        Keys.onUpPressed: root.move(-1)
+        Keys.onDownPressed: root.move(1)
+        Keys.onReturnPressed: root.run(root.current)
+        Keys.onEnterPressed: root.run(root.current)
+
+        Keys.onPressed: function (event) {
+          if (event.key === Qt.Key_K) {
+            root.move(-1);
             event.accepted = true;
             return;
           }
+          if (event.key === Qt.Key_J) {
+            root.move(1);
+            event.accepted = true;
+            return;
+          }
+          for (var i = 0; i < root.actions.length; i++) {
+            if (event.text === root.actions[i].key) {
+              root.run(i);
+              event.accepted = true;
+              return;
+            }
+          }
         }
-      }
 
-      Column {
-        anchors.centerIn: parent
-        spacing: Theme.spacingLg
+        Column {
+          anchors.centerIn: parent
+          spacing: Theme.spacingLg
 
-        Repeater {
-          model: root.actions
+          Repeater {
+            model: root.actions
 
-          Item {
-            id: entry
+            Item {
+              id: entry
 
-            required property var modelData
-            required property int index
+              required property var modelData
+              required property int index
 
-            readonly property bool active: root.current === entry.index
+              readonly property bool active: root.current === entry.index
 
-            width: 240
-            height: 56
+              width: 240
+              height: 56
 
-            Text {
-              anchors.centerIn: parent
-              text: entry.modelData.label
-              color: entry.active ? Theme.love : Theme.muted
-              font.family: Theme.fontFamily
-              font.pixelSize: 20
+              Text {
+                anchors.centerIn: parent
+                text: entry.modelData.label
+                color: entry.active ? Theme.love : Theme.muted
+                font.family: Theme.fontFamily
+                font.pixelSize: 20
 
-              Behavior on color {
-                ColorAnimation {
-                  duration: Theme.animFast
+                Behavior on color {
+                  ColorAnimation {
+                    duration: Theme.animFast
+                  }
                 }
               }
-            }
 
-            HoverHandler {
-              id: hover
-              cursorShape: Qt.PointingHandCursor
-              onHoveredChanged: {
-                if (hovered)
-                  root.current = entry.index;
+              HoverHandler {
+                id: hover
+                cursorShape: Qt.PointingHandCursor
+                onHoveredChanged: {
+                  if (hovered)
+                    root.current = entry.index;
+                }
               }
-            }
 
-            MouseArea {
-              anchors.fill: parent
-              onClicked: root.run(entry.index)
+              MouseArea {
+                anchors.fill: parent
+                onClicked: root.run(entry.index)
+              }
             }
           }
         }

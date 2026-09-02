@@ -10,6 +10,10 @@ Item {
 
   property int preferredWidth: Theme.panelWidthNarrow
   property int maxHeight: Theme.panelMaxHeight
+  // Raised while an inline editor holds focus, so typing does not also drive
+  // keyboard navigation. See Ui/PanelKeyCatcher.qml.
+  property bool editing: false
+
   // Disable outer scrolling when a nested list scrolls below a fixed header.
   property bool scrollable: true
   // An explicit body height avoids circular sizing against availableHeight.

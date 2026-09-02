@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.Bar.Widgets
 import qs.Commons
@@ -20,7 +19,7 @@ Variants {
     property string openPanel: ""
 
     // IPC panel requests target the focused monitor.
-    readonly property bool focused: Hyprland.focusedMonitor !== null && Hyprland.focusedMonitor.name === bar.screen.name
+    readonly property bool focused: Monitors.isFocused(bar.screen)
 
     function toggle(name) {
       openPanel = openPanel === name ? "" : name;
@@ -59,9 +58,12 @@ Variants {
       }
     }
 
-    // PanelHost cards use this item's coordinate space.
+    // PanelHost cards use this item's coordinate space, and its overlay
+    // replays bar-strip clicks onto these widgets.
     Item {
       id: barBody
+
+      readonly property var clickTargets: [nixButton, clockWidget, claudeWidget, bluetoothWidget, networkWidget, volumeWidget, cpuWidget, batteryWidget]
 
       anchors.fill: parent
 
@@ -72,6 +74,7 @@ Variants {
         spacing: Theme.barItemGap
 
         NixButton {
+          id: nixButton
           anchors.verticalCenter: parent.verticalCenter
           onActivated: {
             bar.openPanel = "";

@@ -1,39 +1,12 @@
 import QtQuick
-import Quickshell.Networking
 import qs.Commons
+import qs.Services
 
 IconWidget {
   id: root
 
-  readonly property var wifiDevice: {
-    for (var i = 0; i < Networking.devices.values.length; i++) {
-      var d = Networking.devices.values[i];
-      if (d.type === DeviceType.Wifi)
-        return d;
-    }
-    return null;
-  }
-
-  readonly property var wiredDevice: {
-    for (var i = 0; i < Networking.devices.values.length; i++) {
-      var d = Networking.devices.values[i];
-      if (d.type === DeviceType.Wired)
-        return d;
-    }
-    return null;
-  }
-
-  readonly property var activeWifi: {
-    if (!wifiDevice)
-      return null;
-    for (var i = 0; i < wifiDevice.networks.values.length; i++) {
-      if (wifiDevice.networks.values[i].connected)
-        return wifiDevice.networks.values[i];
-    }
-    return null;
-  }
-
-  readonly property bool onEthernet: wiredDevice !== null && wiredDevice.connected
+  readonly property var activeWifi: NetworkInfo.activeNetwork
+  readonly property bool onEthernet: NetworkInfo.onEthernet
 
   glyph: {
     if (onEthernet)

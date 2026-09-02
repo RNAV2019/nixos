@@ -52,6 +52,11 @@ in {
 
     settings = {
       monitor = [
+        # 1920x1200 across 300 mm is 163 DPI, which sits right where a fractional
+        # scale is tempting. Resist it: Xwayland and any client without
+        # wp-fractional-scale-v1 render at the next integer scale and get
+        # resampled, and that blur costs more than the size gains. Scale 1 is
+        # pixel-exact; grow font sizes instead.
         {
           output = "eDP-1";
           mode = "preferred";
@@ -339,11 +344,12 @@ in {
           (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
           (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
 
-          # Quickshell watches these controls and renders the OSD.
-          (bindel "XF86AudioRaiseVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0"))
-          (bindel "XF86AudioLowerVolume" (exec "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"))
-          (bindel "XF86MonBrightnessUp" (exec "brightnessctl set 5%+"))
-          (bindel "XF86MonBrightnessDown" (exec "brightnessctl set 5%-"))
+          # Quickshell performs these and renders the OSD, so a press at either
+          # rail still shows feedback.
+          (bindel "XF86AudioRaiseVolume" (exec "qs ipc call volume up"))
+          (bindel "XF86AudioLowerVolume" (exec "qs ipc call volume down"))
+          (bindel "XF86MonBrightnessUp" (exec "qs ipc call brightness up"))
+          (bindel "XF86MonBrightnessDown" (exec "qs ipc call brightness down"))
         ];
 
       window_rule = [

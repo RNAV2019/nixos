@@ -31,6 +31,13 @@ Item {
 
   readonly property bool active: player !== null && player.playbackState !== MprisPlaybackState.Stopped
 
+  readonly property bool playing: player !== null && player.isPlaying
+
+  // The timer stops the moment playing goes false, so it never ticks again to
+  // show where playback actually stopped. Push that one refresh here.
+  onPlayingChanged: if (player)
+    player.positionChanged()
+
   function formatTime(seconds) {
     var s = Math.max(0, Math.floor(seconds));
     var m = Math.floor(s / 60);
@@ -76,9 +83,11 @@ Item {
     return s;
   }
 
-  // positionChanged() refreshes visible positions, including paused players.
+  // positionChanged() refreshes the visible position. A paused player does not
+  // advance, so only poll while playing; the pause itself still pushes one
+  // refresh so the final position is correct.
   Timer {
-    running: root.active
+    running: root.playing
     repeat: true
     triggeredOnStart: true
     interval: 1000

@@ -11,7 +11,12 @@ PanelContent {
   readonly property var sink: Pipewire.defaultAudioSink
   readonly property var source: Pipewire.defaultAudioSource
 
+  // Only enumerate and track devices while the panel is open. PipeWire pushes
+  // updates for every tracked node, and the bar widget tracks the default sink
+  // on its own, so a closed panel has no reason to hold any of them.
   readonly property var sinks: {
+    if (!root.active)
+      return [];
     var out = [];
     for (var i = 0; i < Pipewire.nodes.values.length; i++) {
       var n = Pipewire.nodes.values[i];
@@ -22,6 +27,8 @@ PanelContent {
   }
 
   readonly property var sources: {
+    if (!root.active)
+      return [];
     var out = [];
     for (var i = 0; i < Pipewire.nodes.values.length; i++) {
       var n = Pipewire.nodes.values[i];

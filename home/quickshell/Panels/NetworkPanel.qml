@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
 import qs.Commons
+import qs.Services
 import qs.Ui
 
 PanelContent {
@@ -11,49 +12,13 @@ PanelContent {
 
   property string pendingSsid: ""
 
-  readonly property var wifiDevice: {
-    for (var i = 0; i < Networking.devices.values.length; i++) {
-      if (Networking.devices.values[i].type === DeviceType.Wifi)
-        return Networking.devices.values[i];
-    }
-    return null;
-  }
-
-  readonly property var wiredDevice: {
-    for (var i = 0; i < Networking.devices.values.length; i++) {
-      if (Networking.devices.values[i].type === DeviceType.Wired)
-        return Networking.devices.values[i];
-    }
-    return null;
-  }
-
-  readonly property var activeNetwork: {
-    if (!wifiDevice)
-      return null;
-    for (var i = 0; i < wifiDevice.networks.values.length; i++) {
-      if (wifiDevice.networks.values[i].connected)
-        return wifiDevice.networks.values[i];
-    }
-    return null;
-  }
-
-  readonly property var otherNetworks: {
-    if (!wifiDevice)
-      return [];
-    var out = [];
-    for (var i = 0; i < wifiDevice.networks.values.length; i++) {
-      var n = wifiDevice.networks.values[i];
-      if (!n.connected)
-        out.push(n);
-    }
-    out.sort(function (a, b) {
-      return b.signalStrength - a.signalStrength;
-    });
-    return out;
-  }
+  readonly property var wifiDevice: NetworkInfo.wifiDevice
+  readonly property var wiredDevice: NetworkInfo.wiredDevice
+  readonly property var activeNetwork: NetworkInfo.activeNetwork
+  readonly property var otherNetworks: NetworkInfo.otherNetworks
 
   function secured(network) {
-    return network.security !== WifiSecurityType.Open && network.security !== WifiSecurityType.Unknown;
+    return NetworkInfo.secured(network);
   }
 
   function runNmcli(args) {

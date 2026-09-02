@@ -15,6 +15,16 @@ Item {
   signal secondaryActivated
   signal scrolled(int delta)
 
+  // An open panel covers the bar with its own overlay surface. That overlay
+  // hit-tests clicks landing in the bar strip and replays them here, so
+  // switching from one panel to another stays a single click.
+  function triggerPress(button) {
+    if (button === Qt.RightButton)
+      root.secondaryActivated();
+    else
+      root.activated();
+  }
+
   // Own both side paddings; the parent row must keep spacing at zero.
   implicitWidth: row.implicitWidth + Theme.barIconPadding * 2
   implicitHeight: Theme.barHeight

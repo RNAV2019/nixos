@@ -8,6 +8,11 @@ Rectangle {
   signal activated
   property alias containsMouse: mouse.containsMouse
 
+  // See IconWidget.triggerPress.
+  function triggerPress(button) {
+    root.activated();
+  }
+
   implicitWidth: label.implicitWidth + Theme.barPillPaddingWide * 2
   implicitHeight: Theme.barHeight
   radius: height / 2

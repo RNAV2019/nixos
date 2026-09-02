@@ -21,7 +21,6 @@
         helpColorBright = "c4a7e7";
       };
       graphicalTerminal = {
-        font.scale = "2x2";
         background = "191724";
         foreground = "e0def4";
         brightBackground = "6e6a86";

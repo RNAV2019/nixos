@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
 import Quickshell.Wayland
 import qs.Commons
@@ -50,13 +49,28 @@ Scope {
       flash("volume");
   }
 
+  // A keypress at either rail moves nothing, so the value signals below never
+  // fire for it. adjusted covers the press itself; the value signals stay so
+  // changes from elsewhere (idle dimming, the lock screen) still show.
   Connections {
     target: Brightness
+
+    function onAdjusted() {
+      root.flash("brightness");
+    }
 
     function onValueChanged() {
       // available filters the initial zero-to-real transition.
       if (root.ready && Brightness.available)
         root.flash("brightness");
+    }
+  }
+
+  Connections {
+    target: Volume
+
+    function onAdjusted() {
+      root.flash("volume");
     }
   }
 
@@ -84,6 +98,9 @@ Scope {
     return volume;
   }
 
+  // Every glyph the OSD can show, used to size a stable icon column.
+  readonly property var glyphCandidates: Icons.volume.concat([Icons.volumeMuted, Icons.brightness, Icons.keyboardBacklight])
+
   readonly property string glyph: {
     if (mode === "brightness")
       return Icons.brightness;
@@ -102,7 +119,7 @@ Scope {
 
       required property var modelData
 
-      readonly property bool focused: Hyprland.focusedMonitor !== null && Hyprland.focusedMonitor.name === window.screen.name
+      readonly property bool focused: Monitors.isFocused(window.screen)
 
       screen: modelData
       visible: root.showing && focused
@@ -127,15 +144,44 @@ Scope {
         border.width: 1
         border.color: Theme.highlightMed
 
-        Text {
+        // Glyph widths differ between icon sets and across volume steps, which
+        // slid the progress bar sideways as the level crossed a threshold. Pin
+        // the column to the widest candidate. The probes overlap at x=0, so
+        // childrenRect spans the widest one rather than their total.
+        Item {
+          id: glyphProbe
+
+          visible: false
+
+          Repeater {
+            model: root.glyphCandidates
+
+            Text {
+              required property string modelData
+
+              text: modelData
+              font.family: Theme.fontFamily
+              font.pixelSize: Theme.fontSizeXl
+            }
+          }
+        }
+
+        Item {
           id: osdIcon
+
           anchors.left: parent.left
           anchors.leftMargin: Theme.spacingXl
           anchors.verticalCenter: parent.verticalCenter
-          text: root.glyph
-          color: Theme.text
-          font.family: Theme.fontFamily
-          font.pixelSize: Theme.fontSizeXl
+          width: glyphProbe.childrenRect.width
+          height: parent.height
+
+          Text {
+            anchors.centerIn: parent
+            text: root.glyph
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeXl
+          }
         }
 
         Rectangle {
@@ -154,9 +200,11 @@ Scope {
             radius: parent.radius
             color: root.mode === "volume" && root.muted ? Theme.muted : Theme.accent
 
+            // Held keys repeat about every 40 ms, so a longer tween never
+            // finishes and the fill visibly trails the key.
             Behavior on width {
               NumberAnimation {
-                duration: Theme.animFast
+                duration: 80
               }
             }
           }

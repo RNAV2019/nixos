@@ -164,12 +164,18 @@ in {
   ];
 
   fonts.fontconfig = {
-    # Subpixel rendering; the NixOS default is grayscale, which reads soft on eDP-1.
-    subpixel.rgba = "rgb";
-    subpixel.lcdfilter = "default";
+    # eDP-1 is a 1920x1200 OLED at 163 DPI. Subpixel rendering assumes a vertical
+    # RGB stripe, and this panel's layout is not exposed anywhere we can read, so
+    # the colour fringes it produces are a gamble that only paid off on the denser
+    # 2880x1800 panel that preceded it, where they were too small to see.
+    # Grayscale has no layout to get wrong.
+    subpixel.rgba = "none";
     hinting = {
       enable = true;
-      style = "full";
+      # Full hinting distorts outlines to put stems on whole pixels. That trade
+      # is worth less at 163 DPI than the even spacing slight hinting keeps, and
+      # slight is the better partner for grayscale.
+      style = "slight";
     };
     defaultFonts = {
       sansSerif = ["Inter" "Noto Sans"];

@@ -9,7 +9,28 @@ PopupWindow {
   property string text: ""
   property bool show: false
 
-  readonly property bool wanted: show && text.length > 0
+  // Crossing the bar should not strobe every tooltip on the way past, so a
+  // hover has to settle before the bubble appears. Leaving clears instantly.
+  readonly property int showDelay: 400
+
+  property bool settled: false
+
+  readonly property bool wanted: settled && show && text.length > 0
+
+  onShowChanged: {
+    if (show)
+      settle.restart();
+    else {
+      settle.stop();
+      settled = false;
+    }
+  }
+
+  Timer {
+    id: settle
+    interval: root.showDelay
+    onTriggered: root.settled = true
+  }
 
   // Keep the window mapped until fade-out completes.
   visible: wanted || bubble.opacity > 0

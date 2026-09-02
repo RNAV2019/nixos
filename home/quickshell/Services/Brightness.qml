@@ -16,14 +16,20 @@ Singleton {
 
   property int _max: 0
 
-  function set(fraction) {
-    var v = Math.max(0.01, Math.min(1, fraction));
-    setter.command = ["brightnessctl", "set", Math.round(v * 100) + "%"];
-    setter.running = true;
-  }
+  // Emitted per keypress, including when the value is already railed, so the
+  // OSD can appear without waiting on a sysfs change that never comes.
+  signal adjusted
 
-  function step(delta) {
-    set(value + delta);
+  // -e spends the raw range on an exponential curve, so a step at the dim end
+  // does not swamp the one before it. That makes each step a proportion of the
+  // current level rather than of the maximum, so it takes a smaller percentage
+  // than a linear control would to land on the same feel.
+  function step(up) {
+    // --min-value keeps the key off a fully black panel. It has to be joined by
+    // = because a separate argument is parsed as the operation instead.
+    setter.command = ["brightnessctl", "-e", "--min-value=4", "set", up ? "2.5%+" : "2.5%-"];
+    setter.running = true;
+    root.adjusted();
   }
 
   Process {
