@@ -291,7 +291,6 @@ in {
           (bind "${mod} + RETURN" (exec "ghostty"))
           (bind "${mod} + SHIFT + B" (exec "helium"))
           (bind "${mod} + SHIFT + F" (exec "nautilus"))
-          (bind "${mod} + P" (exec "project-picker --toggle"))
 
           (bind "${mod} + W" "hl.dsp.window.close()")
           (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')
@@ -362,7 +361,6 @@ in {
           suppress_event = "maximize";
         }
 
-        (floatingOverlay "uk.co.ryannavsaria.project-picker")
         (floatingOverlay "uk.co.ryannavsaria.mycelium")
         (floatingOverlay "uk.co.ryannavsaria.cherry")
 

@@ -55,34 +55,6 @@
     '';
   };
 
-  project-picker = let
-    runtimeLibs = [
-      pkgs.wayland
-      pkgs.libxkbcommon
-      pkgs.vulkan-loader
-    ];
-    src = pkgs.fetchFromGitHub {
-      owner = "RNAV2019";
-      repo = "project-picker";
-      rev = "590f5c9931ae852b81efef94db6988e1cf23957f";
-      hash = "sha256-aOzgjytqZhfnW9QiWZdEoUpP1/8W5kdnDtnaZrVTjEI=";
-    };
-  in
-    pkgs.rustPlatform.buildRustPackage {
-      pname = "project-picker";
-      version = "1.0.0";
-      inherit src;
-      cargoLock.lockFile = "${src}/Cargo.lock";
-
-      buildInputs = runtimeLibs;
-      nativeBuildInputs = [pkgs.makeWrapper];
-
-      postInstall = ''
-        wrapProgram $out/bin/project-picker \
-          --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
-      '';
-    };
-
   mycelium = let
     runtimeLibs = [
       pkgs.wayland
@@ -92,8 +64,8 @@
     src = pkgs.fetchFromGitHub {
       owner = "RNAV2019";
       repo = "mycelium";
-      rev = "2229b3992861c0c2ad901d192d50e0e3155765bd";
-      hash = "sha256-W8/TiYPMrTAGQsGdW2/62Tx1oC1rcFxiWVEkKePTj4Y=";
+      rev = "3628eaf0a0fe5234fcc91dd789bbb0422f75ac65";
+      hash = "sha256-9d2JS3wjiV6eF3hLoP71XL7Ig5JtAWBRYqsf7xoLa3g=";
     };
   in
     pkgs.rustPlatform.buildRustPackage {
@@ -235,7 +207,6 @@ in {
     ani-cli
     cherry
     lock-session
-    project-picker
     mycelium
     start-desktop
     gen-commit
@@ -246,6 +217,5 @@ in {
   systemd.user.services = {
     cherry = launcherDaemon "cherry" cherry;
     mycelium = launcherDaemon "mycelium" mycelium;
-    project-picker = launcherDaemon "project-picker" project-picker;
   };
 }
