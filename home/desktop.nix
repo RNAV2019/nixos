@@ -33,6 +33,37 @@
 
   workspaces = lib.range 1 9;
 
+  # Monitor layouts are owned by the quickshell displays panel, which writes
+  # this file and applies changes live through `hyprctl eval`. Reading it back
+  # here means a fresh session starts on the last saved arrangement even before
+  # quickshell is up, and that a reload reasserts it rather than the old
+  # hardcoded rule.
+  #
+  # Flake evaluation only sees git-tracked files, so a layout change has to be
+  # `git add`ed before a rebuild picks it up.
+  monitorStore = builtins.fromJSON (builtins.readFile ./monitors.json);
+  activeProfile = monitorStore.profiles.${monitorStore.active} or null;
+
+  monitorRule = m:
+    if m.disabled or false
+    then {
+      output = m.output;
+      disabled = true;
+    }
+    else
+      {
+        output = m.output;
+        mode = m.mode;
+        position = m.position;
+        scale = m.scale;
+      }
+      // lib.optionalAttrs ((m.mirrorOf or "") != "") {mirror = m.mirrorOf;};
+
+  savedMonitors =
+    if activeProfile == null
+    then []
+    else map monitorRule activeProfile.monitors;
+
   # Rose Pine floating overlays share the same shape.
   floatingOverlay = class: {
     match.class = class;
@@ -51,19 +82,24 @@ in {
     systemd.enable = false;
 
     settings = {
-      monitor = [
-        # 1920x1200 across 300 mm is 163 DPI, which sits right where a fractional
-        # scale is tempting. Resist it: Xwayland and any client without
-        # wp-fractional-scale-v1 render at the next integer scale and get
-        # resampled, and that blur costs more than the size gains. Scale 1 is
-        # pixel-exact; grow font sizes instead.
-        {
-          output = "eDP-1";
-          mode = "preferred";
-          position = "0x0";
-          scale = 1.0;
-        }
-      ];
+      # 1920x1200 across 300 mm is 163 DPI, which sits right where a fractional
+      # scale is tempting. Resist it: Xwayland and any client without
+      # wp-fractional-scale-v1 render at the next integer scale and get
+      # resampled, and that blur costs more than the size gains. Scale 1 is
+      # pixel-exact; grow font sizes instead.
+      #
+      # The saved rules come first so they win, then a catch-all lights up any
+      # output the active profile has never seen.
+      monitor =
+        savedMonitors
+        ++ [
+          {
+            output = "";
+            mode = "preferred";
+            position = "auto";
+            scale = 1.0;
+          }
+        ];
 
       env = [
         {_args = ["XCURSOR_SIZE" "24"];}
@@ -330,6 +366,7 @@ in {
           (bind "${mod} + CTRL + P" (exec "qs ipc call panels toggle battery"))
           (bind "${mod} + CTRL + S" (exec "qs ipc call panels toggle system"))
           (bind "${mod} + CTRL + C" (exec "qs ipc call panels toggle clock"))
+          (bind "${mod} + CTRL + D" (exec "qs ipc call panels toggle displays"))
 
           (bind "${mod} + SPACE" (exec "mycelium --toggle"))
 

@@ -20,16 +20,49 @@ Singleton {
   // OSD can appear without waiting on a sysfs change that never comes.
   signal adjusted
 
-  // -e spends the raw range on an exponential curve, so a step at the dim end
-  // does not swamp the one before it. That makes each step a proportion of the
-  // current level rather than of the maximum, so it takes a smaller percentage
-  // than a linear control would to land on the same feel.
+  // Every control works in the raw sysfs range, which is also the space
+  // `value` reports and the panel slider draws. brightnessctl's -e flag would
+  // put a step or a target somewhere up an exponential curve instead, which
+  // leaves the reported percentage disagreeing with what was asked for.
+  readonly property int stepPercent: 5
+
+  // A flat 5% step is right for a tap but slow for a hold: the keyboard
+  // repeats 25 times a second, so crossing the range takes 20 of them. Once a
+  // run of presses is clearly a held key rather than tapping, grow the step so
+  // the ends arrive in roughly half a second while a single press stays fine.
+  readonly property int maxStepPercent: 20
+  readonly property int stepGrowth: 2
+  // Presses at the base size before the run starts accelerating.
+  readonly property int accelAfter: 5
+  // Repeats arrive 40 ms apart, so this separates a held key from tapping.
+  readonly property int repeatWindow: 150
+
+  property int _run: 0
+  property real _lastAt: 0
+  property bool _lastUp: false
+
   function step(up) {
+    var now = Date.now();
+    // Reversing direction restarts the ramp, so a correction is not amplified.
+    var continues = up === _lastUp && (now - _lastAt) < repeatWindow;
+    _run = continues ? _run + 1 : 0;
+    _lastAt = now;
+    _lastUp = up;
+
+    var pct = Math.min(maxStepPercent, stepPercent + Math.max(0, _run - accelAfter) * stepGrowth);
+
     // --min-value keeps the key off a fully black panel. It has to be joined by
     // = because a separate argument is parsed as the operation instead.
-    setter.command = ["brightnessctl", "-e", "--min-value=4", "set", up ? "2.5%+" : "2.5%-"];
+    setter.command = ["brightnessctl", "--min-value=4", "set", pct + (up ? "%+" : "%-")];
     setter.running = true;
     root.adjusted();
+  }
+
+  // The panel slider's absolute target, in the same linear space as the steps.
+  function set(v) {
+    var pct = Math.round(Math.max(0, Math.min(1, v)) * 100);
+    setter.command = ["brightnessctl", "--min-value=4", "set", pct + "%"];
+    setter.running = true;
   }
 
   Process {

@@ -1,0 +1,18 @@
+{
+  "active": "eDP-1|Samsung Display Corp. 0x4208",
+  "profiles": {
+    "eDP-1|Samsung Display Corp. 0x4208": {
+      "label": "eDP-1",
+      "monitors": [
+        {
+          "output": "eDP-1",
+          "mode": "1920x1200@60",
+          "position": "0x0",
+          "scale": 1,
+          "disabled": false,
+          "mirrorOf": ""
+        }
+      ]
+    }
+  }
+}

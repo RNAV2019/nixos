@@ -11,6 +11,13 @@ Singleton {
   readonly property string cpu: "󰍛"
   readonly property string claude: ""
 
+  readonly property string monitor: "󰍹"
+  readonly property string monitorMultiple: "󰍺"
+  readonly property string monitorOff: "󰶐"
+
+  readonly property string expandMore: "󰅀"
+  readonly property string expandLess: "󰅃"
+
   readonly property string mprisPlaying: "󰎇"
   readonly property string mprisPaused: "󰏤"
 

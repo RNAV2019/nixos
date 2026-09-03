@@ -51,7 +51,9 @@ Item {
     preventStealing: true
 
     function apply(mx) {
-      var v = (mx + grab - handle.width / 2) / (root.width - handle.width);
+      // The area is inset by -grab, so its own origin sits grab pixels left of
+      // the track. Convert back before solving for the handle centre.
+      var v = (mx - grab - handle.width / 2) / (root.width - handle.width);
       root.moved(Math.max(0, Math.min(1, v)));
     }
 

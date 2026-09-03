@@ -86,8 +86,17 @@ Singleton {
   readonly property int panelRowHeight: 34
   readonly property int panelWidthNarrow: 300
   readonly property int panelWidthWide: 380
+  readonly property int panelWidthWidest: 440
   // Keep long device lists inside a scrolling card.
   readonly property int panelMaxHeight: 460
+
+  // The display layout map. Monitor rectangles are drawn in logical Hyprland
+  // coordinates scaled to fit this box.
+  readonly property int displayCanvasHeight: 150
+  readonly property int displayRadius: 4
+  // Drag snap threshold, in canvas pixels rather than layout pixels, so the
+  // pull feels the same however far out the map is zoomed.
+  readonly property int displaySnapDistance: 12
 
   readonly property int barHeight: 26
   readonly property int barMarginTop: 6

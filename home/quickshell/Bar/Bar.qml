@@ -63,7 +63,7 @@ Variants {
     Item {
       id: barBody
 
-      readonly property var clickTargets: [nixButton, clockWidget, claudeWidget, bluetoothWidget, networkWidget, volumeWidget, cpuWidget, batteryWidget]
+      readonly property var clickTargets: [nixButton, clockWidget, claudeWidget, displayWidget, bluetoothWidget, networkWidget, volumeWidget, cpuWidget, batteryWidget]
 
       anchors.fill: parent
 
@@ -119,6 +119,12 @@ Variants {
             anchors.verticalCenter: parent.verticalCenter
           }
 
+          DisplayWidget {
+            id: displayWidget
+            anchors.verticalCenter: parent.verticalCenter
+            onActivated: bar.toggle("displays")
+          }
+
           BluetoothWidget {
             id: bluetoothWidget
             anchors.verticalCenter: parent.verticalCenter
@@ -168,6 +174,11 @@ Variants {
         activePanel: bar.openPanel
         onDismissed: bar.openPanel = ""
 
+        DisplayPanel {
+          panelName: "displays"
+          anchorTarget: displayWidget
+        }
+
         BluetoothPanel {
           panelName: "bluetooth"
           anchorTarget: bluetoothWidget
@@ -199,6 +210,12 @@ Variants {
         anchorItem: claudeWidget
         text: claudeWidget.tooltip
         show: claudeWidget.hovered && bar.openPanel === ""
+      }
+
+      BarTooltip {
+        anchorItem: displayWidget
+        text: displayWidget.tooltip
+        show: displayWidget.hovered && bar.openPanel === ""
       }
 
       BarTooltip {
