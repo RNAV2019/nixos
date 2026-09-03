@@ -16,6 +16,12 @@
     gtk-toolbar-style = flat
 
     background-opacity = 0.75
+    # herdr paints its panes with an explicit background (rose-pine surface,
+    # #1f1d2e) rather than leaving the terminal default. Ghostty applies
+    # background-opacity only to the default background, so those cells come
+    # out fully opaque and Hyprland sees nothing translucent to blur. tmux did
+    # not set one, which is why the blur survived until the migration.
+    background-opacity-cells = true
     # Must stay `native`: linear modes blend the background-opacity into an
     # opaque intermediate buffer, and the compositor only sees a uniform alpha
     # with no per-pixel edges, so Hyprland's blur never applies to the window.
@@ -108,5 +114,54 @@
       bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "wl-copy"
       bind -T copy-mode-vi Escape send-keys -X cancel
     '';
+  };
+
+  # Migrating off tmux; both stay enabled until the herdr keymap sticks.
+  programs.herdr = {
+    enable = true;
+
+    settings = {
+      onboarding = false;
+
+      # Built in, so this needs no plugin the way tmux's rose-pine did.
+      theme.name = "rose-pine";
+
+      # `herdr update` writes over its own binary, which the Nix store will
+      # not allow, so suppress the nag. The agent-detection manifest check is
+      # plain data and stays on.
+      update.version_check = false;
+
+      terminal = {
+        # tmux passed `-c "#{pane_current_path}"` on every split and window.
+        new_cwd = "follow";
+      };
+
+      keys = {
+        prefix = "ctrl+a";
+
+        # `v` splits vertically and `s` horizontally, as in the tmux config.
+        # herdr puts split_horizontal on prefix+minus and settings on prefix+s.
+        split_vertical = "prefix+v";
+        split_horizontal = "prefix+s";
+        settings = "prefix+shift+s";
+
+        # tmux detached with prefix+d; herdr defaults to prefix+q.
+        detach = "prefix+d";
+
+        # focus_pane_{left,down,up,right} already default to prefix+h/j/k/l.
+
+        # tmux resized with `H/J/K/L`. herdr has no per-direction resize
+        # bindings; it enters a modal resize mode instead.
+        resize_mode = "prefix+r";
+      };
+
+      ui = {
+        # tmux's new-window does not ask for a name.
+        prompt_new_tab_name = false;
+      };
+
+      # tmux counted 50000 scrollback lines; herdr counts bytes.
+      advanced.scrollback_limit_bytes = 20000000;
+    };
   };
 }

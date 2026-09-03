@@ -24,29 +24,6 @@
   home.homeDirectory = "/home/ryan";
   home.stateVersion = "25.11";
   programs.home-manager.enable = true;
-  programs.omp.enable = true;
-  # Migrated from ~/.omp/agent/config.yml. The module installs this as a
-  # writable copy; runtime edits survive until the next rebuild.
-  programs.omp.settings = {
-    setupVersion = 2;
-    modelRoles.default = "openrouter/stealth/ox-alpha:high";
-
-    # Vendored rose-pine copy overriding the nerd-font context icon (U+E70F,
-    # the Windows logo) with ◫. Custom themes do not merge with builtins, so
-    # home/themes/dark-rose-pine-omp.json carries the full palette.
-    theme.dark = "dark-rose-pine-omp";
-    symbolPreset = "nerd";
-
-    composer.shape = "claude";
-
-    statusLine.preset = "compact";
-    statusLine.transparent = true;
-
-    tui.resizeScrollback = "preserve";
-    hideThinkingBlock = true;
-  };
-
-  home.file.".omp/agent/themes/dark-rose-pine-omp.json".source = ./themes/dark-rose-pine-omp.json;
   xdg.enable = true;
 
   # Prevent web links from falling back to Firefox.

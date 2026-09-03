@@ -24,8 +24,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    oh-my-pi.url = "github:can1357/oh-my-pi";
-
     # Typst notes TUI, installed as the `note` command. The tinymist preview
     # it drives is configured in home/editors.nix.
     note-tui = {
@@ -48,7 +46,6 @@
     helium-browser,
     llm-agents,
     helix-steel,
-    oh-my-pi,
     note-tui,
     fenix,
     ...
@@ -84,7 +81,6 @@
             home-manager.backupFileExtension = "hm-backup";
             home-manager.users.ryan = import ./home/default.nix;
             home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
-            home-manager.sharedModules = [oh-my-pi.homeManagerModules.default];
           }
         ];
         specialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};

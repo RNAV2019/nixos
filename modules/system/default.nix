@@ -136,24 +136,11 @@ in {
   # D-Bus power state for the shell and upower CLI.
   services.upower.enable = true;
 
-  # Declarative Helium extensions, via Chromium enterprise policy. Helium keeps
-  # Chromium's policy directory name, so /etc/chromium/policies/managed is read.
-  environment.etc."chromium/policies/managed/helium-extensions.json".text = builtins.toJSON {
-    ExtensionSettings =
-      {
-        # Leave hand-installing from the web store available.
-        "*".installation_mode = "allowed";
-      }
-      // pkgs.lib.genAttrs [
-        "effdbpeggelllpfkjppbokhmmiinhlmg" # Better Lyrics (Lyrics for YouTube Music)
-        "mffpncjphfmkppebdoaehdlnagnlpfai" # Better Lyrics Shaders
-        "nngceckbapebfimnlniiiahkandclblb" # Bitwarden Password Manager
-        "oemmndcbldboiebfnladdacbdfmadadm" # PDF Viewer (pdfjs.robwu.nl)
-      ] (_: {
-        installation_mode = "force_installed";
-        update_url = "https://clients2.google.com/service/update2/crx";
-      });
-  };
+  # Helium extensions are declared in home/packages.nix and loaded via
+  # --load-extension from pinned web store CRXes. Enterprise policy
+  # (force_installed) is not used: Helium's policy-driven CRX download is
+  # broken upstream (imputnet/helium#1737), and a managed extension blocks
+  # every other install path with a "blocked by the administrator" error.
 
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
