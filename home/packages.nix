@@ -273,6 +273,11 @@ in {
     fetch
 
     cloudflared
+
+    # Editing secrets/secrets.yaml: `sops secrets/secrets.yaml` from the flake
+    # root, with SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key.
+    sops
+    age
     # cargo/rustc/clippy/rustfmt/rust-src/rust-analyzer, all one stable
     # release. Defined in modules/system/default.nix.
     rustToolchain

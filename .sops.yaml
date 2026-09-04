@@ -1,0 +1,10 @@
+# Recipients allowed to decrypt. The private half of this key lives only at
+# /etc/nixos-secrets/age.key and in Bitwarden; it is never in this repo.
+keys:
+  - &ryans-nixos age10dc6xhwm0tand4hk838y4m5u9hgquss4gwurfgeylyspu0n2sclqap8spu
+
+creation_rules:
+  - path_regex: secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *ryans-nixos

@@ -50,7 +50,8 @@
 ├── host/
 │   ├── configuration.nix          # networking, users, locale, limine
 │   └── hardware-configuration.nix
-├── modules/system/                # greetd, hyprland, fonts, …
+├── modules/system/                # greetd, hyprland, fonts, sops, …
+├── secrets/secrets.yaml           # age-encrypted; see Secrets
 └── home/
     ├── default.nix                # entry point, XDG, session vars
     ├── desktop.nix                # hyprland, quickshell, hypridle, fuzzel
@@ -81,8 +82,43 @@ sudo nixos-generate-config --show-hardware-config > ~/nixos/host/hardware-config
 # Edit flake.nix — rename nixosConfigurations.<name>
 # Edit home/default.nix — home.username / homeDirectory
 
+# Restore the age key. It is the only thing not in this repo, and without it
+# nothing below decrypts.
+sudo install -Dm600 /path/to/backup/age.key /etc/nixos-secrets/age.key
+
 sudo nixos-rebuild switch --flake ~/nixos#ryans-nixos
 ```
+
+<br>
+
+## Secrets
+
+`secrets/secrets.yaml` is encrypted with [sops-nix](https://github.com/Mic92/sops-nix)
+and holds the login password hash, the gh token, the cloudflared origin
+certificate and tunnel credentials, and the OpenRouter keys for gen-commit and
+opencode.
+
+The age identity that decrypts it lives only at `/etc/nixos-secrets/age.key` and
+in Bitwarden. Restore it before the first switch; without it activation fails.
+
+```bash
+export SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key
+sops secrets/secrets.yaml    # edit; re-encrypts on save
+```
+
+Your login password is one of these secrets, decrypted early enough for user
+creation. To change it, replace the hash and rebuild:
+
+```bash
+mkpasswd -m yescrypt | jq -Rs 'rtrimstr("\n")' \
+  | sudo -E sops set --value-stdin secrets/secrets.yaml '["users"]["ryan-hashed-password"]'
+sudo chown ryan:users secrets/secrets.yaml
+```
+
+Each secret is decrypted at activation to the path its program already reads,
+owned by `ryan` and mode 400. Those paths are symlinks into `/run/secrets.d`,
+so `gh auth login` and opencode cannot rewrite them; put new values in
+`secrets/secrets.yaml` instead.
 
 <br>
 

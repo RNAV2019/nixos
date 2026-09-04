@@ -37,6 +37,13 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Secrets. The age identity that decrypts secrets/secrets.yaml lives at
+    # /etc/nixos-secrets/age.key and is never in this repo.
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
@@ -48,6 +55,7 @@
     helix-steel,
     note-tui,
     fenix,
+    sops-nix,
     ...
   }: let
     system = "x86_64-linux";
@@ -72,6 +80,9 @@
           ./host/hardware-configuration.nix
           ./modules/system/default.nix
           ./modules/system/sof-sdw-ptl-rt721.nix
+          ./modules/system/secrets.nix
+
+          sops-nix.nixosModules.sops
 
           home-manager.nixosModules.home-manager
           {

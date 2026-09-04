@@ -4,16 +4,18 @@
 
 Both are day-one blockers on fresh hardware.
 
-- [ ] Set `users.users.ryan.hashedPasswordFile` (or `initialPassword` as a stopgap).
+- [x] Set `users.users.ryan.hashedPasswordFile` (or `initialPassword` as a stopgap).
       Greetd autologins, but sudo and the quickshell lock screen need a password.
-- [ ] Add the Hyprland Cachix substituter to `nix.settings`, otherwise a new
+- [x] Add the Hyprland Cachix substituter to `nix.settings`, otherwise a new
       machine compiles Hyprland from source.
 
 ## 2. Add secrets management
 
-- [ ] Adopt sops-nix (or agenix).
-- [ ] Move SSH keys, the gh token, cloudflared tunnel credentials, and API keys
+- [x] Adopt sops-nix (or agenix).
+- [~] Move SSH keys, the gh token, cloudflared tunnel credentials, and API keys
       out of imperative home state and into it.
+      Done for the gh token, cloudflared credentials, and the OpenRouter keys.
+      SSH deferred: no private key exists on this machine yet.
 
 ## 3. Back up to the NAS with Borg
 
