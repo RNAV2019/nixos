@@ -81,6 +81,7 @@
           ./modules/system/default.nix
           ./modules/system/sof-sdw-ptl-rt721.nix
           ./modules/system/secrets.nix
+          ./modules/system/backups.nix
 
           sops-nix.nixosModules.sops
 

@@ -19,17 +19,24 @@ Both are day-one blockers on fresh hardware.
 
 ## 3. Back up to the NAS with Borg
 
-- [ ] Run `borg serve` in a Docker container on the UGREEN DH4300 Plus, over SSH,
-      with `--append-only` on the server side.
-- [ ] Drive backups from `services.borgbackup.jobs`, passphrase from sops-nix.
-      Pika Backup is for browsing and restoring only; its config lives in dconf
-      and is not declarative.
-- [ ] Back up data, not config: `~/Projects`, `~/Work`, `~/Documents`, `~/resume`,
-      `~/Pictures`, `~/.claude`, browser profiles.
-      Exclude `~/.cache`, Trash, `~/.local/share/aube`, `target/`, `node_modules/`,
-      and browser cache directories.
-- [ ] Schedule `borg check` and perform a real test restore.
-- [ ] Store the repo passphrase and SSH key in Bitwarden, outside the backup.
+Declared in `modules/system/backups.nix` and `nas/`. Pika Backup is not used:
+`backup mount` covers browsing and its config would not be declarative anyway.
+The runbook below is written out in full in `BACKUPS.md`.
+
+- [x] Run `borg serve` in a Docker container on the UGREEN DH4300 Plus, over SSH,
+      with `--append-only` on the server side. Reached through a Cloudflare
+      tunnel rather than a forwarded port, so it works away from home too.
+- [x] Drive backups from `services.borgbackup.jobs`, passphrase from sops-nix.
+- [x] Back up data, not config. Added Atuin and Zoxide on top of the original
+      list, without which a restored machine has no shell history.
+- [x] A `backup` command wrapping create, list, restore, mount and check.
+- [ ] Create the tunnel and the Access service token (`BACKUPS.md` steps 1-2).
+- [ ] Bring the containers up on the NAS and pin `nasHostKey` (steps 3-5).
+- [ ] Generate the keypairs, load the four secrets, seed over the LAN (step 6).
+- [ ] Store the passphrase, both private keys and the service token in
+      Bitwarden, outside the backup.
+- [ ] Perform a real test restore, and put `borg check` in the calendar
+      quarterly.
 
 ## 4. Harden the boot to login flow and polish the lock screen
 

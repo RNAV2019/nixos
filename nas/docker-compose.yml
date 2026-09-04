@@ -1,0 +1,51 @@
+# Borg backup server for ryans-nixos.
+#
+# Nothing is published to the host or forwarded on the router. The only way in
+# is the Cloudflare tunnel below, which terminates inside this compose network
+# and speaks to borgserver over an address that does not exist outside it.
+#
+# Repository layout under ./backup is created by borgserver from the filenames
+# in ./sshkeys/clients, so a key named `ryans-nixos` gets ./backup/ryans-nixos.
+
+services:
+  borgserver:
+    image: nold360/borgserver:trixie
+    container_name: borgserver
+    restart: unless-stopped
+    volumes:
+      - ./backup:/backup
+      - ./sshkeys:/sshkeys
+    environment:
+      # The laptop key can only add archives. Deleting or pruning anything
+      # requires the admin key, which lives in Bitwarden and nowhere else.
+      BORG_APPEND_ONLY: "yes"
+      BORG_ADMIN: "borg-admin"
+      PUID: "1000"
+      PGID: "1000"
+    networks:
+      - borg
+
+    # Uncomment for the one-time LAN seed only, then comment it out again and
+    # `docker compose up -d`. Sending the first few gigabytes through the
+    # tunnel works but takes hours; over the LAN it takes minutes.
+    # ports:
+    #   - "2222:22"
+
+  # Runs as a non-root user, so ./cloudflared and both files in it must be
+  # readable by that uid. Root-owned uploads fail here with a permission
+  # denied on config.yml rather than anything about ownership.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: borg-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - borgserver
+    networks:
+      - borg
+
+networks:
+  borg:
+    driver: bridge

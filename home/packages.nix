@@ -228,6 +228,7 @@ in {
     tree
     upower
     speedtest-cli
+    trash-cli
 
     ghostty
     kitty

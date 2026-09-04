@@ -50,8 +50,9 @@
 ├── host/
 │   ├── configuration.nix          # networking, users, locale, limine
 │   └── hardware-configuration.nix
-├── modules/system/                # greetd, hyprland, fonts, sops, …
+├── modules/system/                # greetd, hyprland, fonts, sops, borg, …
 ├── secrets/secrets.yaml           # age-encrypted; see Secrets
+├── nas/                           # borg server + tunnel, runs on the UGREEN
 └── home/
     ├── default.nix                # entry point, XDG, session vars
     ├── desktop.nix                # hyprland, quickshell, hypridle, fuzzel
@@ -83,6 +84,10 @@ sudo nixos-generate-config --show-hardware-config > ~/nixos/host/hardware-config
 sudo install -Dm600 /path/to/backup/age.key /etc/nixos-secrets/age.key
 
 sudo nixos-rebuild switch --flake ~/nixos#ryans-nixos
+
+# Put the data back. Everything this needs was decrypted by the rebuild above,
+# which is why it has to come last.
+backup restore
 ```
 
 <br>
@@ -95,7 +100,9 @@ certificate and tunnel credentials, and the OpenRouter keys for gen-commit and
 opencode.
 
 ```bash
-sudo -E sops secrets/secrets.yaml    # edit; re-encrypts on save
+# The age key is root-only, and nothing exports SOPS_AGE_KEY_FILE, so it has
+# to be named here. Re-encrypts on save.
+sudo SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key sops secrets/secrets.yaml
 sudo chown ryan:users secrets/secrets.yaml
 rebuild
 ```
@@ -104,7 +111,8 @@ rebuild
 sudo -v                              # authenticate first, on its own
 umask 077
 mkpasswd -m yescrypt | jq -Rs 'rtrimstr("\n")' > /tmp/hash.json
-sudo -E sops set --value-stdin secrets/secrets.yaml \
+sudo SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key \
+  sops set --value-stdin secrets/secrets.yaml \
   '["users"]["ryan-hashed-password"]' < /tmp/hash.json
 shred -u /tmp/hash.json
 sudo chown ryan:users secrets/secrets.yaml
@@ -117,6 +125,21 @@ sudo chown ryan:users secrets/secrets.yaml
 rebuild           # sudo nixos-rebuild switch --flake ~/nixos#ryans-nixos
 nix flake update  # bump all inputs
 nix-clean         # garbage-collect old generations
+```
+
+<br>
+
+## Backups
+
+Borg archives push once a day to an append-only server on the NAS, reached
+through a Cloudflare tunnel rather than a forwarded port. Full setup, recovery
+and retention notes are in [BACKUPS.md](BACKUPS.md).
+
+```bash
+backup now        # run one immediately and watch it
+backup status     # last run, next run, size, staleness
+backup mount      # browse an archive, then: backup umount
+backup restore    # put everything back
 ```
 
 <br>

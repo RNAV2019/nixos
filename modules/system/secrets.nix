@@ -42,6 +42,18 @@ in {
       # Consumed by the templates below rather than by a program directly.
       "gh/token" = owned;
       "openrouter/opencode-key" = owned;
+
+      # Backups. Owned by ryan rather than root so that reading an archive
+      # needs no privilege escalation; the scheduled job still runs as root,
+      # which can read these anyway and is what keeps ownership correct on
+      # restore. See modules/system/backups.nix.
+      "borg/passphrase" = owned;
+      "borg/ssh-key" = owned;
+
+      # Guards the tunnel hostname, so reaching the SSH handshake at all
+      # requires a Cloudflare credential.
+      "cloudflare/access-token-id" = owned;
+      "cloudflare/access-token-secret" = owned;
     };
 
     templates = {

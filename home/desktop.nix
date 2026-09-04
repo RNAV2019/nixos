@@ -9,6 +9,9 @@
 
   mod = "SUPER";
 
+  # Hyprland does not expand variables in `env`, so this has to be absolute.
+  screenshotsDir = "${config.home.homeDirectory}/Pictures/screenshots";
+
   # `hl.bind(keys, dispatcher[, opts])`. The dispatcher is raw Lua.
   bind = keys: dispatcher: {_args = [keys (mkLuaInline dispatcher)];};
   bindWith = opts: keys: dispatcher: {_args = [keys (mkLuaInline dispatcher) opts];};
@@ -73,6 +76,9 @@
     rounding = 18;
   };
 in {
+  # grimblast writes into XDG_SCREENSHOTS_DIR and will not create it itself.
+  home.file."Pictures/screenshots/.keep".text = "";
+
   wayland.windowManager.hyprland = {
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
@@ -106,7 +112,7 @@ in {
         {_args = ["XCURSOR_THEME" "Bibata-Modern-Classic"];}
         {_args = ["HYPRCURSOR_SIZE" "24"];}
         {_args = ["NIXOS_OZONE_WL" "1"];}
-        {_args = ["XDG_SCREENSHOTS_DIR" "$HOME/Pictures/screenshots"];}
+        {_args = ["XDG_SCREENSHOTS_DIR" screenshotsDir];}
         {
           _args = [
             "LD_LIBRARY_PATH"

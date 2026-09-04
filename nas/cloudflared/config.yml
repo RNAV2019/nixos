@@ -1,0 +1,14 @@
+# Locally managed tunnel. The UUID and credentials file come from
+# `cloudflared tunnel create borg-nas`, run once on any machine that is logged
+# in to the Cloudflare account; see ../BACKUPS.md.
+#
+# `borgserver` resolves on the compose network only, so this ingress is the
+# single door into the backup server.
+
+tunnel: b2e69025-7f91-4e01-a951-c997811473af
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: backup.ryannavsaria.co.uk
+    service: ssh://borgserver:22
+  - service: http_status:404
