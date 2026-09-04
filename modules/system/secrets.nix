@@ -39,6 +39,11 @@ in {
       # /run/secrets-for-users and take no owner or mode of their own.
       "users/ryan-hashed-password".neededForUsers = true;
 
+      # Claude Code has no declarative MCP config, so home/claude.nix merges
+      # this URL into ~/.claude.json during activation. The Penpot user token
+      # is carried in the query string, which is why the whole URL is secret.
+      "penpot/mcp-url" = ownedAt "${home}/.config/claude/penpot-mcp-url";
+
       # Consumed by the templates below rather than by a program directly.
       "gh/token" = owned;
       "openrouter/opencode-key" = owned;
@@ -93,6 +98,7 @@ in {
       for dir in \
         ${home}/.config/gh \
         ${home}/.config/gen-commit \
+        ${home}/.config/claude \
         ${home}/.cloudflared \
         ${home}/.local/share/opencode; do
         install -d -o ryan -g users -m 0700 "$dir"

@@ -73,6 +73,37 @@
     '';
   };
 
+  # Claude Code keeps user-scope MCP servers in ~/.claude.json and reads none
+  # from settings.json, so a server cannot simply be declared above.
+  # ~/.claude.json is also Claude Code's own scratch state, so the entry is
+  # merged into the live file rather than the file being generated.
+  mcpMerge = pkgs.writeShellApplication {
+    name = "claude-mcp-merge";
+    runtimeInputs = [pkgs.jq pkgs.coreutils];
+    text = ''
+      name="$1"
+      url_file="$2"
+      config="$HOME/.claude.json"
+
+      # The URL arrives from sops, which decrypts after this on a fresh
+      # machine's first boot. Skip rather than fail the whole activation.
+      if [ ! -r "$url_file" ]; then
+        echo "claude-mcp-merge: $url_file not readable, skipping $name" >&2
+        exit 0
+      fi
+
+      [ -e "$config" ] || echo '{}' > "$config"
+
+      tmp=$(mktemp "$config.XXXXXX")
+      trap 'rm -f "$tmp"' EXIT
+      jq --arg name "$name" --rawfile url "$url_file" \
+        '.mcpServers[$name] = {type: "http", url: ($url | rtrimstr("\n"))}' \
+        "$config" > "$tmp"
+      chmod 600 "$tmp"
+      mv -f "$tmp" "$config"
+    '';
+  };
+
   settings = {
     model = "opus";
     theme = "dark";
@@ -113,5 +144,12 @@ in {
   # edits survive until the next rebuild, when the values above win again.
   home.activation.claudeSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run install -Dm600 ${settingsFile} ${config.home.homeDirectory}/.claude/settings.json
+  '';
+
+  # The Penpot user token is the URL's query string, so the whole URL is a
+  # secret; see modules/system/secrets.nix for the path.
+  home.activation.claudeMcpServers = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    run ${mcpMerge}/bin/claude-mcp-merge penpot \
+      ${config.home.homeDirectory}/.config/claude/penpot-mcp-url
   '';
 }
