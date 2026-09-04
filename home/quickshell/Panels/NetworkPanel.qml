@@ -111,21 +111,39 @@ PanelContent {
         anchors.verticalCenter: parent.verticalCenter
         text: root.activeNetwork ? Icons.step(Icons.wifi, root.activeNetwork.signalStrength * 100) : ""
         color: Theme.accent
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSize
       }
 
-      Text {
+      // The padlock is a Nerd Font glyph, so it lives in its own Text rather
+      // than being pasted onto an SSID set in the proportional face.
+      Row {
         anchors.left: activeIcon.right
         anchors.leftMargin: Theme.spacingLg
         anchors.right: activeState.left
         anchors.rightMargin: Theme.spacingMd
         anchors.verticalCenter: parent.verticalCenter
-        text: root.activeNetwork ? root.activeNetwork.name + (root.secured(root.activeNetwork) ? "  󰌾" : "") : ""
-        color: Theme.text
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        elide: Text.ElideRight
+        spacing: Theme.spacingMd
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          width: Math.min(implicitWidth, parent.width - (activeLock.visible ? activeLock.width + parent.spacing : 0))
+          text: root.activeNetwork ? root.activeNetwork.name : ""
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.fontSize
+          elide: Text.ElideRight
+        }
+
+        Text {
+          id: activeLock
+          anchors.verticalCenter: parent.verticalCenter
+          visible: root.activeNetwork !== null && root.secured(root.activeNetwork)
+          text: Icons.lock
+          color: Theme.muted
+          font.family: Theme.iconFont
+          font.pixelSize: Theme.fontSizeSmall
+        }
       }
 
       Text {
@@ -134,8 +152,9 @@ PanelContent {
         anchors.verticalCenter: parent.verticalCenter
         text: "Connected"
         color: Theme.foam
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSizeSmall
+        font.letterSpacing: Theme.trackingLabel
       }
     }
 
@@ -174,7 +193,7 @@ PanelContent {
       visible: Networking.wifiEnabled && root.otherNetworks.length === 0
       text: "Scanning…"
       color: Theme.muted
-      font.family: Theme.fontFamily
+      font.family: Theme.uiFont
       font.pixelSize: Theme.fontSize
     }
   }
@@ -218,21 +237,37 @@ PanelContent {
               anchors.verticalCenter: parent.verticalCenter
               text: Icons.step(Icons.wifi, entry.modelData.signalStrength * 100)
               color: Theme.text
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFont
               font.pixelSize: Theme.fontSize
             }
 
-            Text {
+            Row {
               anchors.left: signalIcon.right
               anchors.leftMargin: Theme.spacingLg
               anchors.right: stateLabel.left
               anchors.rightMargin: Theme.spacingMd
               anchors.verticalCenter: parent.verticalCenter
-              text: entry.modelData.name + (root.secured(entry.modelData) ? "  󰌾" : "")
-              color: Theme.text
-              font.family: Theme.fontFamily
-              font.pixelSize: Theme.fontSize
-              elide: Text.ElideRight
+              spacing: Theme.spacingMd
+
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, parent.width - (entryLock.visible ? entryLock.width + parent.spacing : 0))
+                text: entry.modelData.name
+                color: Theme.text
+                font.family: Theme.uiFont
+                font.pixelSize: Theme.fontSize
+                elide: Text.ElideRight
+              }
+
+              Text {
+                id: entryLock
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.secured(entry.modelData)
+                text: Icons.lock
+                color: Theme.muted
+                font.family: Theme.iconFont
+                font.pixelSize: Theme.fontSizeSmall
+              }
             }
 
             Text {
@@ -241,7 +276,7 @@ PanelContent {
               anchors.verticalCenter: parent.verticalCenter
               text: entry.modelData.stateChanging ? "…" : Math.round(entry.modelData.signalStrength * 100) + "%"
               color: Theme.muted
-              font.family: Theme.fontFamily
+              font.family: Theme.monoFont
               font.pixelSize: Theme.fontSizeSmall
             }
           }

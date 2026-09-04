@@ -55,7 +55,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       text: root.label
       color: Theme.subtle
-      font.family: Theme.fontFamily
+      font.family: Theme.uiFont
       font.pixelSize: Theme.fontSize
     }
 
@@ -68,7 +68,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.value
         color: Theme.text
-        font.family: Theme.fontFamily
+        // Modes, rates and scales are figures; keep their columns aligned.
+        font.family: Theme.monoFont
         font.pixelSize: Theme.fontSize
       }
 
@@ -76,7 +77,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: root.expanded ? Icons.expandLess : Icons.expandMore
         color: Theme.muted
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSizeSmall
       }
     }
@@ -116,7 +117,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           text: root._text(option.modelData)
           color: option.selected ? Theme.text : Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSize
         }
       }

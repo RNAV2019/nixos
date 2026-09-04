@@ -79,7 +79,7 @@ PanelContent {
       Text {
         text: "‹"
         color: Theme.muted
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSizeLarge
 
         MouseArea {
@@ -95,15 +95,15 @@ PanelContent {
         horizontalAlignment: Text.AlignHCenter
         text: Qt.formatDate(root.shown, "MMMM yyyy")
         color: Theme.gold
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        font.bold: true
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.fontSizeLarge
+        font.weight: Theme.weightSemi
       }
 
       Text {
         text: "›"
         color: Theme.muted
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSizeLarge
 
         MouseArea {
@@ -134,9 +134,10 @@ PanelContent {
           horizontalAlignment: Text.AlignHCenter
           text: modelData
           color: Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
-          font.bold: true
+          font.weight: Theme.weightSemi
+          font.letterSpacing: Theme.trackingLabel
         }
       }
     }
@@ -156,7 +157,8 @@ PanelContent {
           Layout.preferredWidth: 30
           text: "W" + root.weekNumbers[weekRow.index]
           color: Theme.foam
-          font.family: Theme.fontFamily
+          // The calendar grid is a numeric table; monospace keeps it aligned.
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSizeSmall
           font.bold: true
         }
@@ -187,7 +189,7 @@ PanelContent {
               anchors.centerIn: parent
               text: cell.day > 0 ? cell.day : ""
               color: root.isToday(cell.day) ? Theme.base : Theme.text
-              font.family: Theme.fontFamily
+              font.family: Theme.monoFont
               font.pixelSize: Theme.fontSize
               font.bold: root.isToday(cell.day)
             }

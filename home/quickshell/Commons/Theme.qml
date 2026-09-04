@@ -61,8 +61,26 @@ Singleton {
     return withAlpha(overlay, borderNormal);
   }
 
+  // The Nerd Font carries the icon glyphs and holds digits on a fixed advance,
+  // so it stays for icons, hardware identifiers and live readouts. Prose and
+  // labels move to a proportional face, which reads better than monospace at
+  // bar and panel sizes.
   readonly property string fontFamily: "JetBrainsMono Nerd Font"
-  readonly property string displayFont: "Inter"
+  readonly property string iconFont: fontFamily
+  readonly property string monoFont: fontFamily
+  readonly property string uiFont: "Inter"
+  // Inter's large-optical-size cut, for type big enough that the text cut
+  // looks loose.
+  readonly property string displayFont: "Inter Display"
+
+  readonly property int weightRegular: Font.Normal
+  readonly property int weightMedium: Font.Medium
+  readonly property int weightSemi: Font.DemiBold
+
+  // Small labels want a little air; large numerals want less.
+  readonly property real trackingLabel: 0.2
+  readonly property real trackingDisplay: -0.4
+
   readonly property int fontSize: 12
   readonly property int fontSizeSmall: 10
   readonly property int fontSizeLarge: 13

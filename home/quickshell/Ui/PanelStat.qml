@@ -15,7 +15,7 @@ Item {
     anchors.verticalCenter: parent.verticalCenter
     text: root.label
     color: Theme.subtle
-    font.family: Theme.fontFamily
+    font.family: Theme.uiFont
     font.pixelSize: Theme.fontSize
   }
 
@@ -24,7 +24,8 @@ Item {
     anchors.verticalCenter: parent.verticalCenter
     text: root.value
     color: root.valueColor
-    font.family: Theme.fontFamily
+    // Readouts stay monospaced so a changing value does not shuffle the row.
+    font.family: Theme.monoFont
     font.pixelSize: Theme.fontSize
   }
 }

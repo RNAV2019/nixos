@@ -29,8 +29,9 @@ Rectangle {
     anchors.centerIn: parent
     text: root.label
     color: root.destructive ? Theme.love : Theme.text
-    font.family: Theme.fontFamily
+    font.family: Theme.uiFont
     font.pixelSize: Theme.fontSize
+    font.weight: Theme.weightMedium
   }
 
   HoverHandler {

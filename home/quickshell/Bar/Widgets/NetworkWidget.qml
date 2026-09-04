@@ -17,6 +17,8 @@ IconWidget {
   }
 
   label: onEthernet ? "" : (activeWifi ? activeWifi.name : "")
+  // An SSID is a name, not a reading.
+  monoLabel: false
 
   readonly property string tooltip: {
     if (onEthernet)

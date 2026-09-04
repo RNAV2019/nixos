@@ -160,7 +160,7 @@ Scope {
               required property string modelData
 
               text: modelData
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFont
               font.pixelSize: Theme.fontSizeXl
             }
           }
@@ -179,7 +179,7 @@ Scope {
             anchors.centerIn: parent
             text: root.glyph
             color: Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFont
             font.pixelSize: Theme.fontSizeXl
           }
         }

@@ -29,7 +29,7 @@ Rectangle {
     anchors.rightMargin: Theme.panelRowInset
     verticalAlignment: TextInput.AlignVCenter
     color: Theme.text
-    font.family: Theme.fontFamily
+    font.family: Theme.uiFont
     font.pixelSize: Theme.fontSize
     echoMode: root.echoPassword ? TextInput.Password : TextInput.Normal
     selectByMouse: true

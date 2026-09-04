@@ -104,17 +104,32 @@ Item {
     color: Theme.base
     clip: true
 
-    Text {
+    // The transport glyph keeps the Nerd Font; the track title is prose.
+    Row {
       id: label
 
       anchors.centerIn: parent
-      // Prevent long titles from displacing the centered workspaces.
-      width: Math.min(implicitWidth, Theme.barMprisMaxWidth)
-      elide: Text.ElideRight
-      color: Theme.foam
-      font.family: Theme.fontFamily
-      font.pixelSize: Theme.fontSize
-      text: (root.player && root.player.isPlaying ? Icons.mprisPlaying : Icons.mprisPaused) + " " + root.dynamic
+      spacing: Theme.spacingSm
+
+      Text {
+        id: mprisGlyph
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.player && root.player.isPlaying ? Icons.mprisPlaying : Icons.mprisPaused
+        color: Theme.foam
+        font.family: Theme.iconFont
+        font.pixelSize: Theme.fontSize
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        // Prevent long titles from displacing the centered workspaces.
+        width: Math.min(implicitWidth, Theme.barMprisMaxWidth - mprisGlyph.width - label.spacing)
+        elide: Text.ElideRight
+        color: Theme.foam
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.fontSize
+        text: root.dynamic
+      }
     }
 
     MouseArea {

@@ -155,8 +155,10 @@ Scope {
                 anchors.centerIn: parent
                 text: entry.modelData.label
                 color: entry.active ? Theme.love : Theme.muted
-                font.family: Theme.fontFamily
+                font.family: Theme.displayFont
                 font.pixelSize: 20
+                font.weight: Theme.weightMedium
+                font.letterSpacing: Theme.trackingDisplay
 
                 Behavior on color {
                   ColorAnimation {

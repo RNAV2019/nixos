@@ -70,7 +70,7 @@ PopupWindow {
       anchors.centerIn: parent
       text: root.text
       color: Theme.text
-      font.family: Theme.fontFamily
+      font.family: Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
       textFormat: Text.PlainText
     }

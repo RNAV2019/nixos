@@ -171,9 +171,10 @@ Item {
           horizontalAlignment: Text.AlignHCenter
           text: tile.modelData.name
           color: Theme.text
-          font.family: Theme.fontFamily
+          // Connector names are identifiers; keep them monospaced.
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSizeSmall
-          font.bold: tile.isSelected
+          font.weight: tile.isSelected ? Theme.weightSemi : Theme.weightRegular
           elide: Text.ElideRight
         }
 
@@ -183,7 +184,7 @@ Item {
           visible: tile.height > 34
           text: tile.modelData.mirrorOf !== "" ? "mirrors " + tile.modelData.mirrorOf : tile.modelData.mode
           color: Theme.muted
-          font.family: Theme.fontFamily
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSizeSmall
           elide: Text.ElideRight
         }
@@ -269,7 +270,7 @@ Item {
     visible: root.rects.length === 0
     text: "No displays detected"
     color: Theme.muted
-    font.family: Theme.fontFamily
+    font.family: Theme.uiFont
     font.pixelSize: Theme.fontSize
   }
 }

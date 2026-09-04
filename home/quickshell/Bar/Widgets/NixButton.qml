@@ -20,7 +20,7 @@ Rectangle {
     anchors.centerIn: parent
     text: Icons.nix
     color: Theme.love
-    font.family: Theme.fontFamily
+    font.family: Theme.iconFont
     font.pixelSize: Theme.barNixFontSize
   }
 

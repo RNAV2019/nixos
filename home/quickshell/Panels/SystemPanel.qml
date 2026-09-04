@@ -46,15 +46,19 @@ PanelContent {
         Text {
           text: Math.round(SystemStats.cpuUsage * 100) + "%"
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.displayFont
           font.pixelSize: Theme.fontSizeDisplay
+          font.weight: Theme.weightMedium
+          font.letterSpacing: Theme.trackingDisplay
         }
 
         Text {
           text: "CPU"
           color: Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
+          font.weight: Theme.weightMedium
+          font.letterSpacing: Theme.trackingLabel
         }
       }
 
@@ -69,7 +73,7 @@ PanelContent {
           Layout.alignment: Qt.AlignRight
           text: SystemStats.cpuTemp > 0 ? Math.round(SystemStats.cpuTemp) + "°C" : "—"
           color: SystemStats.cpuTemp > 85 ? Theme.love : Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSizeLarge
         }
 
@@ -77,8 +81,10 @@ PanelContent {
           Layout.alignment: Qt.AlignRight
           text: "Temp"
           color: Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
+          font.weight: Theme.weightMedium
+          font.letterSpacing: Theme.trackingLabel
         }
       }
 
@@ -89,7 +95,7 @@ PanelContent {
           Layout.alignment: Qt.AlignRight
           text: SystemStats.load1.toFixed(2)
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.monoFont
           font.pixelSize: Theme.fontSizeLarge
         }
 
@@ -97,8 +103,10 @@ PanelContent {
           Layout.alignment: Qt.AlignRight
           text: "Load"
           color: Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
+          font.weight: Theme.weightMedium
+          font.letterSpacing: Theme.trackingLabel
         }
       }
     }

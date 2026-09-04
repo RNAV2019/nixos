@@ -329,8 +329,9 @@ PanelContent {
       Text {
         text: DisplayProfiles.label
         color: Theme.muted
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSizeSmall
+        font.letterSpacing: Theme.trackingLabel
         elide: Text.ElideLeft
         Layout.maximumWidth: root.preferredWidth / 2
       }
@@ -388,14 +389,17 @@ PanelContent {
 
       SectionHeader {
         title: root.selected ? root.selected.name : ""
+        // A connector name is an identifier, so it keeps the monospace face.
+        mono: true
         Layout.fillWidth: true
       }
 
       Text {
         text: root.selected ? root.selected.description : ""
         color: Theme.muted
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSizeSmall
+        font.letterSpacing: Theme.trackingLabel
         elide: Text.ElideRight
         Layout.maximumWidth: root.preferredWidth / 2
       }
@@ -453,7 +457,7 @@ PanelContent {
       Text {
         text: "Enabled"
         color: Theme.subtle
-        font.family: Theme.fontFamily
+        font.family: Theme.uiFont
         font.pixelSize: Theme.fontSize
         Layout.fillWidth: true
       }
@@ -480,7 +484,7 @@ PanelContent {
       Text {
         text: Icons.brightness
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSizeLarge
         Layout.preferredWidth: 20
       }
@@ -496,7 +500,7 @@ PanelContent {
       Text {
         text: Math.round(Brightness.value * 100) + "%"
         color: Theme.subtle
-        font.family: Theme.fontFamily
+        font.family: Theme.monoFont
         font.pixelSize: Theme.fontSize
         Layout.preferredWidth: 36
         horizontalAlignment: Text.AlignRight

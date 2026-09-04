@@ -141,9 +141,9 @@ Scope {
                 width: parent.width
                 text: card.modelData.summary
                 color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-                font.bold: true
+                font.family: Theme.uiFont
+                font.pixelSize: Theme.fontSizeLarge
+                font.weight: Theme.weightSemi
                 elide: Text.ElideRight
               }
 
@@ -152,8 +152,10 @@ Scope {
                 visible: card.modelData.body !== ""
                 text: card.modelData.body
                 color: Theme.subtle
-                font.family: Theme.fontFamily
+                font.family: Theme.uiFont
                 font.pixelSize: Theme.fontSize
+                // Wrapped prose needs more leading than the Qt default.
+                lineHeight: 1.35
                 textFormat: Text.StyledText
                 wrapMode: Text.WordWrap
                 maximumLineCount: 4

@@ -6,6 +6,9 @@ Item {
 
   property string glyph: ""
   property string label: ""
+  // Most labels are live figures, which need a fixed advance so the bar does
+  // not shuffle on every update. Names and other words set this false.
+  property bool monoLabel: true
   property color glyphColor: Theme.text
   property bool labelFirst: false
   property int gap: Theme.barLabelGap
@@ -45,7 +48,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       text: root.glyph
       color: root.glyphColor
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFont
       font.pixelSize: Theme.fontSize
 
       NumberAnimation on opacity {
@@ -69,8 +72,9 @@ Item {
       visible: root.label.length > 0
       text: root.label
       color: root.glyphColor
-      font.family: Theme.fontFamily
+      font.family: root.monoLabel ? Theme.monoFont : Theme.uiFont
       font.pixelSize: Theme.fontSize
+      font.weight: root.monoLabel ? Theme.weightRegular : Theme.weightMedium
     }
   }
 

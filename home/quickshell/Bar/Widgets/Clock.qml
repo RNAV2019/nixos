@@ -23,13 +23,47 @@ Rectangle {
     precision: SystemClock.Minutes
   }
 
-  Text {
+  // Split so the glyphs keep the Nerd Font, the date gets a proportional face
+  // and the time stays on a fixed advance.
+  Row {
     id: label
+
     anchors.centerIn: parent
-    color: Theme.gold
-    font.family: Theme.fontFamily
-    font.pixelSize: Theme.fontSize
-    text: Icons.calendar + " " + Qt.formatDateTime(clock.date, "dd MMMM yyyy") + "  " + Icons.clock + " " + Qt.formatDateTime(clock.date, "HH:mm")
+    spacing: Theme.spacingSm
+
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      text: Icons.calendar
+      color: Theme.gold
+      font.family: Theme.iconFont
+      font.pixelSize: Theme.fontSize
+    }
+
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      text: Qt.formatDateTime(clock.date, "dd MMMM yyyy")
+      color: Theme.gold
+      font.family: Theme.uiFont
+      font.pixelSize: Theme.fontSize
+      font.weight: Theme.weightMedium
+      rightPadding: Theme.spacingMd
+    }
+
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      text: Icons.clock
+      color: Theme.gold
+      font.family: Theme.iconFont
+      font.pixelSize: Theme.fontSize
+    }
+
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      text: Qt.formatDateTime(clock.date, "HH:mm")
+      color: Theme.gold
+      font.family: Theme.monoFont
+      font.pixelSize: Theme.fontSize
+    }
   }
 
   MouseArea {

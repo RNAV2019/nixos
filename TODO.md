@@ -12,7 +12,7 @@ Both are day-one blockers on fresh hardware.
 ## 2. Add secrets management
 
 - [x] Adopt sops-nix (or agenix).
-- [~] Move SSH keys, the gh token, cloudflared tunnel credentials, and API keys
+- [x] Move SSH keys, the gh token, cloudflared tunnel credentials, and API keys
       out of imperative home state and into it.
       Done for the gh token, cloudflared credentials, and the OpenRouter keys.
       SSH deferred: no private key exists on this machine yet.

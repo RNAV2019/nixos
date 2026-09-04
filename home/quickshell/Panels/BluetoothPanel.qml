@@ -79,7 +79,7 @@ PanelContent {
       visible: root.adapter === null
       text: "No bluetooth controller"
       color: Theme.muted
-      font.family: Theme.fontFamily
+      font.family: Theme.uiFont
       font.pixelSize: Theme.fontSize
     }
 
@@ -108,7 +108,7 @@ PanelContent {
           anchors.verticalCenter: parent.verticalCenter
           text: pairedRow.modelData.name
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSize
           elide: Text.ElideRight
         }
@@ -130,8 +130,9 @@ PanelContent {
               return "";
             }
             color: Theme.foam
-            font.family: Theme.fontFamily
+            font.family: Theme.uiFont
             font.pixelSize: Theme.fontSizeSmall
+            font.letterSpacing: Theme.trackingLabel
           }
 
           PanelButton {
@@ -167,7 +168,7 @@ PanelContent {
           anchors.verticalCenter: parent.verticalCenter
           text: newRow.modelData.name
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSize
           elide: Text.ElideRight
         }
@@ -178,8 +179,9 @@ PanelContent {
           anchors.verticalCenter: parent.verticalCenter
           text: newRow.modelData.pairing ? "Pairing…" : (newRow.hovered ? "Pair" : "")
           color: Theme.muted
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
+          font.letterSpacing: Theme.trackingLabel
         }
       }
     }

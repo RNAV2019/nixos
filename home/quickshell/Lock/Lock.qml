@@ -254,6 +254,10 @@ Scope {
           // by the output height so smaller panels keep the same proportions.
           readonly property real ui: height / 1800
 
+          // The date and time are positioned independently, so shift them by a
+          // shared amount to move the block without changing its spacing.
+          readonly property int clockDrop: Math.round(40 * ui)
+
           readonly property int dotSize: Math.round(20 * ui)
           readonly property int dotGap: Math.round(dotSize * 0.3)
 
@@ -265,7 +269,7 @@ Scope {
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -250 * canvas.ui
+            anchors.verticalCenterOffset: -250 * canvas.ui + canvas.clockDrop
             text: Qt.formatDate(clock.date, "dddd, MMMM, dd")
             color: Theme.text
             font.family: Theme.displayFont
@@ -277,13 +281,15 @@ Scope {
           Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -135 * canvas.ui
+            anchors.verticalCenterOffset: -135 * canvas.ui + canvas.clockDrop
             text: Qt.formatDateTime(clock.date, "HH:mm")
             color: Theme.text
             font.family: Theme.displayFont
             renderType: Text.QtRendering
             font.bold: true
             font.pixelSize: Math.round(204 * canvas.ui)
+            // Type this large sets loose by default.
+            font.letterSpacing: Math.round(-4 * canvas.ui)
           }
 
           Text {

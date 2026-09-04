@@ -78,10 +78,6 @@ git clone https://github.com/RNAV2019/nixos ~/nixos
 
 sudo nixos-generate-config --show-hardware-config > ~/nixos/host/hardware-configuration.nix
 
-# Edit host/configuration.nix — hostname, username, timezone, locale
-# Edit flake.nix — rename nixosConfigurations.<name>
-# Edit home/default.nix — home.username / homeDirectory
-
 # Restore the age key. It is the only thing not in this repo, and without it
 # nothing below decrypts.
 sudo install -Dm600 /path/to/backup/age.key /etc/nixos-secrets/age.key
@@ -98,28 +94,21 @@ and holds the login password hash, the gh token, the cloudflared origin
 certificate and tunnel credentials, and the OpenRouter keys for gen-commit and
 opencode.
 
-The age identity that decrypts it lives only at `/etc/nixos-secrets/age.key` and
-in Bitwarden. Restore it before the first switch; without it activation fails.
-
 ```bash
-export SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key
-sops secrets/secrets.yaml    # edit; re-encrypts on save
+sudo -E sops secrets/secrets.yaml    # edit; re-encrypts on save
+sudo chown ryan:users secrets/secrets.yaml
+rebuild
 ```
 
-Your login password is one of these secrets, decrypted early enough for user
-creation. To change it, replace the hash and rebuild:
-
 ```bash
-mkpasswd -m yescrypt | jq -Rs 'rtrimstr("\n")' \
-  | sudo -E sops set --value-stdin secrets/secrets.yaml '["users"]["ryan-hashed-password"]'
+sudo -v                              # authenticate first, on its own
+umask 077
+mkpasswd -m yescrypt | jq -Rs 'rtrimstr("\n")' > /tmp/hash.json
+sudo -E sops set --value-stdin secrets/secrets.yaml \
+  '["users"]["ryan-hashed-password"]' < /tmp/hash.json
+shred -u /tmp/hash.json
 sudo chown ryan:users secrets/secrets.yaml
 ```
-
-Each secret is decrypted at activation to the path its program already reads,
-owned by `ryan` and mode 400. Those paths are symlinks into `/run/secrets.d`,
-so `gh auth login` and opencode cannot rewrite them; put new values in
-`secrets/secrets.yaml` instead.
-
 <br>
 
 ## Daily Ops
@@ -137,14 +126,6 @@ nix-clean         # garbage-collect old generations
 `gen-commit` generates a Conventional Commit message from the staged Git
 snapshot and commits it only after explicit confirmation. Repository status
 and diff content are sent to OpenRouter.
-
-Set up the API key without placing it directly in shell history:
-
-```bash
-read -rsp "OpenRouter API key: " key; echo
-gen-commit --key "$key"
-unset key
-```
 
 Running it:
 

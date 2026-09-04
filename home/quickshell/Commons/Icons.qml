@@ -24,6 +24,7 @@ Singleton {
   readonly property var wifi: ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
   readonly property string ethernet: "󰀂"
   readonly property string networkOff: "󰤮"
+  readonly property string lock: "󰌾"
 
   readonly property string bluetoothOn: ""
   readonly property string bluetoothOff: "󰂲"

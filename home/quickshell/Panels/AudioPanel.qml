@@ -67,7 +67,7 @@ PanelContent {
       Text {
         text: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSizeLarge
         Layout.preferredWidth: 20
 
@@ -94,7 +94,7 @@ PanelContent {
       Text {
         text: Math.round((root.sink && root.sink.audio ? root.sink.audio.volume : 0) * 100) + "%"
         color: Theme.subtle
-        font.family: Theme.fontFamily
+        font.family: Theme.monoFont
         font.pixelSize: Theme.fontSize
         Layout.preferredWidth: 38
         horizontalAlignment: Text.AlignRight
@@ -119,7 +119,7 @@ PanelContent {
           anchors.verticalCenter: parent.verticalCenter
           text: root.label(sinkRow.modelData)
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSize
           elide: Text.ElideRight
         }
@@ -142,7 +142,7 @@ PanelContent {
       Text {
         text: root.source && root.source.audio && root.source.audio.muted ? "󰍭" : "󰍬"
         color: Theme.text
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSizeLarge
         Layout.preferredWidth: 20
 
@@ -169,7 +169,7 @@ PanelContent {
       Text {
         text: Math.round((root.source && root.source.audio ? root.source.audio.volume : 0) * 100) + "%"
         color: Theme.subtle
-        font.family: Theme.fontFamily
+        font.family: Theme.monoFont
         font.pixelSize: Theme.fontSize
         Layout.preferredWidth: 38
         horizontalAlignment: Text.AlignRight
@@ -194,7 +194,7 @@ PanelContent {
           anchors.verticalCenter: parent.verticalCenter
           text: root.label(sourceRow.modelData)
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSize
           elide: Text.ElideRight
         }

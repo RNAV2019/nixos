@@ -59,7 +59,7 @@ PanelContent {
       Text {
         text: root.present ? Icons.step(root.battery.state === UPowerDeviceState.Charging ? Icons.batteryCharging : Icons.batteryDefault, root.battery.percentage * 100) : ""
         color: Theme.accent
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFont
         font.pixelSize: Theme.fontSizeDisplayLg
       }
 
@@ -69,15 +69,18 @@ PanelContent {
         Text {
           text: root.present ? Math.round(root.battery.percentage * 100) + "%" : "—"
           color: Theme.text
-          font.family: Theme.fontFamily
+          font.family: Theme.displayFont
           font.pixelSize: Theme.fontSizeDisplay
+          font.weight: Theme.weightMedium
+          font.letterSpacing: Theme.trackingDisplay
         }
 
         Text {
           text: root.stateLabel
           color: Theme.subtle
-          font.family: Theme.fontFamily
+          font.family: Theme.uiFont
           font.pixelSize: Theme.fontSizeSmall
+          font.letterSpacing: Theme.trackingLabel
         }
       }
 
@@ -169,8 +172,9 @@ PanelContent {
               }
             }
             color: profileRow.selected ? Theme.accent : Theme.text
-            font.family: Theme.fontFamily
+            font.family: Theme.uiFont
             font.pixelSize: Theme.fontSize
+            font.weight: profileRow.selected ? Theme.weightMedium : Theme.weightRegular
           }
         }
       }
