@@ -1,0 +1,96 @@
+<h2>Which list layout should the Quickshell launcher use?</h2>
+<p class="subtitle">All three show the same query state: empty search, apps ranked by frecency. Rose Pine palette, matching your bar. Click the one you want.</p>
+
+<style>
+  .lp { font-family: Inter, system-ui, sans-serif; background: #191724; border-radius: 14px; padding: 0; overflow: hidden; border: 1px solid #26233a; width: 100%; }
+  .lp-search { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #26233a; }
+  .lp-search .mag { color: #6e6a86; font-size: 14px; }
+  .lp-search .ph { color: #6e6a86; font-size: 14px; }
+  .lp-body { padding: 6px 0; }
+  .lp-hdr { color: #6e6a86; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; padding: 10px 16px 5px; font-weight: 600; }
+  .lp-row { display: flex; align-items: center; gap: 12px; padding: 7px 16px; }
+  .lp-row.tall { padding: 9px 16px; }
+  .lp-row.sel { background: #26233a; }
+  .lp-ico { width: 22px; height: 22px; border-radius: 5px; background: #403d52; flex: none; }
+  .lp-ico.sm { width: 16px; height: 16px; border-radius: 4px; }
+  .lp-ico.ff { background: linear-gradient(135deg,#f6c177,#eb6f92); }
+  .lp-ico.bl { background: linear-gradient(135deg,#31748f,#9ccfd8); }
+  .lp-txt { min-width: 0; flex: 1; }
+  .lp-name { color: #e0def4; font-size: 13px; line-height: 1.35; }
+  .lp-desc { color: #908caa; font-size: 11px; line-height: 1.35; }
+  .lp-meta { color: #6e6a86; font-size: 11px; font-family: ui-monospace, monospace; flex: none; }
+  .lp-foot { display: flex; align-items: center; gap: 14px; padding: 9px 16px; border-top: 1px solid #26233a; color: #6e6a86; font-size: 10.5px; }
+  .lp-key { background: #26233a; color: #908caa; border-radius: 4px; padding: 1px 5px; font-size: 9.5px; font-family: ui-monospace, monospace; }
+  .lp-swatch { width: 22px; height: 22px; border-radius: 5px; background: #c4a7e7; flex: none; }
+</style>
+
+<div class="cards">
+
+  <div class="card" data-choice="parity" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#12111b; padding:18px;">
+      <div class="lp">
+        <div class="lp-search"><span class="mag">&#9906;</span><span class="ph">Search apps...</span></div>
+        <div class="lp-body">
+          <div class="lp-row tall sel"><div class="lp-ico"></div><div class="lp-txt"><div class="lp-name">T3 Code (Nightly)</div><div class="lp-desc">T3 Code desktop build</div></div></div>
+          <div class="lp-row tall"><div class="lp-ico ff"></div><div class="lp-txt"><div class="lp-name">Firefox</div></div></div>
+          <div class="lp-row tall"><div class="lp-ico"></div><div class="lp-txt"><div class="lp-name">Advanced Network Configuration</div><div class="lp-desc">Manage and change your network connection settings</div></div></div>
+          <div class="lp-row tall"><div class="lp-ico bl"></div><div class="lp-txt"><div class="lp-name">Blanket</div><div class="lp-desc">Listen to different sounds</div></div></div>
+          <div class="lp-row tall"><div class="lp-ico"></div><div class="lp-txt"><div class="lp-name">Files</div><div class="lp-desc">Access and organize files</div></div></div>
+        </div>
+        <div class="lp-foot"><span class="lp-key">&uarr;&darr;</span> Navigate <span class="lp-key">&crarr;</span> Launch / Copy <span class="lp-key">=</span> 2+2 &middot; 5km to mi <span class="lp-key">Esc</span> Close</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Straight parity</h3>
+      <p>Exactly what you have now. Flat list, no grouping, description under every name, roomy rows. Nothing to relearn, but five results fill the window and long descriptions dominate the row.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="reference" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#12111b; padding:18px;">
+      <div class="lp">
+        <div class="lp-search"><span class="mag">&#9906;</span><span class="ph">Search apps, run a calculation...</span></div>
+        <div class="lp-body">
+          <div class="lp-hdr">Applications</div>
+          <div class="lp-row sel"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">T3 Code (Nightly)</div></div><div class="lp-meta">Recent</div></div>
+          <div class="lp-row"><div class="lp-ico sm ff"></div><div class="lp-txt"><div class="lp-name">Firefox</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">Advanced Network Configuration</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm bl"></div><div class="lp-txt"><div class="lp-name">Blanket</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">Bluetooth Adapters</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">Files</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">GVim</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">Bluetooth Manager</div></div></div>
+        </div>
+        <div class="lp-foot"><span class="lp-key">&uarr;&darr;</span> Navigate <span class="lp-key">&crarr;</span> Select <span class="lp-key">Esc</span> Close</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Reference style</h3>
+      <p>Your reference image. Grouped section header, single line per row, small icons, meta on the right. Eight results in the same height. Descriptions are gone, so unfamiliar entries lose their explanation.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#12111b; padding:18px;">
+      <div class="lp">
+        <div class="lp-search"><span class="mag">&#9906;</span><span class="ph">=&#8202;#c4a7e7</span></div>
+        <div class="lp-body">
+          <div class="lp-hdr">Colour</div>
+          <div class="lp-row sel"><div class="lp-swatch"></div><div class="lp-txt"><div class="lp-name">#c4a7e7</div></div><div class="lp-meta">HEX</div></div>
+          <div class="lp-row"><div class="lp-ico sm" style="background:transparent"></div><div class="lp-txt"><div class="lp-name">rgb(196, 167, 231)</div></div><div class="lp-meta">RGB</div></div>
+          <div class="lp-row"><div class="lp-ico sm" style="background:transparent"></div><div class="lp-txt"><div class="lp-name">hsl(268, 57%, 78%)</div></div><div class="lp-meta">HSL</div></div>
+          <div class="lp-hdr">Applications</div>
+          <div class="lp-row"><div class="lp-ico sm"></div><div class="lp-txt"><div class="lp-name">T3 Code (Nightly)</div><div class="lp-desc">T3 Code desktop build</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm ff"></div><div class="lp-txt"><div class="lp-name">Firefox</div></div></div>
+          <div class="lp-row"><div class="lp-ico sm bl"></div><div class="lp-txt"><div class="lp-name">Blanket</div><div class="lp-desc">Listen to different sounds</div></div></div>
+        </div>
+        <div class="lp-foot"><span class="lp-key">&uarr;&darr;</span> Navigate <span class="lp-key">&crarr;</span> Launch / Copy <span class="lp-key">Esc</span> Close</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Reference structure, description kept</h3>
+      <p>Grouped headers and tight rows from the reference, but the description stays as a second line when the entry has one. Rows vary in height. Shown here mid-calculation, so you can see how calculator rows share the list with apps.</p>
+    </div>
+  </div>
+
+</div>

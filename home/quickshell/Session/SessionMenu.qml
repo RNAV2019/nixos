@@ -12,15 +12,18 @@ Scope {
 
   readonly property var actions: [
     {
-      "label": "󰌾  Lock",
+      "icon": Icons.lock,
+      "label": "Lock",
       "key": "l"
     },
     {
-      "label": "󰜉  Reboot",
+      "icon": Icons.reboot,
+      "label": "Reboot",
       "key": "r"
     },
     {
-      "label": "󰐥  Shutdown",
+      "icon": Icons.shutdown,
+      "label": "Shutdown",
       "key": "s"
     }
   ]
@@ -134,6 +137,8 @@ Scope {
         }
 
         Column {
+          id: menu
+
           anchors.centerIn: parent
           spacing: Theme.spacingLg
 
@@ -148,21 +153,47 @@ Scope {
 
               readonly property bool active: root.current === entry.index
 
+              readonly property color tint: entry.active ? Theme.love : Theme.muted
+
               width: 240
               height: 56
 
-              Text {
+              // Icon and label centre together as one row.
+              Row {
                 anchors.centerIn: parent
-                text: entry.modelData.label
-                color: entry.active ? Theme.love : Theme.muted
-                font.family: Theme.displayFont
-                font.pixelSize: 20
-                font.weight: Theme.weightMedium
-                font.letterSpacing: Theme.trackingDisplay
+                spacing: Theme.spacingMd
 
-                Behavior on color {
-                  ColorAnimation {
-                    duration: Theme.animFast
+                // Both cells are the same family and size, so the row's default
+                // top alignment already lines the glyph up with the word. Any
+                // vertical anchor here would centre the item box instead, which
+                // is what pushed the glyph low.
+                Text {
+                  text: entry.modelData.icon
+                  color: entry.tint
+                  font.family: Theme.iconFont
+                  font.pixelSize: 20
+
+                  Behavior on color {
+                    ColorAnimation {
+                      duration: Theme.animFast
+                    }
+                  }
+                }
+
+                Text {
+                  text: entry.modelData.label
+                  color: entry.tint
+                  // Monospace, matching the glyph cell beside it. The display
+                  // face's negative tracking goes with it; that correction is
+                  // for Inter Display, not for this family.
+                  font.family: Theme.monoFont
+                  font.pixelSize: 20
+                  font.weight: Theme.weightMedium
+
+                  Behavior on color {
+                    ColorAnimation {
+                      duration: Theme.animFast
+                    }
                   }
                 }
               }

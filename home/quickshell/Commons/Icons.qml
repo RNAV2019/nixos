@@ -25,6 +25,8 @@ Singleton {
   readonly property string ethernet: "󰀂"
   readonly property string networkOff: "󰤮"
   readonly property string lock: "󰌾"
+  readonly property string reboot: "󰜉"
+  readonly property string shutdown: "󰐥"
 
   readonly property string bluetoothOn: ""
   readonly property string bluetoothOff: "󰂲"
