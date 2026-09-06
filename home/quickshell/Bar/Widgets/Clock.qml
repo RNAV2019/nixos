@@ -16,7 +16,7 @@ Rectangle {
   implicitWidth: label.implicitWidth + Theme.barPillPaddingWide * 2
   implicitHeight: Theme.barHeight
   radius: height / 2
-  color: Theme.base
+  color: Theme.barModule
 
   SystemClock {
     id: clock

@@ -106,7 +106,7 @@ Variants {
         implicitWidth: rightRow.implicitWidth + Theme.barGroupPadding * 2
         implicitHeight: Theme.barHeight
         radius: height / 2
-        color: Theme.base
+        color: Theme.barModule
 
         Row {
           id: rightRow

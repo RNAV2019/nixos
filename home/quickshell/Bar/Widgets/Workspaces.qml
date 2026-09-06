@@ -39,7 +39,7 @@ Rectangle {
   implicitWidth: row.implicitWidth + Theme.workspacePadding * 2
   implicitHeight: Theme.barHeight
   radius: Theme.workspaceRadius
-  color: Theme.base
+  color: Theme.barModule
 
   Row {
     id: row

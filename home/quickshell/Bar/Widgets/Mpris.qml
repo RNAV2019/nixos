@@ -101,7 +101,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: height / 2
-    color: Theme.base
+    color: Theme.barModule
     clip: true
 
     // The transport glyph keeps the Nerd Font; the track title is prose.

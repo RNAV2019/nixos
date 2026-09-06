@@ -22,6 +22,10 @@ Singleton {
   readonly property color highlightMed: "#403d52"
   readonly property color highlightHigh: "#524f67"
 
+  // Bar modules sit on the wallpaper, which is often the same ink as base.
+  // Lift them one step so each pill reads as its own surface.
+  readonly property color barModule: surface
+
   readonly property color accent: love
   readonly property color urgent: love
 

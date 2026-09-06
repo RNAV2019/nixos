@@ -14,7 +14,7 @@ Rectangle {
   implicitWidth: Theme.barNixMinWidth + Theme.barNixPadding * 2
   implicitHeight: Theme.barHeight
   radius: height / 2
-  color: Theme.base
+  color: Theme.barModule
 
   Text {
     anchors.centerIn: parent
