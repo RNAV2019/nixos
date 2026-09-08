@@ -23,6 +23,10 @@ Item {
     }
   }
 
+  // The corner radius scales with the cover, so it stays proportional while
+  // the card grows.
+  property real cornerRadius: Theme.islandArtRadius * (width / Theme.islandArtSize)
+
   readonly property bool hasArt: Media.artUrl !== "" && art.status === Image.Ready
 
   implicitWidth: Theme.islandArtSize
@@ -96,7 +100,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      radius: Theme.islandArtRadius
+      radius: root.cornerRadius
       color: "black"
     }
   }

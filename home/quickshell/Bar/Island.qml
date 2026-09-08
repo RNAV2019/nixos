@@ -8,9 +8,16 @@ import qs.Ui
 // The centred surface, and the only one that changes shape.
 //
 // It has three resting states. Idle it is a clock and nothing else. With a
-// player running it grows an equaliser to the left of the clock. Hovered, or
-// pinned by a click, it opens into a card carrying the track, a larger clock
-// with the date, and the two readings worth watching all day.
+// player running it grows an equaliser beside the clock. Hovered, or pinned by
+// a click, it opens into a card carrying the track, the clock with its date,
+// and the two readings worth watching all day.
+//
+// The open is not a cross-fade. Measured frame by frame against the source
+// recording, the card's contents scale up with the pill and the layout reflows
+// into the width it currently has, so a title elides down to nothing while the
+// pill is narrow and grows back as it widens. The clock is the one element
+// both states share: it interpolates its own size and slides into place rather
+// than being swapped for a second copy.
 FrostedSurface {
   id: root
 
@@ -23,9 +30,6 @@ FrostedSurface {
 
   readonly property bool expanded: pinned || hover.containsMouse
 
-  // The card is laid out at its full size from the first frame of the morph
-  // and revealed as the pill grows around it, which is what the source shell
-  // does. Nothing here slides or scales on its own.
   clipContent: true
 
   readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
@@ -46,6 +50,26 @@ FrostedSurface {
     Morph {}
   }
 
+  // Everything the card draws is sized against the pill's own height, so one
+  // animated property carries the whole layout and nothing can fall out of
+  // step with the shape.
+  readonly property real scaleFactor: height / Theme.islandExpandedHeight
+
+  // The same progress expressed as 0 while shut and 1 while open, for the
+  // handful of things that travel between two fixed states rather than scale.
+  readonly property real openness: {
+    var span = Theme.islandExpandedHeight - Theme.barHeight;
+    return span <= 0 ? 1 : Math.max(0, Math.min(1, (height - Theme.barHeight) / span));
+  }
+
+  readonly property real midline: height / 2
+
+  // Shut, the clock shares the pill with the equaliser and the pair is centred
+  // together, so the clock itself sits right of centre by half the equaliser.
+  readonly property real clockShift: Media.active ? (collapsedEq.implicitWidth + collapsedGap) / 2 : 0
+
+  readonly property real collapsedGap: 7.5
+
   SystemClock {
     id: clock
 
@@ -64,47 +88,30 @@ FrostedSurface {
     onClicked: root.pinned = !root.pinned
   }
 
-  // Collapsed: an equaliser only when there is something to show, then the
-  // clock, together centred in the pill.
-  Row {
-    id: collapsed
+  // The equaliser the shut pill carries. The open card has its own beside the
+  // title, so this one only has to hand over.
+  Equaliser {
+    id: collapsedEq
 
-    anchors.centerIn: parent
-    spacing: 7.5
+    x: clockLabel.x - root.collapsedGap - implicitWidth
+    y: root.midline - implicitHeight / 2
+    playing: Media.playing
+    visible: Media.active && opacity > 0
     opacity: root.expanded ? 0 : 1
-    visible: opacity > 0
 
     Behavior on opacity {
       Morph {
         duration: Theme.morphContent
       }
     }
-
-    Equaliser {
-      anchors.verticalCenter: parent.verticalCenter
-      playing: Media.playing
-      visible: Media.active
-    }
-
-    Text {
-      anchors.verticalCenter: parent.verticalCenter
-      text: Qt.formatDateTime(clock.date, "HH:mm")
-      color: Theme.text
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.islandClockSize
-      font.weight: Font.DemiBold
-    }
   }
 
-  // Expanded: laid out on the card's own fixed geometry rather than by flow,
-  // because the design places the clock on the card's centre line while the
-  // track sits hard left and the readings hard right.
+  // The card. Laid out against the pill's live width rather than a fixed
+  // design width, which is what makes the contents reflow as it opens.
   Item {
     id: card
 
-    anchors.centerIn: parent
-    width: Theme.islandExpandedWidth
-    height: Theme.islandExpandedHeight
+    anchors.fill: parent
     opacity: root.expanded ? 1 : 0
     visible: opacity > 0
 
@@ -117,52 +124,62 @@ FrostedSurface {
     Item {
       id: media
 
-      x: 16
-      y: 0
-      // Stops short of the clock, so a long title elides rather than crowding
-      // the card's centre line.
-      width: 200
-      height: parent.height
+      anchors.fill: parent
       visible: Media.active
 
       AlbumArt {
-        x: 0
-        y: 18
+        id: cover
+
+        x: 16 * root.scaleFactor
+        y: root.midline - height / 2
+        width: Theme.islandArtSize * root.scaleFactor
+        height: width
       }
 
       Equaliser {
-        x: 60
-        y: (parent.height - height) / 2
+        id: cardEq
+
+        x: 76 * root.scaleFactor
+        y: root.midline - implicitHeight * root.scaleFactor / 2
+        transformOrigin: Item.TopLeft
+        scale: root.scaleFactor
         playing: Media.playing
       }
 
       Text {
-        x: 84
-        y: 26
-        width: 116
+        id: title
+
+        x: 100 * root.scaleFactor
+        y: root.midline - 8 * root.scaleFactor - height / 2
+        // Whatever is left between the equaliser and the clock. While the pill
+        // is narrow this is nothing, and the title elides away entirely.
+        width: Math.max(0, clockLabel.x - 12 * root.scaleFactor - x)
         elide: Text.ElideRight
         text: Media.title
         color: Theme.text
         font.family: Theme.uiFont
-        font.pixelSize: Theme.islandTitleSize
+        font.pixelSize: Theme.islandTitleSize * root.scaleFactor
         font.weight: Font.DemiBold
       }
 
       Text {
-        x: 84
-        y: 45
-        width: 116
+        x: title.x
+        y: root.midline + 9.5 * root.scaleFactor - height / 2
+        width: title.width
         elide: Text.ElideRight
         text: Media.artist
         color: Theme.subtle
         font.family: Theme.uiFont
-        font.pixelSize: Theme.islandCaptionSize
+        font.pixelSize: Theme.islandCaptionSize * root.scaleFactor
       }
 
       // Left and right buttons skip, so the card is a transport as well as a
       // readout.
       MouseArea {
-        anchors.fill: parent
+        x: 0
+        y: 0
+        width: Math.max(0, clockLabel.x - 12 * root.scaleFactor)
+        height: parent.height
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.ForwardButton | Qt.BackButton
         onClicked: function (event) {
@@ -176,62 +193,43 @@ FrostedSurface {
       }
     }
 
-    Item {
-      id: time
+    Text {
+      id: date
 
-      // Centred on the card, not on the space left over beside the track, so
-      // the clock stays put as titles change length.
-      x: (parent.width - width) / 2
-      y: 0
-      width: 120
-      height: parent.height
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 21
-        text: Qt.formatDateTime(clock.date, "HH:mm")
-        color: Theme.text
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandDisplaySize
-        font.weight: Font.DemiBold
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 49
-        text: Qt.formatDateTime(clock.date, "ddd, d MMM")
-        color: Theme.subtle
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandCaptionSize
-      }
-
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.clockActivated()
-      }
+      x: (root.width - width) / 2
+      y: root.midline + 13.5 * root.scaleFactor - height / 2
+      text: Qt.formatDateTime(clock.date, "ddd, d MMM")
+      color: Theme.subtle
+      font.family: Theme.uiFont
+      font.pixelSize: Theme.islandCaptionSize * root.scaleFactor
     }
 
     Rectangle {
       id: status
 
-      x: 432
-      y: 24
-      width: Theme.islandStatusWidth
-      height: 36
+      // Anchored to the right edge with a margin that scales like every other
+      // measurement on the card.
+      x: root.width - 88 * root.scaleFactor
+      y: root.midline - height / 2
+      width: Theme.islandStatusWidth * root.scaleFactor
+      height: 36 * root.scaleFactor
       radius: height / 2
       color: Theme.withAlpha(Theme.accent, 0.14)
       border.width: 1
       border.color: Theme.withAlpha(Theme.accent, 0.28)
 
       WifiGlyph {
-        x: 10
-        anchors.verticalCenter: parent.verticalCenter
+        x: 10 * root.scaleFactor
+        y: (parent.height - implicitHeight * root.scaleFactor) / 2
+        transformOrigin: Item.TopLeft
+        scale: root.scaleFactor
       }
 
       BatteryGauge {
-        x: 33
-        anchors.verticalCenter: parent.verticalCenter
+        x: 33 * root.scaleFactor
+        y: (parent.height - implicitHeight * root.scaleFactor) / 2
+        transformOrigin: Item.TopLeft
+        scale: root.scaleFactor
       }
 
       MouseArea {
@@ -240,5 +238,32 @@ FrostedSurface {
         onClicked: root.statusActivated()
       }
     }
+  }
+
+  // The clock belongs to neither state and survives both. It grows from the
+  // shut size to the open one and slides off the equaliser onto the pill's
+  // centre line, so it is never seen to be replaced.
+  Text {
+    id: clockLabel
+
+    x: (root.width - width) / 2 + (1 - root.openness) * root.clockShift
+    y: root.midline - 8 * root.openness - height / 2
+    text: Qt.formatDateTime(clock.date, "HH:mm")
+    color: Theme.text
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.islandClockSize + root.openness * (Theme.islandDisplaySize - Theme.islandClockSize)
+    font.weight: Font.DemiBold
+  }
+
+  // Sits over the clock and its date, and only takes clicks once the card that
+  // the panel belongs to is actually open.
+  MouseArea {
+    x: clockLabel.x - 12 * root.scaleFactor
+    y: 0
+    width: clockLabel.width + 24 * root.scaleFactor
+    height: root.height
+    enabled: root.expanded
+    cursorShape: Qt.PointingHandCursor
+    onClicked: root.clockActivated()
   }
 }
