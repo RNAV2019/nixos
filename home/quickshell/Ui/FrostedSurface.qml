@@ -22,6 +22,11 @@ Item {
   property real screenOffsetX: 0
   property real screenOffsetY: 0
 
+  // Clip the contents to the pill. A surface whose contents are laid out at
+  // their final size and revealed as it grows needs this; one whose contents
+  // always fit does not, and should not pay for the extra layer.
+  property bool clipContent: false
+
   default property alias content: contentHolder.data
 
   // Overscan for the blur, which would otherwise sample transparency in from
@@ -154,9 +159,17 @@ Item {
     border.color: Theme.withAlpha(Theme.surfaceBorder, Theme.surfaceBorderAlpha)
   }
 
+  // The layer's texture is only as big as this item, so anything the contents
+  // place outside the pill is dropped before the mask even runs; the mask is
+  // what keeps the rounded corners honest.
   Item {
     id: contentHolder
 
     anchors.fill: parent
+    layer.enabled: root.clipContent
+    layer.effect: MultiEffect {
+      maskEnabled: true
+      maskSource: mask
+    }
   }
 }

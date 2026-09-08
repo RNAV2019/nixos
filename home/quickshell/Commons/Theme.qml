@@ -193,6 +193,12 @@ Singleton {
   readonly property int morphToggle: 269
   readonly property int morphSlider: 249
 
+  // Content swaps are not morphs. Measured off the source recording at 60 fps,
+  // a surface takes about 300 ms to change shape while the contents it carries
+  // change over about five frames. Fading the contents on the geometry's clock
+  // reads as a dissolve; this is what makes it read as a reveal instead.
+  readonly property int morphContent: 80
+
   // Qt has no critically damped spring: SpringAnimation takes its own damping
   // scale rather than a stiffness, a mass and a damping coefficient. So the
   // real step response of a zeta = 1 system, y = 1 - (1 + wt)e^-wt, is fitted

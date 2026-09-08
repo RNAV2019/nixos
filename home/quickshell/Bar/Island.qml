@@ -17,15 +17,16 @@ FrostedSurface {
   signal clockActivated
   signal statusActivated
 
-  // A pin survives the pointer leaving, so the card can be read at leisure.
+  // A pin holds the card open once the pointer leaves. Clicking again drops it
+  // back to plain hover behaviour.
   property bool pinned: false
 
-  // Hover alone cannot be the whole story: a click to close the card would do
-  // nothing while the pointer that opened it is still sitting on it. So a
-  // click that closes also suppresses hover until the pointer leaves.
-  property bool dismissed: false
+  readonly property bool expanded: pinned || hover.containsMouse
 
-  readonly property bool expanded: pinned || (hover.containsMouse && !dismissed)
+  // The card is laid out at its full size from the first frame of the morph
+  // and revealed as the pill grows around it, which is what the source shell
+  // does. Nothing here slides or scales on its own.
+  clipContent: true
 
   readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
 
@@ -51,25 +52,16 @@ FrostedSurface {
     precision: SystemClock.Minutes
   }
 
-  // Clicking empty island space toggles the card either way: open it and the
-  // pin holds it open once the pointer leaves, close it and it stays closed
-  // until the pointer leaves. The controls sit on top of this and act without
-  // disturbing either.
+  // Clicking empty island space pins the card open; clicking again releases it
+  // to plain hover behaviour. The controls sit on top of this and act without
+  // disturbing the pin.
   MouseArea {
     id: hover
 
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-
-    onClicked: {
-      var open = root.expanded;
-      root.pinned = !open;
-      root.dismissed = open;
-    }
-
-    // Leaving resets the suppression, so the next hover opens the card again.
-    onExited: root.dismissed = false
+    onClicked: root.pinned = !root.pinned
   }
 
   // Collapsed: an equaliser only when there is something to show, then the
@@ -84,7 +76,7 @@ FrostedSurface {
 
     Behavior on opacity {
       Morph {
-        duration: Theme.morphToggle
+        duration: Theme.morphContent
       }
     }
 
@@ -118,7 +110,7 @@ FrostedSurface {
 
     Behavior on opacity {
       Morph {
-        duration: Theme.morphToggle
+        duration: Theme.morphContent
       }
     }
 
