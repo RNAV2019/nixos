@@ -28,7 +28,16 @@ FrostedSurface {
   // back to plain hover behaviour.
   property bool pinned: false
 
-  readonly property bool expanded: pinned || hover.containsMouse
+  // Raised while another surface has taken the island's place and is drawing
+  // over it. The island keeps drawing, so the two never both leave the screen,
+  // but it holds itself to the pill the covering surface expects to find, and
+  // forgets any pin so it does not spring back open underneath.
+  property bool suppressed: false
+
+  onSuppressedChanged: if (suppressed)
+    pinned = false
+
+  readonly property bool expanded: !suppressed && (pinned || hover.containsMouse)
 
   clipContent: true
 

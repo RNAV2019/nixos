@@ -100,16 +100,17 @@ Variants {
       }
 
       // The launcher grows out of the island's own pill, in the island's own
-      // place, so the two must never be on screen together. It stays down for
-      // the whole morph, not just while the launcher is open, or the pill
-      // would pop back in over the panel still shrinking towards it.
+      // place, and covers it for as long as it is open. The island is left
+      // drawn underneath rather than taken away, so there is never a frame
+      // with neither on screen; all it has to do is stay collapsed, so that
+      // nothing of it shows around the launcher's first frames.
       Island {
         id: island
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         screenOffsetY: Theme.barMarginTop
-        visible: !bar.screen || Bus.launcherScreen !== bar.screen.name
+        suppressed: bar.screen !== null && Bus.launcherScreen === bar.screen.name
         onClockActivated: bar.toggle("clock")
         onStatusActivated: bar.toggle("network")
       }
