@@ -367,8 +367,6 @@ in {
 
           (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
 
-          (bind "ALT + D" (exec "qs ipc call launcher toggle"))
-
           # Match bar panel shortcuts.
           (bind "${mod} + CTRL + A" (exec "qs ipc call panels toggle audio"))
           (bind "${mod} + CTRL + W" (exec "qs ipc call panels toggle network"))
@@ -378,7 +376,7 @@ in {
           (bind "${mod} + CTRL + C" (exec "qs ipc call panels toggle clock"))
           (bind "${mod} + CTRL + D" (exec "qs ipc call panels toggle displays"))
 
-          (bind "${mod} + SPACE" (exec "mycelium --toggle"))
+          (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))
 
           (bind "CTRL + ${mod} + SPACE" (exec "cherry --toggle"))
 
