@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import qs.Commons
 
 // Ranked desktop-entry search, behind the launcher.
 //
@@ -15,8 +14,6 @@ Singleton {
   id: root
 
   property string query: ""
-
-  readonly property int limit: Theme.launcherMaxRows
 
   // Everything the menu is allowed to show, in name order, resolved once.
   // Ranking then only has to reorder this rather than re-read the entries.
@@ -33,10 +30,13 @@ Singleton {
     return out;
   }
 
+  // Every match, not a screenful. Theme.launcherMaxRows caps how tall the
+  // panel is allowed to grow, and the list scrolls past that; it must not also
+  // decide how many applications exist.
   readonly property var results: {
     var q = query.trim().toLowerCase();
     if (q.length === 0)
-      return entries.slice(0, limit);
+      return entries;
 
     var ranked = [];
     for (var i = 0; i < entries.length; i++) {
@@ -54,7 +54,7 @@ Singleton {
     });
 
     var out = [];
-    for (var j = 0; j < ranked.length && j < limit; j++)
+    for (var j = 0; j < ranked.length; j++)
       out.push(ranked[j].entry);
     return out;
   }
@@ -103,6 +103,21 @@ Singleton {
     if (entry.genericName)
       return String(entry.genericName);
     return "";
+  }
+
+  // An entry names its icon the way the icon theme does, not the way a URL
+  // does. Handing that name straight to an Image resolves it against the
+  // component's own path and finds nothing, so it has to go through the theme
+  // lookup first; `check` makes a name the theme cannot place come back empty
+  // rather than as a broken path, which is what lets a row fall back to its
+  // tinted initial. An entry that names an absolute file is used as it is.
+  function iconFor(entry) {
+    if (!entry || !entry.icon)
+      return "";
+    var name = String(entry.icon);
+    if (name.startsWith("/"))
+      return "file://" + name;
+    return Quickshell.iconPath(name, true);
   }
 
   function launch(id) {

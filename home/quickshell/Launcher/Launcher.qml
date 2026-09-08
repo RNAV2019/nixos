@@ -13,8 +13,14 @@ import qs.Ui
 // down for as long as this surface is on screen, so what the eye follows is a
 // single shape changing rather than one surface swapping for another.
 //
-// Measured against the source recording at 60 fps, the shape settles in about
-// 350 ms with no overshoot, which is what Theme.morphCurve already describes.
+// The open was measured against the source recording frame by frame at 60 fps.
+// The shape travels for 308 ms and stops dead, and its width and height ride
+// one curve: fitting them separately lands on 306 and 310 ms, so a single
+// driver is what the source has too. The shape of that curve is already
+// Theme.morphCurve, which tracks the measurements to within 2% of their travel
+// - closer than a true critically damped response manages, which undershoots
+// the first three frames and then arrives late.
+//
 // The clock is the one thing the two states share: it stays drawn in the
 // growing box and fades as the search row takes over, the same hand-off the
 // island performs when it opens into its media card.
@@ -79,21 +85,22 @@ Variants {
       var want = AppSearch.results;
       var i, j;
 
+      // An unfiltered query is the whole application list, so the sweep for
+      // rows that no longer belong goes through a lookup rather than a scan.
+      var wanted = {};
+      for (i = 0; i < want.length; i++)
+        wanted[want[i].id] = true;
+
       for (i = rows.count - 1; i >= 0; i--) {
-        var live = false;
-        for (j = 0; j < want.length; j++) {
-          if (want[j].id === rows.get(i).entryId) {
-            live = true;
-            break;
-          }
-        }
-        if (!live)
+        if (!wanted[rows.get(i).entryId])
           rows.remove(i);
       }
 
+      // What survives is already in the right relative order, so this scan
+      // finds its match at or just after the position it is looking to fill.
       for (i = 0; i < want.length; i++) {
         var at = -1;
-        for (j = 0; j < rows.count; j++) {
+        for (j = i; j < rows.count; j++) {
           if (rows.get(j).entryId === want[i].id) {
             at = j;
             break;
@@ -104,7 +111,7 @@ Variants {
             entryId: want[i].id,
             rowName: String(want[i].name),
             rowDesc: AppSearch.describe(want[i]),
-            rowIcon: String(want[i].icon || "")
+            rowIcon: AppSearch.iconFor(want[i])
           });
         else if (at !== i)
           rows.move(at, i, 1);
@@ -217,15 +224,21 @@ Variants {
       surfaceRadius: win.open ? Theme.launcherRadius : Theme.islandRadius
 
       Behavior on implicitWidth {
-        Morph {}
+        Morph {
+          duration: Theme.morphLauncher
+        }
       }
 
       Behavior on implicitHeight {
-        Morph {}
+        Morph {
+          duration: Theme.morphLauncher
+        }
       }
 
       Behavior on surfaceRadius {
-        Morph {}
+        Morph {
+          duration: Theme.morphLauncher
+        }
       }
 
       SystemClock {

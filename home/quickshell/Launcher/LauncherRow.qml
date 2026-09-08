@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Widgets
 import qs.Commons
 
 // One result. The row draws its icon and its two lines of text; the selected
@@ -63,7 +62,16 @@ Item {
     }
   }
 
-  IconImage {
+  // Ui uses IconImage elsewhere, but it asks the icon theme for exactly the
+  // size it is drawn at. A theme that has no 26 px variant then hands back its
+  // 16 or 22 px one to be scaled up, and the result is visibly soft. Asking
+  // for a size no theme keeps forces the largest variant it has, which
+  // downsamples cleanly instead.
+  //
+  // Loading is synchronous because these are small local files and the
+  // alternative is every row showing its tinted initial for a frame before the
+  // real icon replaces it, on every open.
+  Image {
     id: icon
 
     x: tile.x
@@ -71,9 +79,14 @@ Item {
     width: tile.width
     height: tile.height
     source: root.iconSource
-    // An icon name the theme cannot resolve must not leave a hole where the
+    sourceSize.width: Theme.launcherIconSize * 4
+    sourceSize.height: Theme.launcherIconSize * 4
+    fillMode: Image.PreserveAspectFit
+    smooth: true
+    mipmap: true
+    // An icon name the theme cannot place must not leave a hole where the
     // tinted initial would have been.
-    visible: source !== "" && backer.status !== Image.Error && backer.status !== Image.Null
+    visible: source !== "" && status === Image.Ready
   }
 
   Text {

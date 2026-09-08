@@ -218,6 +218,11 @@ Singleton {
   // the time each kind of surface takes to settle.
   readonly property int morphDuration: 330
   readonly property int morphSurface: 339
+  // The launcher's own open, fitted to the source recording frame by frame
+  // between 4:23 and 4:50. Both the width and the height ride one curve, and
+  // one duration fits the pair to within 4% of their travel; the shared
+  // morphCurve below already has the right shape, only the clock was long.
+  readonly property int morphLauncher: 308
   readonly property int morphSubView: 311
   readonly property int morphOsd: 295
   readonly property int morphToggle: 269
