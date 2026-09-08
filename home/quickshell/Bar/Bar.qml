@@ -49,10 +49,14 @@ Variants {
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: Theme.barHeight
 
-    // The strip covers more than the surfaces do, so clicks may only be taken
-    // where a surface actually is.
+    // The strip is far taller than the surfaces resting in it, so input is
+    // taken only where a surface actually is and the rest stays click-through.
+    // The container region holds no geometry of its own; each surface is a
+    // child region unioned into it.
     mask: Region {
-      item: workspaces
+      Region {
+        item: workspaces
+      }
 
       Region {
         item: island
