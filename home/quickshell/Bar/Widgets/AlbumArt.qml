@@ -1,0 +1,103 @@
+import QtQuick
+import QtQuick.Effects
+import qs.Commons
+import qs.Services
+
+// The track's cover, or a wash of the palette when the player exposes none.
+// The wash is three blurred blooms rather than a placeholder glyph, so an
+// artless track still gives the card something to sit against.
+Item {
+  id: root
+
+  component Bloom: Rectangle {
+    property color blobColor: Theme.iris
+    property real blobOpacity: 1
+
+    radius: Math.min(width, height) / 2
+    color: Theme.withAlpha(blobColor, blobOpacity)
+    layer.enabled: true
+    layer.effect: MultiEffect {
+      blurEnabled: true
+      blur: 0.45
+      blurMax: 32
+    }
+  }
+
+  readonly property bool hasArt: Media.artUrl !== "" && art.status === Image.Ready
+
+  implicitWidth: Theme.islandArtSize
+  implicitHeight: Theme.islandArtSize
+
+  Item {
+    id: content
+
+    anchors.fill: parent
+    layer.enabled: true
+    layer.effect: MultiEffect {
+      maskEnabled: true
+      maskSource: mask
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: Theme.overlay
+    }
+
+    Item {
+      anchors.fill: parent
+      visible: !root.hasArt
+
+      Bloom {
+        blobColor: Theme.love
+        blobOpacity: 0.75
+        x: -10
+        y: -14
+        width: 44
+        height: 40
+      }
+
+      Bloom {
+        blobColor: Theme.gold
+        blobOpacity: 0.6
+        x: 20
+        y: 8
+        width: 40
+        height: 40
+      }
+
+      Bloom {
+        blobColor: Theme.iris
+        blobOpacity: 0.7
+        x: -6
+        y: 22
+        width: 34
+        height: 32
+      }
+    }
+
+    Image {
+      id: art
+
+      anchors.fill: parent
+      source: Media.artUrl
+      fillMode: Image.PreserveAspectCrop
+      asynchronous: true
+      cache: true
+      visible: root.hasArt
+    }
+  }
+
+  Item {
+    id: mask
+
+    anchors.fill: parent
+    visible: false
+    layer.enabled: true
+
+    Rectangle {
+      anchors.fill: parent
+      radius: Theme.islandArtRadius
+      color: "black"
+    }
+  }
+}

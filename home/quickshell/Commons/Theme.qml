@@ -26,7 +26,9 @@ Singleton {
   // Lift them one step so each pill reads as its own surface.
   readonly property color barModule: surface
 
-  readonly property color accent: love
+  // Colour is meant to read as derived from the wallpaper, so the accent is
+  // the one hue the current background actually contains.
+  readonly property color accent: iris
   readonly property color urgent: love
 
   readonly property color lockFail: "#cc2222"
@@ -120,12 +122,43 @@ Singleton {
   // pull feels the same however far out the map is zoomed.
   readonly property int displaySnapDistance: 12
 
-  readonly property int barHeight: 26
-  readonly property int barMarginTop: 6
-  readonly property int barMarginLeft: 3
-  readonly property int barMarginRight: 9
+  readonly property int barHeight: 36
+  readonly property int barMarginTop: 8
+  readonly property int barMarginLeft: 24
+  readonly property int barMarginRight: 24
   readonly property int barGroupPadding: 8
   readonly property int barItemGap: 8
+
+  // Frosted surfaces. Every floating surface is a blurred crop of the
+  // wallpaper under a tint, so the background blooms through wherever it has
+  // detail and reads as flat ink wherever it does not.
+  readonly property color surfaceTint: surface
+  readonly property real surfaceTintAlpha: 0.78
+  readonly property color surfaceBorder: highlightMed
+  readonly property real surfaceBorderAlpha: 0.5
+  // MultiEffect blur is a fraction of blurMax, not a pixel radius.
+  readonly property int surfaceBlurMax: 64
+  readonly property real surfaceBlur: 0.53
+  readonly property int surfaceShadowOffset: 8
+  readonly property int surfaceShadowMax: 32
+  readonly property real surfaceShadowBlur: 0.75
+  readonly property real surfaceShadowAlpha: 0.2
+
+  // The island. One pill that carries the clock, grows an equaliser while
+  // something is playing, and expands into a media and status card on hover.
+  readonly property int islandRadius: 18
+  readonly property int islandIdleWidth: 118
+  readonly property int islandPlayingWidth: 140
+  readonly property int islandExpandedWidth: 520
+  readonly property int islandExpandedHeight: 84
+  readonly property int islandExpandedRadius: 26
+  readonly property int islandClockSize: 17
+  readonly property int islandDisplaySize: 22
+  readonly property int islandTitleSize: 13
+  readonly property int islandCaptionSize: 11
+  readonly property int islandArtSize: 48
+  readonly property int islandArtRadius: 10
+  readonly property int islandStatusWidth: 72
 
   // Widgets own this padding; the containing row must not add spacing.
   readonly property int barIconPadding: 6
@@ -139,10 +172,32 @@ Singleton {
   readonly property int barNixMinWidth: 15
   readonly property int barNixFontSize: 15
 
-  readonly property int workspacePadding: 4
+  readonly property int workspacePadding: 14
   readonly property int workspaceRadius: 18
   readonly property int workspaceGap: 6
+  readonly property int workspaceSlotWidth: 20
+  readonly property int workspaceSlotActiveWidth: 36
+  readonly property int workspaceSlotHeight: 16
+  readonly property int workspaceSlotRadius: 8
 
   readonly property int animFast: 150
   readonly property int animSlow: 300
+
+  // Every morph in the shell is critically damped: it accelerates, arrives and
+  // stops, with no overshoot, wobble or settle bounce. The durations below are
+  // the time each kind of surface takes to settle.
+  readonly property int morphDuration: 330
+  readonly property int morphSurface: 339
+  readonly property int morphSubView: 311
+  readonly property int morphOsd: 295
+  readonly property int morphToggle: 269
+  readonly property int morphSlider: 249
+
+  // Qt has no critically damped spring: SpringAnimation takes its own damping
+  // scale rather than a stiffness, a mass and a damping coefficient. So the
+  // real step response of a zeta = 1 system, y = 1 - (1 + wt)e^-wt, is fitted
+  // here as a cubic bezier instead. The fit tracks that curve to within 0.02
+  // across its whole range and, like it, both leaves and arrives at zero
+  // velocity.
+  readonly property var morphCurve: [0.12, 0.0, 0.22, 1.0, 1.0, 1.0]
 }

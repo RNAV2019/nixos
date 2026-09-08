@@ -38,8 +38,26 @@ Variants {
       right: true
     }
 
-    implicitHeight: Theme.barHeight
+    // Tall enough for the island's expanded card, since the island grows
+    // downward out of the strip and a layer surface cannot draw past its own
+    // height. The strip is transparent, so only the surfaces are visible.
+    implicitHeight: Theme.islandExpandedHeight
     margins.top: Theme.barMarginTop
+
+    // Windows must give way to the resting strip, not to the room the island
+    // needs when it opens; an expanded card floats over them instead.
+    exclusionMode: ExclusionMode.Normal
+    exclusiveZone: Theme.barHeight
+
+    // The strip covers more than the surfaces do, so clicks may only be taken
+    // where a surface actually is.
+    mask: Region {
+      item: workspaces
+
+      Region {
+        item: island
+      }
+    }
 
     Connections {
       target: Bus
@@ -58,106 +76,37 @@ Variants {
       }
     }
 
-    // PanelHost cards use this item's coordinate space, and its overlay
-    // replays bar-strip clicks onto these widgets.
+    // PanelHost cards use this item's coordinate space.
     Item {
       id: barBody
 
-      readonly property var clickTargets: [nixButton, clockWidget, claudeWidget, displayWidget, bluetoothWidget, networkWidget, volumeWidget, cpuWidget, batteryWidget]
+      // Nothing in the strip is a click-through target for an open panel any
+      // more: a click outside a panel simply dismisses it.
+      readonly property var clickTargets: []
 
       anchors.fill: parent
 
-      Row {
-        anchors.left: parent.left
-        anchors.leftMargin: Theme.barMarginLeft + Theme.barItemGap
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Theme.barItemGap
-
-        NixButton {
-          id: nixButton
-          anchors.verticalCenter: parent.verticalCenter
-          onActivated: {
-            bar.openPanel = "";
-            Bus.sessionToggled();
-          }
-        }
-
-        Clock {
-          id: clockWidget
-          anchors.verticalCenter: parent.verticalCenter
-          onActivated: bar.toggle("clock")
-        }
-
-        Mpris {
-          anchors.verticalCenter: parent.verticalCenter
-        }
-      }
-
       Workspaces {
+        id: workspaces
+
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.barMarginLeft
+        anchors.top: parent.top
+        screenOffsetY: Theme.barMarginTop
+      }
+
+      Island {
+        id: island
+
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.top: parent.top
+        screenOffsetY: Theme.barMarginTop
+        onClockActivated: bar.toggle("clock")
+        onStatusActivated: bar.toggle("network")
       }
 
-      Rectangle {
-        anchors.right: parent.right
-        anchors.rightMargin: Theme.barMarginRight
-        anchors.verticalCenter: parent.verticalCenter
-
-        implicitWidth: rightRow.implicitWidth + Theme.barGroupPadding * 2
-        implicitHeight: Theme.barHeight
-        radius: height / 2
-        color: Theme.barModule
-
-        Row {
-          id: rightRow
-          anchors.centerIn: parent
-          // Widgets already own both side paddings.
-          spacing: 0
-
-          ClaudeWidget {
-            id: claudeWidget
-            anchors.verticalCenter: parent.verticalCenter
-          }
-
-          DisplayWidget {
-            id: displayWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("displays")
-          }
-
-          BluetoothWidget {
-            id: bluetoothWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("bluetooth")
-          }
-
-          NetworkWidget {
-            id: networkWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("network")
-          }
-
-          VolumeWidget {
-            id: volumeWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("audio")
-          }
-
-          CpuWidget {
-            id: cpuWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("system")
-          }
-
-          BatteryWidget {
-            id: batteryWidget
-            anchors.verticalCenter: parent.verticalCenter
-            onActivated: bar.toggle("battery")
-          }
-        }
-      }
-
-      // Separate hosts keep panel morphs from crossing the screen.
+      // Panels open under the island, which is the surface every one of them
+      // morphs out of.
       PanelHost {
         barItem: barBody
         activePanel: bar.openPanel
@@ -165,87 +114,38 @@ Variants {
 
         ClockPanel {
           panelName: "clock"
-          anchorTarget: clockWidget
+          anchorTarget: island
         }
-      }
-
-      PanelHost {
-        barItem: barBody
-        activePanel: bar.openPanel
-        onDismissed: bar.openPanel = ""
 
         DisplayPanel {
           panelName: "displays"
-          anchorTarget: displayWidget
+          anchorTarget: island
         }
 
         BluetoothPanel {
           panelName: "bluetooth"
-          anchorTarget: bluetoothWidget
+          anchorTarget: island
         }
 
         NetworkPanel {
           panelName: "network"
-          anchorTarget: networkWidget
+          anchorTarget: island
         }
 
         AudioPanel {
           panelName: "audio"
-          anchorTarget: volumeWidget
+          anchorTarget: island
         }
 
         SystemPanel {
           panelName: "system"
-          anchorTarget: cpuWidget
+          anchorTarget: island
         }
 
         BatteryPanel {
           panelName: "battery"
-          anchorTarget: batteryWidget
+          anchorTarget: island
         }
-      }
-
-      // Open panels duplicate and overlap these tooltips.
-      BarTooltip {
-        anchorItem: claudeWidget
-        text: claudeWidget.tooltip
-        show: claudeWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: displayWidget
-        text: displayWidget.tooltip
-        show: displayWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: bluetoothWidget
-        text: bluetoothWidget.tooltip
-        show: bluetoothWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: networkWidget
-        text: networkWidget.tooltip
-        show: networkWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: volumeWidget
-        text: volumeWidget.tooltip
-        show: volumeWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: cpuWidget
-        text: cpuWidget.tooltip
-        show: cpuWidget.hovered && bar.openPanel === ""
-      }
-
-      BarTooltip {
-        anchorItem: batteryWidget
-        text: batteryWidget.tooltip
-        show: batteryWidget.hovered && bar.openPanel === "" && batteryWidget.present
       }
     }
   }
