@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Bar
 import qs.Commons
+import qs.Launcher
 import qs.Lock
 import qs.Notifications
 import qs.Osd
@@ -10,6 +11,7 @@ import qs.Session
 
 ShellRoot {
   Bar {}
+  Launcher {}
   Notifications {}
   Osd {}
   SessionMenu {}
@@ -26,6 +28,18 @@ ShellRoot {
 
     function close(): void {
       Bus.closePanels();
+    }
+  }
+
+  IpcHandler {
+    target: "launcher"
+
+    function toggle(): void {
+      Bus.launcherToggled();
+    }
+
+    function close(): void {
+      Bus.launcherClosed();
     }
   }
 

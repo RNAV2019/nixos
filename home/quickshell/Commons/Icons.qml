@@ -15,6 +15,9 @@ Singleton {
   readonly property string monitorMultiple: "󰍺"
   readonly property string monitorOff: "󰶐"
 
+  readonly property string search: "󰍉"
+  readonly property string application: "󰣆"
+
   readonly property string expandMore: "󰅀"
   readonly property string expandLess: "󰅃"
 

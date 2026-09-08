@@ -160,6 +160,36 @@ Singleton {
   readonly property int islandArtRadius: 10
   readonly property int islandStatusWidth: 72
 
+  // The app launcher. The island pill grows into this and shrinks back out of
+  // it, so the two share a top edge and a centre line and read as one surface
+  // changing shape rather than one surface replacing another.
+  //
+  // The metrics below are the source recording's own, carried onto the 520 px
+  // column the rest of the shell is drawn against: a 68 px search row above a
+  // rule, then rows on a 45 px pitch, each 42 px tall with a 3 px gap.
+  readonly property int launcherWidth: 520
+  readonly property int launcherRadius: 26
+  readonly property int launcherInset: 14
+  readonly property int launcherSearchHeight: 68
+  readonly property int launcherGlyphLeft: 31
+  readonly property int launcherGlyphSize: 18
+  readonly property int launcherSearchSize: 15
+  readonly property int launcherListTop: 80
+  readonly property int launcherRowHeight: 42
+  readonly property int launcherRowGap: 3
+  readonly property int launcherRowRadius: 10
+  readonly property int launcherPadBottom: 14
+  readonly property int launcherIconLeft: 27
+  readonly property int launcherIconSize: 26
+  readonly property int launcherIconRadius: 7
+  readonly property int launcherTextLeft: 66
+  readonly property int launcherNameSize: 14
+  readonly property int launcherDescSize: 11
+  readonly property int launcherMarkerWidth: 3
+  readonly property int launcherMarkerHeight: 20
+  // Past this the list scrolls rather than the panel growing further.
+  readonly property int launcherMaxRows: 8
+
   // Widgets own this padding; the containing row must not add spacing.
   readonly property int barIconPadding: 6
   readonly property int barLabelGap: 6
