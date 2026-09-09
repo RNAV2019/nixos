@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
+import qs.Services
 
 // A floating surface that shows the wallpaper through itself.
 //
@@ -33,7 +34,11 @@ Item {
   // outside the crop and fade the surface edges.
   readonly property int blurPad: 40
 
-  readonly property string wallpaper: "file://" + Quickshell.env("HOME") + "/.local/share/wallpaper/current"
+  // The resolved file rather than the link that points at it. An Image keyed on
+  // the link would never reload when the wallpaper changed: the URL is the same
+  // name whatever it points at, so Qt would keep serving the picture it already
+  // had, and every surface in the shell would stay frosted over the old one.
+  readonly property string wallpaper: Wallpapers.url
 
   readonly property var win: root.QsWindow.window
   readonly property int screenWidth: win && win.screen ? win.screen.width : 0

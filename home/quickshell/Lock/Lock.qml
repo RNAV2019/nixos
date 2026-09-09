@@ -7,6 +7,7 @@ import Quickshell.Hyprland
 import Quickshell.Services.Pam
 import Quickshell.Wayland
 import qs.Commons
+import qs.Services
 
 Scope {
   id: root
@@ -181,7 +182,7 @@ Scope {
       Image {
         id: wallpaper
         anchors.fill: parent
-        source: "file://" + Quickshell.env("HOME") + "/.local/share/wallpaper/current"
+        source: Wallpapers.url
         fillMode: Image.PreserveAspectCrop
         cache: false
         asynchronous: false

@@ -99,20 +99,25 @@ Variants {
         screenOffsetY: Theme.barMarginTop
       }
 
-      // The launcher grows out of the island's own pill, in the island's own
-      // place, and covers it for as long as it is open. The island is left
-      // drawn underneath rather than taken away, so there is never a frame
-      // with neither on screen; all it has to do is stay collapsed, so that
-      // nothing of it shows around the launcher's first frames.
+      // The launcher and the control centre both grow out of the island's own
+      // pill, in the island's own place, and cover it for as long as they are
+      // open. The island is left drawn underneath rather than taken away, so
+      // there is never a frame with neither on screen; all it has to do is stay
+      // collapsed, so that nothing of it shows around their first frames.
       Island {
         id: island
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         screenOffsetY: Theme.barMarginTop
-        suppressed: bar.screen !== null && Bus.launcherScreen === bar.screen.name
+        suppressed: bar.screen !== null && Bus.islandTaken(bar.screen.name)
+        replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
         onClockActivated: bar.toggle("clock")
-        onStatusActivated: bar.toggle("network")
+        // The status chip is the card's quick-settings summary - the radio and
+        // the battery, the two readings the control centre is about - so it is
+        // the control centre's own button, and pressing it grows the card into
+        // the panel rather than opening a separate one below the bar.
+        onStatusActivated: Bus.controlToggled()
       }
 
       // Panels open under the island, which is the surface every one of them

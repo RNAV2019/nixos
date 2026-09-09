@@ -43,6 +43,10 @@ Variants {
 
     property bool open: false
 
+    // Raised while the island is being handed to the control centre, which is
+    // the one close that does not animate. See dismiss().
+    property bool handover: false
+
     readonly property bool focused: Monitors.isFocused(win.screen)
 
     // The pill the surface has to start from and return to, which is wider
@@ -62,11 +66,23 @@ Variants {
     function show() {
       query.text = "";
       list.currentIndex = 0;
+      // The launcher and the control centre are the same island. Claiming it
+      // is what makes the other let go, and it lets go without animating.
+      handover = false;
+      Bus.islandClaimed();
       Bus.closePanels();
       open = true;
     }
 
     function hide() {
+      open = false;
+    }
+
+    // Giving the island up to the other surface. There is no shrink back to
+    // the pill: the surface taking over is already growing in this one's place
+    // and starts from the same pill, so this one has only to stop being drawn.
+    function dismiss() {
+      handover = true;
       open = false;
     }
 
@@ -186,6 +202,12 @@ Variants {
       function onLauncherClosed() {
         win.hide();
       }
+
+      // The control centre taking the island takes it from here.
+      function onIslandClaimed() {
+        if (win.open)
+          win.dismiss();
+      }
     }
 
     Connections {
@@ -224,18 +246,24 @@ Variants {
       surfaceRadius: win.open ? Theme.launcherRadius : Theme.islandRadius
 
       Behavior on implicitWidth {
+        enabled: !win.handover
+
         Morph {
           duration: Theme.morphLauncher
         }
       }
 
       Behavior on implicitHeight {
+        enabled: !win.handover
+
         Morph {
           duration: Theme.morphLauncher
         }
       }
 
       Behavior on surfaceRadius {
+        enabled: !win.handover
+
         Morph {
           duration: Theme.morphLauncher
         }
@@ -421,8 +449,6 @@ Variants {
             description: rowDesc
             iconSource: rowIcon
 
-            onHoveredChanged: if (hovered)
-              list.currentIndex = index
             onActivated: {
               list.currentIndex = index;
               win.activate();
@@ -463,6 +489,26 @@ Variants {
           }
         }
       }
+    }
+
+    // The launcher is a keyboard surface. Every way of getting anywhere in it -
+    // the query, the selection, the launch - is a key, so while it is up the
+    // pointer is taken off the screen rather than left hovering over a list it
+    // no longer drives.
+    //
+    // This sits over everything and accepts no buttons, so it changes nothing
+    // but the cursor: a press falls straight through it to the dismiss area and
+    // the rows underneath. Being the topmost item that carries a cursor at all
+    // is the whole point, because that is what outranks the query's I-beam and
+    // the rows' pointing hand without having to reach into either.
+    //
+    // Bound rather than switched off, so the pointer comes back on the frame
+    // the launcher closes: an item that is merely disabled keeps the cursor it
+    // last set until something else moves.
+    MouseArea {
+      anchors.fill: parent
+      acceptedButtons: Qt.NoButton
+      cursorShape: win.open ? Qt.BlankCursor : Qt.ArrowCursor
     }
   }
 }

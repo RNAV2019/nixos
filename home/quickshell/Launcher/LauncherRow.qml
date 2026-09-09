@@ -10,7 +10,6 @@ Item {
   property string name: ""
   property string description: ""
   property string iconSource: ""
-  property bool hovered: false
 
   signal activated
 
@@ -27,18 +26,6 @@ Item {
     for (var i = 0; i < name.length; i++)
       h = (h * 31 + name.charCodeAt(i)) % 9973;
     return tintPalette[h % tintPalette.length];
-  }
-
-  Rectangle {
-    anchors.fill: parent
-    radius: Theme.launcherRowRadius
-    color: root.hovered ? Theme.withAlpha(Theme.text, Theme.fillHover) : "transparent"
-
-    Behavior on color {
-      ColorAnimation {
-        duration: Theme.animFast
-      }
-    }
   }
 
   Rectangle {
@@ -115,12 +102,13 @@ Item {
     font.pixelSize: Theme.launcherDescSize
   }
 
+  // A click still launches, for the one case where the pointer is already on a
+  // row when the launcher opens. It does not track the pointer otherwise: the
+  // cursor is hidden while the launcher is up, and a hidden pointer that moves
+  // the selection out from under the arrow keys is worse than one that does
+  // nothing at all. Which row is selected is the list's highlight to say.
   MouseArea {
     anchors.fill: parent
-    hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
-    onEntered: root.hovered = true
-    onExited: root.hovered = false
     onClicked: root.activated()
   }
 }

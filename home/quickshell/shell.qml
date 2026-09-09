@@ -2,19 +2,23 @@ import Quickshell
 import Quickshell.Io
 import qs.Bar
 import qs.Commons
+import qs.Control
 import qs.Launcher
 import qs.Lock
 import qs.Notifications
 import qs.Osd
 import qs.Services
 import qs.Session
+import qs.Wallpaper
 
 ShellRoot {
   Bar {}
+  ControlCenter {}
   Launcher {}
   Notifications {}
   Osd {}
   SessionMenu {}
+  WallpaperPicker {}
   Lock {
     id: lockScreen
   }
@@ -32,6 +36,18 @@ ShellRoot {
   }
 
   IpcHandler {
+    target: "control"
+
+    function toggle(): void {
+      Bus.controlToggled();
+    }
+
+    function close(): void {
+      Bus.controlClosed();
+    }
+  }
+
+  IpcHandler {
     target: "launcher"
 
     function toggle(): void {
@@ -40,6 +56,18 @@ ShellRoot {
 
     function close(): void {
       Bus.launcherClosed();
+    }
+  }
+
+  IpcHandler {
+    target: "wallpaper"
+
+    function toggle(): void {
+      Bus.wallpaperToggled();
+    }
+
+    function close(): void {
+      Bus.wallpaperClosed();
     }
   }
 

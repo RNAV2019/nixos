@@ -3,214 +3,397 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
+import qs.Services
+import qs.Ui
 
-Scope {
+// The power menu. Board 11, and the island in another of its shapes.
+//
+// It was a dimmed screen with a column of words down the middle. The board
+// makes it what every other surface here is: the pill grows in place into a
+// short wide card carrying one row of tiles, on the 339 ms the board's own
+// motion table gives for an island-to-surface morph, and shrinks back into the
+// pill when it is done. Nothing dims; the menu is a surface, not a mode.
+//
+// Lock acts on the first press. The two that end the session do not: one press
+// arms the tile, which turns love and relabels itself Confirm, and only a
+// second press on the same tile commits. Moving to another tile disarms the
+// first, so an armed tile is never left behind for a later keystroke to fire.
+Variants {
   id: root
 
-  property bool open: false
-  property int current: 0
+  model: Quickshell.screens
 
-  readonly property var actions: [
-    {
-      "icon": Icons.lock,
-      "label": "Lock",
-      "key": "l"
-    },
-    {
-      "icon": Icons.reboot,
-      "label": "Reboot",
-      "key": "r"
-    },
-    {
-      "icon": Icons.shutdown,
-      "label": "Shutdown",
-      "key": "s"
+  PanelWindow {
+    id: win
+
+    required property var modelData
+
+    property bool open: false
+
+    // Which tile the keyboard is on.
+    property int current: 0
+
+    // Which tile is armed, or -1. Only ever one, and only ever one that asks
+    // to be.
+    property int armed: -1
+
+    property bool handover: false
+
+    readonly property bool focused: Monitors.isFocused(win.screen)
+
+    readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+
+    // Lock is done the moment it is pressed; there is nothing to undo. The
+    // other two take the session with them, so they ask first.
+    readonly property var tiles: [
+      {
+        glyph: Icons.lock,
+        label: "Lock",
+        confirms: false
+      },
+      {
+        glyph: Icons.reboot,
+        label: "Restart",
+        confirms: true
+      },
+      {
+        glyph: Icons.shutdown,
+        label: "Power Off",
+        confirms: true
+      }
+    ]
+
+    readonly property int count: tiles.length
+
+    readonly property int openWidth: Theme.powerInset * 2 + count * Theme.powerTileWidth + (count - 1) * Theme.powerTileGap
+
+    readonly property bool showing: open || surface.width > collapsedWidth + 0.5
+
+    function tileX(i) {
+      return Theme.powerInset + i * (Theme.powerTileWidth + Theme.powerTileGap);
     }
-  ]
 
-  function move(delta) {
-    var n = root.actions.length;
-    root.current = (root.current + delta + n) % n;
-  }
-
-  function run(index) {
-    root.open = false;
-    switch (index) {
-    case 0:
-      Bus.lockRequested();
-      break;
-    case 1:
-      systemctl.command = ["systemctl", "reboot"];
-      systemctl.running = true;
-      break;
-    case 2:
-      systemctl.command = ["systemctl", "poweroff"];
-      systemctl.running = true;
-      break;
-    }
-  }
-
-  onOpenChanged: {
-    if (open)
+    function show() {
       current = 0;
-  }
-
-  Process {
-    id: systemctl
-  }
-
-  Connections {
-    target: Bus
-
-    function onSessionToggled() {
-      root.open = !root.open;
+      armed = -1;
+      handover = false;
+      Bus.islandClaimed();
+      Bus.closePanels();
+      open = true;
     }
-  }
 
-  // Dim every output, but only the focused one shows and owns the menu.
-  Variants {
-    model: Quickshell.screens
+    function hide() {
+      open = false;
+    }
 
-    PanelWindow {
-      id: window
+    function dismiss() {
+      handover = true;
+      open = false;
+    }
 
-      required property var modelData
+    // Moving disarms. An armed tile that stayed armed while the selection moved
+    // away would sit there waiting for a Return meant for something else.
+    function move(delta) {
+      armed = -1;
+      current = (current + delta + count) % count;
+    }
 
-      readonly property bool focused: Monitors.isFocused(window.screen)
+    function activate(i) {
+      current = i;
 
-      screen: modelData
-      visible: root.open
-      color: "transparent"
-
-      WlrLayershell.layer: WlrLayer.Overlay
-      WlrLayershell.namespace: "quickshell-session"
-      WlrLayershell.keyboardFocus: root.open && focused ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-
-      anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
+      if (tiles[i].confirms && armed !== i) {
+        armed = i;
+        return;
       }
 
-      exclusionMode: ExclusionMode.Ignore
+      win.hide();
 
-      Rectangle {
-        anchors.fill: parent
-        color: Theme.withAlpha(Theme.base, 0.65)
+      switch (i) {
+      case 0:
+        Bus.lockRequested();
+        break;
+      case 1:
+        systemctl.command = ["systemctl", "reboot"];
+        systemctl.running = true;
+        break;
+      case 2:
+        systemctl.command = ["systemctl", "poweroff"];
+        systemctl.running = true;
+        break;
+      }
+    }
 
-        MouseArea {
-          anchors.fill: parent
-          onClicked: root.open = false
+    Process {
+      id: systemctl
+    }
+
+    screen: modelData
+    visible: showing
+    color: "transparent"
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "quickshell-session"
+
+    anchors {
+      top: true
+      bottom: true
+      left: true
+      right: true
+    }
+
+    exclusionMode: ExclusionMode.Ignore
+
+    // Same focus prime as every other surface that grows out of the island:
+    // Hyprland focuses an OnDemand surface when it first maps, but not when an
+    // already-mapped one goes None -> OnDemand, and this one stays mapped
+    // through its close.
+    property bool focusPrimed: false
+
+    WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
+
+    Timer {
+      id: focusPrime
+
+      interval: 75
+      onTriggered: win.focusPrimed = true
+    }
+
+    onOpenChanged: {
+      if (open) {
+        focusPrimed = false;
+        focusPrime.restart();
+        Qt.callLater(function () {
+          if (win.open)
+            keys.forceActiveFocus();
+        });
+      } else {
+        focusPrime.stop();
+        focusPrimed = false;
+        armed = -1;
+      }
+    }
+
+    onShowingChanged: {
+      if (showing)
+        Bus.sessionScreen = win.screen ? win.screen.name : "";
+      else if (win.screen && Bus.sessionScreen === win.screen.name)
+        Bus.sessionScreen = "";
+    }
+
+    Connections {
+      target: Bus
+
+      function onSessionToggled() {
+        if (win.open)
+          win.hide();
+        else if (win.focused)
+          win.show();
+      }
+
+      function onIslandClaimed() {
+        if (win.open)
+          win.dismiss();
+      }
+    }
+
+    // A click anywhere off the surface dismisses, which is also how an armed
+    // tile is stood down without committing to it.
+    MouseArea {
+      anchors.fill: parent
+      enabled: win.open
+      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      onClicked: win.hide()
+    }
+
+    FrostedSurface {
+      id: surface
+
+      x: (win.width - width) / 2
+      y: Theme.barMarginTop
+
+      clipContent: true
+
+      implicitWidth: win.open ? win.openWidth : win.collapsedWidth
+      implicitHeight: win.open ? Theme.powerHeight : Theme.barHeight
+      surfaceRadius: win.open ? Theme.powerRadius : Theme.islandRadius
+
+      Behavior on implicitWidth {
+        enabled: !win.handover
+
+        Morph {
+          duration: Theme.morphSurface
+        }
+      }
+
+      Behavior on implicitHeight {
+        enabled: !win.handover
+
+        Morph {
+          duration: Theme.morphSurface
+        }
+      }
+
+      Behavior on surfaceRadius {
+        enabled: !win.handover
+
+        Morph {
+          duration: Theme.morphSurface
         }
       }
 
       Item {
-        anchors.fill: parent
-        focus: root.open && window.focused
-        visible: window.focused
+        id: keys
 
-        Keys.onEscapePressed: root.open = false
-        Keys.onUpPressed: root.move(-1)
-        Keys.onDownPressed: root.move(1)
-        Keys.onReturnPressed: root.run(root.current)
-        Keys.onEnterPressed: root.run(root.current)
+        anchors.fill: parent
+        focus: true
 
         Keys.onPressed: function (event) {
-          if (event.key === Qt.Key_K) {
-            root.move(-1);
-            event.accepted = true;
+          switch (event.key) {
+          case Qt.Key_Escape:
+            // The first Escape stands an armed tile down; the second closes.
+            if (win.armed >= 0)
+              win.armed = -1;
+            else
+              win.hide();
+            break;
+          case Qt.Key_Left:
+          case Qt.Key_H:
+          case Qt.Key_Backtab:
+            win.move(-1);
+            break;
+          case Qt.Key_Right:
+          case Qt.Key_L:
+          case Qt.Key_Tab:
+            win.move(1);
+            break;
+          case Qt.Key_Return:
+          case Qt.Key_Enter:
+          case Qt.Key_Space:
+            win.activate(win.current);
+            break;
+          default:
             return;
           }
-          if (event.key === Qt.Key_J) {
-            root.move(1);
-            event.accepted = true;
-            return;
+          event.accepted = true;
+        }
+      }
+
+      SystemClock {
+        id: clock
+
+        precision: SystemClock.Minutes
+      }
+
+      // The clock belongs to neither state, and stays in the growing box until
+      // the tiles have taken over.
+      Text {
+        x: (surface.width - width) / 2
+        y: (surface.height - height) / 2
+        text: Qt.formatDateTime(clock.date, "HH:mm")
+        color: Theme.text
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.islandClockSize
+        font.weight: Font.DemiBold
+        opacity: win.open ? 0 : 1
+        visible: opacity > 0
+
+        Behavior on opacity {
+          Morph {
+            duration: Theme.morphContent
           }
-          for (var i = 0; i < root.actions.length; i++) {
-            if (event.text === root.actions[i].key) {
-              root.run(i);
-              event.accepted = true;
-              return;
-            }
+        }
+      }
+
+      Item {
+        id: body
+
+        anchors.fill: parent
+        opacity: win.open ? 1 : 0
+        visible: opacity > 0
+
+        Behavior on opacity {
+          Morph {
+            duration: Theme.morphContent
           }
         }
 
-        Column {
-          id: menu
+        Repeater {
+          model: win.tiles
 
-          anchors.centerIn: parent
-          spacing: Theme.spacingLg
+          Item {
+            id: tile
 
-          Repeater {
-            model: root.actions
+            required property int index
+            required property var modelData
 
-            Item {
-              id: entry
+            readonly property bool isArmed: win.armed === tile.index
+            readonly property bool isCurrent: win.current === tile.index
 
-              required property var modelData
-              required property int index
+            x: win.tileX(index)
+            y: Theme.powerTileTop
+            width: Theme.powerTileWidth
+            height: Theme.powerTileHeight
 
-              readonly property bool active: root.current === entry.index
+            Rectangle {
+              anchors.fill: parent
+              radius: Theme.powerTileRadius
+              // Armed, the tile is filled love and carries its own text in the
+              // base colour: the one thing on screen that is about to do
+              // something irreversible looks nothing like the things that are
+              // not.
+              color: tile.isArmed ? Theme.love : Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
+              border.width: 1
+              border.color: {
+                if (tile.isArmed)
+                  return Theme.love;
+                if (tile.isCurrent || hover.containsMouse)
+                  return Theme.accent;
+                return Theme.withAlpha(Theme.highlightMed, Theme.powerTileBorderAlpha);
+              }
 
-              readonly property color tint: entry.active ? Theme.love : Theme.muted
-
-              width: 240
-              height: 56
-
-              // Icon and label centre together as one row.
-              Row {
-                anchors.centerIn: parent
-                spacing: Theme.spacingMd
-
-                // Both cells are the same family and size, so the row's default
-                // top alignment already lines the glyph up with the word. Any
-                // vertical anchor here would centre the item box instead, which
-                // is what pushed the glyph low.
-                Text {
-                  text: entry.modelData.icon
-                  color: entry.tint
-                  font.family: Theme.iconFont
-                  font.pixelSize: 20
-
-                  Behavior on color {
-                    ColorAnimation {
-                      duration: Theme.animFast
-                    }
-                  }
-                }
-
-                Text {
-                  text: entry.modelData.label
-                  color: entry.tint
-                  // Monospace, matching the glyph cell beside it. The display
-                  // face's negative tracking goes with it; that correction is
-                  // for Inter Display, not for this family.
-                  font.family: Theme.monoFont
-                  font.pixelSize: 20
-                  font.weight: Theme.weightMedium
-
-                  Behavior on color {
-                    ColorAnimation {
-                      duration: Theme.animFast
-                    }
-                  }
+              Behavior on color {
+                ColorAnimation {
+                  duration: Theme.animFast
                 }
               }
 
-              HoverHandler {
-                id: hover
-                cursorShape: Qt.PointingHandCursor
-                onHoveredChanged: {
-                  if (hovered)
-                    root.current = entry.index;
+              Behavior on border.color {
+                ColorAnimation {
+                  duration: Theme.animFast
                 }
               }
+            }
 
-              MouseArea {
-                anchors.fill: parent
-                onClicked: root.run(entry.index)
-              }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              y: Theme.powerGlyphTop - Theme.powerTileTop - height / 2 + Theme.powerGlyphSize / 2
+              text: tile.modelData.glyph
+              color: tile.isArmed ? Theme.base : Theme.text
+              font.family: Theme.iconFont
+              font.pixelSize: Theme.powerGlyphSize
+            }
+
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              y: Theme.powerLabelTop - Theme.powerTileTop
+              text: tile.isArmed ? "Confirm" : tile.modelData.label
+              color: tile.isArmed ? Theme.base : Theme.text
+              font.family: Theme.uiFont
+              font.pixelSize: Theme.powerLabelSize
+              font.weight: tile.isArmed ? Font.Bold : Font.Medium
+            }
+
+            MouseArea {
+              id: hover
+
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              // Hovering moves the keyboard's place too, so the tile the eye is
+              // on and the tile Return would fire are never different ones.
+              onEntered: if (win.armed < 0)
+                win.current = tile.index
+              onClicked: win.activate(tile.index)
             }
           }
         }

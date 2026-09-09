@@ -30,14 +30,30 @@ FrostedSurface {
 
   // Raised while another surface has taken the island's place and is drawing
   // over it. The island keeps drawing, so the two never both leave the screen,
-  // but it holds itself to the pill the covering surface expects to find, and
-  // forgets any pin so it does not spring back open underneath.
+  // but it holds itself to the pill the covering surface expects to find.
   property bool suppressed: false
 
-  onSuppressedChanged: if (suppressed)
+  // Whether the surface covering it is one that stays. The launcher and the
+  // control centre are: a pin is dropped for them, so the card does not spring
+  // back open underneath and be found still open when they close.
+  //
+  // The OSD is not. It is up for a second and a half, and a volume key has no
+  // business closing a card the user pinned open.
+  property bool replaced: false
+
+  onSuppressedChanged: if (suppressed && replaced)
     pinned = false
 
   readonly property bool expanded: !suppressed && (pinned || hover.containsMouse)
+
+  // Offer the card to whatever might have to grow out of it. Only one island
+  // can be under the pointer, so only one is ever the one on offer.
+  onExpandedChanged: {
+    if (expanded)
+      Bus.islandCard = root;
+    else if (Bus.islandCard === root)
+      Bus.islandCard = null;
+  }
 
   clipContent: true
 
@@ -202,6 +218,20 @@ FrostedSurface {
         font.family: Theme.uiFont
         font.pixelSize: Theme.islandCaptionSize
       }
+    }
+
+    // With nothing playing the track block has nothing to say, and the room it
+    // would have taken carries the week instead: today and two days either
+    // side, drawn from the card's own left inset, where the album art starts
+    // when there is one. Scaled as a whole like the track block, so the strip
+    // grows with the pill rather than reflowing inside it.
+    MiniCalendar {
+      x: 16 * root.scaleFactor
+      y: root.midline - height * root.scaleFactor / 2
+      transformOrigin: Item.TopLeft
+      scale: root.scaleFactor
+      today: clock.date
+      visible: !Media.active
     }
 
     // Left and right buttons skip, so the card is a transport as well as a

@@ -28,6 +28,9 @@ Singleton {
 
   // Colour is meant to read as derived from the wallpaper, so the accent is
   // the one hue the current background actually contains.
+  // The palette every colour above comes from, for the surfaces that name it.
+  readonly property string paletteName: "rose-pine"
+
   readonly property color accent: iris
   readonly property color urgent: love
 
@@ -160,6 +163,30 @@ Singleton {
   readonly property int islandArtRadius: 10
   readonly property int islandStatusWidth: 72
 
+  // The mini calendar the expanded card carries on its left while nothing is
+  // playing, in the room the track block would have taken. Board 02b, and the
+  // board is a transcription of the reference frame: five days centred on
+  // today, on a 32 px pitch, single-letter labels over their numbers, today
+  // spelled out in three letters on a plate with its number in the accent.
+  //
+  // The plate is wider than the pitch, which is what gives the three-letter
+  // label its room; measured off the reference at 1.14 pitches.
+  readonly property int islandCalDays: 5
+  readonly property int islandCalPitch: 32
+  readonly property int islandCalLabelSize: 10
+  readonly property int islandCalDaySize: 13
+  readonly property int islandCalTodaySize: 18
+  readonly property int islandCalPlateWidth: 35
+  readonly property int islandCalPlateHeight: 37
+  readonly property int islandCalPlateRadius: 12
+  // Row centres, measured from the top of the block.
+  readonly property real islandCalLabelMid: 10.5
+  readonly property real islandCalDayMid: 27.5
+  // The weekend is the one thing in the strip that is not about today.
+  readonly property real islandCalWeekendLabelAlpha: 0.55
+  readonly property real islandCalWeekendDayAlpha: 0.75
+  readonly property real islandCalPlateAlpha: 0.08
+
   // The app launcher. The island pill grows into this and shrinks back out of
   // it, so the two share a top edge and a centre line and read as one surface
   // changing shape rather than one surface replacing another.
@@ -189,6 +216,215 @@ Singleton {
   readonly property int launcherMarkerHeight: 20
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
+
+  // The notification toast. Board 10, and the island's sixth shape: the pill
+  // grows into one card, holds while it is read, and melts back into the clock.
+  //
+  // One card, not a stack. The island is one surface and can only be one shape,
+  // so a second notification arriving replaces the one on screen rather than
+  // queueing below it; the control centre's list is where the run of them
+  // lives.
+  readonly property int notifWidth: 450
+  readonly property int notifRadius: 28
+  readonly property int notifInset: 16
+  readonly property int notifTextLeft: 68
+  readonly property int notifAvatarSize: 40
+  readonly property int notifAvatarLetterSize: 16
+  readonly property real notifAvatarAlpha: 0.22
+  readonly property int notifAppTop: 17
+  readonly property int notifAppSize: 11
+  readonly property int notifCloseSize: 14
+  readonly property int notifTitleTop: 36
+  readonly property int notifTitleSize: 15
+  readonly property int notifSourceTop: 58
+  readonly property int notifSourceSize: 11
+  readonly property int notifBodyTop: 82
+  // Where the body starts when there is no source line to sit under.
+  readonly property int notifBodyTopBare: 60
+  readonly property real notifBodySize: 12.5
+  readonly property int notifBodyLeading: 18
+  readonly property int notifBodyLines: 2
+  readonly property int notifActionGapAbove: 3
+  readonly property int notifActionHeight: 30
+  readonly property int notifActionRadius: 15
+  readonly property int notifActionGap: 10
+  readonly property int notifActionPad: 16
+  readonly property int notifActionSize: 12
+  readonly property real notifActionSecondaryAlpha: 0.85
+  readonly property int notifPadBottom: 14
+
+  // The power menu. Board 11: three tiles on one row, and no dimmed screen
+  // behind them. Lock acts on the first press; the two that end the session arm
+  // first, turning love and relabelling themselves Confirm.
+  readonly property int powerHeight: 112
+  readonly property int powerRadius: 26
+  readonly property int powerInset: 11
+  readonly property int powerTileWidth: 90
+  readonly property int powerTileHeight: 80
+  readonly property int powerTileRadius: 16
+  readonly property int powerTileGap: 12
+  readonly property int powerTileTop: 16
+  readonly property int powerGlyphTop: 38
+  readonly property int powerGlyphSize: 22
+  readonly property int powerLabelTop: 68
+  readonly property int powerLabelSize: 12
+  readonly property real powerTileFillAlpha: 0.9
+  readonly property real powerTileBorderAlpha: 0.7
+
+  // The on-screen displays. Board 09, and the island's fourth shape: the pill
+  // widens in place into a glyph, a bar and a reading, holds for a beat and
+  // melts back into the clock.
+  //
+  // The source recording settles what the board could only assert. Between 3:05
+  // and 3:20 the OSD is never a second surface: the same pill that carries the
+  // clock becomes the bar, and one frame of the return has the clock drawn back
+  // over the bar as the two cross-fade.
+  //
+  // Everything is laid out at fixed positions in a fixed-width pill, so the
+  // contents are already where they belong on the first frame and the growing
+  // shape uncovers them, as the launcher's and the control centre's do.
+  readonly property int osdWidth: 278
+  readonly property int osdHeight: 48
+  readonly property int osdRadius: 24
+  readonly property int osdGlyphLeft: 20
+  readonly property int osdGlyphSize: 18
+  readonly property int osdTrackLeft: 52
+  readonly property int osdTrackWidth: 166
+  readonly property int osdTrackHeight: 8
+  readonly property int osdValueRight: 20
+  readonly property int osdValueSize: 12
+  // "after about a second and a half, it just melts back into the clock".
+  readonly property int osdDwell: 1500
+
+  // The control centre. The island's third shape, and the same 520 px column
+  // the launcher grows into, carrying a tile grid, two sliders, the media card
+  // and the notification list.
+  //
+  // Every measurement below is board 04's, and the board is a transcription of
+  // the source recording: the panel was measured off the frames at 3:26 as
+  // 520 x 716 on a 1920 px output, which is the board's 520 x 718 to within the
+  // border.
+  readonly property int controlWidth: 520
+  readonly property int controlRadius: 26
+  readonly property int controlInset: 13
+  readonly property int controlHeaderHeight: 70
+  readonly property int controlTitleSize: 18
+  readonly property int controlBackSize: 36
+  readonly property int controlBackLeft: 20
+  readonly property int controlIconBtnSize: 32
+
+  // Tiles. Two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; the
+  // first row is one narrow tile beside one wide, the second is three equal.
+  readonly property int controlTileHeight: 59
+  readonly property int controlTileGap: 12
+  readonly property int controlTileRadius: 29
+  readonly property int controlTileBadge: 34
+  readonly property int controlTileBadgeLeft: 10
+  readonly property int controlTileGlyphSize: 18
+  readonly property int controlTileTextLeft: 54
+  readonly property int controlTileLabelSize: 13
+  readonly property int controlTileSubSize: 11
+
+  // Sliders. Thick pills whose fill is the level, with the glyph riding inside
+  // the fill at the left.
+  readonly property int controlSliderHeight: 40
+  readonly property int controlSliderGap: 17
+  readonly property int controlSliderGlyphLeft: 13
+
+  // The media card, and the gap that separates each block from the next.
+  readonly property int controlBlockGap: 15
+  readonly property int controlMediaHeight: 140
+  readonly property int controlMediaRadius: 16
+  readonly property int controlMediaTitleSize: 19
+  readonly property int controlMediaArtistSize: 12
+  readonly property int controlMediaCaptionSize: 11
+  readonly property int controlMediaPlaySize: 52
+  readonly property int controlMediaSkipSize: 16
+  readonly property real controlMediaProgressHeight: 3
+
+  // The notification list.
+  readonly property int controlSectionGap: 23
+  readonly property int controlSectionHeight: 22
+  readonly property int controlSectionSize: 11
+  readonly property int controlNotifRadius: 14
+  readonly property int controlNotifGap: 10
+  readonly property int controlNotifAvatar: 28
+  readonly property int controlNotifTextLeft: 52
+  readonly property int controlNotifTitleSize: 14
+  readonly property int controlNotifBodySize: 12
+  readonly property int controlNotifBodyTop: 68
+  readonly property int controlNotifBase: 80
+  readonly property int controlPadBottom: 10
+  // Past this the list scrolls rather than the panel growing further.
+  readonly property int controlNotifMaxHeight: 320
+
+  // Sub-views. Rows in the source's own vocabulary: a 46 px pill on a 52 px
+  // pitch, under an 11 px section label.
+  readonly property int controlRowHeight: 46
+  readonly property int controlRowGap: 6
+  readonly property int controlRowRadius: 23
+  readonly property int controlRowInset: 16
+  readonly property int controlViewMaxHeight: 620
+
+  // The wallpaper picker. Board 08, and the island's fifth shape: the pill
+  // grows into a wide, short card carrying one row of previews.
+  //
+  // The source recording settles what the board could not. Between 3:58 and
+  // 4:05 the picker is measured growing out of the pill in the island's own
+  // place, from a fixed top edge, 118 px wide to 1008 x 231 - the same shape
+  // language as the launcher and the control centre, at roughly twice their
+  // width. The board's own column is 800, which is what is used here: it is
+  // the shell's proportion of the screen rather than the source's, and four
+  // wallpapers fit it exactly.
+  readonly property int wallpaperWidth: 800
+  readonly property int wallpaperHeight: 232
+  readonly property int wallpaperRadius: 26
+  readonly property int wallpaperInset: 24
+  readonly property int wallpaperTitleSize: 18
+  readonly property int wallpaperMetaSize: 12
+  readonly property int wallpaperTitleTop: 28
+  readonly property int wallpaperMetaTop: 32
+  readonly property int wallpaperFooterTop: 196
+
+  // The row is a carousel, not a grid: it is clipped by the panel and runs on
+  // past both edges when there are more wallpapers than fit.
+  readonly property int wallpaperRowMid: 130
+  readonly property int wallpaperTileGap: 16
+  readonly property int wallpaperTileRadius: 10
+
+  // The chosen wallpaper is drawn larger and every other one the same, so the
+  // row has one focus rather than a gradient of importance. The board ramps
+  // through a middle size either side of the selection; a ramp says a tile two
+  // along matters less than its neighbour, which is not true of a row you are
+  // stepping through one at a time. The source does not size its previews at
+  // all - only the ring says which is chosen there.
+  //
+  // The first is the selected width; the last is everything else. Four
+  // wallpapers at these two sizes come to 720, which is inside the 752 the
+  // panel has, so the row is centred and nothing is clipped until there are
+  // five.
+  readonly property var wallpaperTileWidths: [192, 160]
+
+  // 16:9, as the board draws them. Previews are cropped to it rather than
+  // letterboxed, so a tile is never part panel background.
+  readonly property real wallpaperTileAspect: 16 / 9
+
+  readonly property real wallpaperTileBorderAlpha: 0.7
+  readonly property int wallpaperSelectedBorder: 2
+
+  // Two things are true of a tile at once and the row has to say both: which
+  // wallpaper the keys are on, and which one is actually up. The ring and the
+  // size carry the first. The second is the accent border below, held well
+  // under the ring's weight so a tile that is merely active never competes
+  // with the one being chosen.
+  readonly property real wallpaperActiveBorderAlpha: 0.55
+
+  // The dot sits on a disc of base, because the corner it lands in belongs to
+  // the picture and a bare accent dot is lost in a pale one.
+  readonly property int wallpaperDotSize: 7
+  readonly property int wallpaperDotInset: 8
+  readonly property int wallpaperDotHalo: 14
+  readonly property real wallpaperDotHaloAlpha: 0.7
 
   // Widgets own this padding; the containing row must not add spacing.
   readonly property int barIconPadding: 6
@@ -223,7 +459,25 @@ Singleton {
   // one duration fits the pair to within 4% of their travel; the shared
   // morphCurve below already has the right shape, only the clock was long.
   readonly property int morphLauncher: 308
+  // The control centre's own open, fitted frame by frame at 60 fps against the
+  // source recording between 6:19 and 6:21. Its width and its height ride one
+  // curve, as the launcher's do: a joint fit of both tracks to within 2.2% of
+  // their travel, and fitting them separately only moves the answer to 300 and
+  // 278 ms.
+  readonly property int morphControl: 295
   readonly property int morphSubView: 311
+  // The wallpaper picker's own open, fitted frame by frame at 60 fps against
+  // the source recording at 4:00. Its width and its height ride one curve: the
+  // two tracks agree on their progress at every sample to within 1.5% of their
+  // travel, and the fit to the shared morphCurve lands within 3.5%.
+  //
+  // The source overshoots. It runs 7 px past its resting width on each side
+  // about 230 ms in and takes another 130 ms to come back, which is 1.6% of
+  // the travel - a spring at about zeta 0.8 rather than the critically damped
+  // one every other surface here uses. It is not reproduced: one bouncing
+  // surface among five that arrive and stop reads as a fault rather than as a
+  // flourish. This is the fit to the rise, which is the part the eye follows.
+  readonly property int morphWallpaper: 228
   readonly property int morphOsd: 295
   readonly property int morphToggle: 269
   readonly property int morphSlider: 249

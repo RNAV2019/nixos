@@ -40,6 +40,23 @@ Singleton {
   readonly property string headphone: ""
   readonly property var volume: ["", " ", " "]
 
+  // The control centre's own vocabulary.
+  readonly property string back: "󰁍"
+  readonly property string close: "󰅖"
+  readonly property string settings: "󰒓"
+  readonly property string refresh: "󰑐"
+  readonly property string check: "󰄬"
+  readonly property string peaceOn: "󰍶"
+  readonly property string peaceOff: "󰂚"
+  readonly property string nightLight: "󰖔"
+  readonly property string previous: "󰒮"
+  readonly property string next: "󰒭"
+  readonly property string play: "󰐊"
+  readonly property string pause: "󰏤"
+  readonly property string microphone: "󰍬"
+  readonly property string microphoneMuted: "󰍭"
+  readonly property string bell: "󰂚"
+
   readonly property string brightness: "󰃟"
   readonly property string keyboardBacklight: "󰌌"
 

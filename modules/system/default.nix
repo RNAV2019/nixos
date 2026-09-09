@@ -47,6 +47,11 @@ in {
 
   nixpkgs.config.allowUnfree = true;
 
+  # Ventoy ships prebuilt binary blobs nixpkgs cannot audit, so it is marked
+  # insecure (NixOS/nixpkgs#404663, ventoy/Ventoy#2795, #3224). Pinned to the
+  # exact version so a bump fails loudly and the trade-off gets re-decided.
+  nixpkgs.config.permittedInsecurePackages = ["ventoy-1.1.17"];
+
   networking.networkmanager.enable = true;
 
   # LocalSend (discovery + transfer on port 53317)
@@ -120,6 +125,9 @@ in {
     curl
     vim
     start-hyprland
+    # Multiboot USB writer. Writes raw block devices, so it goes here rather
+    # than home.packages: sudo resets PATH and would not find a user profile.
+    ventoy-full
   ];
 
   # Dedicated stack so the lock screen skips the failure delay

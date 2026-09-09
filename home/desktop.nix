@@ -378,7 +378,11 @@ in {
 
           (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))
 
-          (bind "CTRL + ${mod} + SPACE" (exec "cherry --toggle"))
+          (bind "ALT + A" (exec "qs ipc call control toggle"))
+
+          # Board 08 asks for ALT + SHIFT + T; this is the chord Ryan uses. It
+          # was cherry's, which now has no binding of its own.
+          (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
 
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
@@ -421,11 +425,29 @@ in {
         }
       ];
 
-      # Bar panels are opaque xdg popups; only the session layer needs blur.
+      # No surface asks the compositor to blur for it. Every one of them is a
+      # FrostedSurface, which takes the crop of the wallpaper behind it and
+      # blurs that itself, inside its own rounded shape.
+      #
+      # The session layer used to ask, back when the power menu was a dimmed
+      # sheet over the whole screen and the blur was the sheet's own effect.
+      # It is a small card now, but the layer surface it lives on still covers
+      # the screen so the card can be centred on it, and a blur rule applies to
+      # the surface, not to what is drawn on it: the whole desktop went soft
+      # behind a 316 px panel. Measured, a region far from the card lost almost
+      # all its detail - its standard deviation fell from 0.16 to 0.01.
       layer_rule = [
+        # The island's other shapes animate their own open, and the shape is
+        # the whole point: the pill grows into the panel and the panel is what
+        # covers the island underneath. Hyprland's layersIn fade runs over the
+        # top of that, so for the first frames the surface is translucent and
+        # the island it is meant to be covering shows straight through it -
+        # two clocks, two headers, the desktop's own lines crossing the panel.
+        # Measured: the strip behind the panel still reads the window under it
+        # 200 ms into the open, and is opaque by 300.
         {
-          match.namespace = "quickshell-session";
-          blur = true;
+          match.namespace = "quickshell-(launcher|control|wallpaper|session|notifications|osd|panel)";
+          no_anim = true;
         }
       ];
 
@@ -487,6 +509,27 @@ in {
         after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'";
       };
     };
+  };
+
+  # The control centre's night light tile drives hyprsunset over hyprctl, so the
+  # daemon has to be up for the session rather than started on the first press.
+  # It starts at identity: the shell asks it for the current temperature and
+  # takes that as the state, so a daemon that came up warm would show the tile
+  # on before anything had asked for it.
+  systemd.user.services.hyprsunset = {
+    Unit = {
+      Description = "hyprsunset colour temperature daemon";
+      PartOf = ["graphical-session.target"];
+      After = ["graphical-session.target"];
+    };
+
+    Service = {
+      ExecStart = "${pkgs.hyprsunset}/bin/hyprsunset --identity";
+      Restart = "always";
+      RestartSec = 1;
+    };
+
+    Install.WantedBy = ["graphical-session.target"];
   };
 
   # Out-of-store symlink enables QML hot reload without rebuilding.

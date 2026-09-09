@@ -246,6 +246,11 @@ in {
     pavucontrol
     mpv
 
+    # notify-send, for posting a desktop notification from a script or a
+    # terminal. The shell's own server, in quickshell/Services/NotificationStore,
+    # is what receives it.
+    libnotify
+
     # dlopen dependencies for locally built Wayland apps.
     wayland
     libxkbcommon
