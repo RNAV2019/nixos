@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.Commons
+import qs.Services
 
 // Reusing one surface lets geometry animate between panels.
 //
@@ -10,6 +11,16 @@ import qs.Commons
 // after a click or hover has routed focus through its parent surface, so
 // Escape and arrow keys did nothing on a hotkey-opened panel. A layer surface
 // can take keyboard focus on its own; see the focus prime below.
+//
+// The card's motion is the island's own. Measured off the source recording at
+// 60 fps, every surface in that shell changes shape on one critically damped
+// spring - it leaves slowly, accelerates, arrives and stops, with no fade
+// carrying it - and a panel that snapped in below the bar on an OutCubic and
+// an opacity ramp was the one surface in this shell that moved on a different
+// physics. The card now grows out of the island pill's own rect on the
+// measured curve, holds its contents laid out while the shape uncovers them,
+// and melts back into the pill on the way down, exactly as the launcher and
+// the control centre do.
 PanelWindow {
   id: root
 
@@ -38,7 +49,22 @@ PanelWindow {
     return null;
   }
 
+  // The panel that is on its way out. It stays active for the length of the
+  // close morph, so its contents are still there to be clipped away as the
+  // card shrinks into the pill, which is what the source's own close does -
+  // content that vanished on the first frame would leave an empty box
+  // sliding shut. Cleared once the morph has finished.
+  property string closingPanel: ""
+
   readonly property var barWindow: barItem ? barItem.QsWindow.window : null
+
+  // The island pill's collapsed footprint, which is what the card grows out
+  // of and back into. The card is a separate layer surface from the bar, and
+  // the island keeps drawing underneath, so a card that starts and ends
+  // exactly on the pill hands the island back without a visible cut.
+  readonly property int pillWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
+  readonly property int pillHeight: Theme.barHeight
+  readonly property int pillY: Theme.barMarginTop
 
   // Distance from the top of the screen to the bottom of the bar. The bar is
   // a top-anchored layer surface, so its own margin is part of the offset.
@@ -49,53 +75,94 @@ PanelWindow {
   readonly property int screenHeight: root.screen ? root.screen.height : 0
   readonly property int screenLimit: screenHeight > 0 ? screenHeight - cardY - Theme.gapsOut : 800
 
-  // Preserve the last geometry while the card fades out.
-  property int lastWidth: Theme.panelWidthNarrow
-  property int lastHeight: Theme.panelMaxHeight
-  property real lastX: 0
+  readonly property int cardWidth: current ? current.preferredWidth : pillWidth
+  readonly property int cardHeight: current ? Math.min(current.preferredHeight, screenLimit) : pillHeight
 
-  readonly property int cardWidth: current ? current.preferredWidth : lastWidth
-  readonly property int cardHeight: current ? Math.min(current.preferredHeight, screenLimit) : lastHeight
+  // The settled size of the panel the card is holding or last held. The
+  // contents are laid out at this size no matter what the card is doing, so
+  // a morph uncovers or covers fixed content instead of squishing it - the
+  // launcher's rows do not reflow while the shape grows over them either.
+  property int heldWidth: Theme.panelWidthNarrow
+  property int heldHeight: Theme.panelMaxHeight
+  onCardWidthChanged: if (current)
+    heldWidth = cardWidth
+  onCardHeightChanged: if (current)
+    heldHeight = cardHeight
 
   // mapToItem is a one-shot; the watcher is what makes this binding re-run
   // when the bar relayouts underneath the anchor.
   TransformWatcher {
     id: anchorWatcher
     a: root.barWindow ? root.barWindow.contentItem : null
-    b: root.current ? root.current.anchorTarget : null
+    b: root.restAnchor
   }
 
-  // Center under the active widget and clamp to the screen margins.
+  // Every panel in this host anchors to the island, so the island is also the
+  // anchor while the card is shut: the pill the card grows out of sits on the
+  // island's own centre line, wherever the bar currently puts it.
+  readonly property var restAnchor: current && current.anchorTarget ? current.anchorTarget : (panelList.length > 0 ? panelList[0].anchorTarget : null)
+
+  // Centre over the island pill when shut and over the active widget when
+  // open, clamped to the screen margins.
   readonly property real cardX: {
     anchorWatcher.transform;
-    if (!current || !current.anchorTarget || !barWindow)
-      return lastX;
-    var target = current.anchorTarget;
+    if (!barWindow)
+      return 0;
+    var target = restAnchor;
+    if (!target)
+      return screenWidth / 2;
     var point = target.mapToItem(barWindow.contentItem, 0, 0);
-    var centred = point.x + target.width / 2 - cardWidth / 2;
-    return Math.max(Theme.gapsOut, Math.min(screenWidth - cardWidth - Theme.gapsOut, centred));
+    var centre = point.x + target.width / 2;
+    if (!current)
+      return centre - pillWidth / 2;
+    var x = centre - cardWidth / 2;
+    return Math.max(Theme.gapsOut, Math.min(screenWidth - cardWidth - Theme.gapsOut, x));
   }
 
   // Push host state because declarative child panels cannot bind back to it.
   function syncPanels() {
     for (var i = 0; i < panelList.length; i++) {
-      panelList[i].active = panelList[i].panelName === root.activePanel;
+      panelList[i].active = panelList[i].panelName === root.activePanel || panelList[i].panelName === root.closingPanel;
       panelList[i].screenLimit = root.screenLimit;
     }
   }
 
-  onActivePanelChanged: syncPanels()
+  // Holds the outgoing panel active for the length of the close morph.
+  Timer {
+    id: closeHold
+
+    interval: Theme.morphPanel + 40
+    onTriggered: {
+      root.closingPanel = "";
+      root.syncPanels();
+    }
+  }
+
+  // The panel that was open before the current one, so a close can hold it
+  // active for the length of the shrink.
+  property string lastPanel: ""
+
+  onActivePanelChanged: {
+    if (activePanel === "") {
+      // A close. The panel that was open keeps drawing until the shrink has
+      // clipped it back into the pill, which is what the source's own close
+      // does - content that vanished on the first frame would leave an empty
+      // box sliding shut.
+      if (lastPanel !== "") {
+        closingPanel = lastPanel;
+        closeHold.restart();
+      }
+    } else {
+      closingPanel = "";
+      closeHold.stop();
+    }
+    lastPanel = activePanel;
+    syncPanels();
+  }
   onPanelListChanged: syncPanels()
   onScreenLimitChanged: syncPanels()
+  onClosingPanelChanged: syncPanels()
   Component.onCompleted: syncPanels()
-
-  // Track settled content sizes so closing starts from the visible geometry.
-  onCardWidthChanged: if (current)
-    lastWidth = cardWidth
-  onCardHeightChanged: if (current)
-    lastHeight = cardHeight
-  onCardXChanged: if (current)
-    lastX = cardX
 
   signal dismissed
 
@@ -217,45 +284,61 @@ PanelWindow {
     id: card
 
     x: root.cardX
-    y: root.cardY
+    y: root.open ? root.cardY : root.pillY
     width: root.cardWidth
     height: root.cardHeight
-    radius: Theme.cornerRadius
+    radius: root.open ? Theme.cornerRadius : Theme.islandRadius
     color: Theme.base
     border.width: 1
     border.color: Theme.overlay
     clip: true
 
-    opacity: root.open ? 1 : 0
+    // Opaque while the shape is bigger than the pill, whatever is happening:
+    // the open and the switches are reveals, and the close shrinks the full
+    // card into the island before letting go. Only once the card is back on
+    // the pill's own rect does it fade, and by then the island underneath is
+    // drawing the same pixels.
+    opacity: root.open || card.width > root.pillWidth + 0.5 || card.height > root.pillHeight + 0.5 ? 1 : 0
 
-    // Avoid opening from the last card's geometry.
-    readonly property bool morphing: opacity > 0.01
+    // True from the first frame of a morph to the last: the geometry
+    // Behaviors must own every change while the card is on screen, including
+    // the close, and must not own the shut-state's idle re-targeting to the
+    // island pill (which happens invisibly).
+    readonly property bool morphing: root.open || opacity > 0.01
 
     Behavior on x {
       enabled: card.morphing
-      NumberAnimation {
-        duration: Theme.animSlow
-        easing.type: Easing.OutCubic
+      Morph {
+        duration: Theme.morphPanel
+      }
+    }
+    Behavior on y {
+      enabled: card.morphing
+      Morph {
+        duration: Theme.morphPanel
       }
     }
     Behavior on width {
       enabled: card.morphing
-      NumberAnimation {
-        duration: Theme.animSlow
-        easing.type: Easing.OutCubic
+      Morph {
+        duration: Theme.morphPanel
       }
     }
     Behavior on height {
       enabled: card.morphing
-      NumberAnimation {
-        duration: Theme.animSlow
-        easing.type: Easing.OutCubic
+      Morph {
+        duration: Theme.morphPanel
+      }
+    }
+    Behavior on radius {
+      enabled: card.morphing
+      Morph {
+        duration: Theme.morphPanel
       }
     }
     Behavior on opacity {
-      NumberAnimation {
-        duration: Theme.animFast
-        easing.type: Easing.InOutQuad
+      Morph {
+        duration: Theme.morphContent
       }
     }
 
@@ -275,9 +358,16 @@ PanelWindow {
           root.current.activate();
       }
 
+      // Sized at the panel's settled metrics and hung from the top centre of
+      // the card, so the growing or shrinking shape reveals and covers it
+      // rather than reflowing it.
       Item {
         id: panelHolder
-        anchors.fill: parent
+
+        x: (parent.width - width) / 2
+        y: 0
+        width: root.heldWidth
+        height: root.heldHeight
       }
     }
   }

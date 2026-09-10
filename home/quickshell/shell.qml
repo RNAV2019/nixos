@@ -1,22 +1,26 @@
 import Quickshell
 import Quickshell.Io
 import qs.Bar
+import qs.Calendar
 import qs.Commons
 import qs.Control
 import qs.Launcher
 import qs.Lock
 import qs.Notifications
 import qs.Osd
+import qs.Recorder
 import qs.Services
 import qs.Session
 import qs.Wallpaper
 
 ShellRoot {
   Bar {}
+  CalendarPanel {}
   ControlCenter {}
   Launcher {}
   Notifications {}
   Osd {}
+  RecorderPicker {}
   SessionMenu {}
   WallpaperPicker {}
   Lock {
@@ -68,6 +72,30 @@ ShellRoot {
 
     function close(): void {
       Bus.wallpaperClosed();
+    }
+  }
+
+  IpcHandler {
+    target: "calendar"
+
+    function toggle(): void {
+      Bus.calendarToggled();
+    }
+
+    function close(): void {
+      Bus.calendarClosed();
+    }
+  }
+
+  IpcHandler {
+    target: "recorder"
+
+    function toggle(): void {
+      Bus.recorderToggled();
+    }
+
+    function close(): void {
+      Bus.recorderClosed();
     }
   }
 

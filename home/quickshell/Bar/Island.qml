@@ -57,22 +57,28 @@ FrostedSurface {
 
   clipContent: true
 
-  readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+  readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
   implicitWidth: expanded ? Theme.islandExpandedWidth : collapsedWidth
   implicitHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
   surfaceRadius: expanded ? Theme.islandExpandedRadius : Theme.islandRadius
 
   Behavior on implicitWidth {
-    Morph {}
+    Morph {
+      duration: Theme.morphIsland
+    }
   }
 
   Behavior on implicitHeight {
-    Morph {}
+    Morph {
+      duration: Theme.morphIsland
+    }
   }
 
   Behavior on surfaceRadius {
-    Morph {}
+    Morph {
+      duration: Theme.morphIsland
+    }
   }
 
   // Everything the card draws is sized against the pill's own height, so one
@@ -101,11 +107,24 @@ FrostedSurface {
   // True only once the morph has come to rest.
   readonly property bool settled: openness >= 1
 
-  // Shut, the clock shares the pill with the equaliser and the pair is centred
-  // together, so the clock itself sits right of centre by half the equaliser.
-  readonly property real clockShift: Media.active ? (collapsedEq.implicitWidth + collapsedGap) / 2 : 0
-
+  // Boards 01, 01b and 09 lay the shut pill out as one row, centred on 34 px
+  // margins, and every board width is exactly that row plus 68: idle 50,
+  // playing 14.5 + 7.5 + 50, recording 50 + 10 + 8, both 90. The equaliser's
+  // shoulder and the dot's differ, so the clock shifts with the row and only
+  // the idle pill finds it back on the centre line. See
+  // Theme.islandCollapsedWidth.
   readonly property real collapsedGap: 7.5
+
+  // Where the shut row puts the clock's left edge. The label is drawn at its
+  // open size and scaled, so its box is wider than the time it shows; this is
+  // the shown left edge, measured the way clockLeft measures it.
+  readonly property real collapsedClockLeft: {
+    var shoulder = Media.active ? collapsedEq.implicitWidth + collapsedGap : 0;
+    var row = shoulder + clockLabel.width * clockLabel.scale;
+    if (Recorder.recording)
+      row += Theme.recorderDotGap + Theme.recorderDotSize;
+    return (root.width - row) / 2 + shoulder;
+  }
 
   SystemClock {
     id: clock
@@ -123,6 +142,30 @@ FrostedSurface {
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onClicked: root.pinned = !root.pinned
+  }
+
+  // The recording mark. Board 09: the trailing element on the pill, after the
+  // clock, so the equaliser keeps the place beside the clock it already had
+  // and the two never have to negotiate. It is love rather than the accent
+  // because it is the one mark here that says something is being captured.
+  //
+  // Shown only while the pill is shut. The open card is a card about what is
+  // playing, and a red dot floating in it would be a second subject.
+  Rectangle {
+    x: root.clockLeft + clockLabel.width * clockLabel.scale + Theme.recorderDotGap
+    y: root.midline - height / 2
+    width: Theme.recorderDotSize
+    height: width
+    radius: width / 2
+    color: Theme.urgent
+    visible: Recorder.recording && opacity > 0
+    opacity: root.expanded ? 0 : 1
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.morphContent
+      }
+    }
   }
 
   // The equaliser the shut pill carries. The open card has its own beside the
@@ -314,7 +357,13 @@ FrostedSurface {
     // never shifts, so the colon and the minutes stay put as it grows.
     readonly property real shownSize: Theme.islandClockSize + root.openness * (Theme.islandDisplaySize - Theme.islandClockSize)
 
-    x: (root.width - width) / 2 + (1 - root.openness) * root.clockShift
+    // Slides from the shut row's clock slot to the centre line the open card
+    // keeps it on, riding the same openness that already carries its size.
+    x: {
+      var openX = (root.width - width) / 2;
+      var shutX = root.collapsedClockLeft - width * (1 - scale) / 2;
+      return shutX + root.openness * (openX - shutX);
+    }
     y: root.midline - 8 * root.openness - height / 2
     transformOrigin: Item.Center
     scale: shownSize / Theme.islandDisplaySize

@@ -43,15 +43,24 @@ Variants {
 
     property bool open: false
 
-    // Raised while the island is being handed to the control centre, which is
-    // the one close that does not animate. See dismiss().
+    // Raised while the island is being handed to another surface. While the
+    // handover's still is held, this surface's shape rides the taker's own
+    // morph; handover is also what keeps the final cut to the pill - once
+    // the still is taken down, covered by the taker - instant. See
+    // Ui/IslandOrigin.qml.
     property bool handover: false
 
-    readonly property bool focused: Monitors.isFocused(win.screen)
+    // The shape this surface grows out of, and the handover protocol it
+    // follows when another surface takes the island: adopt the island's card,
+    // claim, take the shape the holder was wearing. One of these for each of
+    // the six surfaces that stand in for the island.
+    IslandOrigin {
+      id: origin
 
-    // The pill the surface has to start from and return to, which is wider
-    // while something is playing.
-    readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+      window: win
+    }
+
+    readonly property bool focused: Monitors.isFocused(win.screen)
 
     // An empty result set still owns a row's worth of height, so the panel has
     // somewhere to say that nothing matched.
@@ -60,28 +69,34 @@ Variants {
     readonly property int openHeight: Theme.launcherListTop + listHeight + Theme.launcherPadBottom
 
     // True from the moment the shape starts growing until it is back to pill
-    // size, which is the whole time the bar must keep its island hidden.
-    readonly property bool showing: open || surface.width > collapsedWidth + 0.5
+    // size - or until the frozen still it left for a taker is taken down -
+    // which is the whole time the bar must keep its island hidden.
+    readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
 
     function show() {
       query.text = "";
       list.currentIndex = 0;
-      // The launcher and the control centre are the same island. Claiming it
-      // is what makes the other let go, and it lets go without animating.
+      // Take the island. The ordering, the card, the handover mailbox and
+      // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
+      // the four arguments are the morph this surface is about to travel,
+      // which the holder rides with it.
       handover = false;
-      Bus.islandClaimed();
+      origin.claim(Theme.launcherWidth, win.openHeight, Theme.launcherRadius, Theme.morphLauncher);
       Bus.closePanels();
       open = true;
     }
 
     function hide() {
+      origin.release();
       open = false;
     }
 
-    // Giving the island up to the other surface. There is no shrink back to
-    // the pill: the surface taking over is already growing in this one's place
-    // and starts from the same pill, so this one has only to stop being drawn.
+    // Giving the island up to the surface that claimed it. The still this
+    // leaves behind is what the eye sees until the taker's first frame
+    // lands; see Ui/IslandOrigin.qml.
     function dismiss() {
+      origin.publish(surface.width, surface.height, surface.surfaceRadius);
+      origin.hold(surface.width, surface.height, surface.surfaceRadius);
       handover = true;
       open = false;
     }
@@ -183,10 +198,16 @@ Variants {
     }
 
     onShowingChanged: {
-      if (showing)
+      if (showing) {
         Bus.launcherScreen = win.screen ? win.screen.name : "";
-      else if (win.screen && Bus.launcherScreen === win.screen.name)
-        Bus.launcherScreen = "";
+      } else {
+        // The close is off screen; the shape Behaviors are live again for
+        // the next open. A held still unmaps with handover still raised,
+        // which is what keeps its cut to the pill instant.
+        win.handover = false;
+        if (win.screen && Bus.launcherScreen === win.screen.name)
+          Bus.launcherScreen = "";
+      }
     }
 
     Connections {
@@ -203,10 +224,23 @@ Variants {
         win.hide();
       }
 
-      // The control centre taking the island takes it from here.
-      function onIslandClaimed() {
-        if (win.open)
+      // Another surface taking the island takes it from here. On this
+      // output it is growing in this surface's place, so this one cuts;
+      // on any other output nothing is growing here, so this one takes
+      // its own close.
+      function onIslandClaimed(screen) {
+        if (!win.open)
+          return;
+        if (win.screen && screen === win.screen.name)
           win.dismiss();
+        else
+          win.hide();
+      }
+
+      // A bar dropdown was asked for. Nothing is growing in this surface's
+      // place, so it owes the pill its own animated collapse.
+      function onCloseIslands() {
+        win.hide();
       }
     }
 
@@ -241,59 +275,39 @@ Variants {
 
       clipContent: true
 
-      implicitWidth: win.open ? Theme.launcherWidth : win.collapsedWidth
-      implicitHeight: win.open ? win.openHeight : Theme.barHeight
-      surfaceRadius: win.open ? Theme.launcherRadius : Theme.islandRadius
+      implicitWidth: win.open ? Theme.launcherWidth : origin.held ? origin.heldWidth : origin.originWidth
+      implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
+      surfaceRadius: win.open ? Theme.launcherRadius : origin.held ? origin.heldRadius : origin.originRadius
 
       Behavior on implicitWidth {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphLauncher
+          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
         }
       }
 
       Behavior on implicitHeight {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphLauncher
+          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
         }
       }
 
       Behavior on surfaceRadius {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphLauncher
+          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
         }
       }
 
-      SystemClock {
-        id: clock
-
-        precision: SystemClock.Minutes
-      }
-
-      // The clock belongs to neither state. It is what the pill was showing at
-      // the moment the key was pressed, and it stays in the growing box, drawn
-      // on its centre, until the search row has taken over.
-      Text {
-        x: (surface.width - width) / 2
-        y: (surface.height - height) / 2
-        text: Qt.formatDateTime(clock.date, "HH:mm")
-        color: Theme.text
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandClockSize
-        font.weight: Font.DemiBold
-        opacity: win.open ? 0 : 1
-        visible: opacity > 0
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
+      // The carried-over clock; see Ui/IslandClock.qml.
+      IslandClock {
+        anchors.fill: parent
+        origin: origin
+        shown: !win.open && !origin.held
       }
 
       // Everything the launcher draws, cross-faded against the clock on the
@@ -303,10 +317,12 @@ Variants {
         id: body
 
         anchors.fill: parent
-        opacity: win.open ? 1 : 0
+        opacity: win.open || origin.held ? 1 : 0
         visible: opacity > 0
 
         Behavior on opacity {
+          enabled: !origin.held
+
           Morph {
             duration: Theme.morphContent
           }

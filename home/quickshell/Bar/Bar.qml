@@ -69,10 +69,17 @@ Variants {
       function onTogglePanel(name) {
         if (!bar.focused)
           return;
-        if (name === "session")
+        if (name === "session") {
           Bus.sessionToggled();
-        else
-          bar.toggle(name);
+          return;
+        }
+        // Opening a dropdown stands any island surface down: the two families
+        // are different surfaces at different heights, and neither grows in
+        // the other's place, so the one closing owes the pill its own
+        // animated collapse. Closing a dropdown closes nothing of theirs.
+        if (bar.openPanel !== name)
+          Bus.closeIslands();
+        bar.toggle(name);
       }
 
       function onClosePanels() {
@@ -112,7 +119,9 @@ Variants {
         screenOffsetY: Theme.barMarginTop
         suppressed: bar.screen !== null && Bus.islandTaken(bar.screen.name)
         replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
-        onClockActivated: bar.toggle("clock")
+        // Board 14 supersedes the clock dropdown, which is the same month grid
+        // without the events. The dropdown is still reachable on its own chord.
+        onClockActivated: Bus.calendarToggled()
         // The status chip is the card's quick-settings summary - the radio and
         // the battery, the two readings the control centre is about - so it is
         // the control centre's own button, and pressing it grows the card into

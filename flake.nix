@@ -61,15 +61,23 @@
     system = "x86_64-linux";
     pkgs = import nixpkgs {inherit system;};
     gen-commit = import ./home/gen-commit.nix {inherit pkgs;};
+    ical-agenda = import ./home/ical-agenda.nix {inherit pkgs;};
   in {
     packages.${system} = {
-      inherit gen-commit;
+      inherit gen-commit ical-agenda;
       default = gen-commit;
     };
 
-    checks.${system}.gen-commit = import ./tests/gen-commit.nix {
-      inherit pkgs;
-      genCommit = gen-commit;
+    checks.${system} = {
+      gen-commit = import ./tests/gen-commit.nix {
+        inherit pkgs;
+        genCommit = gen-commit;
+      };
+
+      ical-agenda = import ./tests/ical-agenda.nix {
+        inherit pkgs;
+        icalAgenda = ical-agenda;
+      };
     };
 
     nixosConfigurations = {

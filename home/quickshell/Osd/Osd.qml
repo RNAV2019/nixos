@@ -188,7 +188,7 @@ Scope {
 
       readonly property bool focused: Monitors.isFocused(window.screen)
 
-      readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+      readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
       readonly property bool open: root.showing && focused
 

@@ -20,6 +20,8 @@ Singleton {
 
   readonly property string expandMore: "󰅀"
   readonly property string expandLess: "󰅃"
+  readonly property string chevronLeft: "󰅁"
+  readonly property string chevronRight: "󰅂"
 
   readonly property string mprisPlaying: "󰎇"
   readonly property string mprisPaused: "󰏤"
@@ -56,6 +58,14 @@ Singleton {
   readonly property string microphone: "󰍬"
   readonly property string microphoneMuted: "󰍭"
   readonly property string bell: "󰂚"
+
+  // The screen recorder. The ring-and-dot is the record mark wherever it
+  // appears: the pill, the control centre tile and the saved notification.
+  readonly property string record: "󰑊"
+  readonly property string stop: "󰓛"
+  readonly property string captureScreen: "󰍹"
+  readonly property string captureWindow: "󰖯"
+  readonly property string captureRegion: "󰆞"
 
   readonly property string brightness: "󰃟"
   readonly property string keyboardBacklight: "󰌌"

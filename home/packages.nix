@@ -264,6 +264,12 @@ in {
     networkmanagerapplet
 
     grimblast
+    # The screen recorder behind board 08. wl-screenrec rather than
+    # wf-recorder because the board's toggles have to be real: it is the one
+    # with --no-cursor and a named audio device. slurp draws the region and
+    # the window snap targets.
+    wl-screenrec
+    slurp
     hyprpicker
 
     fd

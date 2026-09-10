@@ -96,8 +96,8 @@ backup restore
 
 `secrets/secrets.yaml` is encrypted with [sops-nix](https://github.com/Mic92/sops-nix)
 and holds the login password hash, the gh token, the cloudflared origin
-certificate and tunnel credentials, and the OpenRouter keys for gen-commit and
-opencode.
+certificate and tunnel credentials, the Google Calendar secret iCal addresses
+behind the calendar panel, and the OpenRouter keys for gen-commit and opencode.
 
 ```bash
 # The age key is root-only, and nothing exports SOPS_AGE_KEY_FILE, so it has

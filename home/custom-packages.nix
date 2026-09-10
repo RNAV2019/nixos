@@ -4,6 +4,7 @@
   ...
 }: let
   gen-commit = import ./gen-commit.nix {inherit pkgs;};
+  ical-agenda = import ./ical-agenda.nix {inherit pkgs;};
 
   # Start Quickshell if needed and wait until every output is locked.
   lock-session = pkgs.writeShellApplication {
@@ -210,6 +211,7 @@ in {
     mycelium
     start-desktop
     gen-commit
+    ical-agenda
     forward-dev
     t3code-nightly
   ];

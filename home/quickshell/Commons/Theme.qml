@@ -34,8 +34,6 @@ Singleton {
   readonly property color accent: iris
   readonly property color urgent: love
 
-  readonly property color lockFail: "#cc2222"
-
   readonly property real fillNormal: 0.04
   readonly property real fillHover: 0.08
   readonly property real fillSelected: 0.18
@@ -426,6 +424,152 @@ Singleton {
   readonly property int wallpaperDotHalo: 14
   readonly property real wallpaperDotHaloAlpha: 0.7
 
+  // The screen recorder's picker. Board 08, and the island's sixth shape.
+  //
+  // The capture row is the power menu's own tile grid, to the pixel: same 90
+  // by 80 tile, same 16 px radius, same 12 px gap, same 11 px side inset. Two
+  // surfaces that ask "which of these three" should not ask it in two
+  // different shapes. The toggle rows below are this card's own.
+  readonly property int recorderWidth: 316
+  readonly property int recorderHeight: 228
+  readonly property int recorderRadius: 26
+  readonly property int recorderInset: 11
+  readonly property int recorderTileTop: 16
+  readonly property int recorderTileWidth: 90
+  readonly property int recorderTileHeight: 80
+  readonly property int recorderTileGap: 12
+  readonly property int recorderTileRadius: 16
+  readonly property int recorderGlyphSize: 22
+  readonly property int recorderGlyphTop: 38
+  readonly property int recorderTileLabelTop: 68
+  readonly property int recorderTileLabelSize: 12
+
+  readonly property int recorderRowsTop: 108
+  readonly property int recorderRowHeight: 32
+  readonly property int recorderRowGap: 4
+  readonly property int recorderRowRadius: 16
+  readonly property int recorderRowTextLeft: 12
+  readonly property int recorderRowLabelSize: 12
+
+  // The recording mark the pill carries. Board 09: love rather than the
+  // accent, because it is the one thing in the bar that says something is
+  // being captured, and it must not read as one more thing that is merely on.
+  readonly property int recorderDotSize: 8
+  readonly property int recorderDotGap: 10
+
+  // The calendar. Board 14: a month grid over an agenda for the chosen day.
+  readonly property int calWidth: 520
+  readonly property int calHeight: 528
+  readonly property int calRadius: 26
+  readonly property int calInset: 24
+  readonly property int calTitleTop: 26
+  readonly property int calTitleSize: 18
+  readonly property int calNavSize: 30
+  readonly property int calNavTop: 24
+  readonly property int calNavGap: 6
+  readonly property int calNavGlyphSize: 15
+  readonly property int calTodayBtnHeight: 28
+  readonly property real calTodayBtnSize: 11.5
+
+  // Seven columns on a 68 px pitch, six rows on 46. The day number is drawn at
+  // the row top and the marker centres on it; the event dot hangs below.
+  readonly property int calWeekdayTop: 74
+  readonly property int calWeekdaySize: 11
+  readonly property int calGridTop: 110
+  readonly property int calColumnPitch: 68
+  readonly property int calRowPitch: 46
+  readonly property int calColumnFirst: 56
+  readonly property int calDaySize: 13
+  readonly property int calTodayMarker: 34
+  readonly property int calDotSize: 5
+  readonly property int calDotDrop: 22
+
+  readonly property int calDividerTop: 360
+  readonly property int calSectionTop: 372
+  readonly property real calSectionSize: 11.5
+  readonly property int calAgendaTop: 386
+  readonly property int calAgendaHeight: 38
+  readonly property int calAgendaGap: 4
+  readonly property int calAgendaRadius: 12
+  readonly property int calAgendaInset: 22
+  readonly property int calSpineLeft: 12
+  readonly property int calSpineWidth: 3
+  readonly property int calSpineHeight: 20
+  readonly property int calTimeLeft: 26
+  readonly property real calTimeSize: 11.5
+  readonly property int calTitleLeft: 86
+  readonly property real calEventTitleSize: 12.5
+  readonly property real calMetaSize: 11
+  // Six agenda rows is what the panel has room for below the grid.
+  readonly property int calAgendaMax: 3
+
+  // The lock screen. Board 13: the clock block rides high, the login cluster
+  // sits low, and there is nothing between them but the wallpaper. The board
+  // draws a 1920x1080 frame, so these are board units; Lock.qml maps 1080 of
+  // them onto the output height and everything scales with it.
+  readonly property int lockDateTop: 150
+  readonly property int lockDateSize: 20
+  readonly property int lockClockTop: 175
+  readonly property int lockClockSize: 92
+
+  readonly property int lockAvatarTop: 824
+  readonly property int lockAvatarSize: 56
+  readonly property int lockAvatarInitial: 22
+  readonly property int lockUserTop: 894
+  readonly property int lockUserSize: 14
+
+  readonly property int lockFieldTop: 928
+  readonly property int lockFieldWidth: 280
+  readonly property int lockFieldHeight: 44
+  readonly property int lockFieldRadius: 22
+  // The board puts the caret at 21 in from the field edge and the placeholder
+  // at 25, so the caret leads the text rather than sitting inside it.
+  readonly property int lockCaretInset: 21
+  readonly property int lockTextInset: 25
+  readonly property int lockFieldTextSize: 13
+  readonly property int lockCaretWidth: 1
+  readonly property int lockCaretHeight: 18
+
+  // The board draws the field empty, so the dots are not from it. They are
+  // sized off the placeholder they replace: a dot the height of its x-height,
+  // on a pitch that keeps a long password inside the field's fixed width.
+  readonly property int lockDotSize: 7
+  readonly property int lockDotGap: 5
+
+  // The now-playing line the board does not draw. It is kept from the surface
+  // this replaces, in the board's type, below the login cluster.
+  readonly property int lockNowPlayingBottom: 50
+  readonly property int lockNowPlayingSize: 14
+
+  readonly property real lockVeilOpacity: 0.55
+  readonly property real lockFieldFill: 0.8
+  readonly property real lockFieldStroke: 0.55
+  readonly property real lockAvatarFill: 0.85
+  readonly property real lockAvatarStroke: 0.5
+  readonly property real lockStrokeWidth: 1.5
+  // The board blurs the wallpaper by 28 and puts nothing else over it but the
+  // veil. It carries no colour grade, and the source recording is no guide
+  // here: its ground is a neutral black at 22.5 per cent, measured per channel
+  // off the frames either side of the lock, not a tinted veil at all. The two
+  // sources agree on the motion and not on the look, so the look is the
+  // board.s and the ground is blur and veil alone.
+  //
+  // Penpot states a Gaussian sigma and MultiEffect takes a maximum radius, so
+  // this is the board.s number in a unit that is close rather than equal.
+  readonly property int lockBlurMax: 28
+
+  // The pill's shut width. Board 09 draws all four combinations.
+  //
+  // The widths are the design's and are not derived: the pill grows for a
+  // player and grows again for a recording. What the extras do not do is move
+  // the clock. It is centred in whichever of these widths is in play, and the
+  // equaliser and the dot sit in the padding either side of it - so that
+  // padding is not always equal, and the clock never moves, which is the trade
+  // worth making for the one element on the bar the eye returns to.
+  function islandCollapsedWidth(media, recording) {
+    return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
+  }
+
   // Widgets own this padding; the containing row must not add spacing.
   readonly property int barIconPadding: 6
   readonly property int barLabelGap: 6
@@ -459,12 +603,13 @@ Singleton {
   // one duration fits the pair to within 4% of their travel; the shared
   // morphCurve below already has the right shape, only the clock was long.
   readonly property int morphLauncher: 308
-  // The control centre's own open, fitted frame by frame at 60 fps against the
-  // source recording between 6:19 and 6:21. Its width and its height ride one
-  // curve, as the launcher's do: a joint fit of both tracks to within 2.2% of
-  // their travel, and fitting them separately only moves the answer to 300 and
-  // 278 ms.
-  readonly property int morphControl: 295
+  // The control centre's own open, re-fitted frame by frame at 60 fps against
+  // the source recording at 6:20 (the Alt+A open): the width track fits a
+  // critically damped spring at w = 20.2 and the height track at w = 19.4, a
+  // shared morphCurve duration of 318 and 336 ms. The old 295 ran ahead of the
+  // source by about two frames in the middle third, where the eye tracks the
+  // edge.
+  readonly property int morphControl: 325
   readonly property int morphSubView: 311
   // The wallpaper picker's own open, fitted frame by frame at 60 fps against
   // the source recording at 4:00. Its width and its height ride one curve: the
@@ -478,7 +623,25 @@ Singleton {
   // surface among five that arrive and stop reads as a fault rather than as a
   // flourish. This is the fit to the rise, which is the part the eye follows.
   readonly property int morphWallpaper: 228
-  readonly property int morphOsd: 295
+  // The OSD's own open, re-fitted at 60 fps against the source recording's
+  // volume morph at 2:49. The travel fits a spring at w = 26.6, a morphCurve
+  // duration of 246 ms - the OSD is measurably snappier than the panels, and
+  // holding it on the panel clock reads as lag on a surface that answers a
+  // key press. The melt back into the clock fits the panel spring (w = 21.2,
+  // 308 ms) but on a 157 px travel the difference is under two frames, so one
+  // duration carries both directions.
+  readonly property int morphOsd: 250
+  // The island's own hover expand, re-fitted at 60 fps against the source
+  // recording at 1:33: w = 28.4, a morphCurve duration of 234 ms. Like the
+  // OSD this is a reflex surface - the pointer is already on it when it moves
+  // - and the panel clock read as a sluggish card.
+  readonly property int morphIsland: 240
+  // The bar panels' card. The sub-view measurement is the closest the source
+  // comes to a panel changing shape in place (717 to 160 px in one spring,
+  // w = 21.0, 310 ms), so the panels ride that: the card grows out of the
+  // island pill on the same spring the launcher uses and steps between
+  // panels on it too.
+  readonly property int morphPanel: 310
   readonly property int morphToggle: 269
   readonly property int morphSlider: 249
 
@@ -487,6 +650,49 @@ Singleton {
   // change over about five frames. Fading the contents on the geometry's clock
   // reads as a dissolve; this is what makes it read as a reveal instead.
   readonly property int morphContent: 80
+
+  // How long a surface that has just handed the island over keeps riding the
+  // taker's morph before it is taken down. The surface taking over maps in
+  // single-digit milliseconds but its first rendered frame lands 147-216 ms
+  // later (probed for the pill-blink fix), and the handover has no cut to
+  // hide that: without the hold, the bare pill shows through the gap. The
+  // holder's still rides the taker's own curve - same shape, target, duration
+  // and start frame - so it is covered from the taker's first presented frame
+  // on, and the hold only has to outlive the travel plus a margin; 260 covers
+  // the measured first-frame latency with room to spare.
+  readonly property int morphHold: 240
+
+  // The lock screen's two cross-fades, fitted frame by frame at 60 fps against
+  // the source recording between 10:33 and 10:42. Neither is a morph: stepping
+  // the clock block frame by frame, the digits never move and never change
+  // size, so neither direction uses the spring.
+  //
+  // One progress value drives all of it. The blur radius and the dim veil ride
+  // the same curve over the same window - board 15 records the blur as a
+  // single-frame step, and it is not one. Raw gradient energy does collapse in
+  // one frame, but only because the veil is crushing the image's contrast at
+  // the same time. Measured as sharpness over contrast, which the veil cannot
+  // touch, the radius tracks the veil to within 0.02 of its travel at every
+  // sample, in both directions.
+  readonly property int lockIn: 350
+  // The source runs a longer ramp out and then destroys its surface partway
+  // through it, so its last frame jumps the remaining eight per cent. This is
+  // the fit to the part the eye follows, closed so nothing snaps.
+  readonly property int lockOut: 270
+
+  // The content lags the ground going in and leads it coming out, which is
+  // what lets the island pill read as returning partway through the unlock
+  // rather than arriving after it. The clock is the extreme at both ends: it
+  // is the last thing in and the last thing out.
+  //
+  // The date and the avatar land between the two tiers and swap places
+  // between the two directions, so which tier each belongs to is inside the
+  // measurement's noise. They are grouped by what they are instead.
+  readonly property int lockInClock: 70
+  readonly property int lockInLogin: 100
+  readonly property int lockInContent: 280
+  readonly property int lockOutClock: 20
+  readonly property int lockOutContent: 180
 
   // Qt has no critically damped spring: SpringAnimation takes its own damping
   // scale rather than a stiffness, a mass and a damping coefficient. So the

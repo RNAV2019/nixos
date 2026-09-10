@@ -23,6 +23,10 @@ Item {
   signal closed
   signal opened(string view)
 
+  // The recorder tile asks the panel to hand the island over rather than doing
+  // it itself: only the panel knows the box the picker has to contract out of.
+  signal recorderRequested
+
   readonly property int inset: Theme.controlInset
   readonly property int span: width - inset * 2
 
@@ -47,7 +51,7 @@ Item {
   // the panel's height is a sum rather than a constant and a media card that is
   // not drawn does not leave a hole.
   readonly property int tilesTop: Theme.controlHeaderHeight
-  readonly property int tilesBottom: tilesTop + Theme.controlTileHeight * 2 + Theme.controlTileGap
+  readonly property int tilesBottom: tilesTop + Theme.controlTileHeight * 3 + Theme.controlTileGap * 2
   readonly property int slidersTop: tilesBottom + Theme.controlBlockGap
   readonly property int slidersBottom: slidersTop + Theme.controlSliderHeight * 2 + Theme.controlSliderGap
   readonly property int mediaTop: slidersBottom + Theme.controlBlockGap
@@ -175,6 +179,26 @@ Item {
     opacity: NightLight.available ? 1 : 0.5
     onToggled: if (NightLight.available)
       NightLight.toggle()
+  }
+
+  // Board 08. Full width, because its subtitle is the one on this grid with
+  // something to say: what is being captured, for how long, and how to stop.
+  Tile {
+    id: recorder
+
+    x: root.inset
+    y: bluetooth.y + Theme.controlTileHeight + Theme.controlTileGap
+    width: root.span
+    label: Recorder.recording ? "Recording" : "Record"
+    glyph: Recorder.recording ? Icons.stop : Icons.record
+    sublabel: Recorder.status
+    on: Recorder.busy
+    onToggled: {
+      if (Recorder.busy)
+        Recorder.stop();
+      else
+        root.recorderRequested();
+    }
   }
 
   BigSlider {

@@ -43,7 +43,7 @@ Variants {
 
     readonly property bool open: current !== null && focused && !blocked
 
-    readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+    readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
     readonly property bool showing: open || surface.width > collapsedWidth + 0.5
 

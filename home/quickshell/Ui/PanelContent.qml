@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 Item {
   id: root
@@ -38,10 +39,13 @@ Item {
   opacity: active ? 1 : 0
   visible: opacity > 0
 
+  // Content swaps ride the short clock, not the shape's: measured off the
+  // source recording, a surface changes shape over ~300 ms while the contents
+  // it carries change over about five frames. A 150 ms InOutQuad read as a
+  // dissolve layered on top of the geometry's own reveal.
   Behavior on opacity {
-    NumberAnimation {
-      duration: Theme.animFast
-      easing.type: Easing.InOutQuad
+    Morph {
+      duration: Theme.morphContent
     }
   }
 

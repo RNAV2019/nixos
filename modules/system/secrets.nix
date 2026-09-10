@@ -44,6 +44,13 @@ in {
       # is carried in the query string, which is why the whole URL is secret.
       "penpot/mcp-url" = ownedAt "${home}/.config/claude/penpot-mcp-url";
 
+      # Google Calendar behind board 14, as secret iCal addresses - one per
+      # line. Each is a bearer credential in its own right: anyone holding one
+      # reads that whole calendar without signing in, which is why the shell
+      # reads them from here rather than from a dotfile. ical-agenda is the
+      # only thing that opens this; see home/ical-agenda.nix.
+      "calendar/ical-urls" = ownedAt "${home}/.config/quickshell-calendar/ical-urls";
+
       # Consumed by the templates below rather than by a program directly.
       "gh/token" = owned;
       "openrouter/opencode-key" = owned;
@@ -99,6 +106,7 @@ in {
         ${home}/.config/gh \
         ${home}/.config/gen-commit \
         ${home}/.config/claude \
+        ${home}/.config/quickshell-calendar \
         ${home}/.cloudflared \
         ${home}/.local/share/opencode; do
         install -d -o ryan -g users -m 0700 "$dir"

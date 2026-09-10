@@ -150,7 +150,7 @@ in {
         };
 
         decoration = {
-          rounding = 6;
+          rounding = 8;
           blur = {
             enabled = true;
             size = 8;
@@ -384,6 +384,13 @@ in {
           # was cherry's, which now has no binding of its own.
           (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
 
+          # Board 08. The same chord starts and stops: with nothing recording it
+          # opens the picker, and while recording it stops and saves.
+          (bind "ALT + R" (exec "qs ipc call recorder toggle"))
+
+          # Board 14. Clicking the pill's clock does the same.
+          (bind "ALT + C" (exec "qs ipc call calendar toggle"))
+
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
           (bind "XF86AudioNext" (exec "playerctl next"))
@@ -446,7 +453,7 @@ in {
         # Measured: the strip behind the panel still reads the window under it
         # 200 ms into the open, and is opaque by 300.
         {
-          match.namespace = "quickshell-(launcher|control|wallpaper|session|notifications|osd|panel)";
+          match.namespace = "quickshell-(launcher|control|wallpaper|recorder|calendar|session|notifications|osd|panel)";
           no_anim = true;
         }
       ];

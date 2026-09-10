@@ -37,11 +37,24 @@ Variants {
     // to be.
     property int armed: -1
 
+    // Raised while the island is being handed to another surface. While the
+    // handover's still is held, this surface's shape rides the taker's own
+    // morph; handover is also what keeps the final cut to the pill - once
+    // the still is taken down, covered by the taker - instant. See
+    // Ui/IslandOrigin.qml.
     property bool handover: false
 
-    readonly property bool focused: Monitors.isFocused(win.screen)
+    // The shape this surface grows out of, and the handover protocol it
+    // follows when another surface takes the island: adopt the island's
+    // card, claim, take the shape the holder was wearing. One of these for
+    // each of the six surfaces that stand in for the island.
+    IslandOrigin {
+      id: origin
 
-    readonly property int collapsedWidth: Media.active ? Theme.islandPlayingWidth : Theme.islandIdleWidth
+      window: win
+    }
+
+    readonly property bool focused: Monitors.isFocused(win.screen)
 
     // Lock is done the moment it is pressed; there is nothing to undo. The
     // other two take the session with them, so they ask first.
@@ -67,7 +80,7 @@ Variants {
 
     readonly property int openWidth: Theme.powerInset * 2 + count * Theme.powerTileWidth + (count - 1) * Theme.powerTileGap
 
-    readonly property bool showing: open || surface.width > collapsedWidth + 0.5
+    readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
 
     function tileX(i) {
       return Theme.powerInset + i * (Theme.powerTileWidth + Theme.powerTileGap);
@@ -76,17 +89,27 @@ Variants {
     function show() {
       current = 0;
       armed = -1;
+      // Take the island. The ordering, the card, the handover mailbox and
+      // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
+      // the four arguments are the morph this surface is about to travel,
+      // which the holder rides with it.
       handover = false;
-      Bus.islandClaimed();
+      origin.claim(win.openWidth, Theme.powerHeight, Theme.powerRadius, Theme.morphSurface);
       Bus.closePanels();
       open = true;
     }
 
     function hide() {
+      origin.release();
       open = false;
     }
 
+    // Giving the island up to the surface that claimed it. The still this
+    // leaves behind is what the eye sees until the taker's first frame
+    // lands; see Ui/IslandOrigin.qml.
     function dismiss() {
+      origin.publish(surface.width, surface.height, surface.surfaceRadius);
+      origin.hold(surface.width, surface.height, surface.surfaceRadius);
       handover = true;
       open = false;
     }
@@ -174,10 +197,16 @@ Variants {
     }
 
     onShowingChanged: {
-      if (showing)
+      if (showing) {
         Bus.sessionScreen = win.screen ? win.screen.name : "";
-      else if (win.screen && Bus.sessionScreen === win.screen.name)
-        Bus.sessionScreen = "";
+      } else {
+        // The close is off screen; the shape Behaviors are live again for
+        // the next open. A held still unmaps with handover still raised,
+        // which is what keeps its cut to the pill instant.
+        win.handover = false;
+        if (win.screen && Bus.sessionScreen === win.screen.name)
+          Bus.sessionScreen = "";
+      }
     }
 
     Connections {
@@ -190,9 +219,23 @@ Variants {
           win.show();
       }
 
-      function onIslandClaimed() {
-        if (win.open)
+      // Another surface taking the island takes it from here. On this
+      // output it is growing in this surface's place, so this one cuts;
+      // on any other output nothing is growing here, so this one takes
+      // its own close.
+      function onIslandClaimed(screen) {
+        if (!win.open)
+          return;
+        if (win.screen && screen === win.screen.name)
           win.dismiss();
+        else
+          win.hide();
+      }
+
+      // A bar dropdown was asked for. Nothing is growing in this surface's
+      // place, so it owes the pill its own animated collapse.
+      function onCloseIslands() {
+        win.hide();
       }
     }
 
@@ -213,31 +256,31 @@ Variants {
 
       clipContent: true
 
-      implicitWidth: win.open ? win.openWidth : win.collapsedWidth
-      implicitHeight: win.open ? Theme.powerHeight : Theme.barHeight
-      surfaceRadius: win.open ? Theme.powerRadius : Theme.islandRadius
+      implicitWidth: win.open ? win.openWidth : origin.held ? origin.heldWidth : origin.originWidth
+      implicitHeight: win.open ? Theme.powerHeight : origin.held ? origin.heldHeight : origin.originHeight
+      surfaceRadius: win.open ? Theme.powerRadius : origin.held ? origin.heldRadius : origin.originRadius
 
       Behavior on implicitWidth {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphSurface
+          duration: origin.held ? origin.heldDuration : Theme.morphSurface
         }
       }
 
       Behavior on implicitHeight {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphSurface
+          duration: origin.held ? origin.heldDuration : Theme.morphSurface
         }
       }
 
       Behavior on surfaceRadius {
-        enabled: !win.handover
+        enabled: !origin.snapping && (!win.handover || origin.held)
 
         Morph {
-          duration: Theme.morphSurface
+          duration: origin.held ? origin.heldDuration : Theme.morphSurface
         }
       }
 
@@ -278,40 +321,23 @@ Variants {
         }
       }
 
-      SystemClock {
-        id: clock
-
-        precision: SystemClock.Minutes
-      }
-
-      // The clock belongs to neither state, and stays in the growing box until
-      // the tiles have taken over.
-      Text {
-        x: (surface.width - width) / 2
-        y: (surface.height - height) / 2
-        text: Qt.formatDateTime(clock.date, "HH:mm")
-        color: Theme.text
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandClockSize
-        font.weight: Font.DemiBold
-        opacity: win.open ? 0 : 1
-        visible: opacity > 0
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
+      // The carried-over clock; see Ui/IslandClock.qml.
+      IslandClock {
+        anchors.fill: parent
+        origin: origin
+        shown: !win.open && !origin.held
       }
 
       Item {
         id: body
 
         anchors.fill: parent
-        opacity: win.open ? 1 : 0
+        opacity: win.open || origin.held ? 1 : 0
         visible: opacity > 0
 
         Behavior on opacity {
+          enabled: !origin.held
+
           Morph {
             duration: Theme.morphContent
           }
