@@ -348,8 +348,11 @@ FrostedSurface {
 
   // The clock belongs to neither state and survives both. It grows from the
   // shut size to the open one and slides off the equaliser onto the pill's
-  // centre line, so it is never seen to be replaced.
-  Text {
+  // centre line, so it is never seen to be replaced. On the minute its
+  // digits roll to their next value the way the source recording's do, the
+  // changed glyph leaving upward as the new one rises from below (see
+  // Ui/RollingClock.qml), so the time is never swapped for a second copy.
+  RollingClock {
     id: clockLabel
 
     // Set at the open size and scaled down, rather than having its pixel size

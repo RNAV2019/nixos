@@ -622,6 +622,15 @@ Singleton {
   // reads as a dissolve; this is what makes it read as a reveal instead.
   readonly property int morphContent: 80
 
+  // The clock's digit roll. Measured at 60 fps off the source recording at
+  // 1:37, where 21:48 rolls to 21:49: the outgoing digit leaves upward and
+  // the incoming one rises from below, each travelling about half a glyph's
+  // height, and the two cross-fade as they go - the pair's total ink dips
+  // mid-roll because the outgoing fade runs on the content clock while the
+  // incoming one trails it on the fast one. As a fraction of the font's own
+  // size, so the roll reads the same at the pill's size and the card's.
+  readonly property real clockRollTravel: 0.45
+
   // How long a surface that has just handed the island over keeps riding the
   // taker's morph before it is taken down. The surface taking over maps in
   // single-digit milliseconds but its first rendered frame lands 147-216 ms

@@ -70,6 +70,12 @@ Singleton {
   readonly property string brightness: "󰃟"
   readonly property string keyboardBacklight: "󰌌"
 
+  // The power profiles card. Board 04b: the bolt and the half-circle are the
+  // board's own outline-drawn glyphs, not their filled cousins.
+  readonly property string bolt: "󱐋"
+  readonly property string contrast: "󱎕"
+  readonly property string batterySaver: "󰁹"
+
   readonly property var batteryCharging: ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"]
   readonly property var batteryDefault: ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
   readonly property string batteryFull: "󰂅"

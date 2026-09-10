@@ -8,6 +8,7 @@ import qs.Launcher
 import qs.Lock
 import qs.Notifications
 import qs.Osd
+import qs.Power
 import qs.Recorder
 import qs.Services
 import qs.Session
@@ -20,6 +21,7 @@ ShellRoot {
   Launcher {}
   Notifications {}
   Osd {}
+  Profiles {}
   RecorderPicker {}
   SessionMenu {}
   WallpaperPicker {}
@@ -92,6 +94,18 @@ ShellRoot {
 
     function toggle(): void {
       Bus.sessionToggled();
+    }
+  }
+
+  IpcHandler {
+    target: "profiles"
+
+    function toggle(): void {
+      Bus.profilesToggled();
+    }
+
+    function close(): void {
+      Bus.profilesClosed();
     }
   }
 

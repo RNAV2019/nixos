@@ -382,6 +382,10 @@ in {
           # Board 14. Clicking the pill's clock does the same.
           (bind "ALT + C" (exec "qs ipc call calendar toggle"))
 
+          # Board 04b. The control centre's power profiles, as its own card
+          # out of the pill, on the power menu's shape.
+          (bind "ALT + P" (exec "qs ipc call profiles toggle"))
+
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
           (bind "XF86AudioNext" (exec "playerctl next"))
@@ -444,7 +448,7 @@ in {
         # Measured: the strip behind the panel still reads the window under it
         # 200 ms into the open, and is opaque by 300.
         {
-          match.namespace = "quickshell-(launcher|control|wallpaper|recorder|calendar|session|notifications|osd|panel)";
+          match.namespace = "quickshell-(launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
           no_anim = true;
         }
       ];

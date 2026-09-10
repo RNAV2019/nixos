@@ -26,6 +26,9 @@ Singleton {
   signal calendarToggled
   signal calendarClosed
 
+  signal profilesToggled
+  signal profilesClosed
+
   // Raised when something asks to record but nothing has been chosen yet. The
   // picker answers this; the recorder itself never opens a surface.
   signal recorderRequested
@@ -121,6 +124,9 @@ Singleton {
   // The power menu, which is the island too.
   property string sessionScreen: ""
 
+  // The power profiles card, which is the island too.
+  property string profilesScreen: ""
+
   // The OSD takes the island's place too, for the second and a half it is up.
   property string osdScreen: ""
 
@@ -131,18 +137,18 @@ Singleton {
   // that arrive unasked - the OSD and the toast - wait on this rather than
   // shoving a panel off the screen the moment a volume key is pressed or a
   // notification lands.
-  readonly property bool islandHeld: launcherScreen !== "" || controlScreen !== "" || wallpaperScreen !== "" || recorderScreen !== "" || calendarScreen !== "" || sessionScreen !== ""
+  readonly property bool islandHeld: launcherScreen !== "" || controlScreen !== "" || wallpaperScreen !== "" || recorderScreen !== "" || calendarScreen !== "" || sessionScreen !== "" || profilesScreen !== ""
 
   // True while any surface is standing in for the island. No two of them are
   // ever open at once: the ones the user opens close each other, and the two
   // that arrive unasked hold themselves back while any of those is up.
   function islandTaken(name) {
-    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name || osdScreen === name || notifyScreen === name);
+    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name || profilesScreen === name || osdScreen === name || notifyScreen === name);
   }
 
   // Of those, the ones that are here until the user dismisses them, as against
   // the OSD's second and a half.
   function islandReplaced(name) {
-    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name);
+    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name || profilesScreen === name);
   }
 }

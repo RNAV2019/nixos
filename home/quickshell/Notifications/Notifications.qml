@@ -269,8 +269,9 @@ Variants {
       }
 
       // The clock belongs to neither state, and stays in the growing box until
-      // the card has taken over.
-      Text {
+      // the card has taken over. On the minute its digits roll the way the
+      // island's own do; see Ui/RollingClock.qml.
+      RollingClock {
         x: (surface.width - width) / 2
         y: (surface.height - height) / 2
         text: Qt.formatDateTime(pillClock.date, "HH:mm")

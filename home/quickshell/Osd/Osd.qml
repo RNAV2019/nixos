@@ -292,7 +292,7 @@ Scope {
             visible: Media.active
           }
 
-          Text {
+          RollingClock {
             id: clockLabel
 
             x: (parent.width - width) / 2 + pill.clockShift
