@@ -3,6 +3,7 @@ import QtQuick.Effects
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Services
+import qs.Ui
 
 // The now-playing card. The album art is the card: it is drawn across the whole
 // width, blurred hard and laid under a veil, so a bright cover warms the panel
@@ -159,6 +160,15 @@ Item {
     height: Theme.controlMediaPlaySize
     radius: height / 2
     color: Theme.withAlpha(Theme.text, playHover.containsMouse ? 1 : 0.94)
+    scale: playHover.pressed ? 0.97 : 1
+
+    Behavior on color {
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
 
     Text {
       anchors.centerIn: parent
@@ -188,8 +198,17 @@ Item {
     width: Theme.controlMediaSkipSize
     height: Theme.controlMediaSkipSize
     color: hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.75)
+    scale: skipHover.pressed ? 0.95 : 1
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlMediaSkipSize
+
+    Behavior on color {
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
     verticalAlignment: Text.AlignVCenter
     horizontalAlignment: Text.AlignHCenter
 

@@ -138,7 +138,7 @@ Item {
           NumberAnimation {
             target: incoming
 
-            duration: Theme.animFast
+            duration: Theme.morphState
             easing.type: Easing.Bezier
             easing.bezierCurve: Theme.morphCurve
             from: 0

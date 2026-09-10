@@ -36,68 +36,23 @@ Variants {
 
   model: Quickshell.screens
 
-  PanelWindow {
+  IslandSurface {
     id: win
 
-    required property var modelData
-
-    property bool open: false
-
-    // Raised while the island is being handed to another surface. While the
-    // handover's still is held, this surface's shape rides the taker's own
-    // morph; handover is also what keeps the final cut to the pill - once
-    // the still is taken down, covered by the taker - instant. See
-    // Ui/IslandOrigin.qml.
-    property bool handover: false
-
-    // The shape this surface grows out of, and the handover protocol it
-    // follows when another surface takes the island: adopt the island's card,
-    // claim, take the shape the holder was wearing. One of these for each of
-    // the six surfaces that stand in for the island.
-    IslandOrigin {
-      id: origin
-
-      window: win
-    }
-
-    readonly property bool focused: Monitors.isFocused(win.screen)
+    key: "launcher"
+    openWidth: Theme.launcherWidth
+    openHeight: win.contentHeight
+    openRadius: Theme.launcherRadius
 
     // An empty result set still owns a row's worth of height, so the panel has
     // somewhere to say that nothing matched.
     readonly property int rowCount: Math.max(1, Math.min(AppSearch.results.length, Theme.launcherMaxRows))
     readonly property int listHeight: rowCount * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap
-    readonly property int openHeight: Theme.launcherListTop + listHeight + Theme.launcherPadBottom
+    readonly property int contentHeight: Theme.launcherListTop + listHeight + Theme.launcherPadBottom
 
-    // True from the moment the shape starts growing until it is back to pill
-    // size - or until the frozen still it left for a taker is taken down -
-    // which is the whole time the bar must keep its island hidden.
-    readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
-
-    function show() {
+    onOpening: {
       query.text = "";
       list.currentIndex = 0;
-      // Take the island. The ordering, the card, the handover mailbox and
-      // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
-      // the four arguments are the morph this surface is about to travel,
-      // which the holder rides with it.
-      handover = false;
-      origin.claim(Theme.launcherWidth, win.openHeight, Theme.launcherRadius, Theme.morphLauncher);
-      open = true;
-    }
-
-    function hide() {
-      origin.release();
-      open = false;
-    }
-
-    // Giving the island up to the surface that claimed it. The still this
-    // leaves behind is what the eye sees until the taker's first frame
-    // lands; see Ui/IslandOrigin.qml.
-    function dismiss() {
-      origin.publish(surface.width, surface.height, surface.surfaceRadius);
-      origin.hold(surface.width, surface.height, surface.surfaceRadius);
-      handover = true;
-      open = false;
     }
 
     function activate() {
@@ -148,92 +103,19 @@ Variants {
       }
     }
 
-    screen: modelData
-    visible: showing
-    color: "transparent"
-
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "quickshell-launcher"
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
-
-    exclusionMode: ExclusionMode.Ignore
-
     // Hyprland focuses an OnDemand surface when it first maps, but not when an
     // already-mapped one goes None -> OnDemand, and this surface stays mapped
     // through its close animation. Exclusive covers the second case; staying
     // Exclusive is not an option, because it would route every pointer event on
     // every output here.
-    property bool focusPrimed: false
-
-    WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
-
-    Timer {
-      id: focusPrime
-
-      interval: 75
-      onTriggered: win.focusPrimed = true
-    }
-
     onOpenChanged: {
       if (open) {
-        focusPrimed = false;
-        focusPrime.restart();
         // Layer-shell hands the surface focus, but Qt still needs an
         // active-focus target inside it before the input sees a key.
         Qt.callLater(function () {
           if (win.open)
             query.forceActiveFocus();
         });
-      } else {
-        focusPrime.stop();
-        focusPrimed = false;
-      }
-    }
-
-    onShowingChanged: {
-      if (showing) {
-        Bus.launcherScreen = win.screen ? win.screen.name : "";
-      } else {
-        // The close is off screen; the shape Behaviors are live again for
-        // the next open. A held still unmaps with handover still raised,
-        // which is what keeps its cut to the pill instant.
-        win.handover = false;
-        if (win.screen && Bus.launcherScreen === win.screen.name)
-          Bus.launcherScreen = "";
-      }
-    }
-
-    Connections {
-      target: Bus
-
-      function onLauncherToggled() {
-        if (win.open)
-          win.hide();
-        else if (win.focused)
-          win.show();
-      }
-
-      function onLauncherClosed() {
-        win.hide();
-      }
-
-      // Another surface taking the island takes it from here. On this
-      // output it is growing in this surface's place, so this one cuts;
-      // on any other output nothing is growing here, so this one takes
-      // its own close.
-      function onIslandClaimed(screen) {
-        if (!win.open)
-          return;
-        if (win.screen && screen === win.screen.name)
-          win.dismiss();
-        else
-          win.hide();
       }
     }
 
@@ -250,76 +132,6 @@ Variants {
     }
 
     Component.onCompleted: win.syncRows()
-
-    // A click anywhere off the surface dismisses. The surface sits on top of
-    // this and takes its own clicks.
-    MouseArea {
-      anchors.fill: parent
-      enabled: win.open
-      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-      onClicked: win.hide()
-    }
-
-    FrostedSurface {
-      id: surface
-
-      x: (win.width - width) / 2
-      y: Theme.barMarginTop
-
-      clipContent: true
-
-      implicitWidth: win.open ? Theme.launcherWidth : origin.held ? origin.heldWidth : origin.originWidth
-      implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
-      surfaceRadius: win.open ? Theme.launcherRadius : origin.held ? origin.heldRadius : origin.originRadius
-
-      Behavior on implicitWidth {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
-        }
-      }
-
-      Behavior on implicitHeight {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
-        }
-      }
-
-      Behavior on surfaceRadius {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphLauncher
-        }
-      }
-
-      // The carried-over clock; see Ui/IslandClock.qml.
-      IslandClock {
-        anchors.fill: parent
-        origin: origin
-        shown: !win.open && !origin.held
-      }
-
-      // Everything the launcher draws, cross-faded against the clock on the
-      // same short clock the island uses for its own contents. The rows inside
-      // do not fade individually; the growing shape uncovers them.
-      Item {
-        id: body
-
-        anchors.fill: parent
-        opacity: win.open || origin.held ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-          enabled: !origin.held
-
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
 
         Text {
           x: Theme.launcherGlyphLeft
@@ -424,7 +236,7 @@ Variants {
           highlightRangeMode: ListView.ApplyRange
           preferredHighlightBegin: 0
           preferredHighlightEnd: height
-          highlightMoveDuration: Theme.animSlow
+          highlightMoveDuration: Theme.morphSurface
           highlightMoveVelocity: -1
           highlightResizeDuration: 0
 
@@ -469,7 +281,7 @@ Variants {
               property: "opacity"
               from: 0
               to: 1
-              duration: Theme.animFast
+              duration: Theme.morphState
             }
           }
 
@@ -477,7 +289,7 @@ Variants {
             NumberAnimation {
               property: "opacity"
               to: 0
-              duration: Theme.animFast
+              duration: Theme.morphState
             }
           }
 
@@ -486,19 +298,17 @@ Variants {
           displaced: Transition {
             NumberAnimation {
               properties: "y"
-              duration: Theme.morphDuration
+              duration: Theme.morphSurface
               easing.type: Easing.Bezier
               easing.bezierCurve: Theme.morphCurve
             }
             NumberAnimation {
               property: "opacity"
               to: 1
-              duration: Theme.animFast
+              duration: Theme.morphState
             }
           }
         }
-      }
-    }
 
     // The launcher is a keyboard surface. Every way of getting anywhere in it -
     // the query, the selection, the launch - is a key, so while it is up the

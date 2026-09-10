@@ -99,6 +99,15 @@ Singleton {
     root.load();
   }
 
+  function stepDay(days) {
+    var next = new Date(root.selected.getFullYear(), root.selected.getMonth(), root.selected.getDate() + days);
+    root.selected = next;
+    if (next.getMonth() !== root.anchor.getMonth() || next.getFullYear() !== root.anchor.getFullYear()) {
+      root.anchor = new Date(next.getFullYear(), next.getMonth(), 1);
+      root.load();
+    }
+  }
+
   function today() {
     var now = new Date();
     root.anchor = new Date(now.getFullYear(), now.getMonth(), 1);

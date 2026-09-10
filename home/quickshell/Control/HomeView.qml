@@ -27,6 +27,43 @@ Item {
   // it itself: only the panel knows the box the picker has to contract out of.
   signal recorderRequested
 
+  property int keyboardIndex: 0
+
+  function keyboardMove(delta) {
+    keyboardIndex = (keyboardIndex + delta + 8) % 8;
+  }
+
+  function keyboardActivate() {
+    switch (keyboardIndex) {
+    case 0:
+      root.opened("wifi");
+      break;
+    case 1:
+      root.opened("audio");
+      break;
+    case 2:
+      root.opened("bluetooth");
+      break;
+    case 3:
+      NotificationStore.peace = !NotificationStore.peace;
+      break;
+    case 4:
+      if (NightLight.available)
+        NightLight.toggle();
+      break;
+    case 5:
+      root.recorderRequested();
+      break;
+    case 6:
+      if (root.sink && root.sink.audio)
+        root.sink.audio.muted = !root.sink.audio.muted;
+      break;
+    case 7:
+      Brightness.step(true);
+      break;
+    }
+  }
+
   readonly property int inset: Theme.controlInset
   readonly property int span: width - inset * 2
 
@@ -94,6 +131,7 @@ Item {
       return NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.name : "Not connected";
     }
     on: NetworkInfo.onEthernet || (Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
+    keyFocused: root.keyboardIndex === 0
     opensView: true
     onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
     onOpened: root.opened("wifi")
@@ -109,6 +147,7 @@ Item {
     glyph: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
     sublabel: root.sink ? (root.sink.nickname || root.sink.description || root.sink.name) : "No output"
     on: root.sink !== null && root.sink.audio !== null && !root.sink.audio.muted
+    keyFocused: root.keyboardIndex === 1
     opensView: true
     onToggled: {
       if (root.sink && root.sink.audio)
@@ -143,6 +182,7 @@ Item {
       return root.connectedDevice ? root.connectedDevice.name : "On";
     }
     on: root.adapter !== null && root.adapter.enabled
+    keyFocused: root.keyboardIndex === 2
     opensView: true
     onToggled: if (root.adapter)
       root.adapter.enabled = !root.adapter.enabled
@@ -159,6 +199,7 @@ Item {
     glyph: NotificationStore.peace ? Icons.peaceOn : Icons.peaceOff
     sublabel: NotificationStore.peace ? "On" : "Off"
     on: NotificationStore.peace
+    keyFocused: root.keyboardIndex === 3
     onToggled: NotificationStore.peace = !NotificationStore.peace
   }
 
@@ -176,6 +217,7 @@ Item {
       return NightLight.enabled ? NightLight.temperature + "K" : "Off";
     }
     on: NightLight.enabled
+    keyFocused: root.keyboardIndex === 4
     opacity: NightLight.available ? 1 : 0.5
     onToggled: if (NightLight.available)
       NightLight.toggle()
@@ -193,6 +235,7 @@ Item {
     glyph: Recorder.recording ? Icons.stop : Icons.record
     sublabel: Recorder.status
     on: Recorder.busy
+    keyFocused: root.keyboardIndex === 5
     onToggled: {
       if (Recorder.busy)
         Recorder.stop();
@@ -252,6 +295,15 @@ Item {
     visible: root.count > 0
     text: "Clear all"
     color: clearHover.containsMouse ? Theme.text : Theme.accent
+    scale: clearHover.pressed ? 0.97 : 1
+
+    Behavior on color {
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
     font.family: Theme.uiFont
     font.pixelSize: 12
     font.weight: Theme.weightMedium

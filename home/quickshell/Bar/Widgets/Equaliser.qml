@@ -47,14 +47,16 @@ Item {
 
           NumberAnimation {
             to: 3
-            duration: 260 + bar.index * 70
-            easing.type: Easing.InOutSine
+            duration: Theme.morphState + bar.index * 30
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.morphCurve
           }
 
           NumberAnimation {
             to: root.implicitHeight
-            duration: 300 + bar.index * 55
-            easing.type: Easing.InOutSine
+            duration: Theme.morphState + 40 + bar.index * 25
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.morphCurve
           }
         }
       }

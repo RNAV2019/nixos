@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The small action a row carries: Connect, Disconnect, Forget, Pair.
 //
@@ -45,7 +46,7 @@ Rectangle {
 
   Behavior on opacity {
     NumberAnimation {
-      duration: Theme.animFast
+      duration: Theme.morphState
     }
   }
 
@@ -53,6 +54,16 @@ Rectangle {
     if (onAccent)
       return Theme.withAlpha(Theme.base, hover.containsMouse ? 0.24 : 0.14);
     return Theme.withAlpha(destructive ? Theme.urgent : Theme.accent, hover.containsMouse ? 0.2 : 0);
+  }
+
+  scale: hover.pressed ? 0.97 : 1
+
+  Behavior on color {
+    Tint {}
+  }
+
+  Behavior on scale {
+    Morph { duration: Theme.morphState }
   }
 
   Text {

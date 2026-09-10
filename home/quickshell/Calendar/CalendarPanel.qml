@@ -21,34 +21,23 @@ Variants {
 
   model: Quickshell.screens
 
-  PanelWindow {
+  IslandSurface {
     id: win
 
-    required property var modelData
-
-    property bool open: false
+    key: "calendar"
+    openWidth: Theme.calWidth
+    openHeight: Theme.calHeight
+    openRadius: Theme.calRadius
 
     // Raised while the island is being handed to another surface. While the
     // handover's still is held, this surface's shape rides the taker's own
     // morph; handover is also what keeps the final cut to the pill - once
     // the still is taken down, covered by the taker - instant. See
     // Ui/IslandOrigin.qml.
-    property bool handover: false
-
     // The shape this surface grows out of, and the handover protocol it
     // follows when another surface takes the island: adopt the island's
     // card, claim, take the shape the holder was wearing. One of these for
     // each of the six surfaces that stand in for the island.
-    IslandOrigin {
-      id: origin
-
-      window: win
-    }
-
-    readonly property bool focused: Monitors.isFocused(win.screen)
-
-    readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
-
     // The first cell of the grid: the Monday on or before the first of the
     // month. Weeks start on Monday, as the board draws them, which is why the
     // shift is (day + 6) % 7 rather than the day itself - JavaScript counts
@@ -65,164 +54,15 @@ Variants {
 
     readonly property var agenda: Calendar.eventsOn(Calendar.selected)
 
-    function show() {
+    onOpening: {
       Calendar.today();
       // Take the island. The ordering, the card, the handover mailbox and
       // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
       // the four arguments are the morph this surface is about to travel,
       // which the holder rides with it.
-      handover = false;
-      origin.claim(Theme.calWidth, Theme.calHeight, Theme.calRadius, Theme.morphWallpaper);
-      open = true;
     }
 
-    function hide() {
-      origin.release();
-      open = false;
-    }
-
-    // Giving the island up to the surface that claimed it. The still this
-    // leaves behind is what the eye sees until the taker's first frame
-    // lands; see Ui/IslandOrigin.qml.
-    function dismiss() {
-      origin.publish(surface.width, surface.height, surface.surfaceRadius);
-      origin.hold(surface.width, surface.height, surface.surfaceRadius);
-      handover = true;
-      open = false;
-    }
-
-    screen: modelData
-    visible: showing
-    color: "transparent"
-
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "quickshell-calendar"
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
-
-    exclusionMode: ExclusionMode.Ignore
-
-    property bool focusPrimed: false
-
-    WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
-
-    Timer {
-      id: focusPrime
-
-      interval: 75
-      onTriggered: win.focusPrimed = true
-    }
-
-    onOpenChanged: {
-      if (open) {
-        focusPrimed = false;
-        focusPrime.restart();
-        Qt.callLater(function () {
-          if (win.open)
-            keys.forceActiveFocus();
-        });
-      } else {
-        focusPrime.stop();
-        focusPrimed = false;
-      }
-    }
-
-    onShowingChanged: {
-      if (showing) {
-        Bus.calendarScreen = win.screen ? win.screen.name : "";
-      } else {
-        // The close is off screen; the shape Behaviors are live again for
-        // the next open. A held still unmaps with handover still raised,
-        // which is what keeps its cut to the pill instant.
-        win.handover = false;
-        if (win.screen && Bus.calendarScreen === win.screen.name)
-          Bus.calendarScreen = "";
-      }
-    }
-
-    Connections {
-      target: Bus
-
-      function onCalendarToggled() {
-        if (win.open)
-          win.hide();
-        else if (win.focused)
-          win.show();
-      }
-
-      function onCalendarClosed() {
-        win.hide();
-      }
-
-      // Another surface taking the island takes it from here. On this
-      // output it is growing in this surface's place, so this one cuts;
-      // on any other output nothing is growing here, so this one takes
-      // its own close.
-      function onIslandClaimed(screen) {
-        if (!win.open)
-          return;
-        if (win.screen && screen === win.screen.name)
-          win.dismiss();
-        else
-          win.hide();
-      }
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      enabled: win.open
-      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-      onClicked: win.hide()
-    }
-
-    FrostedSurface {
-      id: surface
-
-      x: (win.width - width) / 2
-      y: Theme.barMarginTop
-
-      clipContent: true
-
-      implicitWidth: win.open ? Theme.calWidth : origin.held ? origin.heldWidth : origin.originWidth
-      implicitHeight: win.open ? Theme.calHeight : origin.held ? origin.heldHeight : origin.originHeight
-      surfaceRadius: win.open ? Theme.calRadius : origin.held ? origin.heldRadius : origin.originRadius
-
-      Behavior on implicitWidth {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Behavior on implicitHeight {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Behavior on surfaceRadius {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Item {
-        id: keys
-
-        anchors.fill: parent
-        focus: true
-
-        Keys.onPressed: function (event) {
+    onKeyPressed: function (event) {
           switch (event.key) {
           case Qt.Key_Escape:
             win.hide();
@@ -235,6 +75,12 @@ Variants {
           case Qt.Key_L:
             Calendar.step(1);
             break;
+          case Qt.Key_Up:
+            Calendar.stepDay(-7);
+            break;
+          case Qt.Key_Down:
+            Calendar.stepDay(7);
+            break;
           case Qt.Key_T:
           case Qt.Key_Home:
             Calendar.today();
@@ -245,31 +91,23 @@ Variants {
           default:
             return;
           }
-          event.accepted = true;
+      event.accepted = true;
+    }
+
+    Item {
+      id: body
+
+      anchors.fill: parent
+      opacity: win.open || win.origin.held ? 1 : 0
+      visible: opacity > 0
+
+      Behavior on opacity {
+        enabled: !win.origin.held
+
+        Morph {
+          duration: Theme.morphContent
         }
       }
-
-      // The carried-over clock; see Ui/IslandClock.qml.
-      IslandClock {
-        anchors.fill: parent
-        origin: origin
-        shown: !win.open && !origin.held
-      }
-
-      Item {
-        id: body
-
-        anchors.fill: parent
-        opacity: win.open || origin.held ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-          enabled: !origin.held
-
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
 
         Text {
           x: Theme.calInset
@@ -291,6 +129,15 @@ Variants {
           height: Theme.calTodayBtnHeight
           radius: height / 2
           color: Theme.withAlpha(Theme.highlightMed, todayHover.containsMouse ? 1 : 0.75)
+          scale: todayHover.pressed ? 0.97 : 1
+
+          Behavior on color {
+            Tint {}
+          }
+
+          Behavior on scale {
+            Morph { duration: Theme.morphState }
+          }
 
           Text {
             id: todayLabel
@@ -322,6 +169,15 @@ Variants {
           height: width
           radius: width / 2
           color: Theme.withAlpha(Theme.highlightLow, prevHover.containsMouse ? 1 : 0.9)
+          scale: prevHover.pressed ? 0.95 : 1
+
+          Behavior on color {
+            Tint {}
+          }
+
+          Behavior on scale {
+            Morph { duration: Theme.morphState }
+          }
 
           Text {
             anchors.centerIn: parent
@@ -350,6 +206,15 @@ Variants {
           height: width
           radius: width / 2
           color: Theme.withAlpha(Theme.highlightLow, nextHover.containsMouse ? 1 : 0.9)
+          scale: nextHover.pressed ? 0.95 : 1
+
+          Behavior on color {
+            Tint {}
+          }
+
+          Behavior on scale {
+            Morph { duration: Theme.morphState }
+          }
 
           Text {
             anchors.centerIn: parent
@@ -403,14 +268,17 @@ Variants {
 
             x: Theme.calColumnFirst + (index % 7) * Theme.calColumnPitch - width / 2
             y: Theme.calGridTop + Math.floor(index / 7) * Theme.calRowPitch - 8
-            width: Theme.calTodayMarker
-            height: Theme.calTodayMarker
+            width: Theme.calColumnPitch
+            height: Theme.calRowPitch
 
             // The marker is the selection, and today is the selection's
             // starting place rather than a mark of its own. A ring says
             // "today, but you are looking elsewhere".
             Rectangle {
-              anchors.fill: parent
+              x: (parent.width - Theme.calTodayMarker) / 2
+              y: (parent.height - Theme.calTodayMarker) / 2
+              width: Theme.calTodayMarker
+              height: Theme.calTodayMarker
               radius: width / 2
               visible: cell.isSelected || cell.isToday
               color: cell.isSelected ? Theme.accent : "transparent"
@@ -419,7 +287,8 @@ Variants {
             }
 
             Text {
-              anchors.centerIn: parent
+              anchors.horizontalCenter: parent.horizontalCenter
+              y: (parent.height - height) / 2
               text: cell.day.getDate()
               color: cell.isSelected ? Theme.base : cell.inMonth ? Theme.text : Theme.muted
               font.family: Theme.uiFont
@@ -564,4 +433,3 @@ Variants {
       }
     }
   }
-}

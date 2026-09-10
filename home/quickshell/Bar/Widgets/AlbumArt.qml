@@ -89,6 +89,25 @@ Item {
       cache: true
       visible: root.hasArt
     }
+
+    Rectangle {
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      anchors.margins: 4
+      width: 16
+      height: width
+      radius: width / 2
+      color: Theme.withAlpha(Theme.base, 0.72)
+      visible: Media.active
+
+      Text {
+        anchors.centerIn: parent
+        text: Media.playing ? Icons.pause : Icons.play
+        color: Theme.text
+        font.family: Theme.iconFont
+        font.pixelSize: 9
+      }
+    }
   }
 
   Item {

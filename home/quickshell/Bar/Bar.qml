@@ -64,23 +64,22 @@ Variants {
 
     // The launcher and the control centre both grow out of the island's own
     // pill, in the island's own place, and cover it for as long as they are
-    // open. The island is left drawn underneath rather than taken away, so
-    // there is never a frame with neither on screen; all it has to do is stay
-    // collapsed, so that nothing of it shows around their first frames.
+    // open. The island stays mapped for handoff timing but is not painted, so
+    // it cannot enter the translucent panel's blur sample.
     Island {
       id: island
 
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
-      suppressed: bar.screen !== null && Bus.islandTaken(bar.screen.name)
+      suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.osdScreen === bar.screen.name || Bus.notifyScreen === bar.screen.name)
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
-      onClockActivated: Bus.calendarToggled()
+      onClockActivated: Bus.toggleSurface("calendar")
       // The status chip is the card's quick-settings summary - the radio and
       // the battery, the two readings the control centre is about - so it is
       // the control centre's own button, and pressing it grows the card into
       // the panel rather than opening a separate one below the bar.
-      onStatusActivated: Bus.controlToggled()
+      onStatusActivated: Bus.toggleSurface("control")
     }
   }
 }

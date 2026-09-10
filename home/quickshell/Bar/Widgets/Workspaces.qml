@@ -83,11 +83,7 @@ FrostedSurface {
         }
 
         Behavior on color {
-          ColorAnimation {
-            duration: Theme.morphToggle
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
-          }
+          Tint {}
         }
 
         MouseArea {

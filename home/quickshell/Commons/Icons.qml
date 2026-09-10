@@ -5,26 +5,9 @@ import Quickshell
 
 // Keep these Nerd Font glyphs in a UTF-8 source file; some are non-BMP.
 Singleton {
-  readonly property string nix: "❄"
-  readonly property string calendar: "󰃭"
-  readonly property string clock: ""
-  readonly property string cpu: "󰍛"
-  readonly property string claude: ""
-
-  readonly property string monitor: "󰍹"
-  readonly property string monitorMultiple: "󰍺"
-  readonly property string monitorOff: "󰶐"
-
   readonly property string search: "󰍉"
-  readonly property string application: "󰣆"
-
-  readonly property string expandMore: "󰅀"
-  readonly property string expandLess: "󰅃"
   readonly property string chevronLeft: "󰅁"
   readonly property string chevronRight: "󰅂"
-
-  readonly property string mprisPlaying: "󰎇"
-  readonly property string mprisPaused: "󰏤"
 
   readonly property var wifi: ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"]
   readonly property string ethernet: "󰀂"
@@ -46,7 +29,6 @@ Singleton {
   // The control centre's own vocabulary.
   readonly property string back: "󰁍"
   readonly property string close: "󰅖"
-  readonly property string settings: "󰒓"
   readonly property string refresh: "󰑐"
   readonly property string check: "󰄬"
   readonly property string peaceOn: "󰍶"
@@ -58,7 +40,6 @@ Singleton {
   readonly property string pause: "󰏤"
   readonly property string microphone: "󰍬"
   readonly property string microphoneMuted: "󰍭"
-  readonly property string bell: "󰂚"
 
   // The screen recorder. The ring-and-dot is the record mark wherever it
   // appears: the pill, the control centre tile and the saved notification.
@@ -79,7 +60,6 @@ Singleton {
 
   readonly property var batteryCharging: ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"]
   readonly property var batteryDefault: ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
-  readonly property string batteryFull: "󰂅"
 
   // Map a 0-100 percentage to a clamped icon index.
   function step(icons, percent) {

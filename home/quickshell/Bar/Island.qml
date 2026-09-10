@@ -28,9 +28,9 @@ FrostedSurface {
   // back to plain hover behaviour.
   property bool pinned: false
 
-  // Raised while another surface has taken the island's place and is drawing
-  // over it. The island keeps drawing, so the two never both leave the screen,
-  // but it holds itself to the pill the covering surface expects to find.
+  // Raised while another surface has taken the island's place. The island stays
+  // mapped for handoff timing, but is not painted while the covering surface
+  // samples the desktop below it.
   property bool suppressed: false
 
   // Whether the surface covering it is one that stays. The launcher and the
@@ -41,10 +41,48 @@ FrostedSurface {
   // business closing a card the user pinned open.
   property bool replaced: false
 
-  onSuppressedChanged: if (suppressed && replaced)
-    pinned = false
+  // Do not leave the pill in Hyprland's backdrop-blur sample while another
+  // island surface is growing over it. Desktop windows and the wallpaper stay
+  // available to the translucent surface above.
+  opacity: suppressed ? 0 : 1
 
-  readonly property bool expanded: !suppressed && (pinned || hover.containsMouse)
+  onSuppressedChanged: {
+    if (suppressed) {
+      openDelay.stop();
+      closeGrace.stop();
+      hoverOpen = false;
+      if (replaced)
+        pinned = false;
+    }
+  }
+
+  property bool hoverOpen: false
+  readonly property bool expanded: !suppressed && (pinned || hoverOpen)
+
+  Timer {
+    id: openDelay
+
+    interval: 120
+    onTriggered: if (hover.containsMouse)
+      root.hoverOpen = true
+  }
+
+  Timer {
+    id: closeGrace
+
+    interval: 250
+    onTriggered: if (!hover.containsMouse && !root.pinned)
+      root.hoverOpen = false
+  }
+
+  onPinnedChanged: {
+    if (pinned) {
+      closeGrace.stop();
+      hoverOpen = true;
+    } else if (!hover.containsMouse) {
+      closeGrace.restart();
+    }
+  }
 
   // Offer the card to whatever might have to grow out of it. Only one island
   // can be under the pointer, so only one is ever the one on offer.
@@ -65,19 +103,19 @@ FrostedSurface {
 
   Behavior on implicitWidth {
     Morph {
-      duration: Theme.morphIsland
+      duration: Theme.morphReflex
     }
   }
 
   Behavior on implicitHeight {
     Morph {
-      duration: Theme.morphIsland
+      duration: Theme.morphReflex
     }
   }
 
   Behavior on surfaceRadius {
     Morph {
-      duration: Theme.morphIsland
+      duration: Theme.morphReflex
     }
   }
 
@@ -141,7 +179,29 @@ FrostedSurface {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
+    onContainsMouseChanged: {
+      if (containsMouse) {
+        closeGrace.stop();
+        if (!root.pinned)
+          openDelay.restart();
+      } else {
+        openDelay.stop();
+        if (!root.pinned)
+          closeGrace.restart();
+      }
+    }
     onClicked: root.pinned = !root.pinned
+  }
+
+  Rectangle {
+    x: root.width / 2 - 1
+    y: 5
+    width: 2
+    height: 6
+    radius: 1
+    color: Theme.accent
+    visible: root.pinned && root.expanded
+    opacity: 0.9
   }
 
   // The recording mark. Board 09: the trailing element on the pill, after the

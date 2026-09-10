@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Services.Mpris
 import Quickshell.Hyprland
 import qs.Commons
 import qs.Services
@@ -12,8 +11,8 @@ import qs.Services
 // LockPreview.qml, so every visual change can be rehearsed on a live desktop
 // before it ever has to work on a screen that can lock you out.
 //
-// The ground is the blurred wallpaper and the veil over it, which move
-// together. The two content tiers ride their own clocks either side of it.
+// The current wallpaper is always mounted and opaque. Its blur increases into
+// the locked state and decreases back to the regular session on unlock.
 Item {
   id: view
 
@@ -24,10 +23,8 @@ Item {
   property string status: ""
   property bool statusIsError: false
   property bool busy: false
-  // False until the first keystroke. The recording draws no field before it:
-  // a centred hint floats where the pill will be, and the pill then fades in
-  // around the first dot. It stays up from there on, through Authenticating
-  // and the reset after it.
+  // Retained as host state for the input flow; board 13 renders the field from
+  // its first frame rather than waiting for a keystroke.
   property bool inputStarted: false
   property real ground: 0
   property real clockAlpha: 0
@@ -35,6 +32,7 @@ Item {
 
   // The screen this view draws on - the lock surface's or the preview's.
   property var outputScreen
+  property string backgroundSource: Wallpapers.url
 
   signal passwordEdited(string text)
   signal accepted
@@ -53,57 +51,6 @@ Item {
     anchors.fill: parent
     cursorShape: Qt.BlankCursor
     acceptedButtons: Qt.NoButton
-  }
-
-  // The blur and the veil composite as one texture before they fade, so the
-  // ramp cross-fades a finished frosted screen over the desktop rather than
-  // fading each layer onto the other's half-drawn output.
-  Item {
-    id: groundLayer
-
-    anchors.fill: parent
-    opacity: view.ground
-    layer.enabled: true
-
-    // Overscan and clip MultiEffect's transparent edge samples.
-    Item {
-      anchors.fill: parent
-      clip: true
-
-      Image {
-        id: blurSource
-
-        anchors.fill: parent
-        anchors.margins: -Theme.lockBlurMax * 2
-        source: Wallpapers.url
-        fillMode: Image.PreserveAspectCrop
-        cache: false
-        asynchronous: false
-        // Expose this layer as MultiEffect's texture source.
-        layer.enabled: true
-      }
-
-      MultiEffect {
-        anchors.fill: blurSource
-        source: blurSource
-        visible: blurSource.status === Image.Ready
-        blurEnabled: true
-        // The radius rides the same progress as the veil, as the recording's
-        // does: measured as sharpness over contrast, which the veil cannot
-        // touch, its radius tracks the veil to within 0.02 of its travel in
-        // both directions. The per-frame re-render is only paid across the
-        // two short fade windows.
-        blur: view.ground
-        blurMax: Theme.lockBlurMax
-        blurMultiplier: 1
-      }
-    }
-
-    Rectangle {
-      anchors.fill: parent
-      color: Theme.lockVeilColor
-      opacity: Theme.lockVeilOpacity
-    }
   }
 
   // Board 13's layout is in board units; scale the canvas into Qt's.
@@ -132,6 +79,48 @@ Item {
     transformOrigin: Item.TopLeft
     scale: 1 / outputScale
 
+    Rectangle {
+      anchors.fill: parent
+      color: Theme.base
+      z: -2
+    }
+
+    Item {
+      id: groundLayer
+
+      anchors.fill: parent
+      clip: true
+      z: -1
+
+      Image {
+        id: blurSource
+
+        anchors.fill: parent
+        source: view.backgroundSource
+        fillMode: Image.PreserveAspectCrop
+        cache: false
+        asynchronous: false
+        visible: false
+        layer.enabled: true
+      }
+
+      MultiEffect {
+        anchors.fill: parent
+        source: blurSource
+        visible: blurSource.status === Image.Ready
+        blurEnabled: true
+        blur: view.ground * Theme.lockBlur
+        blurMax: Theme.lockBlurMax
+        blurMultiplier: 1
+      }
+
+      Rectangle {
+        anchors.fill: parent
+        color: Theme.lockVeilColor
+        opacity: Theme.lockVeilOpacity * view.ground
+      }
+    }
+
     Text {
       id: date
 
@@ -139,8 +128,7 @@ Item {
       y: canvas.u(Theme.lockDateTop)
       opacity: view.clockAlpha
 
-      // The recording's own order - "Thursday, September 3" - pinned so the
-      // user's locale cannot put the day first.
+      // Keep the board's weekday-first date order independent of locale.
       text: Qt.formatDate(clock.date, "dddd, MMMM d")
       color: Theme.lockTextSecondary
       font.family: Theme.uiFont
@@ -182,17 +170,16 @@ Item {
         height: width
         radius: width / 2
 
-        // The recording's login cluster is neutral: a white translucency
-        // with a lighter ring, over the veil.
-        color: Qt.rgba(1, 1, 1, Theme.lockAvatarFill)
+        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, Theme.lockAvatarFill)
         border.width: Math.max(1, Theme.lockStrokeWidth * canvas.ui)
-        border.color: Qt.rgba(1, 1, 1, Theme.lockAvatarStroke)
+        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.lockAvatarStroke)
 
         Text {
           anchors.centerIn: parent
-          text: Icons.person
-          color: "white"
-          font.family: Theme.iconFont
+          text: view.userName.length > 0 ? view.userName.charAt(0).toUpperCase() : "?"
+          color: Theme.accent
+          font.family: Theme.uiFont
+          font.weight: Theme.weightSemi
           font.pixelSize: canvas.u(Theme.lockAvatarGlyphSize)
           renderType: Text.QtRendering
         }
@@ -203,7 +190,7 @@ Item {
         y: canvas.u(Theme.lockUserTop - Theme.lockAvatarTop)
 
         text: view.userName
-        color: "white"
+        color: Theme.lockTextPrimary
         font.family: Theme.uiFont
         font.weight: Theme.weightMedium
         font.pixelSize: canvas.u(Theme.lockUserSize)
@@ -219,20 +206,9 @@ Item {
         height: canvas.u(Theme.lockFieldHeight)
         radius: canvas.u(Theme.lockFieldRadius)
 
-        // The recording shows no pill until the first keystroke; the reveal
-        // from then on - through Authenticating and the reset - never comes
-        // back down.
-        opacity: view.inputStarted ? 1 : 0
-        Behavior on opacity {
-          NumberAnimation {
-            duration: Theme.lockFieldReveal
-            easing.type: Easing.OutQuad
-          }
-        }
-
-        color: Qt.rgba(1, 1, 1, Theme.lockFieldFill)
+        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, Theme.lockFieldFill)
         border.width: Math.max(1, Theme.lockStrokeWidth * canvas.ui)
-        border.color: Qt.rgba(1, 1, 1, Theme.lockFieldStroke)
+        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.lockFieldStroke)
 
         TextInput {
           id: input
@@ -253,26 +229,23 @@ Item {
           onAccepted: view.accepted()
         }
 
-        // Whatever the conversation last said, or the reset's prompt. Left
-        // aligned, so the caret leading it sits where the first dot would:
-        // the recording draws the caret at 16 in from the field edge and the
-        // text 7 further in, in both the busy state and the one after it.
+        // Keep the board's placeholder in the field from the first frame.
         Text {
           anchors.left: parent.left
           anchors.leftMargin: canvas.u(Theme.lockTextInset)
           anchors.right: parent.right
           anchors.rightMargin: canvas.u(Theme.lockTextInset)
           anchors.verticalCenter: parent.verticalCenter
-          visible: view.inputStarted && input.text.length === 0
+          visible: input.text.length === 0
 
           text: {
             if (view.busy)
               return "Authenticating....";
             if (view.statusIsError)
               return view.status;
-            return "Enter Password";
+            return "Enter password";
           }
-          color: view.statusIsError ? Theme.love : Theme.lockFieldState
+          color: view.statusIsError ? Theme.love : view.busy ? Theme.lockFieldState : Theme.lockFieldHint
           elide: Text.ElideRight
           font.family: Theme.uiFont
           font.weight: Theme.weightRegular
@@ -281,9 +254,7 @@ Item {
           renderType: Text.QtRendering
         }
 
-        // Dots then caret, left-aligned, so the caret is always at the
-        // insertion point and trails the last dot by the dot's own gap - the
-        // recording's row: a dot at 16 in, the next at 28, the caret at 40.
+        // Dots then caret, left-aligned, matching the board's caret inset.
         Row {
           anchors.left: parent.left
           anchors.leftMargin: canvas.u(Theme.lockDotInset)
@@ -343,11 +314,7 @@ Item {
             height: canvas.u(Theme.lockCaretHeight)
             radius: width / 2
             color: Theme.lockCaretColor
-            // Up from the first keystroke on, busy included: the recording
-            // never drops it while the conversation runs. Hide rather than
-            // stop the blink: a stopped animation leaves the opacity wherever
-            // the last frame put it.
-            visible: view.inputStarted
+            visible: true
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
@@ -369,47 +336,6 @@ Item {
         }
       }
 
-      // The fresh state has no pill at all: a centred hint floats where the
-      // field will be, and goes the frame the first dot lands.
-      Text {
-        anchors.horizontalCenter: field.horizontalCenter
-        anchors.verticalCenter: field.verticalCenter
-        visible: !view.inputStarted
-
-        text: "Press Any Key to Enter Password"
-        color: Theme.lockFieldHint
-        font.family: Theme.uiFont
-        font.weight: Theme.weightRegular
-        font.pixelSize: canvas.u(Theme.lockFieldTextSize)
-        renderType: Text.QtRendering
-      }
-    }
-
-    // Kept from the surface this replaces; the recording does not draw it.
-    Text {
-      anchors.horizontalCenter: parent.horizontalCenter
-      anchors.bottom: parent.bottom
-      anchors.bottomMargin: canvas.u(Theme.lockNowPlayingBottom)
-      opacity: view.loginAlpha
-
-      color: Theme.lockTextSecondary
-      font.family: Theme.uiFont
-      font.weight: Theme.weightMedium
-      font.pixelSize: canvas.u(Theme.lockNowPlayingSize)
-      renderType: Text.QtRendering
-      text: {
-        for (var i = 0; i < Mpris.players.values.length; i++) {
-          var p = Mpris.players.values[i];
-          if (p.playbackState === MprisPlaybackState.Stopped)
-            continue;
-          var title = p.trackTitle || "";
-          var artist = p.trackArtist || "";
-          if (title.length === 0)
-            continue;
-          return artist.length > 0 ? title + " - " + artist : title;
-        }
-        return "";
-      }
     }
   }
 

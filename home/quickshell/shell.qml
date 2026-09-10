@@ -34,11 +34,11 @@ ShellRoot {
     target: "control"
 
     function toggle(): void {
-      Bus.controlToggled();
+      Bus.toggleSurface("control");
     }
 
     function close(): void {
-      Bus.controlClosed();
+      Bus.closeSurface("control");
     }
   }
 
@@ -46,11 +46,11 @@ ShellRoot {
     target: "launcher"
 
     function toggle(): void {
-      Bus.launcherToggled();
+      Bus.toggleSurface("launcher");
     }
 
     function close(): void {
-      Bus.launcherClosed();
+      Bus.closeSurface("launcher");
     }
   }
 
@@ -58,11 +58,11 @@ ShellRoot {
     target: "wallpaper"
 
     function toggle(): void {
-      Bus.wallpaperToggled();
+      Bus.toggleSurface("wallpaper");
     }
 
     function close(): void {
-      Bus.wallpaperClosed();
+      Bus.closeSurface("wallpaper");
     }
   }
 
@@ -70,11 +70,11 @@ ShellRoot {
     target: "calendar"
 
     function toggle(): void {
-      Bus.calendarToggled();
+      Bus.toggleSurface("calendar");
     }
 
     function close(): void {
-      Bus.calendarClosed();
+      Bus.closeSurface("calendar");
     }
   }
 
@@ -82,11 +82,11 @@ ShellRoot {
     target: "recorder"
 
     function toggle(): void {
-      Bus.recorderToggled();
+      Bus.toggleSurface("recorder");
     }
 
     function close(): void {
-      Bus.recorderClosed();
+      Bus.closeSurface("recorder");
     }
   }
 
@@ -94,7 +94,7 @@ ShellRoot {
     target: "session"
 
     function toggle(): void {
-      Bus.sessionToggled();
+      Bus.toggleSurface("session");
     }
   }
 
@@ -102,11 +102,11 @@ ShellRoot {
     target: "profiles"
 
     function toggle(): void {
-      Bus.profilesToggled();
+      Bus.toggleSurface("profiles");
     }
 
     function close(): void {
-      Bus.profilesClosed();
+      Bus.closeSurface("profiles");
     }
   }
 

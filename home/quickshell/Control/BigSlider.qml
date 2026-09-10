@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The control centre's slider. Thick, fully rounded, and dragged anywhere along
 // its length rather than by a handle.
@@ -42,6 +43,7 @@ Item {
     height: parent.height
     radius: height / 2
     color: root.dimmed ? Theme.withAlpha(Theme.subtle, 0.35) : Theme.accent
+    scale: drag.pressed ? 0.98 : 1
 
     // Only the value animates. A drag writes the value every frame anyway, so
     // this is what smooths a keyboard step or an external change.
@@ -49,16 +51,18 @@ Item {
       enabled: !drag.pressed
 
       NumberAnimation {
-        duration: Theme.morphSlider
+        duration: Theme.morphState
         easing.type: Easing.Bezier
         easing.bezierCurve: Theme.morphCurve
       }
     }
 
     Behavior on color {
-      ColorAnimation {
-        duration: Theme.morphToggle
-      }
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
     }
   }
 

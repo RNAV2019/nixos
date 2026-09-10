@@ -17,9 +17,7 @@ Rectangle {
   border.color: input.activeFocus ? Theme.withAlpha(Theme.accent, Theme.borderSelected) : Theme.withAlpha(Theme.overlay, Theme.borderNormal)
 
   Behavior on border.color {
-    ColorAnimation {
-      duration: Theme.animFast
-    }
+    Tint {}
   }
 
   TextInput {

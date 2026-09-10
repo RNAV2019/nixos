@@ -39,7 +39,7 @@ Item {
       id: scrollTo
       target: view
       property: "contentY"
-      duration: Theme.animFast
+      duration: Theme.morphState
       easing.type: Easing.OutCubic
     }
 

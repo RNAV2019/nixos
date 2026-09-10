@@ -9,7 +9,14 @@ Singleton {
   readonly property color base: "#191724"
   readonly property color surface: "#1f1d2e"
   readonly property color overlay: "#26233a"
-  readonly property color muted: "#6e6a86"
+  // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel
+  // tint. That ink carries almost every 11 px label in the shell - section
+  // headings, launcher descriptions, calendar meta, the toast's app name - so
+  // it is the one colour here that has to clear the AA floor rather than sit
+  // wherever the palette put it. Lifted along the line towards `subtle` until
+  // it reads 4.7:1 on the tinted surface, which is the darkest ground used by
+  // the shell.
+  readonly property color muted: "#8a86a4"
   readonly property color subtle: "#908caa"
   readonly property color text: "#e0def4"
   readonly property color love: "#eb6f92"
@@ -22,10 +29,6 @@ Singleton {
   readonly property color highlightMed: "#403d52"
   readonly property color highlightHigh: "#524f67"
 
-  // Bar modules sit on the wallpaper, which is often the same ink as base.
-  // Lift them one step so each pill reads as its own surface.
-  readonly property color barModule: surface
-
   // Colour is meant to read as derived from the wallpaper, so the accent is
   // the one hue the current background actually contains.
   // The palette every colour above comes from, for the surfaces that name it.
@@ -35,37 +38,13 @@ Singleton {
   readonly property color urgent: love
 
   readonly property real fillNormal: 0.04
-  readonly property real fillHover: 0.08
   readonly property real fillSelected: 0.18
   readonly property real fillPressed: 0.22
   readonly property real borderNormal: 0.4
-  readonly property real borderHover: 0.25
   readonly property real borderSelected: 1.0
 
   function withAlpha(c, a) {
     return Qt.rgba(c.r, c.g, c.b, a);
-  }
-
-  function rowFill(hovered, selected) {
-    if (selected)
-      return withAlpha(accent, fillSelected);
-    if (hovered)
-      return withAlpha(text, fillHover);
-    return "transparent";
-  }
-
-  function controlFill(hovered, focused) {
-    if (focused)
-      return withAlpha(text, fillHover);
-    if (hovered)
-      return withAlpha(text, fillHover);
-    return withAlpha(text, fillNormal);
-  }
-
-  function controlBorder(hovered, focused) {
-    if (focused || hovered)
-      return withAlpha(accent, borderSelected);
-    return withAlpha(overlay, borderNormal);
   }
 
   // The Nerd Font carries the icon glyphs and holds digits on a fixed advance,
@@ -84,23 +63,10 @@ Singleton {
   readonly property int weightMedium: Font.Medium
   readonly property int weightSemi: Font.DemiBold
 
-  // Small labels want a little air; large numerals want less.
-  readonly property real trackingLabel: 0.2
-  readonly property real trackingDisplay: -0.4
-
   readonly property int fontSize: 12
-  readonly property int fontSizeSmall: 10
   readonly property int fontSizeLarge: 13
-  readonly property int fontSizeXl: 16
-  readonly property int fontSizeDisplay: 24
-  readonly property int fontSizeDisplayLg: 28
 
-  readonly property int spacingXs: 2
-  readonly property int spacingSm: 4
-  readonly property int spacingMd: 8
   readonly property int spacingLg: 12
-  readonly property int spacingXl: 16
-  readonly property int spacingXxl: 24
 
   readonly property int gapsOut: 5
 
@@ -111,15 +77,12 @@ Singleton {
   readonly property int barHeight: 36
   readonly property int barMarginTop: 8
   readonly property int barMarginLeft: 24
-  readonly property int barMarginRight: 24
-  readonly property int barGroupPadding: 8
-  readonly property int barItemGap: 8
 
-  // Frosted surfaces. Every floating surface is a blurred crop of the
-  // wallpaper under a tint, so the background blooms through wherever it has
-  // detail and reads as flat ink wherever it does not.
+  // Floating surfaces are translucent so Hyprland can blur the desktop behind
+  // them. Lower shell surfaces are hidden during handoff instead of entering
+  // that blur sample.
   readonly property color surfaceTint: surface
-  readonly property real surfaceTintAlpha: 0.78
+  readonly property real surfaceTintAlpha: 0.55
   readonly property color surfaceBorder: highlightMed
   readonly property real surfaceBorderAlpha: 0.5
   // MultiEffect blur is a fraction of blurMax, not a pixel radius.
@@ -219,10 +182,6 @@ Singleton {
   readonly property int notifCloseSize: 14
   readonly property int notifTitleTop: 36
   readonly property int notifTitleSize: 15
-  readonly property int notifSourceTop: 58
-  readonly property int notifSourceSize: 11
-  readonly property int notifBodyTop: 82
-  // Where the body starts when there is no source line to sit under.
   readonly property int notifBodyTopBare: 60
   readonly property real notifBodySize: 12.5
   readonly property int notifBodyLeading: 18
@@ -294,7 +253,6 @@ Singleton {
   readonly property int controlTitleSize: 18
   readonly property int controlBackSize: 36
   readonly property int controlBackLeft: 20
-  readonly property int controlIconBtnSize: 32
 
   // Tiles. Two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; the
   // first row is one narrow tile beside one wide, the second is three equal.
@@ -335,8 +293,6 @@ Singleton {
   readonly property int controlNotifTextLeft: 52
   readonly property int controlNotifTitleSize: 14
   readonly property int controlNotifBodySize: 12
-  readonly property int controlNotifBodyTop: 68
-  readonly property int controlNotifBase: 80
   readonly property int controlPadBottom: 10
   // Past this the list scrolls rather than the panel growing further.
   readonly property int controlNotifMaxHeight: 320
@@ -488,74 +444,51 @@ Singleton {
   // Six agenda rows is what the panel has room for below the grid.
   readonly property int calAgendaMax: 3
 
-  // The lock screen, and its second transcription. The first one came off the
-  // board; this one comes off the source recording itself (10:33-10:43 of
-  // saneAspect's "It's done. Everything's using Quickshell now."), measured
-  // per-pixel off the frames at native 1080p. The recording's lock carries no
-  // accent colour anywhere: the ground is a neutral black veil over the blur,
-  // and every surface on it is white translucency under warm-white type. The
-  // numbers below are the recording's own glyph and pill boxes, with the
-  // item-top y each one needs so its glyphs land where the frames put them -
-  // the clock's, for instance, at 144 so its digits span 180 to 285.
-  //
-  // The board still settles the motion (the cross-fades, the staggers and the
-  // spring are its), and the board's blur radius stays: the recording's own
-  // radius is not separable from its compression.
-  readonly property int lockDateTop: 125
-  readonly property int lockDateSize: 22
-  readonly property int lockClockTop: 144
-  readonly property int lockClockSize: 146
+  // Board 13: a 1920x1080 lock surface. The background is painted by the
+  // surface itself so the session-lock protocol never exposes a black frame
+  // while the secure surface is being created or removed.
+  readonly property int lockDateTop: 150
+  readonly property int lockDateSize: 20
+  readonly property int lockClockTop: 175
+  readonly property int lockClockSize: 92
 
-  readonly property int lockAvatarTop: 836
-  readonly property int lockAvatarSize: 58
-  readonly property int lockAvatarGlyphSize: 24
-  readonly property int lockUserTop: 915
-  readonly property int lockUserSize: 18
+  readonly property int lockAvatarTop: 824
+  readonly property int lockAvatarSize: 56
+  readonly property int lockAvatarGlyphSize: 22
+  readonly property int lockUserTop: 894
+  readonly property int lockUserSize: 14
 
-  readonly property int lockFieldTop: 956
-  readonly property int lockFieldWidth: 200
-  readonly property int lockFieldHeight: 32
-  readonly property int lockFieldRadius: 16
-  // The field starts hidden. The recording shows no pill until the first
-  // keystroke - a centred hint floats where the field will be - and the pill
-  // then fades in around the first dot.
-  readonly property int lockFieldReveal: 100
-  // The caret rides the dot row: 16 in from the field edge, where the first
-  // dot starts, and the state text follows it 7 further in.
-  readonly property int lockDotInset: 16
+  readonly property int lockFieldTop: 928
+  readonly property int lockFieldWidth: 280
+  readonly property int lockFieldHeight: 44
+  readonly property int lockFieldRadius: 22
+  readonly property int lockDotInset: 21
   readonly property int lockCaretWidth: 2
-  readonly property int lockCaretHeight: 14
-  readonly property int lockTextInset: 23
-  readonly property int lockFieldTextSize: 14
-
-  // The dots are the recording's: 8 px on a 12 px pitch, white, popping in
-  // without overshoot in about 80 ms.
+  readonly property int lockCaretHeight: 18
+  readonly property int lockTextInset: 25
+  readonly property int lockFieldTextSize: 13
   readonly property int lockDotSize: 8
   readonly property int lockDotGap: 4
   readonly property int lockDotPop: 80
 
-  // The now-playing line the recording does not draw. Kept from the surface
-  // this replaces, in the recording's own type, below the login cluster.
-  readonly property int lockNowPlayingBottom: 50
-  readonly property int lockNowPlayingSize: 14
-
-  // The ground's veil and the lock's neutrals, sampled off the recording.
-  // The veil is a flat black at 22.5 per cent - patch-averaged per channel
-  // across the mid-frame, where the blur's edge bleed cannot reach - and the
-  // type is warm white, each colour the core average of its glyphs.
-  readonly property color lockVeilColor: "#000000"
-  readonly property real lockVeilOpacity: 0.225
-  readonly property color lockTextPrimary: "#f0ebe8"
-  readonly property color lockTextSecondary: "#ddd7d3"
-  readonly property color lockFieldState: "#d1cccb"
-  readonly property color lockFieldHint: "#a9a4a0"
-  readonly property color lockCaretColor: "#c2bdbd"
-  readonly property real lockFieldFill: 0.27
-  readonly property real lockFieldStroke: 0.1
-  readonly property real lockAvatarFill: 0.2
+  // The lock snapshot uses the same tint and blur budget as FrostedSurface.
+  // Its source is the captured desktop rather than the compositor backdrop.
+  readonly property color lockVeilColor: surfaceTint
+  readonly property real lockVeilOpacity: surfaceTintAlpha
+  readonly property color lockTextPrimary: "#e0def4"
+  readonly property color lockTextSecondary: "#908caa"
+  readonly property color lockFieldState: "#e0def4"
+  readonly property color lockFieldHint: "#6e6a86"
+  readonly property color lockCaretColor: "#c4a7e7"
+  readonly property real lockFieldFill: 0.8
+  readonly property real lockFieldStroke: 0.55
+  readonly property real lockAvatarFill: 0.85
   readonly property real lockAvatarStroke: 0.5
   readonly property real lockStrokeWidth: 1.5
-  readonly property int lockBlurMax: 28
+  readonly property int lockBlurMax: surfaceBlurMax
+  readonly property real lockBlur: surfaceBlur
+  readonly property int lockIn: 350
+  readonly property int lockOut: 350
 
   // The pill's shut width. Board 09 draws all four combinations.
   //
@@ -569,10 +502,6 @@ Singleton {
     return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
   }
 
-  readonly property int barPillPadding: 12
-  // Character limits alone do not constrain wide glyphs.
-  readonly property int barMprisMaxWidth: 320
-
   readonly property int workspacePadding: 14
   readonly property int workspaceRadius: 18
   readonly property int workspaceGap: 6
@@ -581,54 +510,36 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  readonly property int animFast: 150
-  readonly property int animSlow: 300
-
   // Every morph in the shell is critically damped: it accelerates, arrives and
-  // stops, with no overshoot, wobble or settle bounce. The durations below are
-  // the time each kind of surface takes to settle.
-  readonly property int morphDuration: 330
-  readonly property int morphSurface: 339
-  // The launcher's own open, fitted to the source recording frame by frame
-  // between 4:23 and 4:50. Both the width and the height ride one curve, and
-  // one duration fits the pair to within 4% of their travel; the shared
-  // morphCurve below already has the right shape, only the clock was long.
-  readonly property int morphLauncher: 308
-  // The control centre's own open, re-fitted frame by frame at 60 fps against
-  // the source recording at 6:20 (the Alt+A open): the width track fits a
-  // critically damped spring at w = 20.2 and the height track at w = 19.4, a
-  // shared morphCurve duration of 318 and 336 ms. The old 295 ran ahead of the
-  // source by about two frames in the middle third, where the eye tracks the
-  // edge.
-  readonly property int morphControl: 325
-  readonly property int morphSubView: 311
-  // The wallpaper picker's own open, fitted frame by frame at 60 fps against
-  // the source recording at 4:00. Its width and its height ride one curve: the
-  // two tracks agree on their progress at every sample to within 1.5% of their
-  // travel, and the fit to the shared morphCurve lands within 3.5%.
+  // stops, with no overshoot, wobble or settle bounce. Motion below is graded
+  // by what the moving thing *is*, not by which surface it belongs to.
   //
-  // The source overshoots. It runs 7 px past its resting width on each side
-  // about 230 ms in and takes another 130 ms to come back, which is 1.6% of
-  // the travel - a spring at about zeta 0.8 rather than the critically damped
-  // one every other surface here uses. It is not reproduced: one bouncing
-  // surface among five that arrive and stop reads as a fault rather than as a
-  // flourish. This is the fit to the rise, which is the part the eye follows.
-  readonly property int morphWallpaper: 228
-  // The OSD's own open, re-fitted at 60 fps against the source recording's
-  // volume morph at 2:49. The travel fits a spring at w = 26.6, a morphCurve
-  // duration of 246 ms - the OSD is measurably snappier than the panels, and
-  // holding it on the panel clock reads as lag on a surface that answers a
-  // key press. The melt back into the clock fits the panel spring (w = 21.2,
-  // 308 ms) but on a 157 px travel the difference is under two frames, so one
-  // duration carries both directions.
-  readonly property int morphOsd: 250
-  // The island's own hover expand, re-fitted at 60 fps against the source
-  // recording at 1:33: w = 28.4, a morphCurve duration of 234 ms. Like the
-  // OSD this is a reflex surface - the pointer is already on it when it moves
-  // - and the panel clock read as a sluggish card.
-  readonly property int morphIsland: 240
-  readonly property int morphToggle: 269
-  readonly property int morphSlider: 249
+  // These four replace fourteen. The originals were each fitted frame by frame
+  // against the source recording and landed on 308, 311, 320, 325, 330 and
+  // 339 ms for six surfaces that do the same thing. At 60 fps that whole
+  // spread is under two frames across the entire travel, and under one frame
+  // at any instant the eye could sample - so no viewer could ever separate
+  // them, while the shell paid six tokens and six chances to drift. The fits
+  // were real; the distinctions they encoded were not. What the measurements
+  // did establish is the one split that survives here: reflex surfaces really
+  // are faster than deliberate ones, by about a third.
+  //
+  // A surface changing shape. The launcher, the control centre, the calendar,
+  // the wallpaper and recorder pickers, the power menu, the profiles card, the
+  // toast, and the sub-view slide inside the control centre. The calendar used
+  // to borrow the wallpaper picker's 228 ms, which was fitted to a 232 px
+  // travel and then asked to carry 528 px, so its edge moved at over twice
+  // every other panel's speed.
+  readonly property int morphSurface: 320
+
+  // A surface that answers something the user is already touching: the OSD
+  // under a volume key, the island under the pointer that is on it. Holding
+  // these on the panel duration reads as lag.
+  readonly property int morphReflex: 240
+
+  // A control changing state rather than shape: a toggle, a slider, a row or
+  // a tile taking or losing colour, anything that answers a hover or a press.
+  readonly property int morphState: 180
 
   // Content swaps are not morphs. Measured off the source recording at 60 fps,
   // a surface takes about 300 ms to change shape while the contents it carries
@@ -668,12 +579,6 @@ Singleton {
   // the same time. Measured as sharpness over contrast, which the veil cannot
   // touch, the radius tracks the veil to within 0.02 of its travel at every
   // sample, in both directions.
-  readonly property int lockIn: 350
-  // The source runs a longer ramp out and then destroys its surface partway
-  // through it, so its last frame jumps the remaining eight per cent. This is
-  // the fit to the part the eye follows, closed so nothing snaps.
-  readonly property int lockOut: 270
-
   // The content lags the ground going in and leads it coming out, which is
   // what lets the island pill read as returning partway through the unlock
   // rather than arriving after it. The clock is the extreme at both ends: it

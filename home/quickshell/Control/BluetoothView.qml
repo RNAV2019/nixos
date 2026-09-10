@@ -112,6 +112,15 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.refresh
       color: rescan.containsMouse ? Theme.text : Theme.subtle
+      scale: rescan.pressed ? 0.95 : 1
+
+      Behavior on color {
+        Tint {}
+      }
+
+      Behavior on scale {
+        Morph { duration: Theme.morphState }
+      }
       font.family: Theme.iconFont
       font.pixelSize: 16
 

@@ -262,31 +262,11 @@ Variants {
         }
       }
 
-      SystemClock {
-        id: pillClock
-
-        precision: SystemClock.Minutes
-      }
-
-      // The clock belongs to neither state, and stays in the growing box until
-      // the card has taken over. On the minute its digits roll the way the
-      // island's own do; see Ui/RollingClock.qml.
-      RollingClock {
-        x: (surface.width - width) / 2
-        y: (surface.height - height) / 2
-        text: Qt.formatDateTime(pillClock.date, "HH:mm")
-        color: Theme.text
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandClockSize
-        font.weight: Font.DemiBold
-        opacity: win.open ? 0 : 1
-        visible: opacity > 0
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
+      // Reuse the island clock for the pill state rather than maintaining a
+      // second copy with subtly different metrics.
+      IslandClock {
+        anchors.fill: parent
+        shown: !win.open
       }
 
       Item {
@@ -370,6 +350,15 @@ Variants {
           y: Theme.notifAppTop - 1
           text: Icons.close
           color: closeArea.containsMouse ? Theme.text : Theme.muted
+          scale: closeArea.pressed ? 0.95 : 1
+
+          Behavior on color {
+            Tint {}
+          }
+
+          Behavior on scale {
+            Morph { duration: Theme.morphState }
+          }
           font.family: Theme.iconFont
           font.pixelSize: Theme.notifCloseSize
 

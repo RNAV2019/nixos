@@ -29,6 +29,8 @@ Item {
   // False while the surface's contents are up: the clock belongs to the shape
   // the surface grew out of, not to what is drawn in it.
   property bool shown: true
+  property real clockShift: 0
+  property alias date: clock.date
 
   SystemClock {
     id: clock
@@ -37,7 +39,7 @@ Item {
   }
 
   RollingClock {
-    x: (parent.width - width) / 2
+    x: (parent.width - width) / 2 + clockRoot.clockShift
     y: clockRoot.origin && clockRoot.origin.fromCard ? clockRoot.origin.fromHeight / 2 - 8 * clockRoot.origin.fromOpenness - height / 2 : (parent.height - height) / 2
     text: Qt.formatDateTime(clock.date, "HH:mm")
     color: Theme.text

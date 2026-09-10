@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The bar every control-centre view wears: a back button, the view's name, and
 // whatever that view needs on the right.
@@ -28,6 +29,15 @@ Item {
     height: Theme.controlBackSize
     radius: height / 2
     color: Theme.withAlpha(Theme.highlightMed, backHover.containsMouse ? 0.95 : 0.75)
+    scale: backHover.pressed ? 0.97 : 1
+
+    Behavior on color {
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
 
     Text {
       anchors.centerIn: parent

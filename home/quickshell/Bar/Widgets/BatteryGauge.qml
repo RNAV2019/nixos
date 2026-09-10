@@ -49,7 +49,7 @@ Item {
 
     Behavior on width {
       NumberAnimation {
-        duration: Theme.morphToggle
+        duration: Theme.morphState
         easing.type: Easing.Bezier
         easing.bezierCurve: Theme.morphCurve
       }

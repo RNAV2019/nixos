@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // One quick-settings tile, and the control centre's split tap target.
 //
@@ -19,11 +20,13 @@ Rectangle {
   property string glyph: ""
   property bool on: false
   property bool opensView: false
+  property bool keyFocused: false
 
   signal toggled
   signal opened
 
   readonly property bool hovered: badgeHover.containsMouse || bodyHover.containsMouse
+  readonly property bool pressed: badgeHover.pressed || bodyHover.pressed
 
   height: Theme.controlTileHeight
   radius: Theme.controlTileRadius
@@ -35,14 +38,15 @@ Rectangle {
   }
 
   border.width: on ? 0 : 1
-  border.color: Theme.withAlpha(Theme.highlightMed, 0.7)
+  border.color: root.keyFocused ? Theme.accent : Theme.withAlpha(Theme.highlightMed, 0.7)
+  scale: pressed ? 0.97 : 1
 
   Behavior on color {
-    ColorAnimation {
-      duration: Theme.morphToggle
-      easing.type: Easing.Bezier
-      easing.bezierCurve: Theme.morphCurve
-    }
+    Tint {}
+  }
+
+  Behavior on scale {
+    Morph { duration: Theme.morphState }
   }
 
   Rectangle {
@@ -54,6 +58,10 @@ Rectangle {
     height: Theme.controlTileBadge
     radius: height / 2
     color: root.on ? Theme.withAlpha(Theme.base, badgeHover.containsMouse ? 0.28 : 0.16) : Theme.withAlpha(Theme.text, badgeHover.containsMouse ? 0.14 : 0.07)
+
+    Behavior on color {
+      Tint {}
+    }
 
     Text {
       anchors.centerIn: parent

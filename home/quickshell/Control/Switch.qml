@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The radio switch a sub-view header carries. It is the same on/off statement
 // the tiles make with their fill, in the one place a tile is not available.
@@ -10,6 +11,7 @@ Rectangle {
   // Not `enabled`: that name belongs to Item, and shadowing it would leave the
   // switch drawing one state while the input layer believed another.
   property bool interactive: true
+  readonly property bool pressed: mouse.pressed
 
   signal toggled(bool value)
 
@@ -19,11 +21,14 @@ Rectangle {
 
   opacity: interactive ? 1 : 0.4
   color: checked ? Theme.accent : Theme.withAlpha(Theme.highlightMed, 0.9)
+  scale: pressed ? 0.97 : 1
 
   Behavior on color {
-    ColorAnimation {
-      duration: Theme.morphToggle
-    }
+    Tint {}
+  }
+
+  Behavior on scale {
+    Morph { duration: Theme.morphState }
   }
 
   Rectangle {
@@ -36,7 +41,7 @@ Rectangle {
 
     Behavior on x {
       NumberAnimation {
-        duration: Theme.morphToggle
+        duration: Theme.morphState
         easing.type: Easing.Bezier
         easing.bezierCurve: Theme.morphCurve
       }
@@ -44,6 +49,7 @@ Rectangle {
   }
 
   MouseArea {
+    id: mouse
     anchors.fill: parent
     enabled: root.interactive
     cursorShape: Qt.PointingHandCursor

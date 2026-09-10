@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Widgets
 import qs.Commons
 import qs.Services
+import qs.Ui
 
 // One row of the control centre's notification list.
 //
@@ -115,6 +116,15 @@ Rectangle {
     y: 14
     text: Icons.close
     color: dismissHover.containsMouse ? Theme.text : Theme.muted
+    scale: dismissHover.pressed ? 0.95 : 1
+
+    Behavior on color {
+      Tint {}
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
     font.family: Theme.iconFont
     font.pixelSize: 14
 

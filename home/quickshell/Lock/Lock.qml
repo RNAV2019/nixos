@@ -18,10 +18,12 @@ Scope {
   property string status: ""
   property bool statusIsError: false
   property bool busy: false
-  // False until the first keystroke. The recording draws no field before it,
-  // and the pill's reveal rides this.
+  // False until the first keystroke. The lock field itself is present from the
+  // first board frame, but this state still tracks the input flow.
   property bool inputStarted: false
   property int attempts: 0
+  property string snapshotPath: ""
+  property string snapshotCleanupPath: ""
   readonly property bool secure: lockContext.secure
 
   // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell
@@ -45,7 +47,13 @@ Scope {
   LockReveal {
     id: reveal
 
-    onRevealOutFinished: lockContext.locked = false
+    onRevealOutFinished: {
+      root.snapshotCleanupPath = root.snapshotPath;
+      root.snapshotPath = "";
+      lockContext.locked = false;
+      if (root.snapshotCleanupPath.length > 0)
+        snapshotCleanup.running = true;
+    }
   }
 
   function lock() {
@@ -67,6 +75,13 @@ Scope {
     root.pendingPassword = "";
     root.pamErrored = false;
     pamWatchdog.restart();
+  }
+
+  function requestManualLock() {
+    if (lockContext.locked || snapshotCapture.running)
+      return;
+    root.snapshotPath = Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png";
+    snapshotCapture.running = true;
   }
 
   // respond() is dropped unless PAM is already asking, and a conversation that
@@ -92,8 +107,7 @@ Scope {
     root.statusIsError = false;
     root.busy = false;
     // The bar comes back on the first frame of the fade, not after it. The
-    // surface is see-through from here, so the pill spends the whole ramp
-    // emerging through the lifting veil.
+    // captured background unblurs underneath the returning session UI.
     Bus.sessionReady = true;
     reveal.animateOut();
   }
@@ -134,8 +148,28 @@ Scope {
     target: Bus
 
     function onLockRequested() {
+      root.requestManualLock();
+    }
+  }
+
+  // Capture before the session-lock protocol takes ownership of the output.
+  // Boot locks bypass this and continue to use the configured wallpaper.
+  Process {
+    id: snapshotCapture
+
+    command: ["grimblast", "save", "screen", root.snapshotPath]
+
+    onExited: function (exitCode) {
+      if (exitCode !== 0)
+        root.snapshotPath = "";
       root.lock();
     }
+  }
+
+  Process {
+    id: snapshotCleanup
+
+    command: ["rm", "-f", root.snapshotCleanupPath]
   }
 
   // Lock until this compositor instance completes its first secure lock.
@@ -265,18 +299,16 @@ Scope {
     WlSessionLockSurface {
       id: surface
 
-      // The surface is see-through, so what fades in is the lock over the live
-      // desktop rather than a copy of the wallpaper with the bar cut out of
-      // it. This is the whole reason the island pill can fade rather than
-      // snap: it is never hidden, it is covered - the recording's locked pill
-      // reads as a smooth blurred bowl under the veil, never a crisp one.
-      color: "transparent"
+      // Keep an opaque base mounted for the complete secure-lock lifetime.
+      // A transparent session-lock surface is composited as black by the
+      // compositor during lock/unlock, which creates the unwanted black flash.
+      color: Theme.base
 
       // Reveal once the compositor has created the surface. There is one of
       // these per screen and they share the one reveal clock, so a second
       // screen joins the ramp already in progress rather than restarting it.
       Component.onCompleted: {
-        if (!reveal.animatingIn && reveal.ground < 1)
+        if (!reveal.animatingIn && reveal.ground === 0 && reveal.clockAlpha === 0 && reveal.loginAlpha === 0)
           reveal.animateIn();
       }
 
@@ -285,6 +317,7 @@ Scope {
 
         anchors.fill: parent
         outputScreen: surface.screen
+        backgroundSource: root.snapshotPath.length > 0 ? "file://" + root.snapshotPath : Wallpapers.url
         password: root.password
         status: root.status
         statusIsError: root.statusIsError

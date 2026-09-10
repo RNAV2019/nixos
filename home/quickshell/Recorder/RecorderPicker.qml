@@ -27,34 +27,23 @@ Variants {
 
   model: Quickshell.screens
 
-  PanelWindow {
+  IslandSurface {
     id: win
 
-    required property var modelData
-
-    property bool open: false
+    key: "recorder"
+    openWidth: Theme.recorderWidth
+    openHeight: Theme.recorderHeight
+    openRadius: Theme.recorderRadius
 
     // Raised while the island is being handed to another surface. While the
     // handover's still is held, this surface's shape rides the taker's own
     // morph; handover is also what keeps the final cut to the pill - once
     // the still is taken down, covered by the taker - instant. See
     // Ui/IslandOrigin.qml.
-    property bool handover: false
-
     // The shape this surface grows out of, and the handover protocol it
     // follows when another surface takes the island: adopt the island's
     // card, claim, take the shape the holder was wearing. One of these for
     // each of the six surfaces that stand in for the island.
-    IslandOrigin {
-      id: origin
-
-      window: win
-    }
-
-    readonly property bool focused: Monitors.isFocused(win.screen)
-
-    readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
-
     // Which capture tile the ring is on. Seeded from what the recorder was
     // last left on, so the picker opens on the last answer.
     property int selected: 0
@@ -109,7 +98,7 @@ Variants {
         Recorder.microphone = value;
     }
 
-    function show() {
+    onOpening: {
       selected = Math.max(0, ["screen", "window", "region"].indexOf(Recorder.target));
       // Take the island. The ordering, the card, the handover mailbox and
       // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
@@ -118,26 +107,11 @@ Variants {
       // the one handover that contracts: this card is much smaller than that
       // panel, so the morph - both this one and the still the panel rides
       // with it - runs backwards out of the box it was wearing.
-      handover = false;
-      origin.claim(Theme.recorderWidth, Theme.recorderHeight, Theme.recorderRadius, Theme.morphWallpaper);
-      open = true;
-    }
-
-    function hide() {
-      origin.release();
-      open = false;
     }
 
     // Giving the island up to the surface that claimed it. The still this
     // leaves behind is what the eye sees until the taker's first frame
     // lands; see Ui/IslandOrigin.qml.
-    function dismiss() {
-      origin.publish(surface.width, surface.height, surface.surfaceRadius);
-      origin.hold(surface.width, surface.height, surface.surfaceRadius);
-      handover = true;
-      open = false;
-    }
-
     // The row is a ring, as the wallpaper row is.
     function step(delta) {
       selected = ((selected + delta) % 3 + 3) % 3;
@@ -154,60 +128,6 @@ Variants {
       });
     }
 
-    screen: modelData
-    visible: showing
-    color: "transparent"
-
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "quickshell-recorder"
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
-
-    exclusionMode: ExclusionMode.Ignore
-
-    property bool focusPrimed: false
-
-    WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
-
-    Timer {
-      id: focusPrime
-
-      interval: 75
-      onTriggered: win.focusPrimed = true
-    }
-
-    onOpenChanged: {
-      if (open) {
-        focusPrimed = false;
-        focusPrime.restart();
-        Qt.callLater(function () {
-          if (win.open)
-            keys.forceActiveFocus();
-        });
-      } else {
-        focusPrime.stop();
-        focusPrimed = false;
-      }
-    }
-
-    onShowingChanged: {
-      if (showing) {
-        Bus.recorderScreen = win.screen ? win.screen.name : "";
-      } else {
-        // The close is off screen; the shape Behaviors are live again for
-        // the next open. A held still unmaps with handover still raised,
-        // which is what keeps its cut to the pill instant.
-        win.handover = false;
-        if (win.screen && Bus.recorderScreen === win.screen.name)
-          Bus.recorderScreen = "";
-      }
-    }
-
     Connections {
       target: Bus
 
@@ -217,82 +137,8 @@ Variants {
         if (win.focused && !win.open)
           win.show();
       }
-
-      function onRecorderToggled() {
-        if (win.open)
-          win.hide();
-        else if (win.focused)
-          Recorder.toggle();
-      }
-
-      function onRecorderClosed() {
-        win.hide();
-      }
-
-      // Another surface taking the island takes it from here. On this
-      // output it is growing in this surface's place, so this one cuts;
-      // on any other output nothing is growing here, so this one takes
-      // its own close.
-      function onIslandClaimed(screen) {
-        if (!win.open)
-          return;
-        if (win.screen && screen === win.screen.name)
-          win.dismiss();
-        else
-          win.hide();
-      }
     }
-
-    MouseArea {
-      anchors.fill: parent
-      enabled: win.open
-      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-      onClicked: win.hide()
-    }
-
-    FrostedSurface {
-      id: surface
-
-      x: (win.width - width) / 2
-      y: Theme.barMarginTop
-
-      clipContent: true
-
-      implicitWidth: win.open ? Theme.recorderWidth : origin.held ? origin.heldWidth : origin.originWidth
-      implicitHeight: win.open ? Theme.recorderHeight : origin.held ? origin.heldHeight : origin.originHeight
-      surfaceRadius: win.open ? Theme.recorderRadius : origin.held ? origin.heldRadius : origin.originRadius
-
-      Behavior on implicitWidth {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Behavior on implicitHeight {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Behavior on surfaceRadius {
-        enabled: !origin.snapping && (!win.handover || origin.held)
-
-        Morph {
-          duration: origin.held ? origin.heldDuration : Theme.morphWallpaper
-        }
-      }
-
-      Item {
-        id: keys
-
-        anchors.fill: parent
-        focus: true
-
-        Keys.onPressed: function (event) {
+    onKeyPressed: function (event) {
           switch (event.key) {
           case Qt.Key_Escape:
             win.hide();
@@ -324,93 +170,34 @@ Variants {
           default:
             return;
           }
-          event.accepted = true;
+      event.accepted = true;
+    }
+
+    Item {
+      id: body
+
+      anchors.fill: parent
+      opacity: win.open || win.origin.held ? 1 : 0
+      visible: opacity > 0
+
+      Behavior on opacity {
+        enabled: !win.origin.held
+
+        Morph {
+          duration: Theme.morphContent
         }
       }
-
-      // The carried-over clock; see Ui/IslandClock.qml. Out of the control
-      // centre this surface is open while it contracts, so the clock stays
-      // hidden: a card that contracted out of the control centre never had a
-      // clock on it.
-      IslandClock {
-        anchors.fill: parent
-        origin: origin
-        shown: !win.open && !origin.held
-      }
-
-      Item {
-        id: body
-
-        anchors.fill: parent
-        opacity: win.open || origin.held ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-          enabled: !origin.held
-
-          Morph {
-            duration: Theme.morphContent
-          }
-        }
 
         // The capture row, on the power menu's grid.
-        Repeater {
+        ChoiceTiles {
+          inset: Theme.recorderInset
           model: win.targets
-
-          Item {
-            id: tile
-
-            required property int index
-            required property var modelData
-
-            readonly property bool chosen: index === win.selected
-
-            x: Theme.recorderInset + index * (Theme.recorderTileWidth + Theme.recorderTileGap)
-            y: Theme.recorderTileTop
-            width: Theme.recorderTileWidth
-            height: Theme.recorderTileHeight
-
-            Rectangle {
-              anchors.fill: parent
-              radius: Theme.recorderTileRadius
-              color: tile.chosen ? Theme.accent : Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
-              border.width: tile.chosen ? 0 : 1
-              border.color: Theme.withAlpha(Theme.highlightMed, Theme.powerTileBorderAlpha)
-
-              Behavior on color {
-                ColorAnimation {
-                  duration: Theme.morphContent
-                }
-              }
-            }
-
-            Text {
-              x: (parent.width - width) / 2
-              y: Theme.recorderGlyphTop - Theme.recorderTileTop
-              text: tile.modelData.glyph
-              color: tile.chosen ? Theme.base : Theme.text
-              font.family: Theme.iconFont
-              font.pixelSize: Theme.recorderGlyphSize
-            }
-
-            Text {
-              x: (parent.width - width) / 2
-              y: Theme.recorderTileLabelTop - Theme.recorderTileTop
-              text: tile.modelData.label
-              color: tile.chosen ? Theme.base : Theme.text
-              font.family: Theme.uiFont
-              font.pixelSize: Theme.recorderTileLabelSize
-              font.weight: tile.chosen ? Font.Bold : Font.Medium
-            }
-
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                win.selected = tile.index;
-                win.activate();
-              }
-            }
+          currentIndex: win.selected
+          activeIndex: win.selected
+          onEntered: win.selected = index
+          onActivated: {
+            win.selected = index;
+            win.activate();
           }
         }
 
@@ -468,6 +255,5 @@ Variants {
           }
         }
       }
-    }
   }
 }

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import qs.Commons
+import qs.Ui
 
 // One preview in the carousel.
 //
@@ -90,9 +91,7 @@ Item {
     border.color: root.selected ? Theme.accent : root.active ? Theme.withAlpha(Theme.accent, Theme.wallpaperActiveBorderAlpha) : Theme.withAlpha(Theme.highlightMed, Theme.wallpaperTileBorderAlpha)
 
     Behavior on border.color {
-      ColorAnimation {
-        duration: Theme.morphContent
-      }
+      Tint {}
     }
   }
 

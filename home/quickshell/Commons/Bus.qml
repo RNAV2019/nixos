@@ -9,29 +9,105 @@ Singleton {
   property bool sessionReady: false
 
   signal lockRequested
-  signal sessionToggled
-
-  signal launcherToggled
-  signal launcherClosed
-
-  signal controlToggled
-  signal controlClosed
-
-  signal wallpaperToggled
-  signal wallpaperClosed
-
-  signal recorderToggled
-  signal recorderClosed
-
-  signal calendarToggled
-  signal calendarClosed
-
-  signal profilesToggled
-  signal profilesClosed
 
   // Raised when something asks to record but nothing has been chosen yet. The
   // picker answers this; the recorder itself never opens a surface.
   signal recorderRequested
+
+  // Opening and closing an island surface, by key rather than by name.
+  //
+  // There used to be a toggled/closed pair per surface and a screen property
+  // per surface, which meant seven near-identical signal declarations here,
+  // seven IpcHandlers in shell.qml, and seven copies of the same three-line
+  // registration handler out in the surfaces. Keying them turns all of that
+  // into one of each. The keys are "launcher", "control", "wallpaper",
+  // "recorder", "calendar", "session", "profiles", "osd" and "notify".
+  signal surfaceToggled(string key)
+  signal surfaceClosed(string key)
+
+  function toggleSurface(key) {
+    surfaceToggled(key);
+  }
+
+  function closeSurface(key) {
+    surfaceClosed(key);
+  }
+
+  // Which output each surface currently owns, keyed the same way. Absent means
+  // the surface is not on screen anywhere.
+  //
+  // Reassigned wholesale rather than mutated, because a binding cannot see a
+  // property written into a JavaScript object in place - islandHeld below
+  // would go stale the first time a surface opened.
+  property var owners: ({})
+
+  // Transient surfaces do not claim the island through owners because they
+  // dismiss themselves. The bar still needs their output markers to stand the
+  // pill down while the compositor blurs the desktop behind them.
+  property string osdScreen: ""
+  property string notifyScreen: ""
+
+  function setOwner(key, screenName) {
+    var next = {};
+    for (var k in owners)
+      next[k] = owners[k];
+    if (screenName === "")
+      delete next[key];
+    else
+      next[key] = screenName;
+    owners = next;
+  }
+
+  function ownerOf(key) {
+    return owners[key] !== undefined ? owners[key] : "";
+  }
+
+  // The two that arrive unasked. Everything else is up until the user
+  // dismisses it, which is the distinction islandHeld and islandReplaced are
+  // actually about.
+  readonly property var transientKeys: ["osd", "notify"]
+
+  function isTransient(key) {
+    return transientKeys.indexOf(key) !== -1;
+  }
+
+  // True while a surface the user has to dismiss is holding the island. The
+  // two that arrive unasked wait on this rather than shoving a panel off the
+  // screen the moment a volume key is pressed or a notification lands.
+  readonly property bool islandHeld: {
+    for (var k in owners) {
+      if (!root.isTransient(k))
+        return true;
+    }
+    return false;
+  }
+
+  // True while any surface at all is standing in for the island on this
+  // output. No two of them are ever open at once: the ones the user opens
+  // close each other, and the two that arrive unasked hold themselves back
+  // while any of those is up.
+  function islandTaken(name) {
+    if (name === "")
+      return false;
+    for (var k in owners) {
+      if (owners[k] === name)
+        return true;
+    }
+    return false;
+  }
+
+  // Of those, the ones that are here until the user dismisses them, as against
+  // the OSD's second and a half. The island drops a pin for these and not for
+  // the others.
+  function islandReplaced(name) {
+    if (name === "")
+      return false;
+    for (var k in owners) {
+      if (owners[k] === name && !root.isTransient(k))
+        return true;
+    }
+    return false;
+  }
 
   // Emitted by whichever surface is about to take the island, just before it
   // starts to grow, carrying the output it is taking it on. Every island
@@ -43,6 +119,13 @@ Singleton {
   // something is growing in its place - and on any other it takes its own
   // close, because nothing is.
   signal islandClaimed(string screen)
+
+  // Raised by a surface letting the island go with nothing growing in its
+  // place, carrying the output it let it go on. A still held for that surface
+  // is owed to a taker that is now leaving, and the taker shrinking back to
+  // the pill uncovers it: the panel before last comes back for a moment on
+  // the way down. Whoever is holding one drops it instead.
+  signal islandDropped(string screen)
 
   // The live shape of a surface that has just given the island up to another
   // one in the same frame, published by the surface letting go and consumed
@@ -75,13 +158,6 @@ Singleton {
   // stale-still drop in Ui/IslandOrigin.qml.
   property int claimSerial: 0
 
-  // Raised by a surface letting the island go with nothing growing in its
-  // place, carrying the output it let it go on. A still held for that surface
-  // is owed to a taker that is now leaving, and the taker shrinking back to
-  // the pill uncovers it: the panel before last comes back for a moment on
-  // the way down. Whoever is holding one drops it instead.
-  signal islandDropped(string screen)
-
   // The island card that is currently standing open, or null while every
   // island is a pill.
   //
@@ -92,63 +168,4 @@ Singleton {
   // the instant it opens and picks the shape up part way if the card is still
   // growing.
   property var islandCard: null
-
-  // The output the launcher currently owns, if any.
-  //
-  // The launcher opens at exactly the island's collapsed size, on a layer
-  // above it, and only ever grows, so it hides the island by covering it and
-  // the bar does not have to take the island away. That matters: the two are
-  // separate layer surfaces committed independently, and a bar that hid its
-  // island the instant the launcher was asked to open would blank the pill a
-  // frame or more before the launcher had one to show in its place.
-  //
-  // What the bar does owe the launcher is a collapsed island. An island held
-  // open by hover or by a pin is wider and taller than the launcher's first
-  // frames, so it would show around the edges of a surface meant to cover it.
-  property string launcherScreen: ""
-
-  // The control centre takes the island's place on the same terms, so the bar
-  // watches both and stands its island down for whichever holds an output.
-  property string controlScreen: ""
-
-  // And the wallpaper picker, on the same terms as those two.
-  property string wallpaperScreen: ""
-
-  // And the recorder picker, which is the wallpaper picker's twin in every
-  // way that matters here.
-  property string recorderScreen: ""
-
-  // And the calendar, which the clock on the pill opens.
-  property string calendarScreen: ""
-
-  // The power menu, which is the island too.
-  property string sessionScreen: ""
-
-  // The power profiles card, which is the island too.
-  property string profilesScreen: ""
-
-  // The OSD takes the island's place too, for the second and a half it is up.
-  property string osdScreen: ""
-
-  // And the toast, which is the island for as long as it is being read.
-  property string notifyScreen: ""
-
-  // True while a surface the user has to dismiss is holding the island. The two
-  // that arrive unasked - the OSD and the toast - wait on this rather than
-  // shoving a panel off the screen the moment a volume key is pressed or a
-  // notification lands.
-  readonly property bool islandHeld: launcherScreen !== "" || controlScreen !== "" || wallpaperScreen !== "" || recorderScreen !== "" || calendarScreen !== "" || sessionScreen !== "" || profilesScreen !== ""
-
-  // True while any surface is standing in for the island. No two of them are
-  // ever open at once: the ones the user opens close each other, and the two
-  // that arrive unasked hold themselves back while any of those is up.
-  function islandTaken(name) {
-    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name || profilesScreen === name || osdScreen === name || notifyScreen === name);
-  }
-
-  // Of those, the ones that are here until the user dismisses them, as against
-  // the OSD's second and a half.
-  function islandReplaced(name) {
-    return name !== "" && (launcherScreen === name || controlScreen === name || wallpaperScreen === name || recorderScreen === name || calendarScreen === name || sessionScreen === name || profilesScreen === name);
-  }
 }

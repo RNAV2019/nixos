@@ -10,7 +10,7 @@ import qs.Commons
 //     Morph {}
 //   }
 NumberAnimation {
-  duration: Theme.morphDuration
+  duration: Theme.morphSurface
   easing.type: Easing.Bezier
   easing.bezierCurve: Theme.morphCurve
 }

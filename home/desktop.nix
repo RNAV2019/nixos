@@ -153,7 +153,7 @@ in {
           rounding = 8;
           blur = {
             enabled = true;
-            size = 8;
+            size = 16;
             passes = 3;
             vibrancy = 0.1696;
           };
@@ -427,17 +427,10 @@ in {
         }
       ];
 
-      # No surface asks the compositor to blur for it. Every one of them is a
-      # FrostedSurface, which takes the crop of the wallpaper behind it and
-      # blurs that itself, inside its own rounded shape.
-      #
-      # The session layer used to ask, back when the power menu was a dimmed
-      # sheet over the whole screen and the blur was the sheet's own effect.
-      # It is a small card now, but the layer surface it lives on still covers
-      # the screen so the card can be centred on it, and a blur rule applies to
-      # the surface, not to what is drawn on it: the whole desktop went soft
-      # behind a 316 px panel. Measured, a region far from the card lost almost
-      # all its detail - its standard deviation fell from 0.16 to 0.01.
+      # FrostedSurface leaves the card translucent and lets Hyprland blur the
+      # actual desktop behind it. The panel windows cover the whole output for
+      # outside-click handling, so ignore transparent layer pixels or the blur
+      # would affect the entire desktop instead of only the visible card.
       layer_rule = [
         # The island's other shapes animate their own open, and the shape is
         # the whole point: the pill grows into the panel and the panel is what
@@ -448,7 +441,9 @@ in {
         # Measured: the strip behind the panel still reads the window under it
         # 200 ms into the open, and is opaque by 300.
         {
-          match.namespace = "quickshell-(launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
+          blur = true;
+          ignore_alpha = 0.01;
           no_anim = true;
         }
       ];

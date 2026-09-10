@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // A row in a control-centre sub-view: a network, an audio device, a headset.
 //
@@ -20,6 +21,7 @@ Rectangle {
   signal clicked
 
   readonly property bool hovered: hover.containsMouse
+  readonly property bool pressed: hover.pressed
 
   readonly property color ink: selected ? Theme.base : Theme.text
 
@@ -32,10 +34,14 @@ Rectangle {
     return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.highlightLow, 0.9);
   }
 
+  scale: pressed ? 0.97 : 1
+
+  Behavior on scale {
+    Morph { duration: Theme.morphState }
+  }
+
   Behavior on color {
-    ColorAnimation {
-      duration: Theme.morphToggle
-    }
+    Tint {}
   }
 
   MouseArea {

@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The round badge beside a device slider. Muted it goes red, because mute is
 // the one audio state worth spotting from across the panel.
@@ -19,6 +20,16 @@ Rectangle {
     if (muted)
       return Theme.withAlpha(Theme.urgent, hover.containsMouse ? 0.95 : 0.8);
     return Theme.withAlpha(hover.containsMouse ? Theme.highlightMed : Theme.highlightLow, 0.9);
+  }
+
+  scale: hover.pressed ? 0.97 : 1
+
+  Behavior on color {
+    Tint {}
+  }
+
+  Behavior on scale {
+    Morph { duration: Theme.morphState }
   }
 
   Text {

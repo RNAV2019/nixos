@@ -78,6 +78,17 @@
         inherit pkgs;
         icalAgenda = ical-agenda;
       };
+
+      quickshell-qmlformat = pkgs.runCommand "quickshell-qmlformat" {
+        nativeBuildInputs = [pkgs.qt6Packages.qtdeclarative];
+      } ''
+        cp -R ${./home/quickshell} quickshell
+        chmod -R u+w quickshell
+        find quickshell -type f -name '*.qml' -print0 | while IFS= read -r -d "" file; do
+          qmlformat --force --inplace "$file"
+        done
+        touch "$out"
+      '';
     };
 
     nixosConfigurations = {

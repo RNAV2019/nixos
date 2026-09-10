@@ -238,26 +238,28 @@ Scope {
 
         Behavior on implicitWidth {
           Morph {
-            duration: Theme.morphOsd
+            duration: Theme.morphReflex
           }
         }
 
         Behavior on implicitHeight {
           Morph {
-            duration: Theme.morphOsd
+            duration: Theme.morphReflex
           }
         }
 
         Behavior on surfaceRadius {
           Morph {
-            duration: Theme.morphOsd
+            duration: Theme.morphReflex
           }
         }
 
-        SystemClock {
+        IslandClock {
           id: clock
 
-          precision: SystemClock.Minutes
+          anchors.fill: parent
+          shown: !window.open
+          clockShift: pill.clockShift
         }
 
         // The pill the OSD grows out of and shrinks back into, drawn exactly as
@@ -281,28 +283,15 @@ Scope {
 
           readonly property real collapsedGap: 7.5
           readonly property real clockShift: Media.active ? (equaliser.implicitWidth + collapsedGap) / 2 : 0
-          readonly property real clockLeft: clockLabel.x
-
           Equaliser {
             id: equaliser
 
-            x: pill.clockLeft - pill.collapsedGap - implicitWidth
+            x: parent.width / 2 + pill.clockShift - Theme.islandClockSize * 1.5 - pill.collapsedGap - implicitWidth
             y: (parent.height - implicitHeight) / 2
             playing: Media.playing
             visible: Media.active
           }
 
-          RollingClock {
-            id: clockLabel
-
-            x: (parent.width - width) / 2 + pill.clockShift
-            y: (parent.height - height) / 2
-            text: Qt.formatDateTime(clock.date, "HH:mm")
-            color: Theme.text
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.islandClockSize
-            font.weight: Font.DemiBold
-          }
         }
 
         // Board 09's row, at the board's own positions in the board's own
