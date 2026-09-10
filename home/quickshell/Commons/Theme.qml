@@ -488,59 +488,73 @@ Singleton {
   // Six agenda rows is what the panel has room for below the grid.
   readonly property int calAgendaMax: 3
 
-  // The lock screen. Board 13: the clock block rides high, the login cluster
-  // sits low, and there is nothing between them but the wallpaper. The board
-  // draws a 1920x1080 frame, so these are board units; Lock.qml maps 1080 of
-  // them onto the output height and everything scales with it.
-  readonly property int lockDateTop: 150
-  readonly property int lockDateSize: 20
-  readonly property int lockClockTop: 175
-  readonly property int lockClockSize: 92
+  // The lock screen, and its second transcription. The first one came off the
+  // board; this one comes off the source recording itself (10:33-10:43 of
+  // saneAspect's "It's done. Everything's using Quickshell now."), measured
+  // per-pixel off the frames at native 1080p. The recording's lock carries no
+  // accent colour anywhere: the ground is a neutral black veil over the blur,
+  // and every surface on it is white translucency under warm-white type. The
+  // numbers below are the recording's own glyph and pill boxes, with the
+  // item-top y each one needs so its glyphs land where the frames put them -
+  // the clock's, for instance, at 144 so its digits span 180 to 285.
+  //
+  // The board still settles the motion (the cross-fades, the staggers and the
+  // spring are its), and the board's blur radius stays: the recording's own
+  // radius is not separable from its compression.
+  readonly property int lockDateTop: 125
+  readonly property int lockDateSize: 22
+  readonly property int lockClockTop: 144
+  readonly property int lockClockSize: 146
 
-  readonly property int lockAvatarTop: 824
-  readonly property int lockAvatarSize: 56
-  readonly property int lockAvatarInitial: 22
-  readonly property int lockUserTop: 894
-  readonly property int lockUserSize: 14
+  readonly property int lockAvatarTop: 836
+  readonly property int lockAvatarSize: 58
+  readonly property int lockAvatarGlyphSize: 24
+  readonly property int lockUserTop: 915
+  readonly property int lockUserSize: 18
 
-  readonly property int lockFieldTop: 928
-  readonly property int lockFieldWidth: 280
-  readonly property int lockFieldHeight: 44
-  readonly property int lockFieldRadius: 22
-  // The board puts the caret at 21 in from the field edge and the placeholder
-  // at 25, so the caret leads the text rather than sitting inside it.
-  readonly property int lockCaretInset: 21
-  readonly property int lockTextInset: 25
-  readonly property int lockFieldTextSize: 13
-  readonly property int lockCaretWidth: 1
-  readonly property int lockCaretHeight: 18
+  readonly property int lockFieldTop: 956
+  readonly property int lockFieldWidth: 200
+  readonly property int lockFieldHeight: 32
+  readonly property int lockFieldRadius: 16
+  // The field starts hidden. The recording shows no pill until the first
+  // keystroke - a centred hint floats where the field will be - and the pill
+  // then fades in around the first dot.
+  readonly property int lockFieldReveal: 100
+  // The caret rides the dot row: 16 in from the field edge, where the first
+  // dot starts, and the state text follows it 7 further in.
+  readonly property int lockDotInset: 16
+  readonly property int lockCaretWidth: 2
+  readonly property int lockCaretHeight: 14
+  readonly property int lockTextInset: 23
+  readonly property int lockFieldTextSize: 14
 
-  // The board draws the field empty, so the dots are not from it. They are
-  // sized off the placeholder they replace: a dot the height of its x-height,
-  // on a pitch that keeps a long password inside the field's fixed width.
-  readonly property int lockDotSize: 7
-  readonly property int lockDotGap: 5
+  // The dots are the recording's: 8 px on a 12 px pitch, white, popping in
+  // without overshoot in about 80 ms.
+  readonly property int lockDotSize: 8
+  readonly property int lockDotGap: 4
+  readonly property int lockDotPop: 80
 
-  // The now-playing line the board does not draw. It is kept from the surface
-  // this replaces, in the board's type, below the login cluster.
+  // The now-playing line the recording does not draw. Kept from the surface
+  // this replaces, in the recording's own type, below the login cluster.
   readonly property int lockNowPlayingBottom: 50
   readonly property int lockNowPlayingSize: 14
 
-  readonly property real lockVeilOpacity: 0.55
-  readonly property real lockFieldFill: 0.8
-  readonly property real lockFieldStroke: 0.55
-  readonly property real lockAvatarFill: 0.85
+  // The ground's veil and the lock's neutrals, sampled off the recording.
+  // The veil is a flat black at 22.5 per cent - patch-averaged per channel
+  // across the mid-frame, where the blur's edge bleed cannot reach - and the
+  // type is warm white, each colour the core average of its glyphs.
+  readonly property color lockVeilColor: "#000000"
+  readonly property real lockVeilOpacity: 0.225
+  readonly property color lockTextPrimary: "#f0ebe8"
+  readonly property color lockTextSecondary: "#ddd7d3"
+  readonly property color lockFieldState: "#d1cccb"
+  readonly property color lockFieldHint: "#a9a4a0"
+  readonly property color lockCaretColor: "#c2bdbd"
+  readonly property real lockFieldFill: 0.27
+  readonly property real lockFieldStroke: 0.1
+  readonly property real lockAvatarFill: 0.2
   readonly property real lockAvatarStroke: 0.5
   readonly property real lockStrokeWidth: 1.5
-  // The board blurs the wallpaper by 28 and puts nothing else over it but the
-  // veil. It carries no colour grade, and the source recording is no guide
-  // here: its ground is a neutral black at 22.5 per cent, measured per channel
-  // off the frames either side of the lock, not a tinted veil at all. The two
-  // sources agree on the motion and not on the look, so the look is the
-  // board.s and the ground is blur and veil alone.
-  //
-  // Penpot states a Gaussian sigma and MultiEffect takes a maximum radius, so
-  // this is the board.s number in a unit that is close rather than equal.
   readonly property int lockBlurMax: 28
 
   // The pill's shut width. Board 09 draws all four combinations.

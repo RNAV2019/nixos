@@ -32,6 +32,7 @@ Singleton {
   readonly property string lock: "󰌾"
   readonly property string reboot: "󰜉"
   readonly property string shutdown: "󰐥"
+  readonly property string person: "󰀄"
 
   readonly property string bluetoothOn: ""
   readonly property string bluetoothOff: "󰂲"

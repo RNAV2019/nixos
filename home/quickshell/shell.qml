@@ -28,6 +28,7 @@ ShellRoot {
   Lock {
     id: lockScreen
   }
+  LockPreview {}
 
   IpcHandler {
     target: "control"
