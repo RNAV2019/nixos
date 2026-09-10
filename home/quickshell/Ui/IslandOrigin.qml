@@ -36,9 +36,12 @@ QtObject {
   // before it goes forwards. The card is the same 520 px column at the same
   // radius the panels settle at, so growing out of it is a change of height
   // and nothing else.
+  //
+  // Only a width and a height: the corner is not part of the shape a surface
+  // is handed, because no surface animates it. It reads its corner off its own
+  // live height instead; see Bar/Island.qml.
   property real fromWidth: 0
   property real fromHeight: 0
-  property real fromRadius: 0
 
   readonly property bool fromCard: fromHeight > 0
 
@@ -52,7 +55,6 @@ QtObject {
 
   readonly property real originWidth: fromCard ? fromWidth : collapsedWidth
   readonly property real originHeight: fromCard ? fromHeight : Theme.barHeight
-  readonly property real originRadius: fromCard ? fromRadius : Theme.islandRadius
 
   // How far open the card was when it handed over, on the island's own scale
   // where 0 is the pill and 1 the card. The clock the surface carries over is
@@ -150,12 +152,10 @@ QtObject {
 
     var w = card.width;
     var h = card.height;
-    var r = card.surfaceRadius;
 
     snapping = true;
     fromWidth = w;
     fromHeight = h;
-    fromRadius = r;
     snapping = false;
   }
 
@@ -172,8 +172,6 @@ QtObject {
     Bus.handoffWidth = 0;
     var pendingHeight = Bus.handoffHeight;
     Bus.handoffHeight = 0;
-    var pendingRadius = Bus.handoffRadius;
-    Bus.handoffRadius = 0;
 
     if (pendingScreen === "" || !origin.window || !origin.window.screen || pendingScreen !== origin.window.screen.name)
       return;
@@ -181,7 +179,6 @@ QtObject {
     snapping = true;
     fromWidth = pendingWidth;
     fromHeight = pendingHeight;
-    fromRadius = pendingRadius;
     snapping = false;
     handedOver = true;
   }
@@ -194,7 +191,6 @@ QtObject {
     held = false;
     fromWidth = 0;
     fromHeight = 0;
-    fromRadius = 0;
     Bus.islandDropped(screenName);
   }
 
@@ -230,11 +226,10 @@ QtObject {
   // one's place. What this one owes it is the shape it was wearing,
   // published before this surface lets go of it, so the switch lands as one
   // morph instead of a cut to the pill.
-  function publish(width, height, radius) {
+  function publish(width, height) {
     Bus.handoffScreen = screenName;
     Bus.handoffWidth = width;
     Bus.handoffHeight = height;
-    Bus.handoffRadius = radius;
     release();
   }
 }

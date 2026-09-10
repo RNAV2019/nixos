@@ -139,7 +139,6 @@ Singleton {
   property string handoffScreen: ""
   property real handoffWidth: 0
   property real handoffHeight: 0
-  property real handoffRadius: 0
 
   // The open shape and morph duration of the surface that is claiming the
   // island, written by it just before the claim and consumed by the holder's

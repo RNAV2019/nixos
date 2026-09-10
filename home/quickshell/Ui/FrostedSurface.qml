@@ -9,7 +9,10 @@ import qs.Commons
 Item {
   id: root
 
-  property int surfaceRadius: height / 2
+  // Defaults to the stadium. Callers that want a flatter corner pass their own
+  // radius, but they pass it through min(height / 2, r) rather than animating
+  // it, so a short surface is always fully round; see Bar/Island.qml.
+  property real surfaceRadius: height / 2
   property real screenOffsetX: 0
   property real screenOffsetY: 0
 

@@ -59,10 +59,18 @@ FrostedSurface {
   property bool hoverOpen: false
   readonly property bool expanded: !suppressed && (pinned || hoverOpen)
 
+  // Both delays are the source's, timed off six hover opens and six closes in
+  // the recordings by tracking the pointer against the island's own box: about
+  // 50 ms from the pointer landing on the pill to the card starting to grow,
+  // and about 40 ms from it leaving to the shrink. Both are upper bounds -
+  // they include input and capture latency, so the shell's own timers may well
+  // be shorter still. They replace a 120 ms open and a 250 ms close grace,
+  // which held the card shut long enough to read as a hesitation and then held
+  // it open long enough to read as a lag.
   Timer {
     id: openDelay
 
-    interval: 120
+    interval: 50
     onTriggered: if (hover.containsMouse)
       root.hoverOpen = true
   }
@@ -70,7 +78,7 @@ FrostedSurface {
   Timer {
     id: closeGrace
 
-    interval: 250
+    interval: 40
     onTriggered: if (!hover.containsMouse && !root.pinned)
       root.hoverOpen = false
   }
@@ -99,24 +107,22 @@ FrostedSurface {
 
   implicitWidth: expanded ? Theme.islandExpandedWidth : collapsedWidth
   implicitHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
-  surfaceRadius: expanded ? Theme.islandExpandedRadius : Theme.islandRadius
+
+  // The corner is not animated, because in the source it is not a property
+  // that travels - it is read off the height. A per-frame corner fit against
+  // the recordings gives radius = min(height / 2, the surface's own radius) to
+  // 1.25 px rms, against 5.32 px for a radius interpolated across the morph.
+  // What that buys is that the shape stays a true stadium, fully round at both
+  // ends, until it is tall enough for the corner to bite; interpolating made
+  // the ends stop being round on the first frame of the morph instead.
+  surfaceRadius: Math.min(height / 2, Theme.islandExpandedRadius)
 
   Behavior on implicitWidth {
-    Morph {
-      duration: Theme.morphReflex
-    }
+    Morph {}
   }
 
   Behavior on implicitHeight {
-    Morph {
-      duration: Theme.morphReflex
-    }
-  }
-
-  Behavior on surfaceRadius {
-    Morph {
-      duration: Theme.morphReflex
-    }
+    Morph {}
   }
 
   // Everything the card draws is sized against the pill's own height, so one

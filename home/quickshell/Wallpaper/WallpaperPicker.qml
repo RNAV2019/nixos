@@ -16,8 +16,9 @@ import qs.Ui
 // pixel - out to 1008 by 231, from a top edge that never moves. Its width and
 // its height ride one curve: sampled frame by frame at 60 fps, the two tracks
 // agree on their progress at every frame to within 1.5% of their travel. The
-// duration is Theme.morphSurface; see the note there for the one thing the
-// source does that this does not.
+// duration and the curve are Theme.morphSurface and Theme.morphCurve. The
+// overshoot this picker was the first to show - it passes its target and
+// settles back - is now the shell's own; see the note on Theme.morphCurve.
 //
 // What it carries is one row of previews, clipped by the panel rather than
 // wrapped into a grid, so a collection larger than the row runs on past both

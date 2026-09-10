@@ -14,12 +14,11 @@ import qs.Ui
 // single shape changing rather than one surface swapping for another.
 //
 // The open was measured against the source recording frame by frame at 60 fps.
-// The shape travels for 308 ms and stops dead, and its width and height ride
-// one curve: fitting them separately lands on 306 and 310 ms, so a single
-// driver is what the source has too. The shape of that curve is already
-// Theme.morphCurve, which tracks the measurements to within 2% of their travel
-// - closer than a true critically damped response manages, which undershoots
-// the first three frames and then arrives late.
+// The shape travels for about 300 ms, and its width and height ride one curve:
+// fitting them separately lands on 306 and 310 ms, so a single driver is what
+// the source has too. What it does not do is stop dead at the end - like every
+// other morph here it passes its target and settles back; see the note on
+// Theme.morphCurve for the survey that establishes that.
 //
 // The clock is the one thing the two states share: it stays drawn in the
 // growing box and fades as the search row takes over, the same hand-off the

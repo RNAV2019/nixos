@@ -234,24 +234,16 @@ Scope {
 
         implicitWidth: window.open ? Theme.osdWidth : window.collapsedWidth
         implicitHeight: window.open ? Theme.osdHeight : Theme.barHeight
-        surfaceRadius: window.open ? Theme.osdRadius : Theme.islandRadius
+
+        // Read off the height rather than travelling; see Bar/Island.qml.
+        surfaceRadius: Math.min(height / 2, Theme.osdRadius)
 
         Behavior on implicitWidth {
-          Morph {
-            duration: Theme.morphReflex
-          }
+          Morph {}
         }
 
         Behavior on implicitHeight {
-          Morph {
-            duration: Theme.morphReflex
-          }
-        }
-
-        Behavior on surfaceRadius {
-          Morph {
-            duration: Theme.morphReflex
-          }
+          Morph {}
         }
 
         IslandClock {

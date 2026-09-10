@@ -11,7 +11,7 @@ import qs.Services
 // the profiles card - and every one of them used to carry its own copy of this
 // file's contents. Not similar copies: identical ones. All seven `dismiss()`
 // bodies matched byte for byte, all seven had the same 75 ms focus prime, the
-// same three shape Behaviors with the same guard expression, the same
+// same shape Behaviors with the same guard expression, the same
 // `showing` definition, the same off-surface dismiss area, and the same
 // `onIslandClaimed` handler. Roughly nine hundred lines of it.
 //
@@ -112,7 +112,7 @@ PanelWindow {
   // Giving the island up to the surface that claimed it. The still this leaves
   // behind is what the eye sees until the taker's first frame lands.
   function dismiss() {
-    origin.publish(surface.width, surface.height, surface.surfaceRadius);
+    origin.publish(surface.width, surface.height);
     origin.hold(surface.width, surface.height, surface.surfaceRadius);
     handover = true;
     open = false;
@@ -233,7 +233,14 @@ PanelWindow {
 
     implicitWidth: win.open ? win.openWidth : origin.held ? origin.heldWidth : origin.originWidth
     implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
-    surfaceRadius: win.open ? win.openRadius : origin.held ? origin.heldRadius : origin.originRadius
+
+    // Read off the height rather than travelling; see Bar/Island.qml. The
+    // radius asked for is this surface's own in every state including the
+    // close, because on the way back down the shape is still this surface's
+    // until it is short enough for the stadium to take over. A still riding a
+    // taker's morph asks for the taker's instead, the same way it takes the
+    // taker's target shape and duration.
+    surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
 
     Behavior on implicitWidth {
       enabled: !origin.snapping && (!win.handover || origin.held)
@@ -244,14 +251,6 @@ PanelWindow {
     }
 
     Behavior on implicitHeight {
-      enabled: !origin.snapping && (!win.handover || origin.held)
-
-      Morph {
-        duration: origin.held ? origin.heldDuration : Theme.morphSurface
-      }
-    }
-
-    Behavior on surfaceRadius {
       enabled: !origin.snapping && (!win.handover || origin.held)
 
       Morph {

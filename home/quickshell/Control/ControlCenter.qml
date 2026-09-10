@@ -14,11 +14,11 @@ import qs.Ui
 // another.
 //
 // The open was measured against the source recording frame by frame at 60 fps
-// between 6:19 and 6:21. The shape travels for 295 ms and stops dead, and its
-// width and height ride one curve: a joint fit of both tracks to within 2.2% of
-// their travel, where fitting them apart lands on 300 and 278 ms. The curve is
-// Theme.morphCurve, the same critically damped response every other surface
-// uses.
+// between 6:19 and 6:21. The shape travels for about 295 ms, and its width and
+// height ride one curve: a joint fit of both tracks to within 2.2% of their
+// travel, where fitting them apart lands on 300 and 278 ms. The curve is
+// Theme.morphCurve, the same underdamped response every other surface uses -
+// it passes its target and settles back rather than stopping dead.
 //
 // The panel is clipped and its contents are laid out at their final metrics
 // from the first frame, so the open is a reveal rather than a fade. That is

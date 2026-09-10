@@ -221,24 +221,16 @@ Variants {
 
       implicitWidth: win.open ? Theme.notifWidth : win.collapsedWidth
       implicitHeight: win.open ? win.openHeight : Theme.barHeight
-      surfaceRadius: win.open ? Theme.notifRadius : Theme.islandRadius
+
+      // Read off the height rather than travelling; see Bar/Island.qml.
+      surfaceRadius: Math.min(height / 2, Theme.notifRadius)
 
       Behavior on implicitWidth {
-        Morph {
-          duration: Theme.morphSurface
-        }
+        Morph {}
       }
 
       Behavior on implicitHeight {
-        Morph {
-          duration: Theme.morphSurface
-        }
-      }
-
-      Behavior on surfaceRadius {
-        Morph {
-          duration: Theme.morphSurface
-        }
+        Morph {}
       }
 
       MouseArea {

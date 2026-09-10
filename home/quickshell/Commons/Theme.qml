@@ -510,32 +510,22 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  // Every morph in the shell is critically damped: it accelerates, arrives and
-  // stops, with no overshoot, wobble or settle bounce. Motion below is graded
-  // by what the moving thing *is*, not by which surface it belongs to.
+  // Every morph in the shell rides one curve for one duration. Both come from
+  // a survey of all ten saneAspect recordings at 1440p60: the island's own
+  // silhouette tracked per frame, 186 morphs found, 176 of them fitted.
   //
-  // These four replace fourteen. The originals were each fitted frame by frame
-  // against the source recording and landed on 308, 311, 320, 325, 330 and
-  // 339 ms for six surfaces that do the same thing. At 60 fps that whole
-  // spread is under two frames across the entire travel, and under one frame
-  // at any instant the eye could sample - so no viewer could ever separate
-  // them, while the shell paid six tokens and six chances to drift. The fits
-  // were real; the distinctions they encoded were not. What the measurements
-  // did establish is the one split that survives here: reflex surfaces really
-  // are faster than deliberate ones, by about a third.
+  // The single duration is what that survey settled. It replaces a split
+  // between a 320 ms panel morph and a 240 ms reflex morph, which the source
+  // does not have: its pill-to-card and its pill-to-panel morphs come out the
+  // same speed within noise, and so do both directions and both axes. The
+  // measured quartiles are 36 / 68 / 104 / 148 ms of travel, and the fit below
+  // reproduces them at 33 / 64 / 103 / 143.
   //
   // A surface changing shape. The launcher, the control centre, the calendar,
   // the wallpaper and recorder pickers, the power menu, the profiles card, the
-  // toast, and the sub-view slide inside the control centre. The calendar used
-  // to borrow the wallpaper picker's 228 ms, which was fitted to a 232 px
-  // travel and then asked to carry 528 px, so its edge moved at over twice
-  // every other panel's speed.
-  readonly property int morphSurface: 320
-
-  // A surface that answers something the user is already touching: the OSD
-  // under a volume key, the island under the pointer that is on it. Holding
-  // these on the panel duration reads as lag.
-  readonly property int morphReflex: 240
+  // toast, the OSD, the island's own card, and the sub-view slide inside the
+  // control centre.
+  readonly property int morphSurface: 300
 
   // A control changing state rather than shape: a toggle, a slider, a row or
   // a tile taking or losing colour, anything that answers a hover or a press.
@@ -593,11 +583,23 @@ Singleton {
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
 
-  // Qt has no critically damped spring: SpringAnimation takes its own damping
-  // scale rather than a stiffness, a mass and a damping coefficient. So the
-  // real step response of a zeta = 1 system, y = 1 - (1 + wt)e^-wt, is fitted
-  // here as a cubic bezier instead. The fit tracks that curve to within 0.02
-  // across its whole range and, like it, both leaves and arrives at zero
-  // velocity.
-  readonly property var morphCurve: [0.12, 0.0, 0.22, 1.0, 1.0, 1.0]
+  // The shell's one motion curve. It is *not* critically damped, and this is
+  // the single largest thing the source does that a zeta = 1 curve cannot.
+  //
+  // Every morph in the recordings passes its target by about 1.5 per cent of
+  // the travel, holds there, and decays back over roughly 130 ms. That is an
+  // underdamped spring at a damping ratio near 0.84, and it is systematic
+  // rather than occasional: of the 176 fitted morphs, 98 per cent overshoot by
+  // more than half a per cent, in both directions, on both axes, on every
+  // surface. Forcing zeta = 1 on the averaged curve nearly triples the
+  // residual, 0.0144 against 0.0052. It is motion and not codec ringing - the
+  // raw pixel counts of one open read 1063, 1085, 1087, then decay to 1074.
+  //
+  // Qt has no spring animation that takes a damping ratio, so the response is
+  // fitted here as a cubic bezier, which is also what lets one curve serve
+  // every Behavior in the shell. The third control point sits above 1, which
+  // is how the overshoot is expressed; Qt allows that, the same way its own
+  // OutBack does. The fit tracks the measured average to 0.46 per cent of the
+  // travel and peaks at +1.17 per cent about 253 ms in.
+  readonly property var morphCurve: [0.28, 0.574, 0.302, 1.097, 1.0, 1.0]
 }
