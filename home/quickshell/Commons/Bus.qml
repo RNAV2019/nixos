@@ -8,9 +8,6 @@ Singleton {
 
   property bool sessionReady: false
 
-  signal togglePanel(string name)
-  signal closePanels
-
   signal lockRequested
   signal sessionToggled
 
@@ -44,15 +41,6 @@ Singleton {
   // close, because nothing is.
   signal islandClaimed(string screen)
 
-  // The mirror of closePanels, for the bar's dropdown family. The bar emits
-  // it when a dropdown is asked for while an island surface is up: the two
-  // families stand in for different things at different heights, and neither
-  // grows in the other's place, so each owes the other honest mutual
-  // exclusion. The island surface answering takes its own animated close -
-  // nothing is growing in its place at the bar's centre line, so it owes the
-  // pill a proper collapse.
-  signal closeIslands
-
   // The live shape of a surface that has just given the island up to another
   // one in the same frame, published by the surface letting go and consumed
   // by the one taking over, both through the protocol every island surface
@@ -77,6 +65,19 @@ Singleton {
   property int takeHeight: 0
   property int takeRadius: 0
   property int takeDuration: 0
+
+  // Bumped once per claim, just before the claim goes out. A surface that is
+  // holding a still records the serial it armed that still for, which is how
+  // it tells the handover the still belongs to from a later one. See the
+  // stale-still drop in Ui/IslandOrigin.qml.
+  property int claimSerial: 0
+
+  // Raised by a surface letting the island go with nothing growing in its
+  // place, carrying the output it let it go on. A still held for that surface
+  // is owed to a taker that is now leaving, and the taker shrinking back to
+  // the pill uncovers it: the panel before last comes back for a moment on
+  // the way down. Whoever is holding one drops it instead.
+  signal islandDropped(string screen)
 
   // The island card that is currently standing open, or null while every
   // island is a pill.

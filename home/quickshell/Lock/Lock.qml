@@ -19,6 +19,20 @@ Scope {
   property int attempts: 0
   readonly property bool secure: lockContext.secure
 
+  // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell
+  // #964). The child of a threaded process can inherit a mutex held by a
+  // thread that no longer exists in it and deadlock in futex before PAM
+  // produces anything: no prompt, no completion, no error, while submit() has
+  // already disabled the input. quickshell works once or twice and then, on
+  // the wrong roll, freezes the screen for good.
+  //
+  // The child is still killable, so the watchdog aborts the wedged
+  // conversation, forks a fresh one, and resubmits the held password when the
+  // new prompt arrives. Each kick re-rolls the fork race; three losses in a
+  // row give up visibly and re-enable the input so the user can retry by hand.
+  property string pendingPassword: ""
+  property int pamKicks: 0
+
   // The ground is the blurred wallpaper and the veil over it, which move
   // together. The two content tiers ride their own clocks either side of it.
   property real ground: 0
@@ -50,9 +64,16 @@ Scope {
     revealIn.stop();
     lockContext.locked = true;
     passwordPam.start();
+    // Covers the boot lock too: a worker wedged before its prompt never asks
+    // for a password, so nothing else would notice.
+    root.pamKicks = 0;
+    root.pendingPassword = "";
+    pamWatchdog.restart();
   }
 
   function unlock() {
+    pamWatchdog.stop();
+    root.pendingPassword = "";
     passwordPam.abort();
     root.password = "";
     root.status = "";
@@ -163,6 +184,12 @@ Scope {
     root.busy = true;
     root.status = "";
     root.statusIsError = false;
+    root.pamKicks = 0;
+    pamWatchdog.restart();
+    // A give-up abort or a silent start failure leaves no conversation to
+    // answer this password; fork one.
+    if (!passwordPam.active)
+      passwordPam.start();
     // start() leaves PAM waiting for this password response.
     if (passwordPam.responseRequired)
       passwordPam.respond(root.password);
@@ -208,7 +235,18 @@ Scope {
     configDirectory: "/etc/pam.d"
     config: "quickshell-password"
 
+    onPamMessage: {
+      // The watchdog's replacement conversation races its own prompt; send
+      // the held password once the new one asks for it.
+      if (root.pendingPassword.length > 0 && passwordPam.responseRequired) {
+        passwordPam.respond(root.pendingPassword);
+        root.pendingPassword = "";
+      }
+    }
+
     onCompleted: function (result) {
+      pamWatchdog.stop();
+      root.pendingPassword = "";
       root.busy = false;
       if (result === PamResult.Success) {
         root.unlock();
@@ -220,9 +258,38 @@ Scope {
     }
 
     onError: function (err) {
+      pamWatchdog.stop();
+      root.pendingPassword = "";
       root.busy = false;
       root.statusIsError = true;
       root.status = "Authentication unavailable";
+    }
+  }
+
+  Timer {
+    id: pamWatchdog
+
+    interval: 4000
+
+    onTriggered: {
+      if (root.pamKicks >= 3) {
+        // Three lost fork rolls. Kill the last worker, surface the failure,
+        // and leave the input to the user; the next submit forks fresh.
+        passwordPam.abort();
+        root.pendingPassword = "";
+        root.busy = false;
+        root.statusIsError = true;
+        root.status = "Authentication unavailable";
+        return;
+      }
+      root.pamKicks += 1;
+      passwordPam.abort();
+      passwordPam.start();
+      // Only a submitted password rides the replacement conversation; a kick
+      // that lands while the user is still typing would otherwise submit the
+      // half-typed field the moment the fresh prompt arrives.
+      root.pendingPassword = root.busy ? root.password : "";
+      restart();
     }
   }
 

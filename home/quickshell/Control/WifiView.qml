@@ -9,8 +9,7 @@ import qs.Ui
 // could be on instead.
 //
 // Quickshell's Networking API can connect and can join with a passphrase, but
-// it exposes neither disconnect nor forget, so those two go out through nmcli -
-// the same split Panels/NetworkPanel.qml already makes.
+// it exposes neither disconnect nor forget, so those two go out through nmcli.
 Item {
   id: root
 

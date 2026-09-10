@@ -121,7 +121,6 @@ Variants {
       // which the holder rides with it.
       handover = false;
       origin.claim(Theme.wallpaperWidth, Theme.wallpaperHeight, Theme.wallpaperRadius, Theme.morphWallpaper);
-      Bus.closePanels();
       open = true;
     }
 
@@ -249,12 +248,6 @@ Variants {
           win.dismiss();
         else
           win.hide();
-      }
-
-      // A bar dropdown was asked for. Nothing is growing in this surface's
-      // place, so it owes the pill its own animated collapse.
-      function onCloseIslands() {
-        win.hide();
       }
     }
 

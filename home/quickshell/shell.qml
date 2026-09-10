@@ -28,18 +28,6 @@ ShellRoot {
   }
 
   IpcHandler {
-    target: "panels"
-
-    function toggle(name: string): void {
-      Bus.togglePanel(name);
-    }
-
-    function close(): void {
-      Bus.closePanels();
-    }
-  }
-
-  IpcHandler {
     target: "control"
 
     function toggle(): void {

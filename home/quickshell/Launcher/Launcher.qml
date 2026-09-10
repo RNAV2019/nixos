@@ -82,7 +82,6 @@ Variants {
       // which the holder rides with it.
       handover = false;
       origin.claim(Theme.launcherWidth, win.openHeight, Theme.launcherRadius, Theme.morphLauncher);
-      Bus.closePanels();
       open = true;
     }
 
@@ -165,11 +164,11 @@ Variants {
 
     exclusionMode: ExclusionMode.Ignore
 
-    // Same focus prime as Ui/PanelHost.qml: Hyprland focuses an OnDemand
-    // surface when it first maps, but not when an already-mapped one goes
-    // None -> OnDemand, and this surface stays mapped through its close
-    // animation. Exclusive covers the second case; staying Exclusive is not an
-    // option, because it would route every pointer event on every output here.
+    // Hyprland focuses an OnDemand surface when it first maps, but not when an
+    // already-mapped one goes None -> OnDemand, and this surface stays mapped
+    // through its close animation. Exclusive covers the second case; staying
+    // Exclusive is not an option, because it would route every pointer event on
+    // every output here.
     property bool focusPrimed: false
 
     WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
@@ -235,12 +234,6 @@ Variants {
           win.dismiss();
         else
           win.hide();
-      }
-
-      // A bar dropdown was asked for. Nothing is growing in this surface's
-      // place, so it owes the pill its own animated collapse.
-      function onCloseIslands() {
-        win.hide();
       }
     }
 

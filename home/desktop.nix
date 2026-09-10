@@ -367,15 +367,6 @@ in {
 
           (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
 
-          # Match bar panel shortcuts.
-          (bind "${mod} + CTRL + A" (exec "qs ipc call panels toggle audio"))
-          (bind "${mod} + CTRL + W" (exec "qs ipc call panels toggle network"))
-          (bind "${mod} + CTRL + B" (exec "qs ipc call panels toggle bluetooth"))
-          (bind "${mod} + CTRL + P" (exec "qs ipc call panels toggle battery"))
-          (bind "${mod} + CTRL + S" (exec "qs ipc call panels toggle system"))
-          (bind "${mod} + CTRL + C" (exec "qs ipc call panels toggle clock"))
-          (bind "${mod} + CTRL + D" (exec "qs ipc call panels toggle displays"))
-
           (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))
 
           (bind "ALT + A" (exec "qs ipc call control toggle"))

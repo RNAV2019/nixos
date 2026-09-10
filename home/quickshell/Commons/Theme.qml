@@ -102,26 +102,11 @@ Singleton {
   readonly property int spacingXl: 16
   readonly property int spacingXxl: 24
 
-  readonly property int cornerRadius: 6
   readonly property int gapsOut: 5
 
-  readonly property int panelPadding: spacingXl
   readonly property int panelRowInset: spacingLg
   readonly property int panelRowRadius: 8
   readonly property int panelRowHeight: 34
-  readonly property int panelWidthNarrow: 300
-  readonly property int panelWidthWide: 380
-  readonly property int panelWidthWidest: 440
-  // Keep long device lists inside a scrolling card.
-  readonly property int panelMaxHeight: 460
-
-  // The display layout map. Monitor rectangles are drawn in logical Hyprland
-  // coordinates scaled to fit this box.
-  readonly property int displayCanvasHeight: 150
-  readonly property int displayRadius: 4
-  // Drag snap threshold, in canvas pixels rather than layout pixels, so the
-  // pull feels the same however far out the map is zoomed.
-  readonly property int displaySnapDistance: 12
 
   readonly property int barHeight: 36
   readonly property int barMarginTop: 8
@@ -570,17 +555,9 @@ Singleton {
     return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
   }
 
-  // Widgets own this padding; the containing row must not add spacing.
-  readonly property int barIconPadding: 6
-  readonly property int barLabelGap: 6
-
   readonly property int barPillPadding: 12
-  readonly property int barPillPaddingWide: 14
   // Character limits alone do not constrain wide glyphs.
   readonly property int barMprisMaxWidth: 320
-  readonly property int barNixPadding: 7
-  readonly property int barNixMinWidth: 15
-  readonly property int barNixFontSize: 15
 
   readonly property int workspacePadding: 14
   readonly property int workspaceRadius: 18
@@ -636,12 +613,6 @@ Singleton {
   // OSD this is a reflex surface - the pointer is already on it when it moves
   // - and the panel clock read as a sluggish card.
   readonly property int morphIsland: 240
-  // The bar panels' card. The sub-view measurement is the closest the source
-  // comes to a panel changing shape in place (717 to 160 px in one spring,
-  // w = 21.0, 310 ms), so the panels ride that: the card grows out of the
-  // island pill on the same spring the launcher uses and steps between
-  // panels on it too.
-  readonly property int morphPanel: 310
   readonly property int morphToggle: 269
   readonly property int morphSlider: 249
 

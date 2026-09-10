@@ -92,18 +92,48 @@ QtObject {
   property real heldRadius: 0
   property int heldDuration: 0
 
+  // The claim this surface's still was armed for. A still is owed to exactly
+  // one taker: it covers the gap before that taker's first frame lands, and
+  // is then covered by it. A second claim makes it stale - the surface that
+  // was open at that moment leaves the taker a still of its own, and this
+  // one is left riding a target nothing on screen is travelling to any more.
+  // Left up through a run of fast switches, the stales stack up beside the
+  // surface that is actually growing, several panels wide.
+  property int heldSerial: 0
+
   function hold(width, height, radius) {
     heldWidth = Bus.takeWidth > 0 ? Bus.takeWidth : width;
     heldHeight = Bus.takeHeight > 0 ? Bus.takeHeight : height;
     heldRadius = Bus.takeRadius > 0 ? Bus.takeRadius : radius;
     heldDuration = Bus.takeDuration > 0 ? Bus.takeDuration : Theme.morphHold;
     held = true;
+    heldSerial = Bus.claimSerial;
     holdTimer.interval = heldDuration + 260;
     holdTimer.restart();
   }
 
   property Timer holdTimer: Timer {
     onTriggered: origin.held = false
+  }
+
+  // Drop a still that a later claim has made stale. Keyed on the serial
+  // rather than on which handler runs first, so it holds whichever order the
+  // claim reaches this surface and the one dismissing into it.
+  property Connections claims: Connections {
+    target: Bus
+
+    function onIslandClaimed(screen) {
+      if (origin.held && origin.heldSerial !== Bus.claimSerial && screen === origin.screenName)
+        origin.release();
+    }
+
+    // And drop one whose taker has gone. release() is what raises this, so
+    // the drop raises it again, but only ever one deep: the second pass finds
+    // held already down and does nothing.
+    function onIslandDropped(screen) {
+      if (origin.held && screen === origin.screenName)
+        origin.release();
+    }
   }
 
   readonly property string screenName: origin.window && origin.window.screen ? origin.window.screen.name : ""
@@ -165,6 +195,7 @@ QtObject {
     fromWidth = 0;
     fromHeight = 0;
     fromRadius = 0;
+    Bus.islandDropped(screenName);
   }
 
   // Take the island. This is the ordering every surface uses, in one place:
@@ -179,6 +210,7 @@ QtObject {
     handedOver = false;
     held = false;
     adopt();
+    Bus.claimSerial++;
     Bus.takeWidth = width;
     Bus.takeHeight = height;
     Bus.takeRadius = radius;

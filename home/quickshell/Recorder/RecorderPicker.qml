@@ -120,7 +120,6 @@ Variants {
       // with it - runs backwards out of the box it was wearing.
       handover = false;
       origin.claim(Theme.recorderWidth, Theme.recorderHeight, Theme.recorderRadius, Theme.morphWallpaper);
-      Bus.closePanels();
       open = true;
     }
 
@@ -241,12 +240,6 @@ Variants {
           win.dismiss();
         else
           win.hide();
-      }
-
-      // A bar dropdown was asked for. Nothing is growing in this surface's
-      // place, so it owes the pill its own animated collapse.
-      function onCloseIslands() {
-        win.hide();
       }
     }
 
