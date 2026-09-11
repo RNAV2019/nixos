@@ -32,7 +32,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       "location",
   ]
 
-  # Feeds are cached on disk for this long; --refresh is how the shell asks for current.
+  # Feeds are cached on disk for this long; --refresh asks for current
+  # data.
   CACHE_SECONDS = 600
 
   FETCH_TIMEOUT = 20
@@ -98,7 +99,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       except (urllib.error.URLError, OSError, ValueError) as error:
           fail("could not fetch " + url + ": " + str(error))
 
-      # Written through a neighbour, so a fetch that dies half way leaves no truncated feed.
+      # Written through a neighbour, so a fetch that dies half way leaves
+      # no truncated feed.
       try:
           cached.parent.mkdir(parents=True, exist_ok=True)
           partial = cached.with_suffix(".part")
@@ -127,8 +129,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       end_field = component.get("DTEND")
       end = end_field.dt if end_field is not None else start
 
-      # An all-day event is the one whose DTSTART is a plain date. gcalcli left both times
-      # empty for those and the QML service still reads it that way.
+      # An all-day event is the one whose DTSTART is a plain date. gcalcli
+      # left both times empty and the QML service still reads it that way.
       all_day = not isinstance(start, datetime.datetime)
 
       if all_day:
@@ -153,8 +155,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
 
 
   def calendar_name(feed):
-      # Google names the feed; a hand-rolled .ics need not, and the shell's per-calendar
-      # colour only has to be stable, not meaningful.
+      # Google names the feed; a hand-rolled .ics need not. The shell's
+      # per-calendar colour only has to be stable, not meaningful.
       return one_line(feed.get("X-WR-CALNAME")) or "Calendar"
 
 
@@ -179,7 +181,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       parser.add_argument("end", help="last day of the window, inclusive")
       args = parser.parse_args()
 
-      # The window is inclusive at both ends: a month with a week of padding either side.
+      # The window is inclusive at both ends: a month with a week of
+      # padding either side.
       first = day(args.start, "start")
       last = day(args.end, "end")
       if last < first:
