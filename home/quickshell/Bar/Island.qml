@@ -28,6 +28,11 @@ FrostedSurface {
   // back to plain hover behaviour.
   property bool pinned: false
 
+  // The output this island is on. A surface growing out of the card matches
+  // against this, because the card is an item on the bar and not a window of
+  // its own; see adopt() in Ui/IslandOrigin.qml.
+  property string screenName: ""
+
   // Raised while another surface has taken the island's place. The island stays
   // mapped for handoff timing, but is not painted while the covering surface
   // samples the desktop below it.

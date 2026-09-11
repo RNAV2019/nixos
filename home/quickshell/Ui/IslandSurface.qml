@@ -86,6 +86,23 @@ PanelWindow {
   // still is taken down, covered by the taker - instant.
   property bool handover: false
 
+  // Raised for the length of a handover, and what the still's two fades are
+  // driven from. Separate from `handover` because that one is also what
+  // disables the shape Behaviors, and is left raised while the still unmaps.
+  property bool farewell: false
+
+  // True while this surface's contents are arriving out of another surface
+  // rather than out of the island. Panel to panel there is no clip to reveal
+  // them, so they enter on their own delayed schedule instead; growing out of
+  // the pill is left exactly as it was measured.
+  readonly property bool entering: win.open && origin.handedOver
+
+  // The few pixels the arriving contents settle through, signed by the
+  // direction the height is travelling: down out of a shorter panel, up out of
+  // a taller one, so the contents move with the box rather than against it.
+  // Set once per open, because openHeight is usually a live binding.
+  property real enterTravel: 0
+
   readonly property bool focused: Monitors.isFocused(win.screen)
 
   // True from the moment the shape starts growing until it is back to pill
@@ -96,16 +113,23 @@ PanelWindow {
   function show() {
     win.opening();
     handover = false;
+    farewell = false;
     // Take the island. The ordering, the card, the handover mailbox and the
     // still the holder leaves behind all live in Ui/IslandOrigin.qml; the
     // four arguments are the morph this surface is about to travel, which the
     // holder rides with it.
     origin.claim(win.openWidth, win.openHeight, win.openRadius, Theme.morphSurface);
+    // Read after the claim, because the claim is what fills in the shape this
+    // surface is growing out of.
+    enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     open = true;
   }
 
   function hide() {
     origin.release();
+    // The travel belongs to the arrival. A close is a close whichever shape
+    // this surface grew out of, so it does not drift on the way down.
+    enterTravel = 0;
     open = false;
   }
 
@@ -115,6 +139,7 @@ PanelWindow {
     origin.publish(surface.width, surface.height);
     origin.hold(surface.width, surface.height, surface.surfaceRadius);
     handover = true;
+    farewell = true;
     open = false;
   }
 
@@ -174,6 +199,7 @@ PanelWindow {
       // next open. A held still unmaps with handover still raised, which is
       // what keeps its cut to the pill instant.
       win.handover = false;
+      win.farewell = false;
       if (win.screen && Bus.ownerOf(win.key) === win.screen.name)
         Bus.setOwner(win.key, "");
     }
@@ -221,10 +247,59 @@ PanelWindow {
   FrostedSurface {
     id: surface
 
-    // A held still exists only to bridge the mapping gap before the taker
-    // appears. Keeping it out of the compositor blur sample prevents the old
-    // panel from showing through the taker's translucent surface.
-    opacity: win.handover || win.origin.held ? 0 : 1
+    // The still bridges the mapping gap before the taker appears, and it does
+    // it with pixels. Cutting the whole surface here is what left a hole: the
+    // taker's window maps in single-digit milliseconds but does not present a
+    // frame for 147-216 ms, and for that whole stretch nothing at all was
+    // painted in the island's place - the still was transparent, the taker was
+    // not there yet, and the bar keeps its pill stood down throughout.
+    //
+    // So the still fades in two parts instead. Its contents go first and go
+    // quickly, because the taker's blur samples whatever is behind it and the
+    // old panel's text is the one thing it must not find there. Its ground
+    // stays through the gap and comes off afterwards, and a flat tint is what
+    // the taker's blur wants to find anyway.
+    contentOpacity: win.farewell ? 0 : 1
+    backdropOpacity: win.farewell ? 0 : 1
+
+    // Only the fade out is animated. The reset happens off screen, between one
+    // open and the next, and has to land in a single frame.
+    //
+    // Guarded on `handover` and not on `farewell`, even though `farewell` is
+    // what the two values above are bound to. A Behavior's `enabled` is a
+    // binding like any other, and on the frame `farewell` changes the value
+    // binding is evaluated before it, so a guard read off `farewell` answers
+    // for the frame before. That got both ends wrong: the fade out was written
+    // while the guard still said false and cut instead of fading, and the
+    // reset was written while it still said true and ran that schedule
+    // backwards - the contents fading in over a ground still 130 ms from
+    // coming back. That is the panel with no background under it, seen on a
+    // fast switch back to a surface still holding its own still. Both call
+    // sites move `handover` immediately before `farewell`, so this guard is
+    // settled by the time the values are written.
+    Behavior on contentOpacity {
+      enabled: win.handover
+
+      Morph {
+        duration: Theme.morphFarewell
+      }
+    }
+
+    Behavior on backdropOpacity {
+      enabled: win.handover
+
+      SequentialAnimation {
+        PauseAnimation {
+          duration: Theme.morphGround
+        }
+
+        NumberAnimation {
+          duration: Theme.morphGroundFade
+          easing.type: Easing.Bezier
+          easing.bezierCurve: Theme.morphCurve
+        }
+      }
+    }
 
     x: (win.width - width) / 2
     y: Theme.barMarginTop
@@ -286,6 +361,12 @@ PanelWindow {
     // Everything the surface draws, cross-faded against that clock on the
     // short clock the island uses for its own contents. Nothing inside fades
     // on its own; the growing shape uncovers it.
+    //
+    // Out of another panel there is no growing shape to uncover anything, so
+    // the contents wait for the box to be most of the way to its target and
+    // then arrive, settling through a few pixels as they come. The container
+    // leads and the contents follow, rather than the contents being at rest
+    // two thirds of a morph before the container is.
     Item {
       id: bodyHolder
 
@@ -293,11 +374,26 @@ PanelWindow {
       opacity: win.open || origin.held ? 1 : 0
       visible: opacity > 0
 
+      // Taken off the fade rather than run beside it, so the two cannot fall
+      // out of step and the reveal out of the pill, where the travel is zero,
+      // is left untouched.
+      transform: Translate {
+        y: (1 - bodyHolder.opacity) * win.enterTravel
+      }
+
       Behavior on opacity {
         enabled: !origin.held
 
-        Morph {
-          duration: Theme.morphContent
+        SequentialAnimation {
+          PauseAnimation {
+            duration: win.entering ? Theme.morphEnterDelay : 0
+          }
+
+          NumberAnimation {
+            duration: win.entering ? Theme.morphEnter : Theme.morphContent
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.morphCurve
+          }
         }
       }
     }

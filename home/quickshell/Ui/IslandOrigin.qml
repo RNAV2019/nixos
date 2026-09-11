@@ -143,11 +143,16 @@ QtObject {
   // Take the shape of the card already standing open on this output, if
   // there is one. Its measurements are read first and read into locals,
   // because claiming the island is what shuts the card.
+  //
+  // Matched on the card's `screenName` rather than by reaching through it for
+  // a window. The card is a FrostedSurface, not a window, and has never had a
+  // `win` of its own - so the reach found undefined, the guard took it for
+  // "no card on this output", and every panel grew out of the pill with the
+  // card's 520 x 84 sitting unread on the bus. The chip is on the card, so
+  // that was every open the chip could make.
   function adopt() {
     var card = Bus.islandCard;
-    if (!card || !card.win || !card.win.screen || !origin.window || !origin.window.screen)
-      return;
-    if (card.win.screen.name !== origin.window.screen.name)
+    if (!card || card.screenName === "" || card.screenName !== origin.screenName)
       return;
 
     var w = card.width;

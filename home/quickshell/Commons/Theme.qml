@@ -62,6 +62,7 @@ Singleton {
   readonly property int weightRegular: Font.Normal
   readonly property int weightMedium: Font.Medium
   readonly property int weightSemi: Font.DemiBold
+  readonly property int weightBold: Font.Bold
 
   readonly property int fontSize: 12
   readonly property int fontSizeLarge: 13
@@ -450,7 +451,7 @@ Singleton {
   readonly property int lockDateTop: 150
   readonly property int lockDateSize: 20
   readonly property int lockClockTop: 175
-  readonly property int lockClockSize: 92
+  readonly property int lockClockSize: 112
 
   readonly property int lockAvatarTop: 824
   readonly property int lockAvatarSize: 56
@@ -536,6 +537,51 @@ Singleton {
   // change over about five frames. Fading the contents on the geometry's clock
   // reads as a dissolve; this is what makes it read as a reveal instead.
   readonly property int morphContent: 80
+
+  // The handover's own content pass, for a surface growing out of another
+  // surface rather than out of the island.
+  //
+  // Out of the pill the shape travels from 36 px to a full column, so the clip
+  // is the transition: the contents are uncovered by the growing box and the
+  // 80 ms above is only there to take the carried clock off. Panel to panel
+  // there is nothing to uncover - every column is the same 520 px wide at the
+  // same radius, so the switch is a change of height and nothing else - and
+  // the same 80 ms fired on the first frame of a 300 ms morph puts the new
+  // contents at rest while the box is still two thirds from its target. The
+  // container arrives after what it contains, which is the wrong way round and
+  // is what reads as the clunk.
+  //
+  // These are chosen rather than fitted: the source recordings have no panel
+  // to panel switch in them, so there is nothing to measure against. They are
+  // laid out here so the whole schedule can be read and tuned in one place.
+
+  // The outgoing contents dissolve inside the still, which is already riding
+  // the taker's shape and curve. Short, because it has to be finished before
+  // the taker's first frame lands on top of it.
+  readonly property int morphFarewell: 120
+
+  // The still's ground outlives its contents: it is what covers the gap
+  // before the taker presents, and a flat tint is all the taker's blur wants
+  // to find behind it.
+  //
+  // The taker may land anywhere in 147-216 ms, so the ground's fade is laid
+  // across that whole window rather than after it. Two grounds painting at
+  // once would stack their tint and read as a dimming; a hole would read as a
+  // blink. Fading from 130 to 230 means the early arrival meets a ground
+  // already most of the way off and the late one meets the last of it, and
+  // neither end can go dark.
+  readonly property int morphGround: 130
+  readonly property int morphGroundFade: 100
+
+  // The incoming contents wait, then fade, landing just before the shape
+  // settles at morphSurface rather than long before it.
+  readonly property int morphEnterDelay: 90
+  readonly property int morphEnter: 150
+
+  // And they settle through a few pixels, taken in the direction the height
+  // is travelling, so a switch between two columns of the same width has an
+  // axis to read. Small enough to be a settle and not a slide.
+  readonly property real morphEnterTravel: 10
 
   // The clock's digit roll. Measured at 60 fps off the source recording at
   // 1:37, where 21:48 rolls to 21:49: the outgoing digit leaves upward and

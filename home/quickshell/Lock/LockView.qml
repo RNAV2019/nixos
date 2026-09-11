@@ -148,7 +148,7 @@ Item {
       text: Qt.formatDateTime(clock.date, "HH:mm")
       color: Theme.lockTextPrimary
       font.family: Theme.displayFont
-      font.weight: Theme.weightSemi
+      font.weight: Theme.weightBold
       font.pixelSize: canvas.u(Theme.lockClockSize)
       renderType: Text.QtRendering
     }

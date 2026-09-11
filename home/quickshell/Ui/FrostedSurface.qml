@@ -21,6 +21,15 @@ Item {
   // always fit does not, and should not pay for the extra layer.
   property bool clipContent: false
 
+  // The ground and the contents fade separately, because the handover needs
+  // them to. A surface handing the island over keeps its ground painted for
+  // as long as it is covering the gap before the taker presents, and takes
+  // its contents off well before that: the taker's blur samples whatever is
+  // behind it, so what it must not find there is the old panel's text. A flat
+  // tint it can find, and does not show. See Ui/IslandSurface.qml.
+  property real backdropOpacity: 1
+  property real contentOpacity: 1
+
   default property alias content: contentHolder.data
 
   // The surface stack, masked to the pill radius in one pass at the end.
@@ -29,6 +38,8 @@ Item {
 
     anchors.fill: parent
     clip: true
+    opacity: root.backdropOpacity
+    visible: opacity > 0
 
     Rectangle {
       anchors.fill: parent
@@ -58,6 +69,8 @@ Item {
     color: "transparent"
     border.width: 1
     border.color: Theme.withAlpha(Theme.surfaceBorder, Theme.surfaceBorderAlpha)
+    opacity: root.backdropOpacity
+    visible: opacity > 0
   }
 
   // The layer's texture is only as big as this item, so anything the contents
@@ -67,6 +80,8 @@ Item {
     id: contentHolder
 
     anchors.fill: parent
+    opacity: root.contentOpacity
+    visible: opacity > 0
     layer.enabled: root.clipContent
     layer.effect: MultiEffect {
       maskEnabled: true

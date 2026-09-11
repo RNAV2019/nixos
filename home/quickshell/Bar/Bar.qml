@@ -72,6 +72,7 @@ Variants {
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
+      screenName: bar.screen ? bar.screen.name : ""
       suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.osdScreen === bar.screen.name || Bus.notifyScreen === bar.screen.name)
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
       onClockActivated: Bus.toggleSurface("calendar")
