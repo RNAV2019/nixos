@@ -238,7 +238,7 @@ in {
     # restored empty — would be answered by silently initialising a fresh
     # empty one and backing into it, leaving `backup status` showing a single
     # healthy archive with the real history nowhere in sight. The repository is
-    # created once, by hand, during the LAN seed; see BACKUPS.md.
+    # created once, by hand, during the LAN seed; see the README backup section.
     doInit = false;
 
     compression = "auto,zstd";
@@ -247,7 +247,7 @@ in {
     extraCreateArgs = ["--stats" "--exclude-caches"];
 
     # No prune. The server refuses it from this key by design, and retention
-    # is an admin-key operation run by hand; see BACKUPS.md.
+    # is an admin-key operation run by hand; see the README backup section.
   };
 
   # A laptop is asleep or elsewhere often enough that an unreachable NAS is

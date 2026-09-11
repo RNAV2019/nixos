@@ -4,7 +4,7 @@
 
 <br>
 
-![Desktop](screenshots/desktop.png)
+<video src="showcase.mp4" controls></video>
 
 <br>
 
@@ -16,12 +16,13 @@
 | Compositor | Hyprland (UWSM session) |
 | Display mgr | greetd, autologin |
 | Lock / idle | quickshell + hypridle |
-| Shell (bar, panels, notifs, OSD, lock) | quickshell · mycelium |
+| Desktop shell | quickshell (bar, control center, launcher, wallpaper, calendar, recorder, profiles, notifications, OSD, lock) |
 | Wallpaper | awww |
-| Shell | fish + starship + atuin + zoxide + fzf |
+| CLI shell | fish + starship + atuin + zoxide + fzf |
 | Terminal | ghostty |
 | Editor | helix |
 | Browser | helium |
+| Custom tools | t3code nightly, ical-agenda |
 | Bootloader | limine (Rose Pine themed) |
 | Theme | Rose Pine Moon |
 
@@ -50,20 +51,19 @@
 ├── host/
 │   ├── configuration.nix          # networking, users, locale, limine
 │   └── hardware-configuration.nix
-├── modules/system/                # greetd, hyprland, fonts, sops, borg, …
+├── modules/system/                # greetd, hyprland, audio, power, fonts, borg, …
 ├── secrets/secrets.yaml           # age-encrypted; see Secrets
-├── nas/                           # borg server + tunnel, runs on the UGREEN
 └── home/
     ├── default.nix                # entry point, XDG, session vars
-    ├── desktop.nix                # hyprland, quickshell, hypridle, fuzzel
+    ├── desktop.nix                # hyprland, quickshell, hypridle, fuzzel, monitors
     ├── shell.nix                  # fish, starship, atuin, zoxide, fzf, git
     ├── terminal.nix               # ghostty
     ├── editors.nix                # helix
     ├── programs.nix               # GUI/CLI apps
     ├── dev.nix                    # languages & toolchains
     ├── packages.nix               # flat user package list
-    ├── custom-packages.nix
-    ├── quickshell/                # QML shell: bar, panels, notifs, OSD, lock
+    ├── custom-packages.nix        # t3code, agenda, helpers
+    ├── quickshell/                # QML shell: panels, calendar, recorder, lock, …
     ├── themes/                    # Rose Pine Moon colour files
     └── backgrounds.nix            # wallpaper install + default symlink
 ```
@@ -131,15 +131,19 @@ nix-clean         # garbage-collect old generations
 
 ## Backups
 
-Borg archives push once a day to an append-only server on the NAS, reached
-through a Cloudflare tunnel rather than a forwarded port. Full setup, recovery
-and retention notes are in [BACKUPS.md](BACKUPS.md).
+Borg archives are pushed daily to an append-only server on the NAS through a
+Cloudflare tunnel. The client cannot prune archives; if the NAS is unreachable,
+the job skips cleanly and the persistent timer catches up later. Personal data,
+the Helium profile, and shell databases are included while build and cache
+directories are excluded.
 
 ```bash
-backup now        # run one immediately and watch it
-backup status     # last run, next run, size, staleness
-backup mount      # browse an archive, then: backup umount
-backup restore    # put everything back
+backup now                 # run one immediately
+backup status              # last run, next run, size, staleness
+backup list [ARCHIVE]      # list archives or archive contents
+backup restore [PATH...]   # restore the selected archive
+backup mount [ARCHIVE]    # browse an archive, then: backup umount
+backup check [--data]      # verify repository integrity
 ```
 
 <br>
@@ -164,13 +168,19 @@ gen-commit --model google/gemini-2.5-flash-lite
 | Key | Action |
 |---|---|
 | `Super + Return` | Terminal |
-| `Super + Space` | App launcher (mycelium) |
-| `Super + P` | Project picker |
+| `Super + Shift + B` | Browser |
+| `Super + Shift + F` | File manager |
+| `Super + Space` | App launcher |
 | `Super + W` | Close window |
 | `Super + L` | Lock |
 | `Super + Escape` | Logout menu |
-| `PrtSc` | Screenshot window |
-| `Super + PrtSc` | Screenshot region |
-| `Shift + PrtSc` | Screenshot monitor |
+| `Alt + A` | Control center |
+| `Ctrl + Super + Space` | Wallpaper picker |
+| `Alt + R` | Screen recorder |
+| `Alt + C` | Calendar |
+| `Alt + P` | Power profiles |
+| `PrtSc` | Screenshot region |
+| `Alt + PrtSc` | Screenshot output |
+| `Super + Ctrl + PrtSc` | Screenshot all outputs |
 
 Full list in `home/desktop.nix`.

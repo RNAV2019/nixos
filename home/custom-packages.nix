@@ -56,63 +56,6 @@
     '';
   };
 
-  mycelium = let
-    runtimeLibs = [
-      pkgs.wayland
-      pkgs.libxkbcommon
-      pkgs.vulkan-loader
-    ];
-    src = pkgs.fetchFromGitHub {
-      owner = "RNAV2019";
-      repo = "mycelium";
-      rev = "3628eaf0a0fe5234fcc91dd789bbb0422f75ac65";
-      hash = "sha256-9d2JS3wjiV6eF3hLoP71XL7Ig5JtAWBRYqsf7xoLa3g=";
-    };
-  in
-    pkgs.rustPlatform.buildRustPackage {
-      pname = "mycelium";
-      version = "0.1.0";
-      inherit src;
-      cargoLock.lockFile = "${src}/Cargo.lock";
-
-      buildInputs = runtimeLibs;
-      nativeBuildInputs = [pkgs.makeWrapper];
-
-      postInstall = ''
-        wrapProgram $out/bin/mycelium \
-          --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
-      '';
-    };
-
-  cherry = let
-    runtimeLibs = [
-      pkgs.wayland
-      pkgs.libxkbcommon
-      pkgs.vulkan-loader
-    ];
-    src = pkgs.fetchFromGitHub {
-      owner = "RNAV2019";
-      repo = "cherry";
-      rev = "c9242329ea16a2da857d5b231702d07cb041813d";
-      hash = "sha256-nMM04+ki4ckS57YKMexgHiNMy2g0PtIoU7N0poLnxo8=";
-    };
-  in
-    pkgs.rustPlatform.buildRustPackage {
-      pname = "cherry";
-      version = "0.1.0";
-      inherit src;
-      cargoLock.lockFile = "${src}/Cargo.lock";
-
-      buildInputs = runtimeLibs;
-      nativeBuildInputs = [pkgs.makeWrapper pkgs.pkg-config pkgs.wayland-protocols];
-
-      postInstall = ''
-        wrapProgram $out/bin/cherry \
-          --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs} \
-          --prefix PATH : ${pkgs.lib.makeBinPath [pkgs.awww pkgs.libnotify]}
-      '';
-    };
-
   # Desktop helpers are held until the lock has securely covered every output.
   start-desktop = pkgs.writeShellApplication {
     name = "start-desktop";
@@ -171,29 +114,6 @@
       '';
     };
 
-  # Hyprland's misc:initial_workspace_tracking pins the first window of an
-  # exec'd process to the workspace that was active at spawn time. These
-  # launchers are daemons that map their window lazily on the first toggle, so
-  # a login-time exec left them opening on workspace 1 forever after. systemd
-  # spawns them outside that tracking, so every window follows the active
-  # workspace — including the first.
-  launcherDaemon = name: pkg: {
-    Unit = {
-      Description = "${name} launcher daemon";
-      PartOf = ["graphical-session.target"];
-      After = ["graphical-session.target"];
-    };
-
-    Service = {
-      ExecStart = "${pkg}/bin/${name}";
-      # `--kill` is an intentional exit; only restart on a crash.
-      Restart = "on-failure";
-      RestartSec = 1;
-    };
-
-    Install.WantedBy = ["graphical-session.target"];
-  };
-
   ani-cli = pkgs.ani-cli.overrideAttrs {
     version = "5.0";
     src = pkgs.fetchFromGitHub {
@@ -206,9 +126,7 @@
 in {
   home.packages = [
     ani-cli
-    cherry
     lock-session
-    mycelium
     start-desktop
     gen-commit
     ical-agenda
@@ -216,8 +134,4 @@ in {
     t3code-nightly
   ];
 
-  systemd.user.services = {
-    cherry = launcherDaemon "cherry" cherry;
-    mycelium = launcherDaemon "mycelium" mycelium;
-  };
 }

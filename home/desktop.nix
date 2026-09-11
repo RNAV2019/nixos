@@ -406,9 +406,6 @@ in {
           suppress_event = "maximize";
         }
 
-        (floatingOverlay "uk.co.ryannavsaria.mycelium")
-        (floatingOverlay "uk.co.ryannavsaria.cherry")
-
         {
           match.class = "org.pwmt.zathura";
           no_initial_focus = true;

@@ -76,7 +76,7 @@ Singleton {
     }
   }
 
-  // cherry's own arguments, so a switch looks the same however it was asked for.
+  // Keep the transition explicit so every wallpaper switch behaves the same.
   function paintCommand(target) {
     return ["awww", "img", target, "--transition-type", "grow", "--transition-pos", "center", "--transition-duration", "0.9", "--transition-fps", "120"];
   }

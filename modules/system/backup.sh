@@ -82,7 +82,7 @@ usage: backup <command> [args]
   check [--data]          verify integrity, --data reads every chunk
 
 Restoring never picks an archive for you. Retention is deliberately absent:
-the server is append-only and pruning needs the admin key. See BACKUPS.md.
+the server is append-only and pruning needs the admin key.
 USAGE
 }
 
@@ -256,7 +256,7 @@ cmd_status() {
 
   # Append-only means nothing on this machine can trim the repository, so the
   # reminder has to come from somewhere.
-  ((count < 60)) || warn "$count archives. Time to prune with the admin key; see BACKUPS.md."
+  ((count < 60)) || warn "$count archives. Time to prune with the admin key."
 }
 
 cmd_list() {
