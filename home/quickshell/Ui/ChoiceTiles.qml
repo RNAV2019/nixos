@@ -1,40 +1,24 @@
 import QtQuick
 import qs.Commons
 
-// One row of tiles asking "which of these". The power menu, the profiles card
-// and the recorder picker each drew this grid, and their own comments said so:
-// "the power menu's own tile grid, to the pixel", "the tile grid is the power
-// menu's and the recorder picker's, to the pixel". Three surfaces asking the
-// same question in the same shape had three copies of it.
-//
-// The caller supplies the model, says which tile is active and which the
-// keyboard is on, and hears back when one is chosen. Everything about how a
-// tile looks in each of those states is here, once.
+// One row of tiles asking "which of these". The power menu, the profiles card and the
+// recorder picker all draw this grid.
 Item {
   id: root
 
-  // Entries of { glyph, label }. Rebuilt by the caller when a label changes,
-  // which is how the power menu relabels an armed tile Confirm.
+  // Entries of { glyph, label }, rebuilt by the caller when a label changes.
   property var model: []
 
-  // The tile the keyboard is on, and the tile that is filled. They are not the
-  // same thing: the profiles card opens with the keyboard on the profile that
-  // is already running, and the recorder picker moves both together.
+  // The tile the keyboard is on and the tile that is filled are not the same thing.
   property int currentIndex: 0
   property int activeIndex: -1
   property int inset: Theme.powerInset
   property string activeLabel: ""
 
-  // The fill an active tile takes. Love where the tile says the machine's
-  // whole stance has changed or is about to, accent where it is merely the
-  // one picked out of three.
+  // Love where the machine's whole stance changes, accent where it is one pick of three.
   property color activeColor: Theme.accent
 
-  // Whether the active tile's colour outranks the focus ring. The power menu
-  // sets this: an armed tile is one press from ending the session, so it must
-  // not be wearing the same accent ring as a tile that is merely selected.
-  // Everywhere else the ring wins, because it is the only thing saying where
-  // Return would land.
+  // The power menu sets this: an armed tile must not wear the ring a selected one wears.
   property bool activeIsCommitting: false
 
   signal activated(int index)
@@ -95,8 +79,6 @@ Item {
           return Theme.withAlpha(Theme.highlightMed, Theme.powerTileBorderAlpha);
         }
 
-        // A press dips the whole tile rather than only its fill, so the target
-        // reads as taking the click at any size.
         scale: hover.pressed ? 0.97 : 1
 
         Behavior on scale {
@@ -147,8 +129,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        // Hovering moves the keyboard's place too, so the tile the eye is on
-        // and the tile Return would fire are never different ones.
+        // Hovering moves the keyboard's place too, so the hovered tile is the one Return fires.
         onEntered: root.entered(tile.index)
         onClicked: root.activated(tile.index)
       }

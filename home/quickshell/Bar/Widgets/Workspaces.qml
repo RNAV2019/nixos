@@ -4,8 +4,6 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 
-// The one left-anchored surface. It has to stay put while the island morphs
-// beside it, so it never takes part in the island's own geometry.
 FrostedSurface {
   id: root
 
@@ -65,8 +63,6 @@ FrostedSurface {
         readonly property bool isActive: ws !== null && ws.active
         readonly property bool isUrgent: ws !== null && ws.urgent
 
-        // The active workspace is the only one that carries the accent, and it
-        // widens rather than brightening, so the row reads at a glance.
         width: isActive ? Theme.workspaceSlotActiveWidth : Theme.workspaceSlotWidth
         height: Theme.workspaceSlotHeight
         radius: Theme.workspaceSlotRadius

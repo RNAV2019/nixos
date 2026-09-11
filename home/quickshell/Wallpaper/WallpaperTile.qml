@@ -3,13 +3,8 @@ import QtQuick.Effects
 import qs.Commons
 import qs.Ui
 
-// One preview in the carousel.
-//
-// The tile is a fixed box that the picture is cropped into rather than fitted
-// to, so a wallpaper of any shape fills it and the row stays a row of equal
-// rectangles. Losing a little off the top and bottom of a 16:10 picture in a
-// 16:9 box is the right trade: a fitted preview would leave panel background
-// inside the tile, and the tile's shape is what the eye is scanning.
+// One preview in the carousel. The picture is cropped into a fixed box rather than
+// fitted to it, so the row stays a row of equal rectangles.
 Item {
   id: root
 
@@ -18,14 +13,10 @@ Item {
   // Where the keys are. Carried by the ring and by the tile's size.
   property bool selected: false
 
-  // The wallpaper that is currently up. Independent of the above: it is still
-  // the one on screen while the ring is somewhere else, and the row would
-  // otherwise lose track of it the moment the first arrow is pressed.
+  // The wallpaper that is currently up, independent of where the keys are.
   property bool active: false
 
-  // Corner radius is not scaled with the tile. The tiles change size as the
-  // selection moves past them, and a radius that grew with them would read as
-  // the corners breathing.
+  // Not scaled with the tile: a radius that grew would read as the corners breathing.
   readonly property real cornerRadius: Theme.wallpaperTileRadius
 
   Item {
@@ -38,8 +29,6 @@ Item {
       maskSource: mask
     }
 
-    // Something to look at while the picture decodes, and what a wallpaper
-    // that has gone missing leaves behind.
     Rectangle {
       anchors.fill: parent
       color: Theme.overlay
@@ -51,9 +40,7 @@ Item {
       anchors.fill: parent
       source: root.source
       fillMode: Image.PreserveAspectCrop
-      // Decoded at about twice the tile, which is enough for the tile to grow
-      // into its selected size without softening and cheap enough to hold a
-      // row of them.
+      // Decoded at about twice the tile, so it grows into its selected size unsoftened.
       sourceSize.width: Theme.wallpaperTileWidths[0] * 2
       asynchronous: true
       cache: true
@@ -75,14 +62,9 @@ Item {
     }
   }
 
-  // The ring is drawn over the picture rather than around the tile, so the row
-  // keeps its pitch whether or not a tile is carrying one.
-  //
-  // Three weights, in the order they matter: the full ring for the tile being
-  // chosen, a hairline of the same accent for the one that is up, and the
-  // muted hairline for the rest. The active tile borrows the accent rather
-  // than a second colour because it is the same fact at a lower volume, and a
-  // row that answered "which is up" in another hue would read as two rows.
+  // Drawn over the picture rather than around the tile, so the row keeps its pitch.
+  // Three weights: the full ring for the tile being chosen, an accent hairline for the
+  // one that is up, and a muted hairline for the rest.
   Rectangle {
     anchors.fill: parent
     radius: root.cornerRadius
@@ -95,9 +77,6 @@ Item {
     }
   }
 
-  // The one mark that survives a screenshot in greyscale, and the only thing
-  // in the row that is unambiguously about the wallpaper on screen rather than
-  // about where the keys have got to.
   Item {
     x: parent.width - width - Theme.wallpaperDotInset
     y: Theme.wallpaperDotInset

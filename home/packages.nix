@@ -246,9 +246,7 @@ in {
     pavucontrol
     mpv
 
-    # notify-send, for posting a desktop notification from a script or a
-    # terminal. The shell's own server, in quickshell/Services/NotificationStore,
-    # is what receives it.
+    # notify-send. The shell's own server, quickshell/Services/NotificationStore, receives it.
     libnotify
 
     # dlopen dependencies for locally built Wayland apps.
@@ -264,10 +262,8 @@ in {
     networkmanagerapplet
 
     grimblast
-    # The screen recorder behind board 08. wl-screenrec rather than
-    # wf-recorder because the board's toggles have to be real: it is the one
-    # with --no-cursor and a named audio device. slurp draws the region and
-    # the window snap targets.
+    # The screen recorder. wl-screenrec rather than wf-recorder: it is the one with
+    # --no-cursor and a named audio device. slurp draws the region and the snap targets.
     wl-screenrec
     slurp
     hyprpicker

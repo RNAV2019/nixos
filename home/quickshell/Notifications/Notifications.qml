@@ -5,22 +5,14 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The toast. Board 10, and the island in another of its shapes.
+// The toast: the island in another shape. The pill grows in place into a 450 px card,
+// holds while the notification is read, and melts back into the clock.
 //
-// It used to be a card in the top right corner, which is the one place in this
-// shell where a surface appeared that the island had nothing to do with. The
-// board puts it where every other surface is: the pill grows in place into a
-// 450 px card on the board's own 339 ms, holds while the notification is read,
-// and melts back into the clock.
+// One card, not a stack. The island can only be one shape, so this draws the newest and
+// the rest wait behind it; the control centre's list is where the whole run lives.
 //
-// One card, not a stack. The island can only be one shape, so this draws the
-// newest notification and the rest wait behind it; each gets its own life when
-// it reaches the front. The control centre's list is where the whole run of
-// them lives, and nothing here has to outlive its card.
-//
-// Only the card takes input. The window covers the screen so the card can be
-// centred in it, but its mask is the card alone, so a click anywhere else goes
-// to whatever is underneath rather than being eaten by an overlay.
+// Only the card takes input. The window covers the screen so the card can be centred in
+// it, but its mask is the card alone.
 Variants {
   id: root
 
@@ -36,9 +28,8 @@ Variants {
     // The one being shown. Newest first, which is the order the store keeps.
     readonly property var current: NotificationStore.popups.length > 0 ? NotificationStore.popups[0] : null
 
-    // A toast is not asked for, so it waits rather than shoving a panel the
-    // user opened off the screen, and it gives way to an OSD, which is the
-    // direct result of a key that was just pressed.
+    // A toast is not asked for, so it waits behind a panel the user opened, and gives way
+    // to an OSD, which is the direct result of a key just pressed.
     readonly property bool blocked: Bus.islandHeld || Bus.osdScreen !== ""
 
     readonly property bool open: current !== null && focused && !blocked
@@ -47,8 +38,7 @@ Variants {
 
     readonly property bool showing: open || surface.width > collapsedWidth + 0.5
 
-    // Per the specification: 0 never expires, negative means the server's own
-    // default, positive is a count of milliseconds.
+    // Per the specification: 0 never expires, negative is the server default, positive is ms.
     readonly property int timeout: {
       if (!current)
         return 0;
@@ -67,9 +57,8 @@ Variants {
 
     readonly property string iconSource: current ? NotificationStore.iconFor(current.image, current.appIcon) : ""
 
-    // The notification's own buttons. "default" is the whole-card click, by
-    // convention, so it is never drawn as one; two is as many as the row has
-    // room for beside the dismiss button.
+    // "default" is the whole-card click by convention, so it is never drawn as a button;
+    // two is as many as the row has room for beside dismiss.
     readonly property var buttons: {
       var out = [];
       if (!current)
@@ -82,15 +71,10 @@ Variants {
       return out;
     }
 
-    // What the notification is worth reading of. Board 10 draws two lines and
-    // the card is sized to whatever there actually is.
     readonly property int bodyLines: bodyText === "" ? 0 : Math.min(Theme.notifBodyLines, bodyMetrics.lineCount)
 
-    // The board has a source line under the title - a web address, in its own
-    // example. Nothing on this bus carries one: an application sends a summary
-    // and a body and nothing between them. So the body sits where the source
-    // would have started, and the line is not drawn at all rather than drawn
-    // empty.
+    // The board has a source line under the title, but nothing on this bus carries one, so
+    // the body sits where the source would have started and the line is not drawn at all.
     readonly property int bodyTop: Theme.notifBodyTopBare
 
     readonly property int bodyBottom: bodyLines > 0 ? bodyTop + bodyLines * Theme.notifBodyLeading - 3 : Theme.notifTitleTop + 18
@@ -99,11 +83,8 @@ Variants {
 
     readonly property int openHeight: Math.max(Theme.notifAvatarSize + Theme.notifInset * 2, actionsTop + Theme.notifActionHeight + Theme.notifPadBottom)
 
-    // Time left before it goes, in milliseconds. Counted down rather than run
-    // off one long Timer, because hovering has to hold it where it is: a Timer
-    // that is stopped and started again begins its whole interval afresh, which
-    // hands back time the notification had already spent and makes a card that
-    // is passed over twice outlive one that is not.
+    // Counted down rather than run off one long Timer, because hovering has to hold it
+    // where it is: a restarted Timer hands back time the notification had already spent.
     property int remaining: 0
 
     function reset() {
@@ -112,9 +93,8 @@ Variants {
 
     onTimeoutChanged: reset()
 
-    // Taking the card away. The notification is dismissed on the bus, which is
-    // what tells the application nobody is looking at it any more, and dropped
-    // from the store, which is what shrinks this surface back to the pill.
+    // Dismissed on the bus, which tells the application nobody is looking at it any more,
+    // and dropped from the store, which shrinks this surface back to the pill.
     function close() {
       if (!current)
         return;
@@ -123,8 +103,7 @@ Variants {
       NotificationStore.forgetPopup(n);
     }
 
-    // The same, but as the timeout rather than as a decision: expire() is the
-    // one the specification wants when nobody touched it.
+    // The same, but as the timeout: expire() is what the specification wants here.
     function expire() {
       if (!current)
         return;
@@ -139,8 +118,8 @@ Variants {
     }
 
     Timer {
-      // Only while the card is up, only while it expires at all, and only while
-      // the pointer is somewhere else.
+      // Only while the card is up, only while it expires at all, and only while the pointer
+      // is somewhere else.
       running: win.open && win.timeout > 0 && !cardHover.containsMouse
       interval: 100
       repeat: true
@@ -151,8 +130,7 @@ Variants {
       }
     }
 
-    // For the timestamp, which is the only thing on the card that changes while
-    // it is being looked at.
+    // For the timestamp, the only thing on the card that changes while it is looked at.
     SystemClock {
       id: clock
 
@@ -161,8 +139,7 @@ Variants {
 
     property date arrived: new Date()
 
-    // One handler, because QML takes only one per signal: a new notification
-    // arrives, so it is new, and its clock starts now.
+    // One handler, because QML takes only one per signal.
     onCurrentChanged: {
       arrived = new Date();
       reset();
@@ -194,12 +171,10 @@ Variants {
 
     exclusionMode: ExclusionMode.Ignore
 
-    // A toast must never take the keyboard. Whatever was being typed into goes
-    // on being typed into.
+    // A toast must never take the keyboard.
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    // Only the card is a target; the rest of the window is not there as far as
-    // the pointer is concerned.
+    // Only the card is a target; the rest of the window is not there to the pointer.
     mask: Region {
       item: surface
     }
@@ -239,9 +214,8 @@ Variants {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        // Clicking the card invokes the notification's default action, which is
-        // what opens the application that sent it. Anything without one is just
-        // dismissed.
+        // Clicking the card invokes the default action, which opens the application that
+        // sent it. Anything without one is just dismissed.
         onClicked: {
           var actions = win.current ? win.current.actions : [];
           for (var i = 0; i < actions.length; i++) {
@@ -254,8 +228,7 @@ Variants {
         }
       }
 
-      // Reuse the island clock for the pill state rather than maintaining a
-      // second copy with subtly different metrics.
+      // Reuse the island clock rather than a second copy with subtly different metrics.
       IslandClock {
         anchors.fill: parent
         shown: !win.open
@@ -274,9 +247,7 @@ Variants {
           }
         }
 
-        // The sender's icon, or its initial on a wash of its own colour. The
-        // colour is picked off the name, so the same application keeps the same
-        // avatar between sessions.
+        // The sender's icon, or its initial on a wash of a colour picked off the name.
         Rectangle {
           id: avatar
 
@@ -390,16 +361,15 @@ Variants {
           wrapMode: Text.WordWrap
           maximumLineCount: Theme.notifBodyLines
           elide: Text.ElideRight
-          // Fixed leading, so the card's height can be worked out from a line
-          // count rather than measured after the fact.
+          // Fixed leading, so the card's height follows from a line count rather than
+          // being measured after the fact.
           lineHeightMode: Text.FixedHeight
           lineHeight: Theme.notifBodyLeading
           font.family: Theme.uiFont
           font.pixelSize: Theme.notifBodySize
         }
 
-        // The buttons, laid out right to left: the sender's own first, so the
-        // rightmost is the thing the notification is for, and ours last.
+        // Laid out right to left: the sender's own buttons first, ours last.
         Row {
           id: actions
 
@@ -456,9 +426,8 @@ Variants {
             }
           }
 
-          // Always present, and always the leftmost. A critical notification
-          // has not been dealt with by being sent away, so its word for this is
-          // Ignore rather than Dismiss.
+          // Always present and always leftmost. A critical notification says Ignore rather
+          // than Dismiss, because sending it away is not dealing with it.
           Pill {
             label: win.urgent ? "Ignore" : "Dismiss"
             primary: win.buttons.length === 0

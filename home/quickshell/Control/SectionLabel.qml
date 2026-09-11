@@ -1,8 +1,6 @@
 import QtQuick
 import qs.Commons
 
-// The 11 px label that names a block, with room on the right for the one word a
-// block sometimes has to say about itself - "Scanning…", a count, a state.
 Item {
   id: root
 

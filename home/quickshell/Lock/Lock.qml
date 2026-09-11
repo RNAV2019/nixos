@@ -9,39 +9,31 @@ import qs.Services
 Scope {
   id: root
 
-  // password is the display - the dots the field's row draws - and
-  // submittedPassword is the copy the PAM conversation is actually fed. The
-  // recording wipes the field the frame Enter lands, long before the
+  // password is the display - the dots the field's row draws - and submittedPassword is
+  // the copy PAM is fed. The field wipes the frame Enter lands, long before the
   // conversation answers, so the two lives of one password are kept apart.
   property string password: ""
   property string submittedPassword: ""
   property string status: ""
   property bool statusIsError: false
   property bool busy: false
-  // False until the first keystroke. The lock field itself is present from the
-  // first board frame, but this state still tracks the input flow.
+  // False until the first keystroke; the field itself is present from the first frame.
   property bool inputStarted: false
   property int attempts: 0
   property string snapshotPath: ""
   property string snapshotCleanupPath: ""
   readonly property bool secure: lockContext.secure
 
-  // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell
-  // #964). The child of a threaded process can inherit a mutex held by a
-  // thread that no longer exists in it and deadlock in futex before PAM
-  // produces anything: no prompt, no completion, no error, while submit() has
-  // already disabled the input. quickshell works once or twice and then, on
-  // the wrong roll, freezes the screen for good.
+  // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell #964). The
+  // child can inherit a mutex held by a thread that no longer exists in it and deadlock in
+  // futex before PAM produces anything, freezing the screen with the input already disabled.
   //
-  // The child is still killable, so the watchdog aborts the wedged
-  // conversation, forks a fresh one, and resubmits the held password when the
-  // new prompt arrives. Each kick re-rolls the fork race; three losses in a
-  // row give up visibly and re-enable the input so the user can retry by hand.
+  // The child is still killable, so the watchdog aborts the wedged conversation, forks a
+  // fresh one and resubmits the held password. Three losses in a row give up visibly.
   property string pendingPassword: ""
   property int pamKicks: 0
-  // quickshell answers one fault with both signals: error() and then
-  // completed(Error). The error handler has already named it, so this stops
-  // the completion handler relabelling a broken worker as a wrong password.
+  // quickshell answers one fault with error() and then completed(Error). The error handler
+  // has already named it, so this stops a broken worker reading as a wrong password.
   property bool pamErrored: false
 
   LockReveal {
@@ -69,8 +61,7 @@ Scope {
     reveal.reset();
     lockContext.locked = true;
     passwordPam.start();
-    // Covers the boot lock too: a worker wedged before its prompt never asks
-    // for a password, so nothing else would notice.
+    // Covers the boot lock too: a worker wedged before its prompt never asks for a password.
     root.pamKicks = 0;
     root.pendingPassword = "";
     root.pamErrored = false;
@@ -84,10 +75,8 @@ Scope {
     snapshotCapture.running = true;
   }
 
-  // respond() is dropped unless PAM is already asking, and a conversation that
-  // has only just been forked has not asked yet - its prompt arrives a tick
-  // later, over a socket. So a password is always held here first and handed
-  // over by whichever comes second, this call or the prompt.
+  // respond() is dropped unless PAM is already asking, and a freshly forked conversation
+  // has not asked yet, so the password is held here and handed over by whichever is second.
   function deliverPending() {
     if (root.pendingPassword.length === 0)
       return;
@@ -106,15 +95,13 @@ Scope {
     root.status = "";
     root.statusIsError = false;
     root.busy = false;
-    // The bar comes back on the first frame of the fade, not after it. The
-    // captured background unblurs underneath the returning session UI.
+    // The bar comes back on the first frame of the fade, not after it.
     Bus.sessionReady = true;
     reveal.animateOut();
   }
 
   function fail(reason) {
-    // The dots are already gone - submit wiped them - so a refusal just
-    // relabels the empty field and lets the count ride with it.
+    // submit already wiped the dots, so a refusal just relabels the empty field.
     root.attempts += 1;
     root.statusIsError = true;
     root.status = reason + " (" + root.attempts + ")";
@@ -129,16 +116,13 @@ Scope {
     root.status = "";
     root.statusIsError = false;
     root.submittedPassword = root.password;
-    // The field wipes the frame Enter lands; the dots go with it, and the
-    // placeholder the field carries turns to Authenticating until the
-    // conversation answers.
+    // The field wipes the frame Enter lands; the placeholder turns to Authenticating.
     root.password = "";
     root.pamKicks = 0;
     root.pamErrored = false;
     root.pendingPassword = root.submittedPassword;
     pamWatchdog.restart();
-    // A give-up abort or a silent start failure leaves no conversation to
-    // answer this password; fork one.
+    // A give-up abort or a silent start failure leaves no conversation to answer; fork one.
     if (!passwordPam.active)
       passwordPam.start();
     deliverPending();
@@ -152,8 +136,7 @@ Scope {
     }
   }
 
-  // Capture before the session-lock protocol takes ownership of the output.
-  // Boot locks bypass this and continue to use the configured wallpaper.
+  // Capture before the session-lock protocol takes the output. Boot locks bypass this.
   Process {
     id: snapshotCapture
 
@@ -207,8 +190,8 @@ Scope {
     config: "quickshell-password"
 
     onPamMessage: {
-      // Whether the password was typed before this prompt or after it, the
-      // prompt is the half that arrives second often enough to matter.
+      // The password may be typed before the prompt or after it; the prompt is the half
+      // that arrives second often enough to matter.
       root.deliverPending();
     }
 
@@ -220,8 +203,7 @@ Scope {
         root.unlock();
         return;
       }
-      // A worker that died or never came up is not a refused password, and
-      // must not read as one: onError has already labelled this.
+      // A worker that died or never came up is not a refused password; onError named it.
       if (!root.pamErrored)
         root.fail(result === PamResult.MaxTries ? "Too many attempts" : "Authentication failed");
       root.pamErrored = false;
@@ -236,8 +218,7 @@ Scope {
       root.pamErrored = true;
       root.statusIsError = true;
       root.status = "Authentication unavailable";
-      // Clear it like a refusal, so the field invites another try rather
-      // than stranding the user on a dead-end message.
+      // Clear it like a refusal, so the field invites another try.
       failTimeout.restart();
     }
   }
@@ -248,15 +229,12 @@ Scope {
     interval: 4000
 
     onTriggered: {
-      // A conversation sitting at its prompt with nothing submitted is
-      // waiting on the user, not wedged. Stand down rather than churn PAM
-      // under an idle lock screen: killing the healthy conversation the user
-      // is about to answer is what made a correct password look wrong.
+      // A conversation sitting at its prompt with nothing submitted is waiting on the user,
+      // not wedged. Killing the healthy one is what made a correct password look wrong.
       if (!root.busy && passwordPam.active && passwordPam.responseRequired)
         return;
       if (root.pamKicks >= 3) {
-        // Three lost fork rolls. Kill the last worker, surface the failure,
-        // and leave the input to the user; the next submit forks fresh.
+        // Three lost fork rolls. Kill the worker, surface the failure, leave the input alone.
         passwordPam.abort();
         root.pendingPassword = "";
         root.busy = false;
@@ -266,10 +244,8 @@ Scope {
       }
       root.pamKicks += 1;
       passwordPam.abort();
-      // Only a submitted password rides the replacement conversation; a kick
-      // that lands while the user is still typing would otherwise submit the
-      // half-typed field the moment the fresh prompt arrives. Held before the
-      // fork, so the replacement's prompt cannot outrun it.
+      // Only a submitted password rides the replacement conversation, and it is held before
+      // the fork, so a kick landing mid-typing cannot submit a half-typed field.
       root.pendingPassword = root.busy ? root.submittedPassword : "";
       passwordPam.start();
       restart();
@@ -299,14 +275,12 @@ Scope {
     WlSessionLockSurface {
       id: surface
 
-      // Keep an opaque base mounted for the complete secure-lock lifetime.
-      // A transparent session-lock surface is composited as black by the
-      // compositor during lock/unlock, which creates the unwanted black flash.
+      // A transparent session-lock surface is composited as black during lock and unlock,
+      // so an opaque base stays mounted for the whole secure-lock lifetime.
       color: Theme.base
 
-      // Reveal once the compositor has created the surface. There is one of
-      // these per screen and they share the one reveal clock, so a second
-      // screen joins the ramp already in progress rather than restarting it.
+      // One of these per screen, sharing the one reveal clock, so a second screen joins
+      // the ramp already in progress rather than restarting it.
       Component.onCompleted: {
         if (!reveal.animatingIn && reveal.ground === 0 && reveal.clockAlpha === 0 && reveal.loginAlpha === 0)
           reveal.animateIn();

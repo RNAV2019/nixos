@@ -7,24 +7,13 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The control centre's root view: board 04, laid out at its own metrics.
-//
-// Nothing here is centred or stretched against the surface it sits in. Every
-// position is the design's, measured from the panel's top-left, because the
-// surface grows around this rather than this reflowing inside the surface. That
-// is what makes the open read as a reveal: the contents are already where they
-// will end up on the first frame, and the shape uncovers them.
-//
-// The header carries no settings button. Board 04 draws one, but no frame of
-// the source recording has it, and there is no settings surface for it to open.
 Item {
   id: root
 
   signal closed
   signal opened(string view)
 
-  // The recorder tile asks the panel to hand the island over rather than doing
-  // it itself: only the panel knows the box the picker has to contract out of.
+  // Only the panel knows the box the picker has to contract out of.
   signal recorderRequested
 
   property int keyboardIndex: 0
@@ -84,9 +73,7 @@ Item {
     objects: root.sink ? [root.sink] : []
   }
 
-  // The layout chain. Each block starts a fixed gap below the one above it, so
-  // the panel's height is a sum rather than a constant and a media card that is
-  // not drawn does not leave a hole.
+  // Each block starts a fixed gap below the one above, so a missing card leaves no hole.
   readonly property int tilesTop: Theme.controlHeaderHeight
   readonly property int tilesBottom: tilesTop + Theme.controlTileHeight * 3 + Theme.controlTileGap * 2
   readonly property int slidersTop: tilesBottom + Theme.controlBlockGap
@@ -107,8 +94,6 @@ Item {
     onBacked: root.closed()
   }
 
-  // Row one: the narrow tile beside the wide one. The split is the design's -
-  // Wi-Fi gets a name, audio gets a device string that needs the room.
   Tile {
     id: wifi
 
@@ -156,8 +141,7 @@ Item {
     onOpened: root.opened("audio")
   }
 
-  // Row two: three equal tiles. The remainder from the division goes to the
-  // last one, so the row still ends on the panel's right inset.
+  // The remainder from the division goes to the last tile, so the row ends on the inset.
   readonly property int thirdWidth: Math.floor((span - Theme.controlTileGap * 2) / 3)
 
   Tile {
@@ -223,8 +207,6 @@ Item {
       NightLight.toggle()
   }
 
-  // Board 08. Full width, because its subtitle is the one on this grid with
-  // something to say: what is being captured, for how long, and how to stop.
   Tile {
     id: recorder
 
@@ -347,10 +329,7 @@ Item {
       Repeater {
         model: NotificationStore.history
 
-        // The card's own property names are the model's, so the delegate reads
-        // the row through the model rather than requiring roles it would then
-        // be assigning to itself. The rows are snapshots and never change after
-        // they are inserted, so a one-shot read is the whole story.
+        // The rows are snapshots and never change, so a one-shot read is the whole story.
         NotificationCard {
           id: card
 

@@ -371,19 +371,13 @@ in {
 
           (bind "ALT + A" (exec "qs ipc call control toggle"))
 
-          # Board 08 asks for ALT + SHIFT + T; this is the chord Ryan uses. It
-          # was cherry's, which now has no binding of its own.
           (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
 
-          # Board 08. The same chord starts and stops: with nothing recording it
-          # opens the picker, and while recording it stops and saves.
+          # The same chord starts and stops: it opens the picker, or stops and saves.
           (bind "ALT + R" (exec "qs ipc call recorder toggle"))
 
-          # Board 14. Clicking the pill's clock does the same.
           (bind "ALT + C" (exec "qs ipc call calendar toggle"))
 
-          # Board 04b. The control centre's power profiles, as its own card
-          # out of the pill, on the power menu's shape.
           (bind "ALT + P" (exec "qs ipc call profiles toggle"))
 
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
@@ -427,19 +421,11 @@ in {
         }
       ];
 
-      # FrostedSurface leaves the card translucent and lets Hyprland blur the
-      # actual desktop behind it. The panel windows cover the whole output for
-      # outside-click handling, so ignore transparent layer pixels or the blur
-      # would affect the entire desktop instead of only the visible card.
+      # The panel windows cover the whole output for outside-click handling, so ignore
+      # transparent layer pixels or the blur would cover the whole desktop.
       layer_rule = [
-        # The island's other shapes animate their own open, and the shape is
-        # the whole point: the pill grows into the panel and the panel is what
-        # covers the island underneath. Hyprland's layersIn fade runs over the
-        # top of that, so for the first frames the surface is translucent and
-        # the island it is meant to be covering shows straight through it -
-        # two clocks, two headers, the desktop's own lines crossing the panel.
-        # Measured: the strip behind the panel still reads the window under it
-        # 200 ms into the open, and is opaque by 300.
+        # Hyprland's layersIn fade would run over an island surface's own open, leaving the
+        # island visible through the panel for the first frames; measured opaque by 300 ms.
         {
           match.namespace = "quickshell-(bar|launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
           blur = true;
@@ -508,11 +494,8 @@ in {
     };
   };
 
-  # The control centre's night light tile drives hyprsunset over hyprctl, so the
-  # daemon has to be up for the session rather than started on the first press.
-  # It starts at identity: the shell asks it for the current temperature and
-  # takes that as the state, so a daemon that came up warm would show the tile
-  # on before anything had asked for it.
+  # The night light tile drives hyprsunset over hyprctl, so the daemon has to be up for the
+  # session. It starts at identity: the shell takes the daemon's temperature as the state.
   systemd.user.services.hyprsunset = {
     Unit = {
       Description = "hyprsunset colour temperature daemon";

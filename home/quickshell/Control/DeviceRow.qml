@@ -2,11 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// A row in a control-centre sub-view: a network, an audio device, a headset.
-//
-// The row is a pill on the same 46 px height the tiles are built from, and it
-// says what it is with the same accent fill they use, so a connected device and
-// an enabled toggle read as the same state.
 Rectangle {
   id: root
 
@@ -65,8 +60,6 @@ Rectangle {
     font.pixelSize: Theme.controlTileGlyphSize
   }
 
-  // One line is centred; two lines sit either side of the centre line, which is
-  // what keeps a row with a subtitle the same height as one without.
   Text {
     id: name
 

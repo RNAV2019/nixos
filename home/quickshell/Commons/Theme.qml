@@ -9,13 +9,9 @@ Singleton {
   readonly property color base: "#191724"
   readonly property color surface: "#1f1d2e"
   readonly property color overlay: "#26233a"
-  // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel
-  // tint. That ink carries almost every 11 px label in the shell - section
-  // headings, launcher descriptions, calendar meta, the toast's app name - so
-  // it is the one colour here that has to clear the AA floor rather than sit
-  // wherever the palette put it. Lifted along the line towards `subtle` until
-  // it reads 4.7:1 on the tinted surface, which is the darkest ground used by
-  // the shell.
+  // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel tint. That ink
+  // carries almost every 11 px label in the shell, so it is lifted along the line towards
+  // `subtle` until it reads 4.7:1 on the darkest ground the shell uses.
   readonly property color muted: "#8a86a4"
   readonly property color subtle: "#908caa"
   readonly property color text: "#e0def4"
@@ -29,8 +25,6 @@ Singleton {
   readonly property color highlightMed: "#403d52"
   readonly property color highlightHigh: "#524f67"
 
-  // Colour is meant to read as derived from the wallpaper, so the accent is
-  // the one hue the current background actually contains.
   // The palette every colour above comes from, for the surfaces that name it.
   readonly property string paletteName: "rose-pine"
 
@@ -47,16 +41,13 @@ Singleton {
     return Qt.rgba(c.r, c.g, c.b, a);
   }
 
-  // The Nerd Font carries the icon glyphs and holds digits on a fixed advance,
-  // so it stays for icons, hardware identifiers and live readouts. Prose and
-  // labels move to a proportional face, which reads better than monospace at
-  // bar and panel sizes.
+  // The Nerd Font carries the icon glyphs and holds digits on a fixed advance, so it stays
+  // for icons, identifiers and live readouts. Prose and labels use a proportional face.
   readonly property string fontFamily: "JetBrainsMono Nerd Font"
   readonly property string iconFont: fontFamily
   readonly property string monoFont: fontFamily
   readonly property string uiFont: "Inter"
-  // Inter's large-optical-size cut, for type big enough that the text cut
-  // looks loose.
+  // Inter's large-optical-size cut, for type big enough that the text cut looks loose.
   readonly property string displayFont: "Inter Display"
 
   readonly property int weightRegular: Font.Normal
@@ -79,9 +70,8 @@ Singleton {
   readonly property int barMarginTop: 8
   readonly property int barMarginLeft: 24
 
-  // Floating surfaces are translucent so Hyprland can blur the desktop behind
-  // them. Lower shell surfaces are hidden during handoff instead of entering
-  // that blur sample.
+  // Floating surfaces are translucent so Hyprland can blur the desktop behind them. Lower
+  // shell surfaces are hidden during handoff instead of entering that blur sample.
   readonly property color surfaceTint: surface
   readonly property real surfaceTintAlpha: 0.55
   readonly property color surfaceBorder: highlightMed
@@ -94,8 +84,8 @@ Singleton {
   readonly property real surfaceShadowBlur: 0.75
   readonly property real surfaceShadowAlpha: 0.2
 
-  // The island. One pill that carries the clock, grows an equaliser while
-  // something is playing, and expands into a media and status card on hover.
+  // The island: one pill carrying the clock, which grows an equaliser while something is
+  // playing and expands into a media and status card on hover.
   readonly property int islandRadius: 18
   readonly property int islandIdleWidth: 118
   readonly property int islandPlayingWidth: 140
@@ -110,14 +100,9 @@ Singleton {
   readonly property int islandArtRadius: 10
   readonly property int islandStatusWidth: 72
 
-  // The mini calendar the expanded card carries on its left while nothing is
-  // playing, in the room the track block would have taken. Board 02b, and the
-  // board is a transcription of the reference frame: five days centred on
-  // today, on a 32 px pitch, single-letter labels over their numbers, today
-  // spelled out in three letters on a plate with its number in the accent.
-  //
-  // The plate is wider than the pitch, which is what gives the three-letter
-  // label its room; measured off the reference at 1.14 pitches.
+  // The mini calendar the expanded card carries while nothing is playing. Five days centred
+  // on today on a 32 px pitch; the plate is 1.14 pitches wide, which gives the three-letter
+  // label its room.
   readonly property int islandCalDays: 5
   readonly property int islandCalPitch: 32
   readonly property int islandCalLabelSize: 10
@@ -129,18 +114,13 @@ Singleton {
   // Row centres, measured from the top of the block.
   readonly property real islandCalLabelMid: 10.5
   readonly property real islandCalDayMid: 27.5
-  // The weekend is the one thing in the strip that is not about today.
   readonly property real islandCalWeekendLabelAlpha: 0.55
   readonly property real islandCalWeekendDayAlpha: 0.75
   readonly property real islandCalPlateAlpha: 0.08
 
-  // The app launcher. The island pill grows into this and shrinks back out of
-  // it, so the two share a top edge and a centre line and read as one surface
-  // changing shape rather than one surface replacing another.
-  //
-  // The metrics below are the source recording's own, carried onto the 520 px
-  // column the rest of the shell is drawn against: a 68 px search row above a
-  // rule, then rows on a 45 px pitch, each 42 px tall with a 3 px gap.
+  // The app launcher. The island pill grows into this and shrinks back out of it, so the two
+  // share a top edge and a centre line. A 68 px search row above a rule, then rows on a 45 px
+  // pitch, each 42 px tall with a 3 px gap.
   readonly property int launcherWidth: 520
   readonly property int launcherRadius: 26
   readonly property int launcherInset: 14
@@ -164,13 +144,8 @@ Singleton {
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
 
-  // The notification toast. Board 10, and the island's sixth shape: the pill
-  // grows into one card, holds while it is read, and melts back into the clock.
-  //
-  // One card, not a stack. The island is one surface and can only be one shape,
-  // so a second notification arriving replaces the one on screen rather than
-  // queueing below it; the control centre's list is where the run of them
-  // lives.
+  // The notification toast: the pill grows into one card, holds while it is read, and melts
+  // back into the clock. One card, not a stack; a second notification replaces the first.
   readonly property int notifWidth: 450
   readonly property int notifRadius: 28
   readonly property int notifInset: 16
@@ -196,9 +171,8 @@ Singleton {
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
-  // The power menu. Board 11: three tiles on one row, and no dimmed screen
-  // behind them. Lock acts on the first press; the two that end the session arm
-  // first, turning love and relabelling themselves Confirm.
+  // The power menu: three tiles on one row. Lock acts on the first press; the two that end
+  // the session arm first, turning love and relabelling themselves Confirm.
   readonly property int powerHeight: 112
   readonly property int powerRadius: 26
   readonly property int powerInset: 11
@@ -214,18 +188,9 @@ Singleton {
   readonly property real powerTileFillAlpha: 0.9
   readonly property real powerTileBorderAlpha: 0.7
 
-  // The on-screen displays. Board 09, and the island's fourth shape: the pill
-  // widens in place into a glyph, a bar and a reading, holds for a beat and
-  // melts back into the clock.
-  //
-  // The source recording settles what the board could only assert. Between 3:05
-  // and 3:20 the OSD is never a second surface: the same pill that carries the
-  // clock becomes the bar, and one frame of the return has the clock drawn back
-  // over the bar as the two cross-fade.
-  //
-  // Everything is laid out at fixed positions in a fixed-width pill, so the
-  // contents are already where they belong on the first frame and the growing
-  // shape uncovers them, as the launcher's and the control centre's do.
+  // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds
+  // for a beat and melts back into the clock. Everything is laid out at fixed positions in a
+  // fixed-width pill, so the growing shape uncovers contents already where they belong.
   readonly property int osdWidth: 278
   readonly property int osdHeight: 48
   readonly property int osdRadius: 24
@@ -239,14 +204,9 @@ Singleton {
   // "after about a second and a half, it just melts back into the clock".
   readonly property int osdDwell: 1500
 
-  // The control centre. The island's third shape, and the same 520 px column
-  // the launcher grows into, carrying a tile grid, two sliders, the media card
-  // and the notification list.
-  //
-  // Every measurement below is board 04's, and the board is a transcription of
-  // the source recording: the panel was measured off the frames at 3:26 as
-  // 520 x 716 on a 1920 px output, which is the board's 520 x 718 to within the
-  // border.
+  // The control centre: the same 520 px column the launcher grows into, carrying a tile grid,
+  // two sliders, the media card and the notification list. Measured off the source frames as
+  // 520 x 716 on a 1920 px output.
   readonly property int controlWidth: 520
   readonly property int controlRadius: 26
   readonly property int controlInset: 13
@@ -255,8 +215,8 @@ Singleton {
   readonly property int controlBackSize: 36
   readonly property int controlBackLeft: 20
 
-  // Tiles. Two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; the
-  // first row is one narrow tile beside one wide, the second is three equal.
+  // Tiles. Two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; the first row is
+  // one narrow tile beside one wide, the second is three equal.
   readonly property int controlTileHeight: 59
   readonly property int controlTileGap: 12
   readonly property int controlTileRadius: 29
@@ -267,8 +227,7 @@ Singleton {
   readonly property int controlTileLabelSize: 13
   readonly property int controlTileSubSize: 11
 
-  // Sliders. Thick pills whose fill is the level, with the glyph riding inside
-  // the fill at the left.
+  // Sliders. Thick pills whose fill is the level, with the glyph riding inside the fill.
   readonly property int controlSliderHeight: 40
   readonly property int controlSliderGap: 17
   readonly property int controlSliderGlyphLeft: 13
@@ -298,24 +257,16 @@ Singleton {
   // Past this the list scrolls rather than the panel growing further.
   readonly property int controlNotifMaxHeight: 320
 
-  // Sub-views. Rows in the source's own vocabulary: a 46 px pill on a 52 px
-  // pitch, under an 11 px section label.
+  // Sub-views. A 46 px pill on a 52 px pitch, under an 11 px section label.
   readonly property int controlRowHeight: 46
   readonly property int controlRowGap: 6
   readonly property int controlRowRadius: 23
   readonly property int controlRowInset: 16
   readonly property int controlViewMaxHeight: 620
 
-  // The wallpaper picker. Board 08, and the island's fifth shape: the pill
-  // grows into a wide, short card carrying one row of previews.
-  //
-  // The source recording settles what the board could not. Between 3:58 and
-  // 4:05 the picker is measured growing out of the pill in the island's own
-  // place, from a fixed top edge, 118 px wide to 1008 x 231 - the same shape
-  // language as the launcher and the control centre, at roughly twice their
-  // width. The board's own column is 800, which is what is used here: it is
-  // the shell's proportion of the screen rather than the source's, and four
-  // wallpapers fit it exactly.
+  // The wallpaper picker: the pill grows into a wide, short card carrying one row of previews.
+  // The column is the board's 800 rather than the source's 1008, which is the shell's own
+  // proportion of the screen and fits four wallpapers exactly.
   readonly property int wallpaperWidth: 800
   readonly property int wallpaperHeight: 232
   readonly property int wallpaperRadius: 26
@@ -326,52 +277,35 @@ Singleton {
   readonly property int wallpaperMetaTop: 32
   readonly property int wallpaperFooterTop: 196
 
-  // The row is a carousel, not a grid: it is clipped by the panel and runs on
-  // past both edges when there are more wallpapers than fit.
+  // The row is a carousel, not a grid: clipped by the panel, running on past both edges.
   readonly property int wallpaperRowMid: 130
   readonly property int wallpaperTileGap: 16
   readonly property int wallpaperTileRadius: 10
 
-  // The chosen wallpaper is drawn larger and every other one the same, so the
-  // row has one focus rather than a gradient of importance. The board ramps
-  // through a middle size either side of the selection; a ramp says a tile two
-  // along matters less than its neighbour, which is not true of a row you are
-  // stepping through one at a time. The source does not size its previews at
-  // all - only the ring says which is chosen there.
-  //
-  // The first is the selected width; the last is everything else. Four
-  // wallpapers at these two sizes come to 720, which is inside the 752 the
-  // panel has, so the row is centred and nothing is clipped until there are
-  // five.
+  // The chosen wallpaper is drawn larger and every other one the same, so the row has one
+  // focus rather than a gradient of importance. The first is the selected width, the last is
+  // everything else; four at these sizes come to 720, inside the 752 the panel has.
   readonly property var wallpaperTileWidths: [192, 160]
 
-  // 16:9, as the board draws them. Previews are cropped to it rather than
-  // letterboxed, so a tile is never part panel background.
+  // 16:9, as the board draws them. Previews are cropped to it rather than letterboxed, so a
+  // tile is never part panel background.
   readonly property real wallpaperTileAspect: 16 / 9
 
   readonly property real wallpaperTileBorderAlpha: 0.7
   readonly property int wallpaperSelectedBorder: 2
 
-  // Two things are true of a tile at once and the row has to say both: which
-  // wallpaper the keys are on, and which one is actually up. The ring and the
-  // size carry the first. The second is the accent border below, held well
-  // under the ring's weight so a tile that is merely active never competes
-  // with the one being chosen.
+  // Which wallpaper the keys are on is carried by the ring and the size; which one is up is
+  // the accent border below, held well under the ring's weight.
   readonly property real wallpaperActiveBorderAlpha: 0.55
 
-  // The dot sits on a disc of base, because the corner it lands in belongs to
-  // the picture and a bare accent dot is lost in a pale one.
+  // The dot sits on a disc of base, because a bare accent dot is lost in a pale corner.
   readonly property int wallpaperDotSize: 7
   readonly property int wallpaperDotInset: 8
   readonly property int wallpaperDotHalo: 14
   readonly property real wallpaperDotHaloAlpha: 0.7
 
-  // The screen recorder's picker. Board 08, and the island's sixth shape.
-  //
-  // The capture row is the power menu's own tile grid, to the pixel: same 90
-  // by 80 tile, same 16 px radius, same 12 px gap, same 11 px side inset. Two
-  // surfaces that ask "which of these three" should not ask it in two
-  // different shapes. The toggle rows below are this card's own.
+  // The screen recorder's picker. The capture row is the power menu's own tile grid, to the
+  // pixel; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
   readonly property int recorderHeight: 228
   readonly property int recorderRadius: 26
@@ -393,9 +327,8 @@ Singleton {
   readonly property int recorderRowTextLeft: 12
   readonly property int recorderRowLabelSize: 12
 
-  // The recording mark the pill carries. Board 09: love rather than the
-  // accent, because it is the one thing in the bar that says something is
-  // being captured, and it must not read as one more thing that is merely on.
+  // The recording mark the pill carries: love rather than the accent, so it does not read as
+  // one more thing that is merely on.
   readonly property int recorderDotSize: 8
   readonly property int recorderDotGap: 10
 
@@ -413,8 +346,8 @@ Singleton {
   readonly property int calTodayBtnHeight: 28
   readonly property real calTodayBtnSize: 11.5
 
-  // Seven columns on a 68 px pitch, six rows on 46. The day number is drawn at
-  // the row top and the marker centres on it; the event dot hangs below.
+  // Seven columns on a 68 px pitch, six rows on 46. The day number is drawn at the row top
+  // and the marker centres on it; the event dot hangs below.
   readonly property int calWeekdayTop: 74
   readonly property int calWeekdaySize: 11
   readonly property int calGridTop: 110
@@ -445,9 +378,8 @@ Singleton {
   // Six agenda rows is what the panel has room for below the grid.
   readonly property int calAgendaMax: 3
 
-  // Board 13: a 1920x1080 lock surface. The background is painted by the
-  // surface itself so the session-lock protocol never exposes a black frame
-  // while the secure surface is being created or removed.
+  // Board 13: a 1920x1080 lock surface. The background is painted by the surface itself, so
+  // the session-lock protocol never exposes a black frame.
   readonly property int lockDateTop: 150
   readonly property int lockDateSize: 20
   readonly property int lockClockTop: 175
@@ -472,8 +404,7 @@ Singleton {
   readonly property int lockDotGap: 4
   readonly property int lockDotPop: 80
 
-  // The lock snapshot uses the same tint and blur budget as FrostedSurface.
-  // Its source is the captured desktop rather than the compositor backdrop.
+  // The same tint and blur budget as FrostedSurface, sourced from the captured desktop.
   readonly property color lockVeilColor: surfaceTint
   readonly property real lockVeilOpacity: surfaceTintAlpha
   readonly property color lockTextPrimary: "#e0def4"
@@ -491,14 +422,10 @@ Singleton {
   readonly property int lockIn: 350
   readonly property int lockOut: 350
 
-  // The pill's shut width. Board 09 draws all four combinations.
-  //
-  // The widths are the design's and are not derived: the pill grows for a
-  // player and grows again for a recording. What the extras do not do is move
-  // the clock. It is centred in whichever of these widths is in play, and the
-  // equaliser and the dot sit in the padding either side of it - so that
-  // padding is not always equal, and the clock never moves, which is the trade
-  // worth making for the one element on the bar the eye returns to.
+  // The pill's shut width, one per combination. The widths are the design's: the pill grows
+  // for a player and again for a recording, but neither moves the clock. It is centred in
+  // whichever width is in play, and the equaliser and the dot sit in the padding either side,
+  // so that padding is not always equal.
   function islandCollapsedWidth(media, recording) {
     return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
   }
@@ -511,141 +438,82 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  // Every morph in the shell rides one curve for one duration. Both come from
-  // a survey of all ten saneAspect recordings at 1440p60: the island's own
-  // silhouette tracked per frame, 186 morphs found, 176 of them fitted.
+  // Every morph in the shell rides one curve for one duration, both settled by a survey of
+  // ten recordings at 1440p60: 186 morphs found, 176 fitted. One duration replaces a split
+  // between a 320 ms panel morph and a 240 ms reflex morph the source does not have. The
+  // measured quartiles are 36 / 68 / 104 / 148 ms of travel; the fit reproduces 33 / 64 / 103 / 143.
   //
-  // The single duration is what that survey settled. It replaces a split
-  // between a 320 ms panel morph and a 240 ms reflex morph, which the source
-  // does not have: its pill-to-card and its pill-to-panel morphs come out the
-  // same speed within noise, and so do both directions and both axes. The
-  // measured quartiles are 36 / 68 / 104 / 148 ms of travel, and the fit below
-  // reproduces them at 33 / 64 / 103 / 143.
-  //
-  // A surface changing shape. The launcher, the control centre, the calendar,
-  // the wallpaper and recorder pickers, the power menu, the profiles card, the
-  // toast, the OSD, the island's own card, and the sub-view slide inside the
-  // control centre.
+  // A surface changing shape.
   readonly property int morphSurface: 300
 
-  // A control changing state rather than shape: a toggle, a slider, a row or
-  // a tile taking or losing colour, anything that answers a hover or a press.
+  // A control changing state rather than shape: a toggle, a slider, a hover or a press.
   readonly property int morphState: 180
 
-  // Content swaps are not morphs. Measured off the source recording at 60 fps,
-  // a surface takes about 300 ms to change shape while the contents it carries
-  // change over about five frames. Fading the contents on the geometry's clock
-  // reads as a dissolve; this is what makes it read as a reveal instead.
+  // Content swaps are not morphs. A surface takes about 300 ms to change shape while the
+  // contents it carries change over about five frames, so fading them on the geometry's clock
+  // would read as a dissolve rather than a reveal.
   readonly property int morphContent: 80
 
-  // The handover's own content pass, for a surface growing out of another
-  // surface rather than out of the island.
+  // The handover's own content pass, for a surface growing out of another surface rather than
+  // out of the island. Out of the pill the clip is the transition; panel to panel there is
+  // nothing to uncover, and the 80 ms above fired on the first frame would put the contents at
+  // rest while the box is still two thirds from its target.
   //
-  // Out of the pill the shape travels from 36 px to a full column, so the clip
-  // is the transition: the contents are uncovered by the growing box and the
-  // 80 ms above is only there to take the carried clock off. Panel to panel
-  // there is nothing to uncover - every column is the same 520 px wide at the
-  // same radius, so the switch is a change of height and nothing else - and
-  // the same 80 ms fired on the first frame of a 300 ms morph puts the new
-  // contents at rest while the box is still two thirds from its target. The
-  // container arrives after what it contains, which is the wrong way round and
-  // is what reads as the clunk.
-  //
-  // These are chosen rather than fitted: the source recordings have no panel
-  // to panel switch in them, so there is nothing to measure against. They are
-  // laid out here so the whole schedule can be read and tuned in one place.
+  // Chosen rather than fitted: the recordings have no panel-to-panel switch to measure.
 
-  // The outgoing contents dissolve inside the still, which is already riding
-  // the taker's shape and curve. Short, because it has to be finished before
-  // the taker's first frame lands on top of it.
+  // The outgoing contents dissolve inside the still. Short, because it has to be finished
+  // before the taker's first frame lands on top of it.
   readonly property int morphFarewell: 120
 
-  // The still's ground outlives its contents: it is what covers the gap
-  // before the taker presents, and a flat tint is all the taker's blur wants
-  // to find behind it.
-  //
-  // The taker may land anywhere in 147-216 ms, so the ground's fade is laid
-  // across that whole window rather than after it. Two grounds painting at
-  // once would stack their tint and read as a dimming; a hole would read as a
-  // blink. Fading from 130 to 230 means the early arrival meets a ground
-  // already most of the way off and the late one meets the last of it, and
-  // neither end can go dark.
+  // The still's ground outlives its contents: it covers the gap before the taker presents.
+  // The taker may land anywhere in 147-216 ms, so the fade is laid across that whole window.
+  // Two grounds at once would stack their tint, and a hole would read as a blink.
   readonly property int morphGround: 130
   readonly property int morphGroundFade: 100
 
-  // The incoming contents wait, then fade, landing just before the shape
-  // settles at morphSurface rather than long before it.
+  // The incoming contents wait, then fade, landing just before the shape settles.
   readonly property int morphEnterDelay: 90
   readonly property int morphEnter: 150
 
-  // And they settle through a few pixels, taken in the direction the height
-  // is travelling, so a switch between two columns of the same width has an
-  // axis to read. Small enough to be a settle and not a slide.
+  // And they settle through a few pixels, taken in the direction the height is travelling, so
+  // a switch between two columns of the same width has an axis to read.
   readonly property real morphEnterTravel: 10
 
-  // The clock's digit roll. Measured at 60 fps off the source recording at
-  // 1:37, where 21:48 rolls to 21:49: the outgoing digit leaves upward and
-  // the incoming one rises from below, each travelling about half a glyph's
-  // height, and the two cross-fade as they go - the pair's total ink dips
-  // mid-roll because the outgoing fade runs on the content clock while the
-  // incoming one trails it on the fast one. As a fraction of the font's own
-  // size, so the roll reads the same at the pill's size and the card's.
+  // The clock's digit roll, measured at 60 fps: each digit travels about half a glyph's height
+  // and the two cross-fade. Held as a fraction of the font's own size, so the roll reads the
+  // same at the pill's size and the card's.
   readonly property real clockRollTravel: 0.45
 
-  // How long a surface that has just handed the island over keeps riding the
-  // taker's morph before it is taken down. The surface taking over maps in
-  // single-digit milliseconds but its first rendered frame lands 147-216 ms
-  // later (probed for the pill-blink fix), and the handover has no cut to
-  // hide that: without the hold, the bare pill shows through the gap. The
-  // holder's still rides the taker's own curve - same shape, target, duration
-  // and start frame - so it is covered from the taker's first presented frame
-  // on, and the hold only has to outlive the travel plus a margin; 260 covers
-  // the measured first-frame latency with room to spare.
+  // How long a surface that has just handed the island over keeps riding the taker's morph.
+  // The taker maps in single-digit milliseconds but its first rendered frame lands 147-216 ms
+  // later, and without the hold the bare pill shows through that gap; 260 covers it.
   readonly property int morphHold: 240
 
-  // The lock screen's two cross-fades, fitted frame by frame at 60 fps against
-  // the source recording between 10:33 and 10:42. Neither is a morph: stepping
-  // the clock block frame by frame, the digits never move and never change
-  // size, so neither direction uses the spring.
+  // The lock screen's two cross-fades, fitted frame by frame at 60 fps. Neither is a morph:
+  // the digits never move and never change size, so neither direction uses the spring.
   //
-  // One progress value drives all of it. The blur radius and the dim veil ride
-  // the same curve over the same window - board 15 records the blur as a
-  // single-frame step, and it is not one. Raw gradient energy does collapse in
-  // one frame, but only because the veil is crushing the image's contrast at
-  // the same time. Measured as sharpness over contrast, which the veil cannot
-  // touch, the radius tracks the veil to within 0.02 of its travel at every
-  // sample, in both directions.
-  // The content lags the ground going in and leads it coming out, which is
-  // what lets the island pill read as returning partway through the unlock
-  // rather than arriving after it. The clock is the extreme at both ends: it
-  // is the last thing in and the last thing out.
+  // One progress value drives all of it. The blur radius and the dim veil ride the same curve
+  // over the same window: measured as sharpness over contrast, which the veil cannot touch,
+  // the radius tracks the veil to within 0.02 of its travel in both directions.
   //
-  // The date and the avatar land between the two tiers and swap places
-  // between the two directions, so which tier each belongs to is inside the
-  // measurement's noise. They are grouped by what they are instead.
+  // The content lags the ground going in and leads it coming out, which is what lets the
+  // island pill read as returning partway through the unlock. The clock is the extreme at
+  // both ends. The date and the avatar land between the two tiers, so they are grouped by
+  // what they are instead.
   readonly property int lockInClock: 70
   readonly property int lockInLogin: 100
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
 
-  // The shell's one motion curve. It is *not* critically damped, and this is
-  // the single largest thing the source does that a zeta = 1 curve cannot.
+  // The shell's one motion curve. It is *not* critically damped: every morph in the recordings
+  // passes its target by about 1.5 per cent of the travel and decays back over roughly 130 ms,
+  // an underdamped spring near zeta = 0.84. Of the 176 fitted morphs, 98 per cent overshoot by
+  // more than half a per cent, and forcing zeta = 1 nearly triples the residual.
   //
-  // Every morph in the recordings passes its target by about 1.5 per cent of
-  // the travel, holds there, and decays back over roughly 130 ms. That is an
-  // underdamped spring at a damping ratio near 0.84, and it is systematic
-  // rather than occasional: of the 176 fitted morphs, 98 per cent overshoot by
-  // more than half a per cent, in both directions, on both axes, on every
-  // surface. Forcing zeta = 1 on the averaged curve nearly triples the
-  // residual, 0.0144 against 0.0052. It is motion and not codec ringing - the
-  // raw pixel counts of one open read 1063, 1085, 1087, then decay to 1074.
-  //
-  // Qt has no spring animation that takes a damping ratio, so the response is
-  // fitted here as a cubic bezier, which is also what lets one curve serve
-  // every Behavior in the shell. The third control point sits above 1, which
-  // is how the overshoot is expressed; Qt allows that, the same way its own
-  // OutBack does. The fit tracks the measured average to 0.46 per cent of the
-  // travel and peaks at +1.17 per cent about 253 ms in.
+  // Qt has no spring animation that takes a damping ratio, so the response is fitted here as a
+  // cubic bezier, which also lets one curve serve every Behavior in the shell. The third
+  // control point sits above 1, which is how the overshoot is expressed. The fit tracks the
+  // measured average to 0.46 per cent of the travel.
   readonly property var morphCurve: [0.28, 0.574, 0.302, 1.097, 1.0, 1.0]
 }

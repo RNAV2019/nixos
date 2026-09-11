@@ -7,24 +7,12 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The on-screen displays, and the island in its fourth shape.
+// The on-screen displays: the island in another shape rather than a card over the
+// desktop. It starts at the island's own collapsed pill and grows into a fixed 278 px
+// pill whose contents are laid out at their final positions from the first frame.
 //
-// Board 09, and not a card floating over the desktop. Change the volume and the
-// pill that was carrying the clock widens in place into a glyph, a bar and a
-// reading, holds for a second and a half, and melts back into the clock. The
-// source recording is unambiguous about this: between 3:05 and 3:20 there is
-// never a second surface on screen, and one frame of the return catches the
-// clock drawn back over the bar while the two cross-fade.
-//
-// So this is built like the launcher and the control centre. It starts at the
-// island's own collapsed pill - the same width, height, radius and centre line,
-// carrying the same equaliser and clock - and grows into a fixed 278 px pill
-// whose contents are laid out at their final positions from the first frame.
-// The bar stands its island down while this is up.
-//
-// Nothing here takes input. The window's mask is empty, so every click passes
-// straight through to the island underneath rather than being eaten by an
-// overlay the user cannot even see the edges of.
+// Nothing here takes input. The window's mask is empty, so every click passes straight
+// through to the island underneath.
 Scope {
   id: root
 
@@ -63,11 +51,8 @@ Scope {
     }
   }
 
-  // The launcher and the control centre are the island's other two shapes, and
-  // they own the pill while they are open. An OSD has no business growing out
-  // from under a 520 px panel that already covers the place it would appear in,
-  // so it does not start while one is up, and a flash already in the air is cut
-  // short by one opening.
+  // The launcher and the control centre own the pill while they are open, so an OSD does
+  // not start under one, and a flash already in the air is cut short by one opening.
   readonly property bool blocked: Bus.islandHeld
 
   onBlockedChanged: if (blocked) {
@@ -92,9 +77,8 @@ Scope {
   onMicMutedChanged: if (ready)
     flash("mic")
 
-  // A keypress at either rail moves nothing, so the value signals below never
-  // fire for it. adjusted covers the press itself; the value signals stay so
-  // changes from elsewhere (idle dimming, the lock screen) still show.
+  // A keypress at either rail moves nothing, so the value signals never fire for it.
+  // adjusted covers the press; the value signals stay, so changes from elsewhere show.
   Connections {
     target: Brightness
 
@@ -142,8 +126,7 @@ Scope {
     return volume;
   }
 
-  // Mute is a state, not a level, so the bar carries no fill for it. Board 09
-  // draws the muted pill as a bare track with a word where the reading goes.
+  // Mute is a state, not a level, so the bar carries no fill for it.
   readonly property bool stateOnly: (mode === "volume" && muted) || mode === "mic"
 
   readonly property string glyph: {
@@ -166,8 +149,7 @@ Scope {
     return Math.round(Math.max(0, Math.min(1, level)) * 100) + "%";
   }
 
-  // A hot microphone is the one state here you must not misread, so muting it
-  // is the only OSD that takes a colour of its own.
+  // A hot microphone is the one state here you must not misread, so it takes its own colour.
   readonly property bool alarming: mode === "mic" && root.micMuted
 
   readonly property color ink: {
@@ -192,8 +174,8 @@ Scope {
 
       readonly property bool open: root.showing && focused
 
-      // Drawn from the moment the shape starts growing until it is back to pill
-      // size, which is the whole time the bar must keep its island hidden.
+      // Drawn from the moment the shape starts growing until it is back to pill size,
+      // which is the whole time the bar must keep its island hidden.
       readonly property bool visibleNow: open || surface.width > collapsedWidth + 0.5
 
       screen: modelData
@@ -213,8 +195,7 @@ Scope {
       implicitHeight: Theme.barMarginTop + Theme.osdHeight + Theme.gapsOut
       exclusionMode: ExclusionMode.Ignore
 
-      // Empty: the whole window is click-through. The island is underneath and
-      // still wants its clicks.
+      // Empty: the whole window is click-through. The island underneath still wants its clicks.
       mask: Region {}
 
       onVisibleNowChanged: {
@@ -254,12 +235,8 @@ Scope {
           clockShift: pill.clockShift
         }
 
-        // The pill the OSD grows out of and shrinks back into, drawn exactly as
-        // Bar/Island.qml draws its collapsed state: the clock on the centre
-        // line, shifted right by half the equaliser when there is one, and the
-        // equaliser to its left. It has to match, because this surface covers
-        // the island rather than replacing it, and any disagreement between the
-        // two would read as the pill jumping at both ends of the flash.
+        // Drawn exactly as Bar/Island.qml draws its collapsed state, because this surface
+        // covers the island rather than replacing it; a disagreement would read as a jump.
         Item {
           id: pill
 
@@ -286,9 +263,7 @@ Scope {
 
         }
 
-        // Board 09's row, at the board's own positions in the board's own
-        // 278 px pill. Nothing in here moves with the shape; the shape uncovers
-        // it.
+        // Board 09's row, at the board's own positions. Nothing in here moves with the shape.
         Item {
           id: readout
 
@@ -326,8 +301,7 @@ Scope {
               color: Theme.accent
               visible: !root.stateOnly
 
-              // Held keys repeat about every 40 ms, so a longer tween never
-              // finishes and the fill visibly trails the key.
+              // Held keys repeat about every 40 ms, so a longer tween never finishes.
               Behavior on width {
                 NumberAnimation {
                   duration: 80
@@ -347,9 +321,7 @@ Scope {
           }
         }
 
-        // Board 09 rings the microphone pill rather than only recolouring what
-        // is inside it. FrostedSurface draws its own hairline, so this is laid
-        // over the top of that one and fades in with the state.
+        // FrostedSurface draws its own hairline, so this is laid over it and fades in.
         Rectangle {
           anchors.fill: parent
           radius: surface.surfaceRadius

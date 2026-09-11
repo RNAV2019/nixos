@@ -5,12 +5,6 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The now-playing card. The album art is the card: it is drawn across the whole
-// width, blurred hard and laid under a veil, so a bright cover warms the panel
-// without ever competing with the text on top of it.
-//
-// The card also names the output the sound is going to, which is the one thing
-// on it that is not about the track.
 Item {
   id: root
 
@@ -30,8 +24,7 @@ Item {
     objects: root.sink ? [root.sink] : []
   }
 
-  // Art, veil and rounding are masked together, so the blur cannot bleed past
-  // the card's corners.
+  // Masked together, so the blur cannot bleed past the card's corners.
   Item {
     id: ground
 
@@ -47,8 +40,7 @@ Item {
       color: Theme.overlay
     }
 
-    // Overscanned, because a blur that samples from the card's own edge fades
-    // it out into the veil.
+    // Overscanned, because a blur that samples the card's own edge fades it out.
     Item {
       id: crop
 
@@ -240,8 +232,7 @@ Item {
     onActivated: Media.next()
   }
 
-  // The bar is a seek target as well as a readout, so its hit area is taller
-  // than the 3 px it draws.
+  // The bar is a seek target too, so its hit area is taller than the 3 px it draws.
   Item {
     id: progress
 

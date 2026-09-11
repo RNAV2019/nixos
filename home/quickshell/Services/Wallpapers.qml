@@ -6,21 +6,10 @@ import Quickshell.Io
 
 // The wallpapers on disk, which one is up, and how to change it.
 //
-// The desktop keeps its answer in two places and they have to move together: a
-// symlink at ~/.local/share/wallpaper/current, which is what the shell and the
-// session start-up read, and awww, which is what actually paints the root
-// surface. Applying writes the link first and then tells the daemon, so a
-// session restarted before the daemon was told still comes up on the right
-// wallpaper.
-//
-// Every wallpaper is known by two paths. The one in ~/Pictures/backgrounds is
-// what the footer shows and what the link is pointed at; it is itself a symlink
-// that home-manager writes, and it survives a rebuild. The one it resolves to
-// in the store is what identifies the picture: two paths in the pictures folder
-// are the same wallpaper only if they resolve to the same file, and the link
-// might have been pointed at either form by something else. Matching is done on
-// the resolved path for that reason, and the resolved path is also what the
-// shell's own surfaces sample - see url.
+// The link at ~/.local/share/wallpaper/current and awww have to move together; the link
+// is written first, so a session restarted before the daemon was told still comes up on
+// the right wallpaper. Matching is done on the resolved store path, because the path in
+// the pictures folder is itself a symlink home-manager writes.
 Singleton {
   id: root
 
@@ -32,15 +21,11 @@ Singleton {
   // Every wallpaper found, name-sorted, as { path, real, name }.
   property var entries: []
 
-  // The wallpaper currently up, resolved. Empty until the first read comes
-  // back, which is why the url below falls back to the link: a surface built in
-  // that first moment still has something to sample.
+  // Empty until the first read comes back, which is why the url below falls back to the link.
   property string current: ""
 
-  // What the shell's frosted surfaces sample. Keyed on the resolved file rather
-  // than on the link, because an Image keyed on the link would never reload: the
-  // URL is the same name whatever it points at, so Qt would keep serving the
-  // picture it already had.
+  // Keyed on the resolved file: an Image keyed on the link would never reload, since the
+  // URL is the same name whatever it points at.
   readonly property string url: "file://" + (current !== "" ? current : link)
 
   readonly property int index: {
@@ -53,8 +38,7 @@ Singleton {
 
   readonly property string name: index >= 0 ? entries[index].name : ""
 
-  // What the footer draws to the left of the file name. The home directory is
-  // written back as a tilde, as a path in a shell surface should be.
+  // The home directory is written back as a tilde, as a path in a shell surface should be.
   readonly property string directoryLabel: "~" + directory.substring(home.length) + "/"
 
   function refresh() {
@@ -64,8 +48,7 @@ Singleton {
       resolve.running = true;
   }
 
-  // Set the wallpaper, from one of the entries above. The link is written
-  // first; see the note at the top.
+  // The link is written first; see the note at the top.
   function apply(entry) {
     if (!entry || entry.real === root.current)
       return;
@@ -75,10 +58,8 @@ Singleton {
     relink.running = true;
   }
 
-  // Written to a second name and renamed over the old one, as cherry does it,
-  // because rename is the only way to replace a symlink without there being a
-  // moment where it does not exist. Anything reading the link in that moment -
-  // a session coming up, another shell - would find nothing at all.
+  // Renamed over the old one, because rename is the only way to replace a symlink without
+  // a moment where it does not exist.
   Process {
     id: relink
 
@@ -86,8 +67,7 @@ Singleton {
 
     onExited: function (code) {
       if (code !== 0) {
-        // The link is the record. If it did not move, nothing else should, and
-        // the state here goes back to whatever is actually on disk.
+        // The link is the record: if it did not move, the state goes back to what is on disk.
         root.refresh();
         return;
       }
@@ -96,17 +76,13 @@ Singleton {
     }
   }
 
-  // cherry's own call, which is what put these wallpapers up before this panel
-  // existed: the new picture grows out of the middle of the screen over nine
-  // tenths of a second. Switching wallpaper should look the same however it was
-  // asked for, so the arguments are copied rather than chosen.
+  // cherry's own arguments, so a switch looks the same however it was asked for.
   function paintCommand(target) {
     return ["awww", "img", target, "--transition-type", "grow", "--transition-pos", "center", "--transition-duration", "0.9", "--transition-fps", "120"];
   }
 
-  // If the daemon is not up there is nothing to tell, and the link is already
-  // written, so the next session start reads the right file. Failing quietly is
-  // the whole handling.
+  // No daemon means nothing to tell, and the link is already written, so failing quietly
+  // is the whole handling.
   Process {
     id: paint
   }
@@ -125,9 +101,8 @@ Singleton {
     }
   }
 
-  // Each line is the pictures-folder path and the file it resolves to. A glob
-  // in one shell rather than find, because both halves are wanted per file and
-  // find can only print one of them.
+  // A glob in one shell rather than find, because both the path and the file it resolves
+  // to are wanted per line and find can only print one of them.
   Process {
     id: scan
 
@@ -161,8 +136,7 @@ Singleton {
           });
         }
 
-        // Sorted here rather than by the shell, so the order does not depend on
-        // the locale the session happens to be running under.
+        // Sorted here rather than by the shell, so the order does not depend on the locale.
         found.sort(function (a, b) {
           return a.name.localeCompare(b.name);
         });

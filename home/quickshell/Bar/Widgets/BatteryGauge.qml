@@ -2,8 +2,6 @@ import QtQuick
 import Quickshell.Services.UPower
 import qs.Commons
 
-// A drawn cell rather than a glyph, so the charge level is the shape itself and
-// the reading sits inside it.
 Item {
   id: root
 
@@ -13,8 +11,6 @@ Item {
   readonly property bool charging: present && battery.state === UPowerDeviceState.Charging
   readonly property bool full: present && battery.state === UPowerDeviceState.FullyCharged
 
-  // A charge that is nearly out has to break the accent, or it reads as a
-  // normal reading in an unusual place.
   readonly property color tint: {
     if (charging || full)
       return Theme.foam;

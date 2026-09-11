@@ -3,36 +3,26 @@ import QtQuick.Effects
 import Quickshell
 import qs.Commons
 
-// A floating surface with the shell's shared tint and compositor blur. Lower
-// shell surfaces are hidden by their owners during handoff so only the desktop
-// can show through this surface.
+// A floating surface with the shell's shared tint and compositor blur.
 Item {
   id: root
 
-  // Defaults to the stadium. Callers that want a flatter corner pass their own
-  // radius, but they pass it through min(height / 2, r) rather than animating
-  // it, so a short surface is always fully round; see Bar/Island.qml.
+  // Defaults to the stadium. Callers pass their own radius through min(height / 2, r)
+  // rather than animating it; see Bar/Island.qml.
   property real surfaceRadius: height / 2
   property real screenOffsetX: 0
   property real screenOffsetY: 0
 
-  // Clip the contents to the pill. A surface whose contents are laid out at
-  // their final size and revealed as it grows needs this; one whose contents
-  // always fit does not, and should not pay for the extra layer.
+  // Only needed where contents are laid out at final size and revealed as the pill grows.
   property bool clipContent: false
 
-  // The ground and the contents fade separately, because the handover needs
-  // them to. A surface handing the island over keeps its ground painted for
-  // as long as it is covering the gap before the taker presents, and takes
-  // its contents off well before that: the taker's blur samples whatever is
-  // behind it, so what it must not find there is the old panel's text. A flat
-  // tint it can find, and does not show. See Ui/IslandSurface.qml.
+  // Ground and contents fade separately: the taker's blur samples what is behind it,
+  // so the old panel's text must be gone well before its ground is.
   property real backdropOpacity: 1
   property real contentOpacity: 1
 
   default property alias content: contentHolder.data
 
-  // The surface stack, masked to the pill radius in one pass at the end.
   Item {
     id: frost
 
@@ -62,7 +52,6 @@ Item {
     }
   }
 
-  // A hairline that separates the surface from a wallpaper of the same ink.
   Rectangle {
     anchors.fill: parent
     radius: root.surfaceRadius
@@ -73,9 +62,8 @@ Item {
     visible: opacity > 0
   }
 
-  // The layer's texture is only as big as this item, so anything the contents
-  // place outside the pill is dropped before the mask even runs; the mask is
-  // what keeps the rounded corners honest.
+  // The layer's texture is only as big as this item, so contents outside the pill are
+  // dropped before the mask runs.
   Item {
     id: contentHolder
 

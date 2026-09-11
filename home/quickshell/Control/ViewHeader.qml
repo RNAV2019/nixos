@@ -2,13 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// The bar every control-centre view wears: a back button, the view's name, and
-// whatever that view needs on the right.
-//
-// The back button is in the same place on every view, including the root, where
-// it closes the panel rather than popping a view. That is deliberate - the
-// control centre is one surface that changes contents, so the control that
-// takes you out of it should not move.
 Item {
   id: root
 
@@ -69,8 +62,6 @@ Item {
     elide: Text.ElideRight
   }
 
-  // Laid out right to left, so a view can add a control without measuring the
-  // ones already there.
   Row {
     id: slot
 

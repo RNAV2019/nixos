@@ -5,18 +5,9 @@ import Quickshell
 import Quickshell.Services.Notifications
 import qs.Commons
 
-// The one notification server, and the two lists it feeds.
-//
-// Toasts and the control centre want different things from the same event. A
-// toast is a live Notification object: it owns the actions the user can invoke
-// and it has to be dismissed on the bus when the toast goes away. The control
-// centre's list is a record of what arrived, and it has to outlive the objects,
-// because a toast that times out is closed on the bus while the row in the
-// control centre stays until the user clears it.
-//
-// So the server pushes to both: the object goes to `popups`, and a snapshot of
-// the fields the card draws goes to `history`. Nothing in the control centre
-// holds a Notification, which is what lets a row survive its toast.
+// The notification server and the two lists it feeds. Toasts get the live Notification
+// object in `popups`; the control centre gets a snapshot in `history`, so a row outlives
+// the toast it came from.
 Singleton {
   id: root
 
@@ -24,9 +15,7 @@ Singleton {
   readonly property int maxPopups: 3
   readonly property int maxHistory: 50
 
-  // Peace mode - do not disturb. Toasts are suppressed while it is on, but the
-  // notifications still arrive and still land in the list, so nothing is lost
-  // by turning it on.
+  // Peace mode. Toasts are suppressed, but notifications still land in the list.
   property bool peace: false
 
   property var popups: []
@@ -51,25 +40,15 @@ Singleton {
     };
   }
 
-  // What the card actually hands an Image.
-  //
-  // Neither field can be trusted to be loadable. An application may send a
-  // path, a data URI or a bare icon-theme name in either of them, and
-  // notify-send puts the name it was given in both. A name handed straight to
-  // IconImage is read as a relative URL and resolved against the Quickshell
-  // module directory, which is where "Cannot open: qrc:/.../audio-headset"
-  // comes from: the load fails and the card falls through to its letter even
-  // though the theme has the icon. So each candidate is resolved, and the
-  // first one that resolves to something is the icon.
+  // Neither field can be trusted to load: an application may send a path, a data URI or
+  // a bare theme name in either. A theme name handed to IconImage resolves against the
+  // module directory and fails, so each candidate is resolved and the first hit wins.
   function _resolve(candidate) {
     if (!candidate)
       return "";
     var s = String(candidate);
-    // Quickshell hands an application icon through as image://icon/<name>, and
-    // that provider paints a broken-image placeholder for a name the theme does
-    // not have rather than failing the load. The theme lookup is the one thing
-    // that answers honestly, so a name that arrived wrapped is unwrapped and
-    // asked again.
+    // Quickshell wraps an application icon as image://icon/<name>, and that provider
+    // paints a placeholder rather than failing, so unwrap and ask the theme instead.
     if (s.indexOf("image://icon/") === 0)
       return Quickshell.iconPath(s.substring(13), true);
     if (s.indexOf("/") === 0 || s.indexOf("://") > 0 || s.indexOf("data:") === 0)
@@ -87,8 +66,7 @@ Singleton {
     return name && name.length > 0 ? name.charAt(0).toUpperCase() : "?";
   }
 
-  // A stable colour per application, so the same sender keeps the same avatar
-  // between sessions rather than depending on arrival order.
+  // A stable colour per application, independent of arrival order.
   function avatarColour(name) {
     var palette = [Theme.foam, Theme.iris, Theme.gold, Theme.rose, Theme.pine];
     var h = 0;
@@ -134,8 +112,7 @@ Singleton {
 
       notification.tracked = true;
 
-      // One toast per application: a second arrival replaces the first rather
-      // than stacking two cards from the same sender.
+      // One toast per application: a second arrival replaces the first.
       var next = root.popups.slice();
       for (var i = 0; i < next.length; i++) {
         if (next[i].appName === notification.appName) {

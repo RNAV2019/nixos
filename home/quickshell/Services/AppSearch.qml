@@ -3,20 +3,14 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Ranked desktop-entry search, behind the launcher.
-//
-// The ranking is a ladder, not a score. A query that starts the name beats one
-// that starts a later word, which beats one that spells the initials, which
-// beats a match anywhere in the name, which beats a match found only in the
-// description or the keywords. Inside a rung entries keep their alphabetical
-// order, so the list never reshuffles for a reason the query does not explain.
+// Ranked desktop-entry search. The ranking is a ladder: name prefix, then word
+// prefix, initials, substring, then description or keywords; ties stay alphabetical.
 Singleton {
   id: root
 
   property string query: ""
 
-  // Everything the menu is allowed to show, in name order, resolved once.
-  // Ranking then only has to reorder this rather than re-read the entries.
+  // Everything the menu may show, in name order, resolved once.
   readonly property var entries: {
     var all = DesktopEntries.applications.values;
     var out = [];
@@ -30,9 +24,7 @@ Singleton {
     return out;
   }
 
-  // Every match, not a screenful. Theme.launcherMaxRows caps how tall the
-  // panel is allowed to grow, and the list scrolls past that; it must not also
-  // decide how many applications exist.
+  // Every match; Theme.launcherMaxRows caps the panel height, not the result count.
   readonly property var results: {
     var q = query.trim().toLowerCase();
     if (q.length === 0)
@@ -93,8 +85,7 @@ Singleton {
     return -1;
   }
 
-  // What a row shows under the name. The generic name says what the thing is;
-  // the comment says what it does. Prefer the sentence over the label.
+  // Prefer the comment's sentence over the generic name.
   function describe(entry) {
     if (!entry)
       return "";
@@ -105,12 +96,9 @@ Singleton {
     return "";
   }
 
-  // An entry names its icon the way the icon theme does, not the way a URL
-  // does. Handing that name straight to an Image resolves it against the
-  // component's own path and finds nothing, so it has to go through the theme
-  // lookup first; `check` makes a name the theme cannot place come back empty
-  // rather than as a broken path, which is what lets a row fall back to its
-  // tinted initial. An entry that names an absolute file is used as it is.
+  // Icon names are theme names, not URLs, so they go through the theme lookup; `check`
+  // makes an unknown name come back empty rather than a broken path. Absolute paths
+  // are used as they are.
   function iconFor(entry) {
     if (!entry || !entry.icon)
       return "";

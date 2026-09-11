@@ -5,23 +5,15 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// The screen recorder. Boards 08 and 09.
+// The screen recorder. Recording is one long-lived wl-screenrec process, which writes
+// until it is asked to stop.
 //
-// Recording is one long-lived process, wl-screenrec, which writes until it is
-// asked to stop. Everything here is about the three moments around it: working
-// out what to point it at, knowing while it runs, and saying where the file
-// went once it has.
+// wl-screenrec rather than wf-recorder because the toggles have to be real: wf-recorder
+// always burns the cursor in, while wl-screenrec has --no-cursor, takes slurp's own
+// geometry format and records audio from a named device.
 //
-// wl-screenrec rather than wf-recorder because the toggles on board 08 have to
-// be real. wf-recorder always burns the cursor in and offers no way to say
-// otherwise; wl-screenrec has --no-cursor, takes slurp's own geometry format,
-// and records audio from a named device. A toggle the recorder cannot honour
-// would be worse than no toggle at all.
-//
-// Stopping is SIGINT, never SIGKILL: the muxer has to write its trailer or the
-// file is unplayable. That is also why `saving` exists as a state of its own -
-// there is a moment after the user has asked to stop where the recording is
-// still being finished, and claiming it was saved before then would be a lie.
+// Stopping is SIGINT, never SIGKILL: the muxer has to write its trailer or the file is
+// unplayable. That is also why `saving` is a state of its own.
 Singleton {
   id: root
 
@@ -29,17 +21,12 @@ Singleton {
   readonly property string directory: home + "/Videos/recordings"
 
   // "idle" -> "picking" -> "recording" -> "saving" -> "idle".
-  //
-  // `picking` covers the slurp call for a window or a region, which is a
-  // separate process the user is interacting with, and during which the shell
-  // must not claim to be recording.
   property string state: "idle"
 
   readonly property bool recording: state === "recording"
   readonly property bool busy: state !== "idle"
 
-  // What the picker was left on. These outlive a recording, so the next one
-  // opens on the same answers rather than back at the defaults.
+  // What the picker was left on. These outlive a recording, so the next one opens on them.
   property string target: "screen"
   property bool cursor: true
   property bool desktopAudio: true
@@ -77,9 +64,8 @@ Singleton {
       Bus.recorderRequested();
   }
 
-  // Called by the picker once the user has chosen. A window or a region needs
-  // slurp first, and slurp cannot run while the picker surface is holding the
-  // keyboard - the picker closes itself before this is reached.
+  // Called by the picker once the user has chosen; it closes itself first, because slurp
+  // cannot run while that surface holds the keyboard.
   function start() {
     if (root.busy)
       return;
@@ -90,10 +76,7 @@ Singleton {
     }
 
     root.state = "picking";
-    // For a window the candidate rectangles are the clients on the active
-    // workspace, which slurp draws as snap targets; for a region it is a free
-    // drag. Either way slurp prints one "x,y WxH" that wl-screenrec takes
-    // verbatim.
+    // slurp prints one "x,y WxH" that wl-screenrec takes verbatim.
     pick.command = root.target === "window" ? ["sh", "-c", 'ws=$(hyprctl -j activeworkspace | jq -r .id); hyprctl -j clients | jq -r --argjson ws "$ws" \'.[] | select(.workspace.id == $ws and .hidden == false) | "\\(.at[0]),\\(.at[1]) \\(.size[0])x\\(.size[1])"\' | slurp -r'] : ["slurp"];
     pick.running = true;
   }
@@ -108,12 +91,9 @@ Singleton {
     if (!root.cursor)
       args.push("--no-cursor");
 
-    // One device, because wl-screenrec mixes nothing: it takes a single
-    // --audio-device. Desktop audio is the default sink's monitor, the
-    // microphone is the default source, and with both asked for the desktop
-    // wins. The name is resolved in the shell below rather than here, because
-    // it is whatever wireplumber currently calls the default - a bluetooth
-    // headset that connects between two recordings changes it.
+    // One device, because wl-screenrec takes a single --audio-device and mixes nothing.
+    // With both asked for the desktop wins. The name is resolved in the shell below, since
+    // it is whatever wireplumber currently calls the default.
     var device = "";
     if (root.desktopAudio)
       device = 'sink';
@@ -121,9 +101,8 @@ Singleton {
       device = 'source';
 
     root.elapsed = 0;
-    // The directory is made here rather than at start-up, so a recorder that is
-    // never used never creates anything. The whole thing is one shell so the
-    // device lookup happens at the moment of recording.
+    // One shell, so the device lookup happens at the moment of recording. The directory is
+    // made here, so a recorder that is never used creates nothing.
     var script = 'mkdir -p "$(dirname "$1")" || exit 1; kind=$2; shift 2; ' + 'if [ -n "$kind" ]; then ' + 'alias=@DEFAULT_AUDIO_SINK@; [ "$kind" = source ] && alias=@DEFAULT_AUDIO_SOURCE@; ' + 'name=$(wpctl inspect "$alias" | sed -n \'s/.*node\\.name = "\\(.*\\)"/\\1/p\' | head -1); ' + '[ "$kind" = sink ] && name="$name.monitor"; ' + 'if [ -n "$name" ]; then set -- "$@" --audio --audio-device "$name"; fi; fi; ' + 'exec "$@"';
     capture.command = ["sh", "-c", script, "sh", root.file, device].concat(args);
     capture.running = true;
@@ -142,11 +121,8 @@ Singleton {
       return;
     root.state = "saving";
     tick.stop();
-    // SIGINT by hand, because Quickshell's Process has no signal method of its
-    // own and setting running to false would terminate rather than interrupt.
-    // The muxer has to write its trailer or the file will not play. The signal
-    // goes to the process group, since the recorder is started under a shell
-    // and it is the shell's child that has to receive it.
+    // SIGINT by hand: Process has no signal method, and running = false would terminate
+    // rather than interrupt. It goes to the process group, since this runs under a shell.
     interrupt.command = ["sh", "-c", 'kill -INT -"$1" 2>/dev/null || kill -INT "$1"', "sh", String(capture.processId)];
     interrupt.running = true;
   }
@@ -169,8 +145,7 @@ Singleton {
     stdout: StdioCollector {
       onStreamFinished: {
         var g = text.trim();
-        // An empty answer is the user pressing Escape in slurp, which is a
-        // cancel and not a failure.
+        // An empty answer is Escape in slurp, which is a cancel and not a failure.
         if (g === "")
           root.state = "idle";
         else
@@ -189,10 +164,7 @@ Singleton {
 
     stderr: StdioCollector {}
 
-    // Code 0 is a clean stop. Anything else on the way out of `saving` still
-    // produced a file often enough to be worth checking for, but a failure
-    // before the first frame leaves nothing, so the file is stat'ed rather
-    // than assumed.
+    // A failure before the first frame leaves nothing, so the file is stat'ed, not assumed.
     onExited: function (code) {
       tick.stop();
       var wanted = root.file;
@@ -226,9 +198,8 @@ Singleton {
     }
   }
 
-  // The shell is the notification server, so its own notification goes out the
-  // same door as everyone else's and comes back in as a toast with real
-  // actions. notify-send holds until one is chosen and prints its name.
+  // The shell is the notification server, so this goes out the same door as everyone
+  // else's and comes back as a toast with real actions.
   Process {
     id: announce
 

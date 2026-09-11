@@ -4,23 +4,12 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Power profiles, driven through powerprofilesctl.
-//
-// power-profiles-daemon owns the platform's performance stance; this only
-// tells it which of its three profiles to hold. There is no notification when
-// something else changes the profile - tlp, a GNOME neighbour or a script can
-// all write it - so the service asks for the current one on startup and after
-// every write, and takes the daemon's answer as the truth rather than its own
-// last command.
-//
-// If the daemon is not running the calls fail harmlessly and `available` goes
-// false, which is what greys the card's tiles out rather than leaving a
-// picker that does nothing.
+// Power profiles, driven through powerprofilesctl. Nothing notifies on an external
+// change, so the daemon is re-read after every write and its answer is the truth.
 Singleton {
   id: root
 
-  // The active profile as the daemon spells it: "performance", "balanced" or
-  // "power-saver". Empty while nothing has answered yet.
+  // The active profile as the daemon spells it; empty until something answers.
   property string profile: ""
 
   property bool available: false
@@ -40,8 +29,7 @@ Singleton {
   Process {
     id: apply
 
-    // powerprofilesctl returns before the daemon has finished switching, so
-    // the read-back is a beat behind the write rather than part of it.
+    // powerprofilesctl returns before the daemon has finished switching.
     onExited: settle.restart()
   }
 
@@ -75,12 +63,8 @@ Singleton {
     }
   }
 
-  // The daemon and quickshell come up together and in either order, so the
-  // first read can beat it to the bus. This backs off rather than giving up:
-  // a run of quick attempts to catch a daemon that is only a moment behind,
-  // then a minute apart forever. Stopping after a fixed number of tries is
-  // what left a tile reading "Unavailable" for the rest of a session in which
-  // the daemon was installed and started afterwards.
+  // The daemon and quickshell come up in either order, so this backs off forever
+  // rather than giving up after a fixed number of tries.
   property int _tries: 0
 
   readonly property int eagerTries: 15

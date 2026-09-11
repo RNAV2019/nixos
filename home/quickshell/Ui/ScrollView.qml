@@ -1,13 +1,12 @@
 import QtQuick
 import qs.Commons
 
-// body provides a stable parent for measuring caller-provided content.
 Item {
   id: root
 
   default property alias content: body.data
 
-  // Disable only the Flickable; disabling this Item would disable nested input.
+  // Disable only the Flickable; disabling this Item would kill nested input.
   property bool scrollable: true
 
   readonly property alias contentHeight: body.implicitHeight
@@ -23,7 +22,7 @@ Item {
     clip: true
     interactive: root.scrollable && contentHeight > height
 
-    // Advance three rows per wheel notch; Qt's default delta is too small here.
+    // Qt's default wheel delta is too small here.
     WheelHandler {
       enabled: view.interactive
       acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -48,12 +47,11 @@ Item {
 
       width: view.width
       implicitHeight: childrenRect.height
-      // Fill static views without creating a circular height dependency.
+      // Avoids a circular height dependency.
       height: root.scrollable ? implicitHeight : view.height
     }
   }
 
-  // A sibling of the Flickable, so it stays put instead of scrolling away.
   Rectangle {
     anchors.right: parent.right
     width: 3

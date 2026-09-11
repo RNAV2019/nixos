@@ -1,9 +1,6 @@
 import QtQuick
 import qs.Commons
 
-// One result. The row draws its icon and its two lines of text; the selected
-// background and the accent marker belong to the list's highlight, which
-// slides between rows rather than being redrawn on each one.
 Item {
   id: root
 
@@ -13,12 +10,9 @@ Item {
 
   signal activated
 
-  // A row with nothing to say under the name centres it instead of leaving a
-  // gap where the description would have been.
   readonly property bool twoLine: description.length > 0
 
-  // Entries without a themed icon fall back to a tinted initial. The hue is
-  // picked off the name so a given app keeps the same colour between runs.
+  // No themed icon: fall back to an initial, tinted off the name so it stays stable.
   readonly property var tintPalette: [Theme.foam, Theme.gold, Theme.iris, Theme.pine, Theme.rose, Theme.love, Theme.subtle]
 
   readonly property color tint: {
@@ -49,15 +43,8 @@ Item {
     }
   }
 
-  // Ui uses IconImage elsewhere, but it asks the icon theme for exactly the
-  // size it is drawn at. A theme that has no 26 px variant then hands back its
-  // 16 or 22 px one to be scaled up, and the result is visibly soft. Asking
-  // for a size no theme keeps forces the largest variant it has, which
-  // downsamples cleanly instead.
-  //
-  // Loading is synchronous because these are small local files and the
-  // alternative is every row showing its tinted initial for a frame before the
-  // real icon replaces it, on every open.
+  // Ask for a size no theme keeps, so it hands back its largest variant and downsamples
+  // cleanly. Loaded synchronously: small local files, and async shows a blank frame.
   Image {
     id: icon
 
@@ -71,8 +58,6 @@ Item {
     fillMode: Image.PreserveAspectFit
     smooth: true
     mipmap: true
-    // An icon name the theme cannot place must not leave a hole where the
-    // tinted initial would have been.
     visible: source !== "" && status === Image.Ready
   }
 
@@ -102,11 +87,7 @@ Item {
     font.pixelSize: Theme.launcherDescSize
   }
 
-  // A click still launches, for the one case where the pointer is already on a
-  // row when the launcher opens. It does not track the pointer otherwise: the
-  // cursor is hidden while the launcher is up, and a hidden pointer that moves
-  // the selection out from under the arrow keys is worse than one that does
-  // nothing at all. Which row is selected is the list's highlight to say.
+  // A click still launches, but hover never moves the selection: the cursor is hidden.
   MouseArea {
     anchors.fill: parent
     onClicked: root.activated()

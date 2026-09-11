@@ -5,11 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// Board 06. The Wi-Fi tile's sub-view: what the machine is on now, and what it
-// could be on instead.
-//
-// Quickshell's Networking API can connect and can join with a passphrase, but
-// it exposes neither disconnect nor forget, so those two go out through nmcli.
+// Quickshell's Networking API exposes neither disconnect nor forget, so those go
+// out through nmcli.
 Item {
   id: root
 
@@ -29,9 +26,7 @@ Item {
 
   readonly property int contentHeight: Math.min(Theme.controlViewMaxHeight, Theme.controlHeaderHeight + Math.ceil(body.implicitHeight) + Theme.controlPadBottom)
 
-  // Scanning is a radio cost, so it runs only while this view is the one on
-  // screen, and it stops a beat after the view leaves rather than the instant
-  // it does, which would thrash on a quick trip out and back.
+  // Scanning is a radio cost, so it runs only while this view is on screen.
   onActiveChanged: {
     if (active) {
       scanOff.stop();
@@ -236,8 +231,6 @@ Item {
             }
           }
 
-          // The passphrase field belongs to the row that asked for it, so it
-          // opens under that row rather than in a dialogue over the panel.
           Item {
             width: parent.width
             height: visible ? 40 : 0

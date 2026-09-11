@@ -1,16 +1,14 @@
 #!/usr/bin/env bats
 
-# ical-agenda replaces gcalcli behind the quickshell calendar. It has to print
-# exactly the TSV that service already parses, so most of what is checked here
-# is the shape of the output rather than the calendar arithmetic.
+# ical-agenda has to print exactly the TSV the quickshell calendar service parses, so most
+# of what is checked here is the shape of the output rather than the calendar arithmetic.
 
 setup() {
   test_root=$(mktemp -d)
   export HOME="$test_root/home"
   export XDG_CONFIG_HOME="$HOME/.config"
   export XDG_CACHE_HOME="$test_root/cache"
-  # The fixtures are stamped in UTC, so the local zone has to be fixed or the
-  # rendered times move with the machine.
+  # The fixtures are stamped in UTC, so the local zone has to be fixed.
   export TZ=UTC
 
   mkdir -p "$HOME" "$test_root/feeds"
@@ -25,8 +23,7 @@ teardown() {
   rm -rf "$test_root"
 }
 
-# The column a header names, for one row of output. Mirrors how the QML service
-# reads the TSV: by name, never by position.
+# The column a header names, mirroring how the QML service reads the TSV: by name.
 column() {
   local name=$1 row=$2
   printf '%s\n' "$output" | awk -F'\t' -v want="$name" -v row="$row" '
@@ -69,8 +66,7 @@ column() {
 @test "a weekly event is expanded to one row per occurrence" {
   run ical-agenda 2026-09-01 2026-09-30
   [ "$status" -eq 0 ]
-  # Mondays in the window are the 7th, 14th, 21st and 28th; the 14th is
-  # cancelled by EXDATE.
+  # Mondays in the window are the 7th, 14th, 21st and 28th; the 14th is cancelled by EXDATE.
   [ "$(printf '%s\n' "$output" | grep -c 'Weekly sync')" -eq 3 ]
   printf '%s\n' "$output" | grep 'Weekly sync' | grep -q '2026-09-21'
 }

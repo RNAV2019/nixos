@@ -2,12 +2,6 @@ import QtQuick
 import qs.Commons
 
 // The lock's one reveal clock, held apart from the surfaces that read it.
-//
-// The wallpaper stays mounted while its blur and the foreground content animate
-// together. The real session lock and the IPC preview share these same ramps.
-//
-// Neither direction is a morph: the digits never move or change size, so the
-// spring stays out of this and each tier rides its own easing.
 Item {
   id: reveal
 
@@ -17,8 +11,7 @@ Item {
 
   readonly property bool animatingIn: inAnim.running
 
-  // Raised when the foreground out-ramp has fully cleared. The opaque base
-  // stays visible until this lands and the session lock is released.
+  // Raised once the foreground out-ramp has cleared; the opaque base holds until then.
   signal revealOutFinished
 
   function animateIn() {
@@ -35,8 +28,7 @@ Item {
   function reset() {
     inAnim.stop();
     outAnim.stop();
-    // Start from the sharp current wallpaper. The surface remains opaque while
-    // the lock is secured, so the compositor never exposes a black frame.
+    // Stay opaque while the lock is secured, so the compositor never shows a black frame.
     ground = 0;
     clockAlpha = 0;
     loginAlpha = 0;

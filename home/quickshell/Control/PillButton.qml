@@ -2,11 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// The small action a row carries: Connect, Disconnect, Forget, Pair.
-//
-// Two weights. On an accent-filled row the button is drawn in the row's own
-// ink, because accent on accent has nothing to separate it; everywhere else it
-// is a bare accent label that gains a fill on hover.
 Rectangle {
   id: root
 
@@ -15,17 +10,9 @@ Rectangle {
   // Set on rows that are themselves accent filled.
   property bool onAccent: false
 
-  // Rows that only reveal an action under the pointer set this. The button is
-  // always laid out and always tracks its own hover; only its paint and its
-  // clicks are withheld.
-  //
-  // It cannot be `visible`. The button sits on top of the row's own MouseArea,
-  // so the moment the pointer crosses onto it the row stops being hovered - and
-  // a button that hid itself on that would hand the hover straight back to the
-  // row, be shown again, take the hover again, and flicker for as long as the
-  // pointer sat on it. Publishing `hovered` is what breaks that loop: the caller
-  // reveals on the row's hover or the button's own, so once the pointer is on
-  // the button the button is what keeps it there.
+  // Rows that only reveal an action under the pointer set this. The button is always
+  // laid out and tracks its own hover; only its paint and clicks are withheld. It
+  // cannot be `visible`: hiding would hand the hover back to the row and flicker.
   property bool revealed: true
 
   readonly property bool hovered: hover.containsMouse

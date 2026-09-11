@@ -6,18 +6,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The power menu. Board 11, and the island in another of its shapes.
-//
-// It was a dimmed screen with a column of words down the middle. The board
-// makes it what every other surface here is: the pill grows in place into a
-// short wide card carrying one row of tiles, on the 339 ms the board's own
-// motion table gives for an island-to-surface morph, and shrinks back into the
-// pill when it is done. Nothing dims; the menu is a surface, not a mode.
-//
-// Lock acts on the first press. The two that end the session do not: one press
-// arms the tile, which turns love and relabels itself Confirm, and only a
-// second press on the same tile commits. Moving to another tile disarms the
-// first, so an armed tile is never left behind for a later keystroke to fire.
+// The power menu: the island grown into a card of tiles. Lock acts on the first press;
+// the two that end the session arm first and commit only on a second press.
 Variants {
   id: root
 
@@ -34,21 +24,10 @@ Variants {
     // Which tile the keyboard is on.
     property int current: 0
 
-    // Which tile is armed, or -1. Only ever one, and only ever one that asks
-    // to be.
+    // Which tile is armed, or -1.
     property int armed: -1
 
-    // Raised while the island is being handed to another surface. While the
-    // handover's still is held, this surface's shape rides the taker's own
-    // morph; handover is also what keeps the final cut to the pill - once
-    // the still is taken down, covered by the taker - instant. See
-    // Ui/IslandOrigin.qml.
-    // The shape this surface grows out of, and the handover protocol it
-    // follows when another surface takes the island: adopt the island's
-    // card, claim, take the shape the holder was wearing. One of these for
-    // each of the six surfaces that stand in for the island.
-    // Lock is done the moment it is pressed; there is nothing to undo. The
-    // other two take the session with them, so they ask first.
+    // Lock is done the moment it is pressed; the other two take the session with them.
     readonly property var tiles: [
       {
         glyph: Icons.lock,
@@ -78,17 +57,9 @@ Variants {
     onOpening: {
       current = 0;
       armed = -1;
-      // Take the island. The ordering, the card, the handover mailbox and
-      // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
-      // the four arguments are the morph this surface is about to travel,
-      // which the holder rides with it.
     }
 
-    // Giving the island up to the surface that claimed it. The still this
-    // leaves behind is what the eye sees until the taker's first frame
-    // lands; see Ui/IslandOrigin.qml.
-    // Moving disarms. An armed tile that stayed armed while the selection moved
-    // away would sit there waiting for a Return meant for something else.
+    // Moving disarms, so an armed tile is never left waiting for a later Return.
     function move(delta) {
       armed = -1;
       current = (current + delta + count) % count;

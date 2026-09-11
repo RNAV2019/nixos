@@ -1,9 +1,6 @@
 import QtQuick
 import qs.Commons
 
-// Four accent bars that stand in for the playing track. They rest at the
-// heights the design fixes and only move while audio is actually playing, so a
-// paused player is visibly paused rather than merely quiet.
 Item {
   id: root
 
@@ -29,9 +26,7 @@ Item {
         required property int index
         required property real modelData
 
-        // The animation drives its own property rather than the height, so
-        // pausing hands the height back to its binding and the bars settle
-        // into the shape the design fixes.
+        // Animating a separate property lets height fall back to its binding on pause.
         property real level: modelData
 
         anchors.verticalCenter: parent.verticalCenter
@@ -40,7 +35,6 @@ Item {
         radius: width / 2
         color: Theme.accent
 
-        // Staggered periods, so the four bars never beat in unison.
         SequentialAnimation on level {
           running: root.playing
           loops: Animation.Infinite

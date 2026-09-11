@@ -2,20 +2,12 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// The control centre's slider. Thick, fully rounded, and dragged anywhere along
-// its length rather than by a handle.
-//
-// The fill is the control: there is no knob, and the glyph rides inside the
-// fill at the left, inverting to the surface ink once the fill has reached it.
-// The fill never shrinks below its own height, so at zero it is still a circle
-// with the glyph in it rather than a sliver.
 Item {
   id: root
 
   property real value: 0
   property string glyph: ""
-  // Muted, or otherwise inert. The fill stays where it is and loses its colour,
-  // which is what the source does when the sink is muted.
+  // Muted or otherwise inert: the fill holds its position and loses its colour.
   property bool dimmed: false
 
   signal moved(real value)
@@ -45,8 +37,7 @@ Item {
     color: root.dimmed ? Theme.withAlpha(Theme.subtle, 0.35) : Theme.accent
     scale: drag.pressed ? 0.98 : 1
 
-    // Only the value animates. A drag writes the value every frame anyway, so
-    // this is what smooths a keyboard step or an external change.
+    // Smooths a keyboard step or an external change; a drag writes every frame anyway.
     Behavior on width {
       enabled: !drag.pressed
 
@@ -70,7 +61,6 @@ Item {
     x: Theme.controlSliderGlyphLeft
     y: (parent.height - height) / 2
     text: root.glyph
-    // The glyph sits on the fill until the fill has retreated past it.
     color: fill.width > x + width && !root.dimmed ? Theme.base : Theme.subtle
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlTileGlyphSize

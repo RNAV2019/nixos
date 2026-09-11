@@ -3,9 +3,6 @@ import QtQuick.Shapes
 import qs.Commons
 import qs.Services
 
-// Drawn rather than set in an icon font, so it tints with the accent and stays
-// crisp at the one size the status pill uses. Arcs fade out below the signal
-// they represent, and all three drop when nothing is connected.
 Item {
   id: root
 
@@ -23,8 +20,7 @@ Item {
     startX: x0
     startY: yBase
 
-    // A quadratic whose control point sits twice as far out as the apex passes
-    // exactly through that apex at its midpoint.
+    // A control point twice as far out as the apex passes through that apex.
     PathQuad {
       x: arc.x1
       y: arc.yBase
@@ -35,7 +31,6 @@ Item {
 
   readonly property bool connected: NetworkInfo.onEthernet || NetworkInfo.activeNetwork !== null
 
-  // Ethernet has no signal to grade, so it lights every arc.
   readonly property real strength: {
     if (NetworkInfo.onEthernet)
       return 1;
@@ -80,7 +75,6 @@ Item {
     }
   }
 
-  // The base dot, which is present whether or not there is a signal.
   Rectangle {
     x: 6.2
     y: 11.2

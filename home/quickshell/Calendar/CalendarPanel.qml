@@ -5,17 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The calendar. Board 14, and the island's seventh shape.
-//
-// Same plan as every other surface on this layer: it starts at the pill's own
-// size, radius and centre line and grows in its place, and the bar stands its
-// island down while it is up. It is opened by clicking the clock, which is the
-// one thing on the pill a calendar could sensibly hang off.
-//
-// The grid is six rows of seven, always, so the panel does not change height
-// between a month that needs five rows and one that needs six. Days from the
-// neighbouring months fill the ends and are drawn dimmed; they are still real
-// days and still take a click.
+// The calendar: the island grown into a card. The grid is six rows of seven, always,
+// so the panel keeps its height between a five-row month and a six-row one.
 Variants {
   id: root
 
@@ -29,19 +20,8 @@ Variants {
     openHeight: Theme.calHeight
     openRadius: Theme.calRadius
 
-    // Raised while the island is being handed to another surface. While the
-    // handover's still is held, this surface's shape rides the taker's own
-    // morph; handover is also what keeps the final cut to the pill - once
-    // the still is taken down, covered by the taker - instant. See
-    // Ui/IslandOrigin.qml.
-    // The shape this surface grows out of, and the handover protocol it
-    // follows when another surface takes the island: adopt the island's
-    // card, claim, take the shape the holder was wearing. One of these for
-    // each of the six surfaces that stand in for the island.
-    // The first cell of the grid: the Monday on or before the first of the
-    // month. Weeks start on Monday, as the board draws them, which is why the
-    // shift is (day + 6) % 7 rather than the day itself - JavaScript counts
-    // Sunday as zero.
+    // The first cell: the Monday on or before the first of the month. The (day + 6) % 7
+    // shift is because JavaScript counts Sunday as zero.
     readonly property date gridStart: {
       var first = new Date(Calendar.anchor.getFullYear(), Calendar.anchor.getMonth(), 1);
       var shift = (first.getDay() + 6) % 7;
@@ -56,10 +36,6 @@ Variants {
 
     onOpening: {
       Calendar.today();
-      // Take the island. The ordering, the card, the handover mailbox and
-      // the still the holder leaves behind all live in Ui/IslandOrigin.qml;
-      // the four arguments are the morph this surface is about to travel,
-      // which the holder rides with it.
     }
 
     onKeyPressed: function (event) {
@@ -119,7 +95,6 @@ Variants {
           font.weight: Font.DemiBold
         }
 
-        // Today, then the two arrows, laid out from the right inset back.
         Rectangle {
           id: todayBtn
 
@@ -234,7 +209,6 @@ Variants {
           }
         }
 
-        // Weekday headings. Monday first, as the board draws them.
         Repeater {
           model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
@@ -251,8 +225,6 @@ Variants {
           }
         }
 
-        // Six rows of seven, always, so the panel does not change height
-        // between a five-row month and a six-row one.
         Repeater {
           model: 42
 
@@ -271,9 +243,8 @@ Variants {
             width: Theme.calColumnPitch
             height: Theme.calRowPitch
 
-            // The marker is the selection, and today is the selection's
-            // starting place rather than a mark of its own. A ring says
-            // "today, but you are looking elsewhere".
+            // Today is where the selection starts, so a ring says "today, but you are
+            // looking elsewhere".
             Rectangle {
               x: (parent.width - Theme.calTodayMarker) / 2
               y: (parent.height - Theme.calTodayMarker) / 2
@@ -296,9 +267,7 @@ Variants {
               font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
             }
 
-            // One dot per day that has anything, in the colour of the first
-            // calendar that day draws from. A count of dots would turn the
-            // grid into a chart; the agenda below is where the detail lives.
+            // One dot per day that has anything, in the colour of its first calendar.
             Rectangle {
               x: (parent.width - width) / 2
               y: parent.height / 2 + Theme.calDotDrop - height / 2
@@ -337,9 +306,7 @@ Variants {
           font.pixelSize: Theme.calSectionSize
         }
 
-        // What the day holds. The panel has room for three rows; a fuller day
-        // says how many more there are rather than scrolling, because this is
-        // a glance surface and scrolling is what the real calendar is for.
+        // Room for three rows; a fuller day says how many more rather than scrolling.
         Repeater {
           model: Math.min(win.agenda.length, Theme.calAgendaMax)
 
@@ -386,8 +353,6 @@ Variants {
               elide: Text.ElideRight
             }
 
-            // The location if there is one, otherwise how long it runs. Both
-            // answer "and what does that mean for my afternoon".
             Text {
               id: meta
 
@@ -411,8 +376,7 @@ Variants {
           }
         }
 
-        // The one line that covers every state the list is not in: nothing on,
-        // more than fits, still loading, or the calendar never set up.
+        // Covers every state the list is not in: empty, truncated, loading, or never set up.
         Text {
           x: Theme.calInset
           y: Theme.calAgendaTop + Math.min(win.agenda.length, Theme.calAgendaMax) * (Theme.calAgendaHeight + Theme.calAgendaGap) + 4

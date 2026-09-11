@@ -4,15 +4,6 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// One row of the control centre's notification list.
-//
-// The card is a record rather than a live notification: it outlives the toast
-// it came from, so it carries no actions, only the sender, what was said, and
-// the cross that forgets it.
-//
-// An application that ships an icon gets its icon. One that does not gets a
-// letter avatar in a colour derived from its name, so the same sender is always
-// the same colour rather than depending on what else has arrived.
 Rectangle {
   id: root
 
@@ -62,8 +53,7 @@ Rectangle {
       anchors.fill: parent
       anchors.margins: 3
       source: root.iconSource
-      // An unresolved icon has to fall back to the letter rather than punch a
-      // hole in the avatar.
+      // An unresolved icon falls back to the letter rather than a hole in the avatar.
       visible: root.iconSource !== "" && status !== Image.Error && status !== Image.Null
     }
   }

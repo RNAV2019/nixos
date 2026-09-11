@@ -5,26 +5,18 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Services
 
-// The lock screen's picture, and nothing else: no session lock, no PAM, no
-// watchdog - those live in the host. Everything here is hosted twice, by the
-// real session-lock surface in Lock.qml and by the IPC preview in
-// LockPreview.qml, so every visual change can be rehearsed on a live desktop
-// before it ever has to work on a screen that can lock you out.
-//
-// The current wallpaper is always mounted and opaque. Its blur increases into
-// the locked state and decreases back to the regular session on unlock.
+// The lock screen's picture and nothing else: no session lock, no PAM, no watchdog.
+// Hosted twice, by Lock.qml and by the IPC preview in LockPreview.qml, so every visual
+// change can be rehearsed on a live desktop.
 Item {
   id: view
 
-  // Host-driven state. password is what the dot row draws; submittedPassword
-  // never reaches this file - the field wipes the frame Enter lands, while
-  // the conversation the host feeds keeps the copy.
+  // submittedPassword never reaches this file: the field wipes the frame Enter lands.
   property string password: ""
   property string status: ""
   property bool statusIsError: false
   property bool busy: false
-  // Retained as host state for the input flow; board 13 renders the field from
-  // its first frame rather than waiting for a keystroke.
+  // Board 13 draws the field from its first frame rather than waiting for a keystroke.
   property bool inputStarted: false
   property real ground: 0
   property real clockAlpha: 0
@@ -41,8 +33,7 @@ Item {
     var name = Quickshell.env("USER") || Quickshell.env("LOGNAME") || "";
     if (name.length > 0)
       return name;
-    // Neither is set under some session managers; the home directory is named
-    // after the account either way.
+    // Neither is set under some session managers; the home directory is named after the account.
     var home = Quickshell.env("HOME") || "";
     return home.substring(home.lastIndexOf("/") + 1);
   }
@@ -66,8 +57,7 @@ Item {
       return view.outputScreen ? view.outputScreen.devicePixelRatio : 1;
     }
 
-    // The board draws 1080 units tall, so one unit is this many device
-    // pixels and the whole block keeps its proportions on any panel.
+    // The board draws 1080 units tall, so the block keeps its proportions on any panel.
     readonly property real ui: height / 1080
 
     function u(v) {
@@ -217,8 +207,7 @@ Item {
 
           focus: true
           enabled: !view.busy
-          // The dots are drawn as fixed geometry beside this, so the field
-          // itself renders nothing.
+          // The dots are fixed geometry beside this, so the field itself renders nothing.
           echoMode: TextInput.NoEcho
           color: "transparent"
           cursorVisible: false
@@ -254,7 +243,6 @@ Item {
           renderType: Text.QtRendering
         }
 
-        // Dots then caret, left-aligned, matching the board's caret inset.
         Row {
           anchors.left: parent.left
           anchors.leftMargin: canvas.u(Theme.lockDotInset)
@@ -270,8 +258,8 @@ Item {
               readonly property bool filled: index < input.text.length
 
               width: filled ? canvas.u(Theme.lockDotSize + Theme.lockDotGap) : 0
-              // Every child of the row is the caret's height, so the row
-              // lines them up without anchors, which a positioner ignores.
+              // Every child of the row is the caret's height, so the positioner lines
+              // them up without anchors, which it would ignore.
               height: canvas.u(Theme.lockCaretHeight)
 
               Behavior on width {

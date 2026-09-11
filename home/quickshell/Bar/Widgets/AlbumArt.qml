@@ -3,9 +3,6 @@ import QtQuick.Effects
 import qs.Commons
 import qs.Services
 
-// The track's cover, or a wash of the palette when the player exposes none.
-// The wash is three blurred blooms rather than a placeholder glyph, so an
-// artless track still gives the card something to sit against.
 Item {
   id: root
 
@@ -23,8 +20,6 @@ Item {
     }
   }
 
-  // The corner radius scales with the cover, so it stays proportional while
-  // the card grows.
   property real cornerRadius: Theme.islandArtRadius * (width / Theme.islandArtSize)
 
   readonly property bool hasArt: Media.artUrl !== "" && art.status === Image.Ready

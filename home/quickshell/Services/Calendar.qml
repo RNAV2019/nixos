@@ -7,21 +7,12 @@ import qs.Commons
 
 // Google Calendar, read through ical-agenda. Board 14.
 //
-// The Google side is a secret iCal address: a URL that returns an .ics for one
-// calendar, issued and revoked from Google's own settings panel. There is no
-// OAuth client, no consent and no refresh token, which is the whole reason it
-// replaced gcalcli - a token in a folder the shell can read is a credential
-// the shell is responsible for, and this is one line in secrets/secrets.yaml
-// instead. sops-nix decrypts the addresses to a root-written file that only
-// ical-agenda opens; nothing here ever sees one.
+// The Google side is a secret iCal address held in secrets/secrets.yaml: sops-nix
+// decrypts it to a root-written file that only ical-agenda opens, so there is no OAuth
+// client and no refresh token, and nothing here ever sees an address.
 //
-// ical-agenda does the fetching, the recurrence expansion and the merge across
-// calendars, and prints the same TSV gcalcli did. See home/ical-agenda.nix.
-//
-// Events are read a month at a time, because that is the unit the grid draws.
-// Moving to another month is a new call; the answers are cached by month key so
-// paging back and forth does not re-fetch, and ical-agenda keeps its own short
-// cache of the feeds themselves underneath that.
+// ical-agenda does the fetching, the recurrence expansion and the merge, and prints TSV.
+// See home/ical-agenda.nix. Events are read a month at a time and cached by month key.
 Singleton {
   id: root
 
@@ -36,8 +27,7 @@ Singleton {
 
   property bool loading: false
 
-  // Empty while things are working. Set when ical-agenda cannot answer, which
-  // on a fresh machine means no address has been put in secrets.yaml yet.
+  // Set when ical-agenda cannot answer, which on a fresh machine means no address yet.
   property string error: ""
 
   // month key -> array of events. An event is
@@ -56,8 +46,7 @@ Singleton {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
-  // The events on one day, in start order. All-day events come first, which is
-  // the order a day reads in.
+  // The events on one day, in start order, all-day first.
   function eventsOn(day) {
     var out = [];
     for (var i = 0; i < root.events.length; i++) {
@@ -80,9 +69,7 @@ Singleton {
     return false;
   }
 
-  // A stable colour per calendar, so the same calendar is the same colour every
-  // session rather than depending on which event arrived first. The same trick
-  // NotificationStore uses for avatars.
+  // A stable colour per calendar, independent of which event arrived first.
   function colourFor(name) {
     var palette = [Theme.foam, Theme.iris, Theme.gold, Theme.rose, Theme.pine];
     if (!name)
@@ -123,12 +110,10 @@ Singleton {
     return d.getFullYear() + "-" + root.pad(d.getMonth() + 1) + "-" + root.pad(d.getDate());
   }
 
-  // The grid shows leading and trailing days from the neighbouring months, so
-  // the fetch is padded a week either side rather than being the month exactly.
-  //
-  // `force` is the user asking again rather than the grid moving, and it is
-  // passed down as --refresh so the feeds are re-downloaded instead of being
-  // answered out of ical-agenda's own cache.
+  // The grid draws days from the neighbouring months, so the fetch is padded a week
+  // either side.
+  // `force` is the user asking again rather than the grid moving, and goes down as
+  // --refresh so the feeds are re-downloaded.
   function load(force) {
     if (root.months[root.monthKey] !== undefined)
       return;
@@ -141,10 +126,8 @@ Singleton {
     watchdog.restart();
   }
 
-  // A process that cannot start at all - no ical-agenda on PATH - only warns
-  // and never exits, so nothing here would ever come back and the panel would
-  // sit on "Loading…" for the rest of the session. This is also what catches a
-  // feed on a network that is not answering.
+  // A process that cannot start at all only warns and never exits, so without this the
+  // panel would sit on "Loading…" forever. It also catches a feed that will not answer.
   Timer {
     id: watchdog
 
@@ -162,8 +145,7 @@ Singleton {
     }
   }
 
-  // Asked for by hand, so it goes past both caches: the months held here and
-  // the feeds ical-agenda keeps on disk.
+  // Asked for by hand, so it goes past both caches.
   function refresh() {
     root.months = {};
     root.load(true);
@@ -182,7 +164,6 @@ Singleton {
           return;
         }
 
-        // The header names the columns; everything below is read through it.
         var cols = {};
         var head = lines[0].split("\t");
         for (var c = 0; c < head.length; c++)
@@ -206,8 +187,7 @@ Singleton {
           var ed = field(p, "end_date");
           var et = field(p, "end_time");
 
-          // ical-agenda leaves both times empty for an all-day event, which is
-          // the only thing that distinguishes one here.
+          // ical-agenda leaves both times empty for an all-day event.
           var allDay = st === "";
 
           out.push({
@@ -236,9 +216,7 @@ Singleton {
       root.loading = false;
       if (code === 0)
         return;
-      // ical-agenda fails with one line, whether that is a missing address
-      // list on a machine that has never been set up or a feed that would not
-      // answer. Either way it says it better than this could.
+      // ical-agenda fails with one line, and it says it better than this could.
       var said = fetch.stderr.text.trim().split("\n")[0];
       root.error = said === "" ? "The calendar is not set up" : said;
       var next = Object.assign({}, root.months);
@@ -247,9 +225,8 @@ Singleton {
     }
   }
 
-  // "YYYY-MM-DD" and "HH:MM" as ical-agenda prints them. Built field
-  // by field rather than handed to Date(), which parses a bare date string as
-  // UTC and would put a late evening event on the wrong day.
+  // Built field by field rather than handed to Date(), which parses a bare date string
+  // as UTC and would put a late evening event on the wrong day.
   function parse(date, time) {
     var d = date.split("-");
     var t = time !== "" ? time.split(":") : ["0", "0"];

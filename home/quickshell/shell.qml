@@ -110,8 +110,7 @@ ShellRoot {
     }
   }
 
-  // The volume and brightness keys route through these so the OSD flashes on
-  // every press, not only on presses that move the value.
+  // Route the keys through here so the OSD flashes on every press, not just on changes.
   IpcHandler {
     target: "brightness"
 

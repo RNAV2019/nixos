@@ -2,14 +2,11 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// The radio switch a sub-view header carries. It is the same on/off statement
-// the tiles make with their fill, in the one place a tile is not available.
 Rectangle {
   id: root
 
   property bool checked: false
-  // Not `enabled`: that name belongs to Item, and shadowing it would leave the
-  // switch drawing one state while the input layer believed another.
+  // Not `enabled`: Item already owns that name.
   property bool interactive: true
   readonly property bool pressed: mouse.pressed
 

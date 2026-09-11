@@ -2,8 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// The round badge beside a device slider. Muted it goes red, because mute is
-// the one audio state worth spotting from across the panel.
 Rectangle {
   id: root
 

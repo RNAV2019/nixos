@@ -4,9 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
 
-// One choice of "the player that matters" for the whole shell. The island and
-// any future media surface have to agree on it, so the pick lives here rather
-// than inside a widget.
 Singleton {
   id: root
 
@@ -44,16 +41,12 @@ Singleton {
 
   readonly property string artUrl: active && player.trackArtUrl ? player.trackArtUrl : ""
 
-  // MPRIS does not push position: a player reports where it is only when it is
-  // asked. The control centre's progress bar is the only thing that wants it,
-  // so the poll runs while that bar is on screen and nowhere else.
+  // MPRIS never pushes position, so poll only while the progress bar is on screen.
   property bool trackPosition: false
 
   readonly property real length: active && player.lengthSupported && player.length > 0 ? player.length : 0
 
-  // A player that does not really carry a position still answers the property,
-  // and some answer it with the wrong type. Nothing asks one of those for a
-  // position, and the poll below does not wake for one either.
+  // Some players answer this with the wrong type; nothing asks those for a position.
   readonly property bool positionKnown: active && player.positionSupported
 
   readonly property real position: positionKnown ? player.position : 0

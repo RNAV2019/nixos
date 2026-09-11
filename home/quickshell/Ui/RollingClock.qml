@@ -1,20 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// The pill's clock, drawn one Text per character so that a digit which
-// changes on the minute can roll to its next value the way the source
-// recording's does. Measured at 60 fps at 1:37, where 21:48 rolls to 21:49:
-// the outgoing glyph rises by about half its own height and fades out on the
-// content clock, while the incoming one rises into place from the same
-// distance below and fades in behind it on the fast one. The two are seen
-// overlapping mid-roll and no frame shows a clipped glyph, so this is a
-// cross-fade and not a clipped reel; it is also why the pair's total ink
-// dips in the middle, the two fades never summing to one.
-//
-// The slots keep each character's own advance - Inter's figures are
-// proportional - so every glyph sits exactly where a single Text of the same
-// string would have drawn it, and the characters that did not change never
-// move. The colon never changes, and so never rolls.
+// The pill's clock, drawn one Text per character so a digit that changes on the minute
+// cross-fades to its next value. Each slot keeps its character's own advance, so the
+// glyphs that did not change never move.
 Item {
   id: root
 
@@ -22,8 +11,7 @@ Item {
   property font font
   property color color
 
-  // About half a glyph's height of travel, measured off the roll at 1:37:
-  // 10 px against a 15 px cap height at the recording's own clock size.
+  // About half a glyph's height of travel.
   readonly property real rollTravel: font.pixelSize * Theme.clockRollTravel
 
   implicitWidth: row.implicitWidth
@@ -42,9 +30,8 @@ Item {
 
         readonly property string glyph: root.text.charAt(index)
 
-        // The glyph this slot has settled on. It is what the outgoing copy
-        // shows when the next change arrives, and comparing against it is
-        // what keeps a digit that did not change perfectly still.
+        // The glyph this slot has settled on; comparing against it keeps an unchanged
+        // digit perfectly still.
         property string shown
         property bool armed: false
 
@@ -55,9 +42,8 @@ Item {
           if (!armed || glyph === shown)
             return;
 
-          // A change while one roll is still under way: the glyph that was
-          // arriving is the one that now leaves, and it snaps to rest first
-          // so the next roll always starts from a settled glyph.
+          // A change mid-roll: the arriving glyph snaps to rest first, so the next roll
+          // always starts from a settled glyph.
           if (roll.running) {
             roll.stop();
             incoming.y = 0;
@@ -95,10 +81,8 @@ Item {
           font: root.font
         }
 
-        // The travel rides the content clock, which settles in about five
-        // frames - what the recording shows - and the outgoing ink fades on
-        // the same clock. The incoming ink trails on the fast one, which is
-        // what dips the pair's total ink mid-roll.
+        // Travel and the outgoing ink ride the content clock; the incoming ink trails
+        // on the fast one, which dips the pair's total ink mid-roll.
         ParallelAnimation {
           id: roll
 

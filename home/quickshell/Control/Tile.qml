@@ -2,16 +2,6 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// One quick-settings tile, and the control centre's split tap target.
-//
-// The source shell puts two actions on every tile: the icon badge toggles the
-// thing on or off, and the rest of the tile opens that thing's sub-view. A tile
-// with nothing to open - peace, night light - gives its whole width to the
-// toggle instead, so no part of it is dead.
-//
-// Accent fill is the only state indicator. There is no separate switch, and the
-// label and the badge invert with the fill rather than sitting on it, which is
-// why every colour here is chosen against `on` rather than against the surface.
 Rectangle {
   id: root
 
@@ -97,8 +87,7 @@ Rectangle {
     elide: Text.ElideRight
   }
 
-  // The badge's own target is the badge plus the gutter around it, so the split
-  // falls where the text begins rather than on the drawn circle's edge.
+  // The badge's target includes its gutter, so the split falls where the text begins.
   MouseArea {
     id: badgeHover
 

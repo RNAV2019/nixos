@@ -3,12 +3,7 @@ import Quickshell.Bluetooth
 import qs.Commons
 import qs.Ui
 
-// Board 06b. The Bluetooth tile's sub-view: connected, paired, and whatever the
-// adapter can see right now.
-//
-// Discovery runs only while this view is on screen. A shell that leaves the
-// adapter discovering costs battery on both ends and keeps the device list
-// churning under the pointer.
+// Discovery runs only while this view is on screen; it costs battery on both ends.
 Item {
   id: root
 
@@ -23,8 +18,7 @@ Item {
 
   readonly property int contentHeight: Math.min(Theme.controlViewMaxHeight, Theme.controlHeaderHeight + Math.ceil(body.implicitHeight) + Theme.controlPadBottom)
 
-  // BlueZ falls back to the MAC address when a device advertises no name, and a
-  // list of bare addresses is noise rather than information.
+  // BlueZ falls back to the MAC address when a device advertises no name.
   function isMacName(name) {
     return /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/.test(name);
   }
@@ -234,8 +228,7 @@ Item {
 
             label: "Forget"
             destructive: true
-            // Revealed by the row, then held by itself once the pointer has
-            // crossed onto it. See PillButton.revealed.
+            // Revealed by the row, then held by itself; see PillButton.revealed.
             revealed: pairedRow.hovered || forget.hovered
             onClicked: pairedRow.modelData.forget()
           }

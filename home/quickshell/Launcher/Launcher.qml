@@ -5,31 +5,16 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The app launcher, and the island in its second shape.
+// The app launcher: the island in another shape rather than a panel. It starts at the
+// pill's exact size, radius and centre line and grows down into a 520 px column, and the
+// bar stands its island down for as long as it is on screen.
 //
-// It is not a panel. Panels open below the bar as a separate card; this one
-// takes the island's own place, starting at the pill's exact size, radius and
-// centre line and growing down into a 520 px column. The bar stands its island
-// down for as long as this surface is on screen, so what the eye follows is a
-// single shape changing rather than one surface swapping for another.
+// The clock is the one thing the two states share: it stays drawn in the growing box and
+// fades as the search row takes over.
 //
-// The open was measured against the source recording frame by frame at 60 fps.
-// The shape travels for about 300 ms, and its width and height ride one curve:
-// fitting them separately lands on 306 and 310 ms, so a single driver is what
-// the source has too. What it does not do is stop dead at the end - like every
-// other morph here it passes its target and settles back; see the note on
-// Theme.morphCurve for the survey that establishes that.
-//
-// The clock is the one thing the two states share: it stays drawn in the
-// growing box and fades as the search row takes over, the same hand-off the
-// island performs when it opens into its media card.
-//
-// The panel is clipped, so the rows do not fade in on the open: they are laid
-// out at their final positions from the first frame and the growing shape
-// uncovers them. Reflow while typing is the part that animates, and it does
-// what the recording shows - new matches fade in, dropped matches fade out,
-// and the ones that survive slide to their new places, passing each other on
-// the way rather than pushing.
+// The panel is clipped, so the rows do not fade in on the open: they are laid out at
+// their final positions and the growing shape uncovers them. Reflow while typing is the
+// part that animates.
 Variants {
   id: root
 
@@ -43,8 +28,7 @@ Variants {
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
 
-    // An empty result set still owns a row's worth of height, so the panel has
-    // somewhere to say that nothing matched.
+    // An empty result set still owns a row's worth of height, so the panel can say so.
     readonly property int rowCount: Math.max(1, Math.min(AppSearch.results.length, Theme.launcherMaxRows))
     readonly property int listHeight: rowCount * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap
     readonly property int contentHeight: Theme.launcherListTop + listHeight + Theme.launcherPadBottom
@@ -61,16 +45,13 @@ Variants {
       hide();
     }
 
-    // Rebuild the model in place rather than replacing it, so the list keeps
-    // its delegates across a query change and can animate what happened to
-    // each one. A wholesale reset would give every row a new delegate at its
-    // new position, and the reflow would read as a cut.
+    // Rebuilt in place rather than replaced, so the list keeps its delegates across a
+    // query change and can animate what happened to each one; a reset would read as a cut.
     function syncRows() {
       var want = AppSearch.results;
       var i, j;
 
-      // An unfiltered query is the whole application list, so the sweep for
-      // rows that no longer belong goes through a lookup rather than a scan.
+      // An unfiltered query is the whole list, so the sweep uses a lookup, not a scan.
       var wanted = {};
       for (i = 0; i < want.length; i++)
         wanted[want[i].id] = true;
@@ -80,8 +61,8 @@ Variants {
           rows.remove(i);
       }
 
-      // What survives is already in the right relative order, so this scan
-      // finds its match at or just after the position it is looking to fill.
+      // What survives is already in the right relative order, so this scan finds its match
+      // at or just after the position it is looking to fill.
       for (i = 0; i < want.length; i++) {
         var at = -1;
         for (j = i; j < rows.count; j++) {
@@ -102,15 +83,13 @@ Variants {
       }
     }
 
-    // Hyprland focuses an OnDemand surface when it first maps, but not when an
-    // already-mapped one goes None -> OnDemand, and this surface stays mapped
-    // through its close animation. Exclusive covers the second case; staying
-    // Exclusive is not an option, because it would route every pointer event on
-    // every output here.
+    // Hyprland focuses an OnDemand surface when it first maps, but not when an already
+    // mapped one goes None -> OnDemand, and this stays mapped through its close animation.
+    // Exclusive covers that, but cannot be permanent: it would route every pointer event here.
     onOpenChanged: {
       if (open) {
-        // Layer-shell hands the surface focus, but Qt still needs an
-        // active-focus target inside it before the input sees a key.
+        // Layer-shell hands the surface focus, but Qt still needs an active-focus target
+        // inside it before the input sees a key.
         Qt.callLater(function () {
           if (win.open)
             query.forceActiveFocus();
@@ -230,8 +209,7 @@ Variants {
           boundsBehavior: Flickable.StopAtBounds
           flickableDirection: Flickable.VerticalFlick
 
-          // Keep the selection on screen once the list is longer than the
-          // panel, without pinning it to a fixed row.
+          // Keep the selection on screen without pinning it to a fixed row.
           highlightRangeMode: ListView.ApplyRange
           preferredHighlightBegin: 0
           preferredHighlightEnd: height
@@ -246,8 +224,6 @@ Variants {
               color: Theme.withAlpha(Theme.text, 0.06)
             }
 
-            // The one piece of colour in the panel, and the only thing that
-            // says which row Enter would launch.
             Rectangle {
               y: (parent.height - height) / 2
               width: Theme.launcherMarkerWidth
@@ -292,8 +268,8 @@ Variants {
             }
           }
 
-          // Survivors travel on the same curve as the shape they sit in, which
-          // is why two of them can be seen crossing rather than shoving.
+          // Survivors travel on the curve of the shape they sit in, which is why two can be
+          // seen crossing rather than shoving.
           displaced: Transition {
             NumberAnimation {
               properties: "y"
@@ -309,20 +285,10 @@ Variants {
           }
         }
 
-    // The launcher is a keyboard surface. Every way of getting anywhere in it -
-    // the query, the selection, the launch - is a key, so while it is up the
-    // pointer is taken off the screen rather than left hovering over a list it
-    // no longer drives.
-    //
-    // This sits over everything and accepts no buttons, so it changes nothing
-    // but the cursor: a press falls straight through it to the dismiss area and
-    // the rows underneath. Being the topmost item that carries a cursor at all
-    // is the whole point, because that is what outranks the query's I-beam and
-    // the rows' pointing hand without having to reach into either.
-    //
-    // Bound rather than switched off, so the pointer comes back on the frame
-    // the launcher closes: an item that is merely disabled keeps the cursor it
-    // last set until something else moves.
+    // The launcher is a keyboard surface, so the pointer comes off the screen while it is
+    // up. This sits over everything and accepts no buttons, so it changes nothing but the
+    // cursor, which is what outranks the query's I-beam and the rows' pointing hand. Bound
+    // rather than switched off, so the pointer returns the frame the launcher closes.
     MouseArea {
       anchors.fill: parent
       acceptedButtons: Qt.NoButton

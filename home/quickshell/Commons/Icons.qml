@@ -26,7 +26,6 @@ Singleton {
   readonly property string headphone: ""
   readonly property var volume: ["", " ", " "]
 
-  // The control centre's own vocabulary.
   readonly property string back: "󰁍"
   readonly property string close: "󰅖"
   readonly property string refresh: "󰑐"
@@ -41,8 +40,6 @@ Singleton {
   readonly property string microphone: "󰍬"
   readonly property string microphoneMuted: "󰍭"
 
-  // The screen recorder. The ring-and-dot is the record mark wherever it
-  // appears: the pill, the control centre tile and the saved notification.
   readonly property string record: "󰑊"
   readonly property string stop: "󰓛"
   readonly property string captureScreen: "󰍹"
@@ -52,8 +49,6 @@ Singleton {
   readonly property string brightness: "󰃟"
   readonly property string keyboardBacklight: "󰌌"
 
-  // The power profiles card. Board 04b: the bolt and the half-circle are the
-  // board's own outline-drawn glyphs, not their filled cousins.
   readonly property string bolt: "󱐋"
   readonly property string contrast: "󱎕"
   readonly property string batterySaver: "󰁹"
@@ -61,7 +56,6 @@ Singleton {
   readonly property var batteryCharging: ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"]
   readonly property var batteryDefault: ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
 
-  // Map a 0-100 percentage to a clamped icon index.
   function step(icons, percent) {
     if (!icons || icons.length === 0)
       return "";

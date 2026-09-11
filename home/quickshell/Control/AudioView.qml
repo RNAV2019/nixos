@@ -3,12 +3,8 @@ import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 
-// Board 05. The audio tile's sub-view: which device the sound comes out of,
-// which one it goes into, and what each running application is doing with it.
-//
-// PipeWire pushes updates for every node the shell tracks, so the enumeration
-// and the tracker are both gated on this view being on screen. Closed, it costs
-// nothing; the bar widget tracks the default sink on its own.
+// PipeWire pushes every node update, so enumeration and tracking are gated on
+// this view being on screen.
 Item {
   id: root
 
@@ -48,7 +44,6 @@ Item {
     return out;
   }
 
-  // Playback streams: one row per application making sound.
   readonly property var streams: {
     if (!active)
       return [];
@@ -111,8 +106,6 @@ Item {
         }
       }
 
-      // The device slider and its mute button. The button is the same round
-      // badge the tiles wear, so mute reads as a toggle rather than a control.
       Item {
         width: parent.width
         height: Theme.controlSliderHeight
@@ -209,8 +202,6 @@ Item {
           width: body.width
           label: root.appLabel(modelData)
 
-          // The per-application level is a thin bar inside the row rather than
-          // a second thick slider, so the row still reads as one thing.
           Item {
             anchors.verticalCenter: parent.verticalCenter
             width: 200
