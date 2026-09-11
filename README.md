@@ -4,7 +4,7 @@
 
 <br>
 
-<video src="showcase.mp4" controls></video>
+<img src="showcase.gif" alt="NixOS desktop showcase">
 
 <br>
 
