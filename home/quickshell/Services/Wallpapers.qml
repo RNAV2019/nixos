@@ -78,7 +78,7 @@ Singleton {
 
   // Keep the transition explicit so every wallpaper switch behaves the same.
   function paintCommand(target) {
-    return ["awww", "img", target, "--transition-type", "grow", "--transition-pos", "center", "--transition-duration", "0.9", "--transition-fps", "120"];
+    return ["awww", "img", target, "--transition-type", "grow", "--transition-pos", "center", "--transition-duration", Theme.reduceMotion ? "0" : "0.36", "--transition-fps", "120"];
   }
 
   // No daemon means nothing to tell, and the link is already written, so failing quietly

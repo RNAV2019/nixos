@@ -54,6 +54,14 @@ Item {
       width: Theme.powerTileWidth
       height: Theme.powerTileHeight
 
+      activeFocusOnTab: true
+      Accessible.role: Accessible.RadioButton
+      Accessible.name: tile.modelData.label
+      Accessible.checked: tile.isActive
+      Accessible.focusable: true
+      Accessible.focused: tile.isCurrent
+      Accessible.onPressAction: root.activated(tile.index)
+
       Rectangle {
         anchors.fill: parent
         radius: Theme.powerTileRadius
@@ -71,7 +79,7 @@ Item {
         border.width: 1
         border.color: {
           if (tile.isActive && root.activeIsCommitting)
-            return root.activeColor;
+             return root.activeColor;
           if (tile.isCurrent || hover.containsMouse)
             return Theme.accent;
           if (tile.isActive)
@@ -100,7 +108,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.powerGlyphTop - Theme.powerTileTop - height / 2 + Theme.powerGlyphSize / 2
         text: tile.modelData.glyph
-        color: tile.ink ? Theme.base : Theme.text
+         color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
         font.family: Theme.iconFont
         font.pixelSize: Theme.powerGlyphSize
 
@@ -113,7 +121,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.powerLabelTop - Theme.powerTileTop
          text: tile.isActive && root.activeLabel !== "" ? root.activeLabel : tile.modelData.label
-        color: tile.ink ? Theme.base : Theme.text
+         color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
         font.family: Theme.uiFont
         font.pixelSize: Theme.powerLabelSize
         font.weight: tile.ink ? Font.Bold : Font.Medium
@@ -129,9 +137,17 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onPressed: tile.forceActiveFocus()
         // Hovering moves the keyboard's place too, so the hovered tile is the one Return fires.
         onEntered: root.entered(tile.index)
         onClicked: root.activated(tile.index)
+      }
+
+      Keys.onPressed: function (event) {
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+          root.activated(tile.index);
+          event.accepted = true;
+        }
       }
     }
   }

@@ -52,26 +52,27 @@ FrostedSurface {
   property bool hoverOpen: false
   readonly property bool expanded: !suppressed && (pinned || hoverOpen)
 
-  // Both delays are the source's, timed off six hover opens and six closes: about 50 ms from
-  // the pointer landing on the pill to the card starting to grow, and about 40 ms from it
-  // leaving to the shrink. Both are upper bounds, including input and capture latency.
+  // Opening is quick, while closing has hysteresis so a pointer crossing the pill's edge does
+  // not make the card flicker shut.
   Timer {
     id: openDelay
 
-    interval: 50
-    onTriggered: if (hover.containsMouse)
+    interval: Theme.islandHoverOpenDelay
+    onTriggered: if (!root.suppressed && hover.containsMouse)
       root.hoverOpen = true
   }
 
   Timer {
     id: closeGrace
 
-    interval: 40
-    onTriggered: if (!hover.containsMouse && !root.pinned)
+    interval: Theme.islandHoverCloseDelay
+    onTriggered: if (!root.suppressed && !hover.containsMouse && !root.pinned)
       root.hoverOpen = false
   }
 
   onPinnedChanged: {
+    if (suppressed)
+      return;
     if (pinned) {
       closeGrace.stop();
       hoverOpen = true;
@@ -84,9 +85,9 @@ FrostedSurface {
   // the pointer, so only one is ever the one on offer.
   onExpandedChanged: {
     if (expanded)
-      Bus.islandCard = root;
-    else if (Bus.islandCard === root)
-      Bus.islandCard = null;
+      Bus.setIslandCard(root.screenName, root);
+    else if (Bus.islandCardFor(root.screenName) === root)
+      Bus.setIslandCard(root.screenName, null);
   }
 
   clipContent: true
@@ -103,12 +104,25 @@ FrostedSurface {
   surfaceRadius: Math.min(height / 2, Theme.islandExpandedRadius)
 
   Behavior on implicitWidth {
-    Morph {}
+    id: widthBehavior
+    enabled: !Theme.reduceMotion
+
+    SurfaceSpring {
+      id: widthSpring
+    }
   }
 
   Behavior on implicitHeight {
-    Morph {}
+    id: heightBehavior
+    enabled: !Theme.reduceMotion
+
+    SurfaceSpring {
+      id: heightSpring
+    }
   }
+
+  readonly property real targetHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
+  readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
   // Everything the card draws is sized against the pill's own height, so one animated
   // property carries the whole layout and nothing can fall out of step with the shape.
@@ -131,8 +145,8 @@ FrostedSurface {
   // block has to stop short of.
   readonly property real centreLeft: Math.min(clockLeft, date.x + date.width * (1 - date.scale) / 2)
 
-  // True only once the morph has come to rest.
-  readonly property bool settled: openness >= 1
+  // Do not infer completion from clamped openness: a spring may cross the target before it rests.
+  readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
 
   // The shut pill is one row on 34 px margins, and every board width is that row plus 68.
   // The equaliser's shoulder and the dot's differ, so the clock shifts with the row and only
@@ -161,6 +175,7 @@ FrostedSurface {
     id: hover
 
     anchors.fill: parent
+    enabled: !root.suppressed
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onContainsMouseChanged: {

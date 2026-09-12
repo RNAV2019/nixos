@@ -17,7 +17,7 @@ Variants {
     id: win
 
     key: "session"
-    openWidth: win.contentWidth
+    openWidth: Theme.panelWidth(modelData, win.contentWidth)
     openHeight: Theme.powerHeight
     openRadius: Theme.powerRadius
 

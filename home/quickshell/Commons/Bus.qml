@@ -7,6 +7,31 @@ Singleton {
   id: root
 
   property bool sessionReady: false
+  property bool locking: false
+
+  signal surfacesClosingForLock
+
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "recorder", "calendar", "session", "profiles"]
+
+  function prepareForLock() {
+    if (locking)
+      return;
+    locking = true;
+    sessionReady = false;
+    for (var i = 0; i < islandKeys.length; i++)
+      surfaceClosed(islandKeys[i]);
+    surfacesClosingForLock();
+    owners = {};
+    transientScreens = {};
+    islandCards = {};
+    islandClaims = {};
+    islandHandoffs = {};
+  }
+
+  function finishUnlock() {
+    locking = false;
+    sessionReady = true;
+  }
 
   signal lockRequested
 
@@ -31,10 +56,35 @@ Singleton {
   // written into a JavaScript object in place.
   property var owners: ({})
 
-  // Transient surfaces dismiss themselves, so they never claim the island through owners.
-  // The bar still needs their markers to stand the pill down.
-  property string osdScreen: ""
-  property string notifyScreen: ""
+  // Transient surfaces dismiss themselves, so they never claim the island through owners. The
+  // markers are keyed by output because a second monitor must not hide its own island when the
+  // focused output is showing an OSD.
+  property var transientScreens: ({})
+
+  function setTransientScreen(key, screenName) {
+    var next = {};
+    for (var k in transientScreens)
+      next[k] = transientScreens[k];
+    if (screenName === "")
+      delete next[key];
+    else
+      next[key] = screenName;
+    transientScreens = next;
+  }
+
+  function transientScreen(key) {
+    return transientScreens[key] !== undefined ? transientScreens[key] : "";
+  }
+
+  function transientOnScreen(name) {
+    if (name === "")
+      return false;
+    for (var k in transientScreens) {
+      if (transientScreens[k] === name)
+        return true;
+    }
+    return false;
+  }
 
   function setOwner(key, screenName) {
     var next = {};
@@ -63,6 +113,16 @@ Singleton {
   readonly property bool islandHeld: {
     for (var k in owners) {
       if (!root.isTransient(k))
+        return true;
+    }
+    return false;
+  }
+
+  function islandHeldFor(name) {
+    if (name === "")
+      return false;
+    for (var k in owners) {
+      if (owners[k] === name && !root.isTransient(k))
         return true;
     }
     return false;
@@ -101,22 +161,65 @@ Singleton {
   // way down.
   signal islandDropped(string screen)
 
-  // The live shape of a surface that has just given the island up, published by the one
-  // letting go and consumed by the one taking over, through Ui/IslandOrigin.qml. The taker
-  // starts from the shape the holder is actually wearing, so a launcher-to-control-centre
-  // switch reads as one surface changing shape. Every claim drains the mailbox in the same
-  // call stack, so it can never outlive its handover.
-  property string handoffScreen: ""
-  property real handoffWidth: 0
-  property real handoffHeight: 0
+  // Per-output handoff transactions. A singleton mailbox is safe only on one monitor; maps keep
+  // simultaneous claims and fractional geometry isolated from one another.
+  property var islandClaims: ({})
+  property var islandHandoffs: ({})
 
-  // The open shape and morph duration of the surface claiming the island, written just
-  // before the claim and consumed by the holder's hold() inside it, so the holder's still
-  // rides the taker's morph in lockstep. Cleared by the taker after the claim.
-  property int takeWidth: 0
-  property int takeHeight: 0
-  property int takeRadius: 0
-  property int takeDuration: 0
+  function claimIsland(screen, width, height, radius, duration) {
+    claimSerial++;
+    var next = {};
+    for (var k in islandClaims)
+      next[k] = islandClaims[k];
+    next[screen] = {
+      serial: claimSerial,
+      width: width,
+      height: height,
+      radius: radius,
+      duration: duration
+    };
+    islandClaims = next;
+    islandClaimed(screen);
+  }
+
+  function claimFor(screen) {
+    return islandClaims[screen] !== undefined ? islandClaims[screen] : null;
+  }
+
+  function clearClaim(screen, serial) {
+    var claim = claimFor(screen);
+    if (!claim || (serial !== undefined && claim.serial !== serial))
+      return;
+    var next = {};
+    for (var k in islandClaims)
+      next[k] = islandClaims[k];
+    delete next[screen];
+    islandClaims = next;
+  }
+
+  function publishHandoff(screen, width, height, radius) {
+    var next = {};
+    for (var k in islandHandoffs)
+      next[k] = islandHandoffs[k];
+    next[screen] = {
+      width: width,
+      height: height,
+      radius: radius
+    };
+    islandHandoffs = next;
+  }
+
+  function consumeHandoff(screen) {
+    var handoff = islandHandoffs[screen] !== undefined ? islandHandoffs[screen] : null;
+    if (!handoff)
+      return null;
+    var next = {};
+    for (var k in islandHandoffs)
+      next[k] = islandHandoffs[k];
+    delete next[screen];
+    islandHandoffs = next;
+    return handoff;
+  }
 
   // Bumped once per claim. A surface holding a still records the serial it armed it for,
   // which is how it tells that handover from a later one; see Ui/IslandOrigin.qml.
@@ -126,5 +229,22 @@ Singleton {
   // A surface taking the island's place starts at the shape the island is actually wearing.
   // The card itself is published rather than its measurements, so the shape can be picked
   // up part way if the card is still growing.
-  property var islandCard: null
+  property var islandCards: ({})
+
+  function setIslandCard(screen, card) {
+    if (screen === "")
+      return;
+    var next = {};
+    for (var k in islandCards)
+      next[k] = islandCards[k];
+    if (card)
+      next[screen] = card;
+    else
+      delete next[screen];
+    islandCards = next;
+  }
+
+  function islandCardFor(screen) {
+    return islandCards[screen] !== undefined ? islandCards[screen] : null;
+  }
 }

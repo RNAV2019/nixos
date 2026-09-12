@@ -15,6 +15,15 @@ Item {
 
   // The wallpaper that is currently up, independent of where the keys are.
   property bool active: false
+  signal activated
+
+  activeFocusOnTab: true
+  Accessible.role: Accessible.Button
+  Accessible.name: root.source
+  Accessible.description: root.selected ? "Selected wallpaper" : root.active ? "Current wallpaper" : "Wallpaper preview"
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+  Accessible.onPressAction: root.activated()
 
   // Not scaled with the tile: a radius that grew would read as the corners breathing.
   readonly property real cornerRadius: Theme.wallpaperTileRadius
@@ -87,7 +96,7 @@ Item {
     Rectangle {
       anchors.fill: parent
       radius: width / 2
-      color: Theme.withAlpha(Theme.base, Theme.wallpaperDotHaloAlpha)
+      color: Theme.withAlpha(Theme.canvas, Theme.wallpaperDotHaloAlpha)
     }
 
     Rectangle {

@@ -92,7 +92,7 @@ Item {
       width: 16
       height: width
       radius: width / 2
-      color: Theme.withAlpha(Theme.base, 0.72)
+      color: Theme.withAlpha(Theme.canvas, 0.72)
       visible: Media.active
 
       Text {

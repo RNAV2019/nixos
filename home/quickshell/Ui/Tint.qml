@@ -1,9 +1,8 @@
 import QtQuick
 import qs.Commons
 
-// The colour counterpart to Morph: same curve, at the state duration.
+// Colour never overshoots. A short ease-out keeps state changes legible without a brightness pulse.
 ColorAnimation {
-  duration: Theme.morphState
-  easing.type: Easing.Bezier
-  easing.bezierCurve: Theme.morphCurve
+  duration: Theme.duration(Theme.morphState)
+  easing.type: Easing.OutQuad
 }

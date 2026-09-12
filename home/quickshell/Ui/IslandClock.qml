@@ -15,6 +15,7 @@ Item {
   property bool shown: true
   property real clockShift: 0
   property alias date: clock.date
+  readonly property real clockWidth: clockLabel.width
 
   SystemClock {
     id: clock
@@ -23,6 +24,8 @@ Item {
   }
 
   RollingClock {
+    id: clockLabel
+
     x: (parent.width - width) / 2 + clockRoot.clockShift
     y: clockRoot.origin && clockRoot.origin.fromCard ? clockRoot.origin.fromHeight / 2 - 8 * clockRoot.origin.fromOpenness - height / 2 : (parent.height - height) / 2
     text: Qt.formatDateTime(clock.date, "HH:mm")

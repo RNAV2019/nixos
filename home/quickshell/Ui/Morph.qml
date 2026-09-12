@@ -1,9 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// The shared surface-morph animation; see Theme.morphCurve.
+// The shared non-spatial transition. Spatial surfaces use SurfaceSpring so retargeting preserves
+// velocity; this component is for small state changes and legacy content transitions.
 NumberAnimation {
-  duration: Theme.morphSurface
-  easing.type: Easing.Bezier
-  easing.bezierCurve: Theme.morphCurve
+  duration: Theme.duration(Theme.morphSurface)
+  easing.type: Easing.OutCubic
 }

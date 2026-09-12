@@ -12,6 +12,15 @@ Item {
 
   property bool active: false
 
+  enabled: active
+  focus: active
+  activeFocusOnTab: true
+
+  Accessible.role: Accessible.Pane
+  Accessible.name: "Wi-Fi settings"
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+
   signal backed
 
   // The network whose password field is open, if any.
@@ -29,13 +38,23 @@ Item {
   // Scanning is a radio cost, so it runs only while this view is on screen.
   onActiveChanged: {
     if (active) {
-      scanOff.stop();
       scanOn.restart();
     } else {
       scanOn.stop();
-      scanOff.restart();
+      if (NetworkInfo.wifiDevice)
+        NetworkInfo.wifiDevice.scannerEnabled = false;
       pendingSsid = "";
     }
+  }
+
+  Keys.onPressed: function (event) {
+    if (event.key !== Qt.Key_Escape && event.key !== Qt.Key_Backspace)
+      return;
+    if (root.pendingSsid !== "")
+      root.pendingSsid = "";
+    else
+      root.backed();
+    event.accepted = true;
   }
 
   function runNmcli(args) {
@@ -51,16 +70,8 @@ Item {
     id: scanOn
 
     interval: Theme.morphSurface + 100
-    onTriggered: if (NetworkInfo.wifiDevice)
+    onTriggered: if (root.active && NetworkInfo.wifiDevice)
       NetworkInfo.wifiDevice.scannerEnabled = true
-  }
-
-  Timer {
-    id: scanOff
-
-    interval: 8000
-    onTriggered: if (NetworkInfo.wifiDevice)
-      NetworkInfo.wifiDevice.scannerEnabled = false
   }
 
   ViewHeader {
@@ -73,6 +84,13 @@ Item {
     Switch {
       checked: Networking.wifiEnabled
       interactive: Networking.wifiHardwareEnabled
+
+      Accessible.role: Accessible.CheckBox
+      Accessible.name: "Wi-Fi"
+      Accessible.checkable: true
+      Accessible.checked: checked
+      Accessible.focusable: true
+
       onToggled: function (v) {
         Networking.wifiEnabled = v;
       }
@@ -99,6 +117,7 @@ Item {
 
         anchors.fill: parent
         anchors.margins: -8
+        enabled: root.active
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: if (NetworkInfo.wifiDevice)
@@ -188,7 +207,7 @@ Item {
       }
 
       Repeater {
-        model: Networking.wifiEnabled ? root.others : []
+        model: root.active && Networking.wifiEnabled ? root.others : []
 
         Column {
           id: entry
@@ -232,9 +251,24 @@ Item {
           }
 
           Item {
+            id: passwordRow
+
             width: parent.width
             height: visible ? 40 : 0
             visible: root.pendingSsid === entry.modelData.name
+
+            onVisibleChanged: {
+              if (visible) {
+                Qt.callLater(function () {
+                  if (passwordRow.visible && root.active)
+                    psk.inputItem.forceActiveFocus();
+                });
+              } else {
+                psk.text = "";
+                if (psk.inputItem.activeFocus)
+                  root.forceActiveFocus();
+              }
+            }
 
             PanelTextField {
               id: psk
@@ -243,6 +277,11 @@ Item {
               width: parent.width - x - join.width - 10
               anchors.verticalCenter: parent.verticalCenter
               placeholder: "Password"
+              accessibleName: "Wi-Fi password"
+              onCancelled: {
+                root.pendingSsid = "";
+                psk.text = "";
+              }
               onAccepted: function (text) {
                 entry.modelData.connectWithPsk(text);
                 root.pendingSsid = "";

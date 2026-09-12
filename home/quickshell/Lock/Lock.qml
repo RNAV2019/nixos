@@ -22,6 +22,7 @@ Scope {
   property int attempts: 0
   property string snapshotPath: ""
   property string snapshotCleanupPath: ""
+  property bool snapshotPending: false
   readonly property bool secure: lockContext.secure
 
   // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell #964). The
@@ -51,6 +52,9 @@ Scope {
   function lock() {
     if (lockContext.locked)
       return;
+    snapshotDelay.stop();
+    snapshotPending = false;
+    Bus.prepareForLock();
     root.password = "";
     root.submittedPassword = "";
     root.status = "";
@@ -69,10 +73,13 @@ Scope {
   }
 
   function requestManualLock() {
-    if (lockContext.locked || snapshotCapture.running)
+    if (Bus.locking || lockContext.locked || snapshotCapture.running || snapshotPending)
       return;
+    // Remove shell layers before the capture so the lock background never contains its own UI.
+    Bus.prepareForLock();
     root.snapshotPath = Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png";
-    snapshotCapture.running = true;
+    snapshotPending = true;
+    snapshotDelay.restart();
   }
 
   // respond() is dropped unless PAM is already asking, and a freshly forked conversation
@@ -96,7 +103,7 @@ Scope {
     root.statusIsError = false;
     root.busy = false;
     // The bar comes back on the first frame of the fade, not after it.
-    Bus.sessionReady = true;
+    Bus.finishUnlock();
     reveal.animateOut();
   }
 
@@ -137,6 +144,16 @@ Scope {
   }
 
   // Capture before the session-lock protocol takes the output. Boot locks bypass this.
+  Timer {
+    id: snapshotDelay
+
+    interval: 80
+    onTriggered: {
+      root.snapshotPending = false;
+      snapshotCapture.running = true;
+    }
+  }
+
   Process {
     id: snapshotCapture
 
@@ -164,7 +181,7 @@ Scope {
 
     onExited: function (exitCode, exitStatus) {
       if (exitCode === 0) {
-        Bus.sessionReady = true;
+        Bus.finishUnlock();
         return;
       }
       root.lock();
@@ -277,7 +294,7 @@ Scope {
 
       // A transparent session-lock surface is composited as black during lock and unlock,
       // so an opaque base stays mounted for the whole secure-lock lifetime.
-      color: Theme.base
+       color: Theme.canvas
 
       // One of these per screen, sharing the one reveal clock, so a second screen joins
       // the ramp already in progress rather than restarting it.

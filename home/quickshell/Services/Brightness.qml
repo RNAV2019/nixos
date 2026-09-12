@@ -41,6 +41,55 @@ Singleton {
   property real _lastAt: 0
   property bool _lastUp: false
 
+  // Slider motion and key repeat can arrive faster than brightnessctl can finish. Keep the
+  // latest absolute target and allow only one short-lived writer at a time.
+  readonly property int writeInterval: 20
+  property real _requestedValue: 0
+  property bool _hasRequestedValue: false
+  property real _lastTarget: 0
+  property bool _hasLastTarget: false
+  property real _lastWriteAt: 0
+
+  function clamp(v) {
+    return Math.max(0, Math.min(1, v));
+  }
+
+  function baseValue() {
+    if (_hasRequestedValue)
+      return _requestedValue;
+    if (_hasLastTarget)
+      return _lastTarget;
+    return root.value;
+  }
+
+  function queueValue(v) {
+    _requestedValue = root.clamp(v);
+    _hasRequestedValue = true;
+    writeTimer.restart();
+  }
+
+  function flushValue() {
+    if (!_hasRequestedValue || setter.running)
+      return;
+
+    var elapsed = Date.now() - _lastWriteAt;
+    if (_lastWriteAt > 0 && elapsed < writeInterval) {
+      writeTimer.restart();
+      return;
+    }
+
+    var target = _requestedValue;
+    _hasRequestedValue = false;
+    if (_hasLastTarget && Math.abs(target - _lastTarget) < 0.005)
+      return;
+
+    _lastTarget = target;
+    _hasLastTarget = true;
+    _lastWriteAt = Date.now();
+    setter.command = ["brightnessctl", "--min-value=4", "set", Math.round(target * 100) + "%"];
+    setter.running = true;
+  }
+
   function step(up) {
     var now = Date.now();
     // Reversing direction restarts the ramp, so a correction is not amplified.
@@ -50,23 +99,35 @@ Singleton {
     _lastUp = up;
 
     var pct = Math.min(maxStepPercent, stepPercent + Math.max(0, _run - accelAfter) * stepGrowth);
-
-    // --min-value keeps the key off a fully black panel. It has to be joined by
-    // = because a separate argument is parsed as the operation instead.
-    setter.command = ["brightnessctl", "--min-value=4", "set", pct + (up ? "%+" : "%-")];
-    setter.running = true;
+    queueValue(baseValue() + (up ? pct : -pct) / 100);
     root.adjusted();
   }
 
   // The panel slider's absolute target, in the same linear space as the steps.
   function set(v) {
-    var pct = Math.round(Math.max(0, Math.min(1, v)) * 100);
-    setter.command = ["brightnessctl", "--min-value=4", "set", pct + "%"];
-    setter.running = true;
+    queueValue(v);
+  }
+
+  onValueChanged: {
+    if (!_hasRequestedValue && !setter.running) {
+      _lastTarget = root.value;
+      _hasLastTarget = true;
+    }
+  }
+
+  Timer {
+    id: writeTimer
+
+    interval: root.writeInterval
+    repeat: false
+    onTriggered: root.flushValue()
   }
 
   Process {
     id: setter
+
+    onRunningChanged: if (!setter.running)
+      root.flushValue()
   }
 
   Process {

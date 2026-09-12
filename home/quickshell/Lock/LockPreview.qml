@@ -75,6 +75,15 @@ Scope {
     }
   }
 
+  Connections {
+    target: Bus
+
+    // The rehearsal surface must never remain above the real PAM-backed lock.
+    function onSurfacesClosingForLock() {
+      root.active = false;
+    }
+  }
+
   IpcHandler {
     target: "lockpreview"
 

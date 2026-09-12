@@ -43,13 +43,17 @@ Singleton {
 
   // MPRIS never pushes position, so poll only while the progress bar is on screen.
   property bool trackPosition: false
+  property int positionPulse: 0
 
   readonly property real length: active && player.lengthSupported && player.length > 0 ? player.length : 0
 
   // Some players answer this with the wrong type; nothing asks those for a position.
   readonly property bool positionKnown: active && player.positionSupported
 
-  readonly property real position: positionKnown ? player.position : 0
+   readonly property real position: {
+     root.positionPulse;
+     return positionKnown ? player.position : 0;
+   }
 
   readonly property real progress: length > 0 ? Math.max(0, Math.min(1, position / length)) : 0
 
@@ -60,8 +64,7 @@ Singleton {
     interval: 1000
     repeat: true
     triggeredOnStart: true
-    onTriggered: if (root.player)
-      root.player.positionChanged()
+     onTriggered: root.positionPulse++
   }
 
   function seek(fraction) {

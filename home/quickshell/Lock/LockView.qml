@@ -71,7 +71,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.base
+       color: Theme.canvas
       z: -2
     }
 
@@ -264,7 +264,7 @@ Item {
 
               Behavior on width {
                 NumberAnimation {
-                  duration: Theme.lockDotPop
+                   duration: Theme.duration(Theme.lockDotPop)
                   easing.type: Easing.OutQuad
                 }
               }
@@ -281,14 +281,14 @@ Item {
 
                 Behavior on scale {
                   NumberAnimation {
-                    duration: Theme.lockDotPop
+                     duration: Theme.duration(Theme.lockDotPop)
                     easing.type: slot.filled ? Easing.OutQuad : Easing.InQuad
                   }
                 }
 
                 Behavior on opacity {
                   NumberAnimation {
-                    duration: Theme.lockDotPop
+                     duration: Theme.duration(Theme.lockDotPop)
                   }
                 }
               }
@@ -306,7 +306,7 @@ Item {
 
             SequentialAnimation on opacity {
               loops: Animation.Infinite
-              running: true
+              running: !Theme.reduceMotion
               PropertyAction {
                 value: 1
               }

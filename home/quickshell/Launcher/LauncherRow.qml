@@ -10,6 +10,14 @@ Item {
 
   signal activated
 
+  activeFocusOnTab: true
+  Accessible.role: Accessible.Button
+  Accessible.name: root.name
+  Accessible.description: root.description
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+  Accessible.onPressAction: root.activated()
+
   readonly property bool twoLine: description.length > 0
 
   // No themed icon: fall back to an initial, tinted off the name so it stays stable.
@@ -68,7 +76,7 @@ Item {
     y: root.twoLine ? 5 : (parent.height - height) / 2
     width: parent.width - x - Theme.launcherInset
     text: root.name
-    color: Theme.text
+    color: Theme.inkPrimary
     elide: Text.ElideRight
     font.family: Theme.uiFont
     font.pixelSize: Theme.launcherNameSize
@@ -80,7 +88,7 @@ Item {
     y: 24
     width: title.width
     text: root.description
-    color: Theme.muted
+    color: Theme.inkTertiary
     elide: Text.ElideRight
     visible: root.twoLine
     font.family: Theme.uiFont
@@ -90,6 +98,15 @@ Item {
   // A click still launches, but hover never moves the selection: the cursor is hidden.
   MouseArea {
     anchors.fill: parent
+    activeFocusOnTab: true
+    onPressed: root.forceActiveFocus()
     onClicked: root.activated()
+  }
+
+  Keys.onPressed: function (event) {
+    if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+      root.activated();
+      event.accepted = true;
+    }
   }
 }

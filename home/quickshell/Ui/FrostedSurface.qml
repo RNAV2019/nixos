@@ -3,7 +3,7 @@ import QtQuick.Effects
 import Quickshell
 import qs.Commons
 
-// A floating surface with the shell's shared tint and compositor blur.
+// A floating opaque surface with the shell's shared fill.
 Item {
   id: root
 
@@ -16,8 +16,8 @@ Item {
   // Only needed where contents are laid out at final size and revealed as the pill grows.
   property bool clipContent: false
 
-  // Ground and contents fade separately: the taker's blur samples what is behind it,
-  // so the old panel's text must be gone well before its ground is.
+  // Ground and contents fade separately during handoff, so the old panel's text is gone
+  // before its surface.
   property real backdropOpacity: 1
   property real contentOpacity: 1
 
@@ -28,14 +28,26 @@ Item {
 
     anchors.fill: parent
     clip: true
-    opacity: root.backdropOpacity
     visible: opacity > 0
+    opacity: root.backdropOpacity
 
     Rectangle {
       anchors.fill: parent
       radius: root.surfaceRadius
-      color: Theme.withAlpha(Theme.surfaceTint, Theme.surfaceTintAlpha)
+      color: Theme.surface
     }
+  }
+
+  // The opaque fill makes contrast deterministic; this outline keeps the material legible when
+  // the desktop behind it is close to the dark canvas. It is intentionally quieter than a glow.
+  Rectangle {
+    anchors.fill: parent
+    radius: root.surfaceRadius
+    color: "transparent"
+    border.width: 1
+    border.color: Theme.surfaceOutline
+    opacity: root.backdropOpacity
+    visible: opacity > 0
   }
 
   Item {
@@ -50,16 +62,6 @@ Item {
       radius: root.surfaceRadius
       color: "black"
     }
-  }
-
-  Rectangle {
-    anchors.fill: parent
-    radius: root.surfaceRadius
-    color: "transparent"
-    border.width: 1
-    border.color: Theme.withAlpha(Theme.surfaceBorder, Theme.surfaceBorderAlpha)
-    opacity: root.backdropOpacity
-    visible: opacity > 0
   }
 
   // The layer's texture is only as big as this item, so contents outside the pill are

@@ -45,9 +45,8 @@ Item {
 
     Behavior on width {
       NumberAnimation {
-        duration: Theme.morphState
-        easing.type: Easing.Bezier
-        easing.bezierCurve: Theme.morphCurve
+         duration: Theme.duration(Theme.morphState)
+         easing.type: Easing.OutCubic
       }
     }
   }

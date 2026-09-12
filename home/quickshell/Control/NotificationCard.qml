@@ -21,9 +21,9 @@ Rectangle {
   implicitHeight: body !== "" ? 48 + Math.ceil(bodyText.implicitHeight) + 14 : 62
 
   radius: Theme.controlNotifRadius
-  color: Theme.withAlpha(Theme.highlightLow, 0.85)
+  color: Theme.surfaceSubtle
   border.width: 1
-  border.color: urgent ? Theme.withAlpha(Theme.urgent, 0.55) : Theme.withAlpha(Theme.highlightMed, 0.6)
+  border.color: urgent ? Theme.withAlpha(Theme.dangerFill, 0.7) : Theme.withAlpha(Theme.separator, 0.8)
 
   readonly property color accentColour: urgent ? Theme.urgent : NotificationStore.avatarColour(appName)
 
@@ -63,7 +63,7 @@ Rectangle {
     y: 13
     width: Math.max(0, dismiss.x - x - 10)
     text: root.appName
-    color: Theme.muted
+    color: Theme.inkTertiary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlSectionSize
     elide: Text.ElideRight
@@ -74,7 +74,7 @@ Rectangle {
     y: 28
     width: Math.max(0, dismiss.x - x - 10)
     text: root.summary
-    color: Theme.text
+    color: Theme.inkPrimary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlNotifTitleSize
     font.weight: Theme.weightSemi
@@ -89,7 +89,7 @@ Rectangle {
     width: Math.max(0, root.width - x - 20)
     visible: root.body !== ""
     text: root.body
-    color: Theme.subtle
+    color: Theme.inkSecondary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlNotifBodySize
     lineHeight: 1.3
@@ -105,7 +105,12 @@ Rectangle {
     x: root.width - 30
     y: 14
     text: Icons.close
-    color: dismissHover.containsMouse ? Theme.text : Theme.muted
+    Accessible.role: Accessible.Button
+    Accessible.name: "Dismiss notification"
+    Accessible.focusable: true
+    Accessible.focused: dismissHover.activeFocus
+    Accessible.onPressAction: root.dismissed()
+    color: dismissHover.containsMouse ? Theme.inkPrimary : Theme.inkTertiary
     scale: dismissHover.pressed ? 0.95 : 1
 
     Behavior on color {
@@ -124,7 +129,9 @@ Rectangle {
       anchors.fill: parent
       anchors.margins: -8
       hoverEnabled: true
+      activeFocusOnTab: true
       cursorShape: Qt.PointingHandCursor
+      onPressed: dismissHover.forceActiveFocus()
       onClicked: root.dismissed()
     }
   }

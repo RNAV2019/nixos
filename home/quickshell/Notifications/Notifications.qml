@@ -30,13 +30,29 @@ Variants {
 
     // A toast is not asked for, so it waits behind a panel the user opened, and gives way
     // to an OSD, which is the direct result of a key just pressed.
-    readonly property bool blocked: Bus.islandHeld || Bus.osdScreen !== ""
-
-    readonly property bool open: current !== null && focused && !blocked
+    readonly property bool blocked: Bus.islandHeldFor(win.screen ? win.screen.name : "") || Bus.transientScreen("osd") !== ""
+    readonly property bool wantsOpen: current !== null && focused && !blocked
+    property bool open: false
 
     readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
-    readonly property bool showing: open || surface.width > collapsedWidth + 0.5
+    readonly property bool showing: open || origin.held || surface.width > collapsedWidth + 0.5
+
+    IslandOrigin {
+      id: origin
+
+      window: win
+    }
+
+    onWantsOpenChanged: {
+      if (wantsOpen && !open) {
+        origin.claim(Theme.notifWidth, win.openHeight, Theme.notifRadius, Theme.morphSurface);
+        open = true;
+      } else if (!wantsOpen && open) {
+        open = false;
+        origin.release();
+      }
+    }
 
     // Per the specification: 0 never expires, negative is the server default, positive is ms.
     readonly property int timeout: {
@@ -145,6 +161,15 @@ Variants {
       reset();
     }
 
+    Connections {
+      target: win.current
+
+      function onClosed() {
+        if (win.current)
+          NotificationStore.forgetPopup(win.current);
+      }
+    }
+
     readonly property string timestamp: {
       clock.date;
       var mins = Math.floor((Date.now() - arrived.getTime()) / 60000);
@@ -156,7 +181,7 @@ Variants {
     }
 
     screen: modelData
-    visible: showing
+    visible: !Bus.locking && showing
     color: "transparent"
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -181,9 +206,26 @@ Variants {
 
     onShowingChanged: {
       if (showing)
-        Bus.notifyScreen = win.screen ? win.screen.name : "";
-      else if (win.screen && Bus.notifyScreen === win.screen.name)
-        Bus.notifyScreen = "";
+        Bus.setTransientScreen("notify", win.screen ? win.screen.name : "");
+      else if (win.screen && Bus.transientScreen("notify") === win.screen.name)
+        Bus.setTransientScreen("notify", "");
+    }
+
+    Connections {
+      target: Bus
+
+      function onSurfacesClosingForLock() {
+        win.open = false;
+        origin.release();
+      }
+
+      function onIslandClaimed(screen) {
+        if (!win.open || !win.screen || screen !== win.screen.name)
+          return;
+        origin.publish(surface.width, surface.height, surface.surfaceRadius);
+        origin.hold(surface.width, surface.height, surface.surfaceRadius);
+        win.open = false;
+      }
     }
 
     FrostedSurface {
@@ -194,24 +236,29 @@ Variants {
 
       clipContent: true
 
-      implicitWidth: win.open ? Theme.notifWidth : win.collapsedWidth
-      implicitHeight: win.open ? win.openHeight : Theme.barHeight
+      implicitWidth: win.open ? Theme.notifWidth : origin.held ? origin.heldWidth : origin.originWidth
+      implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
 
       // Read off the height rather than travelling; see Bar/Island.qml.
       surfaceRadius: Math.min(height / 2, Theme.notifRadius)
 
       Behavior on implicitWidth {
-        Morph {}
+        enabled: !Theme.reduceMotion
+
+        SurfaceSpring {}
       }
 
       Behavior on implicitHeight {
-        Morph {}
+        enabled: !Theme.reduceMotion
+
+        SurfaceSpring {}
       }
 
       MouseArea {
         id: cardHover
 
         anchors.fill: parent
+        enabled: win.open
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         // Clicking the card invokes the default action, which opens the application that
@@ -228,10 +275,12 @@ Variants {
         }
       }
 
-      // Reuse the island clock rather than a second copy with subtly different metrics.
-      IslandClock {
+      // Reuse the complete collapsed renderer, not only the clock, so the handoff preserves
+      // media and recording state when the toast gives the island back.
+      CollapsedPill {
         anchors.fill: parent
-        shown: !win.open
+        origin: origin
+        shown: !win.open && !origin.held
       }
 
       Item {
@@ -397,7 +446,7 @@ Variants {
 
               anchors.centerIn: parent
               text: pill.label
-              color: pill.primary ? Theme.base : Theme.text
+               color: pill.primary ? Theme.inkOnAccent : Theme.inkPrimary
               font.family: Theme.uiFont
               font.pixelSize: Theme.notifActionSize
               font.weight: pill.primary ? Font.DemiBold : Font.Medium

@@ -36,21 +36,19 @@ Item {
         color: Theme.accent
 
         SequentialAnimation on level {
-          running: root.playing
+          running: root.playing && !Theme.reduceMotion
           loops: Animation.Infinite
 
           NumberAnimation {
             to: 3
-            duration: Theme.morphState + bar.index * 30
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphState + bar.index * 30)
+             easing.type: Easing.OutCubic
           }
 
           NumberAnimation {
             to: root.implicitHeight
-            duration: Theme.morphState + 40 + bar.index * 25
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphState + 40 + bar.index * 25)
+             easing.type: Easing.OutCubic
           }
         }
       }

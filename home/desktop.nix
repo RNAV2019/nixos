@@ -418,15 +418,11 @@ in {
         }
       ];
 
-      # The panel windows cover the whole output for outside-click handling, so ignore
-      # transparent layer pixels or the blur would cover the whole desktop.
+      # Keep panel layer windows from adding a compositor fade; their own surface animations
+      # control how the opaque cards appear and disappear.
       layer_rule = [
-        # Hyprland's layersIn fade would run over an island surface's own open, leaving the
-        # island visible through the panel for the first frames; measured opaque by 300 ms.
         {
           match.namespace = "quickshell-(bar|launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
-          blur = true;
-          ignore_alpha = 0.01;
           no_anim = true;
         }
       ];

@@ -16,7 +16,7 @@ Variants {
     id: win
 
     key: "profiles"
-    openWidth: win.contentWidth
+    openWidth: Theme.panelWidth(modelData, win.contentWidth)
     openHeight: Theme.powerHeight
     openRadius: Theme.recorderRadius
 

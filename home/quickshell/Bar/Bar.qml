@@ -16,7 +16,7 @@ Variants {
     required property var modelData
 
     screen: modelData
-    visible: Bus.sessionReady
+    visible: Bus.sessionReady && !Bus.locking
     color: "transparent"
 
     WlrLayershell.layer: WlrLayer.Top
@@ -43,7 +43,7 @@ Variants {
       }
 
       Region {
-        item: island
+        item: island.suppressed ? null : island
       }
     }
 
@@ -65,7 +65,7 @@ Variants {
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
-      suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.osdScreen === bar.screen.name || Bus.notifyScreen === bar.screen.name)
+       suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.transientOnScreen(bar.screen.name))
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
       onClockActivated: Bus.toggleSurface("calendar")
       onStatusActivated: Bus.toggleSurface("control")

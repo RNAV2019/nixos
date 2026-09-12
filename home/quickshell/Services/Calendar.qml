@@ -33,6 +33,8 @@ Singleton {
   // month key -> array of events. An event is
   // { start: Date, end: Date, allDay: bool, title, calendar, location }.
   property var months: ({})
+  property string pendingKey: ""
+  property bool pendingForce: false
 
   readonly property string monthKey: root.keyFor(root.anchor)
 
@@ -83,6 +85,14 @@ Singleton {
   function step(months) {
     var d = new Date(root.anchor.getFullYear(), root.anchor.getMonth() + months, 1);
     root.anchor = d;
+    var day = Math.min(root.selected.getDate(), new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate());
+    root.selected = new Date(d.getFullYear(), d.getMonth(), day);
+    root.load();
+  }
+
+  function selectDay(day) {
+    root.selected = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    root.anchor = new Date(root.selected.getFullYear(), root.selected.getMonth(), 1);
     root.load();
   }
 
@@ -117,6 +127,11 @@ Singleton {
   function load(force) {
     if (root.months[root.monthKey] !== undefined)
       return;
+    if (fetch.running) {
+      root.pendingKey = root.monthKey;
+      root.pendingForce = root.pendingForce || force === true;
+      return;
+    }
     var from = new Date(root.anchor.getFullYear(), root.anchor.getMonth(), 1 - 7);
     var to = new Date(root.anchor.getFullYear(), root.anchor.getMonth() + 1, 7);
     root.loading = true;
@@ -142,13 +157,30 @@ Singleton {
       var next = Object.assign({}, root.months);
       next[fetch.key] = [];
       root.months = next;
+      root.finishPending();
     }
   }
 
   // Asked for by hand, so it goes past both caches.
   function refresh() {
     root.months = {};
+    if (fetch.running) {
+      root.pendingKey = root.monthKey;
+      root.pendingForce = true;
+      return;
+    }
     root.load(true);
+  }
+
+  function finishPending() {
+    if (root.pendingKey === "")
+      return;
+    root.pendingKey = "";
+    var force = root.pendingForce;
+    root.pendingForce = false;
+    Qt.callLater(function () {
+      root.load(force);
+    });
   }
 
   Process {
@@ -159,7 +191,7 @@ Singleton {
     stdout: StdioCollector {
       onStreamFinished: {
         var lines = text.split("\n");
-        if (lines.length === 0) {
+        if (text.trim() === "") {
           root.loading = false;
           return;
         }
@@ -215,6 +247,8 @@ Singleton {
       watchdog.stop();
       root.loading = false;
       if (code === 0)
+        root.finishPending();
+      if (code === 0)
         return;
       // ical-agenda fails with one line, and it says it better than this could.
       var said = fetch.stderr.text.trim().split("\n")[0];
@@ -222,6 +256,7 @@ Singleton {
       var next = Object.assign({}, root.months);
       next[fetch.key] = [];
       root.months = next;
+      root.finishPending();
     }
   }
 

@@ -21,12 +21,13 @@ Variants {
     id: win
 
     key: "wallpaper"
-    openWidth: Theme.wallpaperWidth
+    openWidth: Theme.panelWidth(modelData, Theme.wallpaperWidth)
     openHeight: Theme.wallpaperHeight
     openRadius: Theme.wallpaperRadius
 
     // Which wallpaper the ring is on, not the one that is up: that is Wallpapers.index.
     property int selected: 0
+    property bool initializingSelection: false
 
     readonly property var entries: Wallpapers.entries
     readonly property int count: entries.length
@@ -70,8 +71,31 @@ Variants {
 
     onOpening: {
       // Open on what is actually up.
+      initializingSelection = true;
       Wallpapers.refresh();
-      selected = Math.max(0, Wallpapers.index);
+      if (Wallpapers.index >= 0) {
+        selected = Wallpapers.index;
+        initializingSelection = false;
+      }
+    }
+
+    Connections {
+      target: Wallpapers
+
+      function syncSelection() {
+        if (!win.initializingSelection || Wallpapers.index < 0)
+          return;
+        win.selected = Wallpapers.index;
+        win.initializingSelection = false;
+      }
+
+      function onEntriesChanged() {
+        syncSelection();
+      }
+
+      function onCurrentChanged() {
+        syncSelection();
+      }
     }
 
     // The row is a ring: stepping past either end comes out at the other. The modulo is
@@ -79,6 +103,7 @@ Variants {
     function step(delta) {
       if (count === 0)
         return;
+      initializingSelection = false;
       selected = ((selected + delta) % count + count) % count;
     }
 
@@ -87,6 +112,7 @@ Variants {
     function activate() {
       if (selected < 0 || selected >= count)
         return;
+      initializingSelection = false;
       Wallpapers.apply(entries[selected]);
       hide();
     }
@@ -179,9 +205,9 @@ Variants {
             height: parent.height
 
             Behavior on x {
-              Morph {
-                duration: Theme.morphSurface
-              }
+              enabled: !Theme.reduceMotion
+
+              SurfaceSpring {}
             }
 
             Repeater {
@@ -198,35 +224,38 @@ Variants {
                 width: win.tileWidth(index)
                 height: win.tileHeight(index)
                 source: "file://" + modelData.real
-                selected: index === win.selected
-                active: index === Wallpapers.index
+                 selected: index === win.selected
+                 active: index === Wallpapers.index
+                 onActivated: {
+                   win.selected = tile.index;
+                   win.activate();
+                 }
 
                 // Every tile travels and resizes on the one curve, which keeps the gaps
                 // between them constant: a sum of identical eases is the same ease of the sum.
                 Behavior on x {
-                  Morph {
-                    duration: Theme.morphSurface
-                  }
+                  enabled: !Theme.reduceMotion
+
+                  SurfaceSpring {}
                 }
 
                 Behavior on width {
-                  Morph {
-                    duration: Theme.morphSurface
-                  }
+                  enabled: !Theme.reduceMotion
+
+                  SurfaceSpring {}
                 }
 
                 Behavior on height {
-                  Morph {
-                    duration: Theme.morphSurface
-                  }
+                  enabled: !Theme.reduceMotion
+
+                  SurfaceSpring {}
                 }
 
                 MouseArea {
                   anchors.fill: parent
                   cursorShape: Qt.PointingHandCursor
                   onClicked: {
-                    win.selected = tile.index;
-                    win.activate();
+                    tile.activated();
                   }
                 }
               }

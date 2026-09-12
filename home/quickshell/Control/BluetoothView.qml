@@ -9,6 +9,15 @@ Item {
 
   property bool active: false
 
+  enabled: active
+  focus: active
+  activeFocusOnTab: true
+
+  Accessible.role: Accessible.Pane
+  Accessible.name: "Bluetooth settings"
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+
   signal backed
 
   readonly property int inset: Theme.controlInset
@@ -24,7 +33,7 @@ Item {
   }
 
   readonly property var connected: {
-    if (!adapter)
+    if (!active || !adapter)
       return [];
     var out = [];
     for (var i = 0; i < adapter.devices.values.length; i++) {
@@ -35,7 +44,7 @@ Item {
   }
 
   readonly property var paired: {
-    if (!adapter)
+    if (!active || !adapter)
       return [];
     var out = [];
     for (var i = 0; i < adapter.devices.values.length; i++) {
@@ -47,7 +56,7 @@ Item {
   }
 
   readonly property var discovered: {
-    if (!adapter)
+    if (!active || !adapter)
       return [];
     var out = [];
     for (var i = 0; i < adapter.devices.values.length; i++) {
@@ -58,8 +67,20 @@ Item {
     return out;
   }
 
-  onActiveChanged: if (adapter)
-    adapter.discovering = active && adapter.enabled
+  onActiveChanged: {
+    if (adapter)
+      adapter.discovering = active && adapter.enabled;
+  }
+
+  onAdapterChanged: if (adapter)
+    adapter.discovering = active && adapter.enabled;
+
+  Keys.onPressed: function (event) {
+    if (event.key !== Qt.Key_Escape && event.key !== Qt.Key_Backspace)
+      return;
+    root.backed();
+    event.accepted = true;
+  }
 
   function glyphFor(device) {
     var icon = (device.icon || "").toLowerCase();
@@ -94,6 +115,13 @@ Item {
     Switch {
       checked: root.adapter !== null && root.adapter.enabled
       interactive: root.adapter !== null
+
+      Accessible.role: Accessible.CheckBox
+      Accessible.name: "Bluetooth"
+      Accessible.checkable: true
+      Accessible.checked: checked
+      Accessible.focusable: true
+
       onToggled: function (v) {
         if (!root.adapter)
           return;
@@ -123,6 +151,7 @@ Item {
 
         anchors.fill: parent
         anchors.margins: -8
+        enabled: root.active
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: if (root.adapter && root.adapter.enabled)

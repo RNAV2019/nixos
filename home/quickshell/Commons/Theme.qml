@@ -25,6 +25,24 @@ Singleton {
   readonly property color highlightMed: "#403d52"
   readonly property color highlightHigh: "#524f67"
 
+  // Dark-only semantic roles. Keep these separate from the Rose Pine source names: `base` is
+  // the canvas, while `inkOnAccent` is the ink used on a selected control.
+  readonly property color canvas: base
+  readonly property color surfaceRaised: overlay
+  readonly property color surfaceSubtle: highlightLow
+  readonly property color separator: highlightMed
+  readonly property color inkPrimary: text
+  readonly property color inkSecondary: subtle
+  readonly property color inkTertiary: muted
+  readonly property color accentFill: accent
+  readonly property color inkOnAccent: base
+  readonly property color dangerFill: urgent
+  readonly property color inkOnDanger: base
+  readonly property color focusRing: accent
+  readonly property color disabledInk: withAlpha(inkSecondary, 0.45)
+  readonly property color surfaceOutline: Qt.rgba(1, 1, 1, 0.10)
+  readonly property color surfaceShadow: Qt.rgba(0, 0, 0, 0.24)
+
   // The palette every colour above comes from, for the surfaces that name it.
   readonly property string paletteName: "rose-pine"
 
@@ -69,20 +87,42 @@ Singleton {
   readonly property int barHeight: 36
   readonly property int barMarginTop: 8
   readonly property int barMarginLeft: 24
+  readonly property int panelSideMargin: 24
 
-  // Floating surfaces are translucent so Hyprland can blur the desktop behind them. Lower
-  // shell surfaces are hidden during handoff instead of entering that blur sample.
-  readonly property color surfaceTint: surface
-  readonly property real surfaceTintAlpha: 0.55
-  readonly property color surfaceBorder: highlightMed
-  readonly property real surfaceBorderAlpha: 0.5
+  function panelWidth(screen, desired) {
+    if (!screen || screen.width <= 0)
+      return desired;
+    return Math.min(desired, Math.max(280, screen.width - panelSideMargin * 2));
+  }
+
+  // Panel surfaces are solid so shell UI does not depend on the desktop behind it for contrast.
+  // Lower shell surfaces are hidden during handoff instead of entering that surface.
   // MultiEffect blur is a fraction of blurMax, not a pixel radius.
   readonly property int surfaceBlurMax: 64
   readonly property real surfaceBlur: 0.53
-  readonly property int surfaceShadowOffset: 8
+  readonly property int surfaceShadowOffset: 6
   readonly property int surfaceShadowMax: 32
   readonly property real surfaceShadowBlur: 0.75
-  readonly property real surfaceShadowAlpha: 0.2
+  readonly property real surfaceShadowAlpha: 0.24
+
+  // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation. This is an
+  // environment switch rather than a second appearance mode, so the shell remains dark-only.
+  readonly property bool reduceMotion: Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
+
+  function duration(ms) {
+    return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
+  }
+
+  // SpringAnimation's damping is a Qt-specific friction value, not a normalized damping ratio.
+  // These are deliberately kept in one place and tuned against a 60 fps surface trace.
+  readonly property real surfaceSpring: 5.0
+  readonly property real surfaceDamping: 0.65
+  readonly property real surfaceMass: 1.0
+  readonly property real surfaceEpsilon: 0.5
+  readonly property real microSpring: 5.0
+  readonly property real microDamping: 0.6
+  readonly property real microMass: 0.8
+  readonly property real microEpsilon: 0.005
 
   // The island: one pill carrying the clock, which grows an equaliser while something is
   // playing and expands into a media and status card on hover.
@@ -99,6 +139,8 @@ Singleton {
   readonly property int islandArtSize: 48
   readonly property int islandArtRadius: 10
   readonly property int islandStatusWidth: 72
+  readonly property int islandHoverOpenDelay: 70
+  readonly property int islandHoverCloseDelay: 120
 
   // The mini calendar the expanded card carries while nothing is playing. Five days centred
   // on today on a 32 px pitch; the plate is 1.14 pitches wide, which gives the three-letter
@@ -404,14 +446,14 @@ Singleton {
   readonly property int lockDotGap: 4
   readonly property int lockDotPop: 80
 
-  // The same tint and blur budget as FrostedSurface, sourced from the captured desktop.
-  readonly property color lockVeilColor: surfaceTint
-  readonly property real lockVeilOpacity: surfaceTintAlpha
-  readonly property color lockTextPrimary: "#e0def4"
-  readonly property color lockTextSecondary: "#908caa"
-  readonly property color lockFieldState: "#e0def4"
-  readonly property color lockFieldHint: "#6e6a86"
-  readonly property color lockCaretColor: "#c4a7e7"
+  // The lock veil is sourced from the captured desktop rather than the compositor backdrop.
+  readonly property color lockVeilColor: surface
+  readonly property real lockVeilOpacity: 1.0
+  readonly property color lockTextPrimary: inkPrimary
+  readonly property color lockTextSecondary: inkSecondary
+  readonly property color lockFieldState: inkPrimary
+  readonly property color lockFieldHint: inkTertiary
+  readonly property color lockCaretColor: focusRing
   readonly property real lockFieldFill: 0.8
   readonly property real lockFieldStroke: 0.55
   readonly property real lockAvatarFill: 0.85
@@ -444,15 +486,15 @@ Singleton {
   // measured quartiles are 36 / 68 / 104 / 148 ms of travel; the fit reproduces 33 / 64 / 103 / 143.
   //
   // A surface changing shape.
-  readonly property int morphSurface: 300
+  readonly property int morphSurface: reduceMotion ? 1 : 190
 
   // A control changing state rather than shape: a toggle, a slider, a hover or a press.
-  readonly property int morphState: 180
+  readonly property int morphState: reduceMotion ? 1 : 115
 
   // Content swaps are not morphs. A surface takes about 300 ms to change shape while the
   // contents it carries change over about five frames, so fading them on the geometry's clock
   // would read as a dissolve rather than a reveal.
-  readonly property int morphContent: 80
+  readonly property int morphContent: reduceMotion ? 1 : 50
 
   // The handover's own content pass, for a surface growing out of another surface rather than
   // out of the island. Out of the pill the clip is the transition; panel to panel there is
@@ -463,17 +505,17 @@ Singleton {
 
   // The outgoing contents dissolve inside the still. Short, because it has to be finished
   // before the taker's first frame lands on top of it.
-  readonly property int morphFarewell: 120
+  readonly property int morphFarewell: reduceMotion ? 1 : 70
 
   // The still's ground outlives its contents: it covers the gap before the taker presents.
   // The taker may land anywhere in 147-216 ms, so the fade is laid across that whole window.
   // Two grounds at once would stack their tint, and a hole would read as a blink.
-  readonly property int morphGround: 130
-  readonly property int morphGroundFade: 100
+  readonly property int morphGround: reduceMotion ? 1 : 70
+  readonly property int morphGroundFade: reduceMotion ? 1 : 60
 
   // The incoming contents wait, then fade, landing just before the shape settles.
-  readonly property int morphEnterDelay: 90
-  readonly property int morphEnter: 150
+  readonly property int morphEnterDelay: reduceMotion ? 0 : 45
+  readonly property int morphEnter: reduceMotion ? 1 : 90
 
   // And they settle through a few pixels, taken in the direction the height is travelling, so
   // a switch between two columns of the same width has an axis to read.
@@ -506,14 +548,7 @@ Singleton {
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
 
-  // The shell's one motion curve. It is *not* critically damped: every morph in the recordings
-  // passes its target by about 1.5 per cent of the travel and decays back over roughly 130 ms,
-  // an underdamped spring near zeta = 0.84. Of the 176 fitted morphs, 98 per cent overshoot by
-  // more than half a per cent, and forcing zeta = 1 nearly triples the residual.
-  //
-  // Qt has no spring animation that takes a damping ratio, so the response is fitted here as a
-  // cubic bezier, which also lets one curve serve every Behavior in the shell. The third
-  // control point sits above 1, which is how the overshoot is expressed. The fit tracks the
-  // measured average to 0.46 per cent of the travel.
-  readonly property var morphCurve: [0.28, 0.574, 0.302, 1.097, 1.0, 1.0]
+  // Fallback curve for direct NumberAnimations that have not moved to a spring component yet.
+  // It intentionally never overshoots; geometry uses SurfaceSpring and colour uses Tint.
+  readonly property var morphCurve: [0.22, 0.61, 0.36, 1.0]
 }

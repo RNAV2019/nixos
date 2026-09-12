@@ -70,12 +70,13 @@ QtObject {
   property int heldSerial: 0
 
   function hold(width, height, radius) {
-    heldWidth = Bus.takeWidth > 0 ? Bus.takeWidth : width;
-    heldHeight = Bus.takeHeight > 0 ? Bus.takeHeight : height;
-    heldRadius = Bus.takeRadius > 0 ? Bus.takeRadius : radius;
-    heldDuration = Bus.takeDuration > 0 ? Bus.takeDuration : Theme.morphHold;
+    var claim = Bus.claimFor(screenName);
+    heldWidth = claim ? claim.width : width;
+    heldHeight = claim ? claim.height : height;
+    heldRadius = claim ? claim.radius : radius;
+    heldDuration = claim ? claim.duration : Theme.morphHold;
     held = true;
-    heldSerial = Bus.claimSerial;
+    heldSerial = claim ? claim.serial : Bus.claimSerial;
     holdTimer.interval = heldDuration + 260;
     holdTimer.restart();
   }
@@ -106,10 +107,10 @@ QtObject {
 
   // Take the shape of the card already standing open on this output. Its measurements are
   // read into locals first, because claiming the island is what shuts the card. Matched on
-  // the card's `screenName`: the card is a FrostedSurface, not a window, so reaching through
+  // the card's `screenName`: the card is a surface, not a window, so reaching through
   // it for a `win` found undefined and every panel grew out of the pill instead.
   function adopt() {
-    var card = Bus.islandCard;
+    var card = Bus.islandCardFor(origin.screenName);
     if (!card || card.screenName === "" || card.screenName !== origin.screenName)
       return;
 
@@ -126,19 +127,13 @@ QtObject {
   // same handover and on this output. It outranks the pill. Consumed on read, and dropped
   // unused, so it can never be mistaken for the shape of some later open.
   function adoptHandoff() {
-    var pendingScreen = Bus.handoffScreen;
-    Bus.handoffScreen = "";
-    var pendingWidth = Bus.handoffWidth;
-    Bus.handoffWidth = 0;
-    var pendingHeight = Bus.handoffHeight;
-    Bus.handoffHeight = 0;
-
-    if (pendingScreen === "" || !origin.window || !origin.window.screen || pendingScreen !== origin.window.screen.name)
+    var handoff = Bus.consumeHandoff(origin.screenName);
+    if (!handoff)
       return;
 
     snapping = true;
-    fromWidth = pendingWidth;
-    fromHeight = pendingHeight;
+    fromWidth = handoff.width;
+    fromHeight = handoff.height;
     snapping = false;
     handedOver = true;
   }
@@ -160,26 +155,17 @@ QtObject {
     handedOver = false;
     held = false;
     adopt();
-    Bus.claimSerial++;
-    Bus.takeWidth = width;
-    Bus.takeHeight = height;
-    Bus.takeRadius = radius;
-    Bus.takeDuration = duration;
-    Bus.islandClaimed(screenName);
+    Bus.claimIsland(screenName, width, height, radius, duration);
+    var serial = Bus.claimSerial;
     adoptHandoff();
-    // The holder consumed these inside the claim; drop them so a later open cannot.
-    Bus.takeWidth = 0;
-    Bus.takeHeight = 0;
-    Bus.takeRadius = 0;
-    Bus.takeDuration = 0;
+    // The holder consumed the transaction synchronously; drop it so a later open cannot reuse it.
+    Bus.clearClaim(screenName, serial);
   }
 
   // Give the island up to the surface that claimed it. There is no shrink back to the pill:
   // what this one owes the taker is the shape it was wearing, published before it lets go.
-  function publish(width, height) {
-    Bus.handoffScreen = screenName;
-    Bus.handoffWidth = width;
-    Bus.handoffHeight = height;
+  function publish(width, height, radius) {
+    Bus.publishHandoff(screenName, width, height, radius);
     release();
   }
 }

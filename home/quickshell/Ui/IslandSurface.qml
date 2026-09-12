@@ -35,6 +35,9 @@ PanelWindow {
   property real openRadius: Theme.controlRadius
 
   property bool open: false
+  // Some keyboard-first surfaces need to hide the pointer for their entire mapped window, not
+  // only over the opaque card. The guard below accepts no buttons and only owns the cursor.
+  property bool hideCursor: false
   property alias origin: origin
   property alias surface: surface
 
@@ -81,6 +84,7 @@ PanelWindow {
   // True from the moment the shape starts growing until it is back to pill size, or until a
   // frozen still is taken down: the whole time the bar must keep its island hidden.
   readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
+  readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
   function show() {
     win.opening();
@@ -104,7 +108,7 @@ PanelWindow {
   // Giving the island up to the surface that claimed it. The still is what the eye sees
   // until the taker's first frame lands.
   function dismiss() {
-    origin.publish(surface.width, surface.height);
+    origin.publish(surface.width, surface.height, surface.surfaceRadius);
     origin.hold(surface.width, surface.height, surface.surfaceRadius);
     handover = true;
     farewell = true;
@@ -112,7 +116,7 @@ PanelWindow {
   }
 
   screen: modelData
-  visible: showing
+  visible: !Bus.locking && showing
   color: "transparent"
 
   WlrLayershell.layer: WlrLayer.Overlay
@@ -206,6 +210,17 @@ PanelWindow {
     onClicked: win.hide()
   }
 
+  MouseArea {
+    id: cursorGuard
+
+    anchors.fill: parent
+    z: 1000
+    enabled: win.open && win.hideCursor
+    hoverEnabled: true
+    acceptedButtons: Qt.NoButton
+    cursorShape: Qt.BlankCursor
+  }
+
   FrostedSurface {
     id: surface
 
@@ -243,9 +258,8 @@ PanelWindow {
         }
 
         NumberAnimation {
-          duration: Theme.morphGroundFade
-          easing.type: Easing.Bezier
-          easing.bezierCurve: Theme.morphCurve
+          duration: Theme.duration(Theme.morphGroundFade)
+          easing.type: Easing.OutCubic
         }
       }
     }
@@ -264,18 +278,18 @@ PanelWindow {
     surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
 
     Behavior on implicitWidth {
-      enabled: !origin.snapping && (!win.handover || origin.held)
+      enabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
 
-      Morph {
-        duration: origin.held ? origin.heldDuration : Theme.morphSurface
+      SurfaceSpring {
+        id: widthSpring
       }
     }
 
     Behavior on implicitHeight {
-      enabled: !origin.snapping && (!win.handover || origin.held)
+      enabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
 
-      Morph {
-        duration: origin.held ? origin.heldDuration : Theme.morphSurface
+      SurfaceSpring {
+        id: heightSpring
       }
     }
 
@@ -296,8 +310,8 @@ PanelWindow {
       }
     }
 
-    // The clock carried over from the shape this surface grew out of; see Ui/IslandClock.qml.
-    IslandClock {
+    // The complete collapsed pill carried over from the shape this surface grew out of.
+    CollapsedPill {
       anchors.fill: parent
       origin: origin
       shown: !win.open && !origin.held
@@ -327,13 +341,12 @@ PanelWindow {
 
         SequentialAnimation {
           PauseAnimation {
-            duration: win.entering ? Theme.morphEnterDelay : 0
+            duration: win.entering ? Theme.duration(Theme.morphEnterDelay) : 0
           }
 
           NumberAnimation {
-            duration: win.entering ? Theme.morphEnter : Theme.morphContent
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+            duration: win.entering ? Theme.duration(Theme.morphEnter) : Theme.duration(Theme.morphContent)
+            easing.type: Easing.OutCubic
           }
         }
       }

@@ -42,7 +42,9 @@ FrostedSurface {
   surfaceRadius: Theme.workspaceRadius
 
   Behavior on implicitWidth {
-    Morph {}
+    enabled: !Theme.reduceMotion
+
+    MicroSpring {}
   }
 
   Row {
@@ -66,6 +68,12 @@ FrostedSurface {
         width: isActive ? Theme.workspaceSlotActiveWidth : Theme.workspaceSlotWidth
         height: Theme.workspaceSlotHeight
         radius: Theme.workspaceSlotRadius
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Button
+        Accessible.name: "Workspace " + slot.modelData
+        Accessible.focusable: true
+        Accessible.focused: slot.activeFocus
+        Accessible.onPressAction: Hyprland.dispatch("hl.dsp.focus({ workspace = " + slot.modelData + " })")
         color: {
           if (isActive)
             return Theme.accent;
@@ -75,7 +83,9 @@ FrostedSurface {
         }
 
         Behavior on width {
-          Morph {}
+          enabled: !Theme.reduceMotion
+
+          MicroSpring {}
         }
 
         Behavior on color {
@@ -86,8 +96,10 @@ FrostedSurface {
           id: mouse
 
           anchors.fill: parent
+          activeFocusOnTab: true
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
+          onPressed: slot.forceActiveFocus()
           onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + slot.modelData + " })")
         }
       }

@@ -16,7 +16,7 @@ Variants {
     id: win
 
     key: "calendar"
-    openWidth: Theme.calWidth
+    openWidth: Theme.panelWidth(modelData, Theme.calWidth)
     openHeight: Theme.calHeight
     openRadius: Theme.calRadius
 
@@ -103,6 +103,11 @@ Variants {
           width: todayLabel.implicitWidth + 22
           height: Theme.calTodayBtnHeight
           radius: height / 2
+          Accessible.role: Accessible.Button
+          Accessible.name: "Today"
+          Accessible.focusable: true
+          Accessible.focused: todayHover.activeFocus
+          Accessible.onPressAction: Calendar.today()
           color: Theme.withAlpha(Theme.highlightMed, todayHover.containsMouse ? 1 : 0.75)
           scale: todayHover.pressed ? 0.97 : 1
 
@@ -130,7 +135,9 @@ Variants {
 
             anchors.fill: parent
             hoverEnabled: true
+            activeFocusOnTab: true
             cursorShape: Qt.PointingHandCursor
+            onPressed: todayHover.forceActiveFocus()
             onClicked: Calendar.today()
           }
         }
@@ -143,6 +150,11 @@ Variants {
           width: Theme.calNavSize
           height: width
           radius: width / 2
+          Accessible.role: Accessible.Button
+          Accessible.name: "Previous month"
+          Accessible.focusable: true
+          Accessible.focused: prevHover.activeFocus
+          Accessible.onPressAction: Calendar.step(-1)
           color: Theme.withAlpha(Theme.highlightLow, prevHover.containsMouse ? 1 : 0.9)
           scale: prevHover.pressed ? 0.95 : 1
 
@@ -167,7 +179,9 @@ Variants {
 
             anchors.fill: parent
             hoverEnabled: true
+            activeFocusOnTab: true
             cursorShape: Qt.PointingHandCursor
+            onPressed: prevHover.forceActiveFocus()
             onClicked: Calendar.step(-1)
           }
         }
@@ -180,6 +194,11 @@ Variants {
           width: Theme.calNavSize
           height: width
           radius: width / 2
+          Accessible.role: Accessible.Button
+          Accessible.name: "Next month"
+          Accessible.focusable: true
+          Accessible.focused: nextHover.activeFocus
+          Accessible.onPressAction: Calendar.step(1)
           color: Theme.withAlpha(Theme.highlightLow, nextHover.containsMouse ? 1 : 0.9)
           scale: nextHover.pressed ? 0.95 : 1
 
@@ -204,7 +223,9 @@ Variants {
 
             anchors.fill: parent
             hoverEnabled: true
+            activeFocusOnTab: true
             cursorShape: Qt.PointingHandCursor
+            onPressed: nextHover.forceActiveFocus()
             onClicked: Calendar.step(1)
           }
         }
@@ -261,7 +282,7 @@ Variants {
               anchors.horizontalCenter: parent.horizontalCenter
               y: (parent.height - height) / 2
               text: cell.day.getDate()
-              color: cell.isSelected ? Theme.base : cell.inMonth ? Theme.text : Theme.muted
+              color: cell.isSelected ? Theme.inkOnAccent : cell.inMonth ? Theme.inkPrimary : Theme.inkTertiary
               font.family: Theme.uiFont
               font.pixelSize: Theme.calDaySize
               font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
@@ -284,7 +305,7 @@ Variants {
             MouseArea {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-              onClicked: Calendar.selected = cell.day
+               onClicked: Calendar.selectDay(cell.day)
             }
           }
         }

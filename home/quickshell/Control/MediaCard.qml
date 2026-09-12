@@ -37,7 +37,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.overlay
+      color: Theme.surfaceRaised
     }
 
     // Overscanned, because a blur that samples the card's own edge fades it out.
@@ -77,7 +77,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.withAlpha(Theme.base, root.hasArt ? 0.45 : 0.2)
+      color: Theme.withAlpha(Theme.canvas, root.hasArt ? 0.58 : 0.2)
     }
   }
 
@@ -101,7 +101,7 @@ Item {
     x: 16
     y: 13
     text: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
-    color: Theme.subtle
+    color: Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlMediaCaptionSize
   }
@@ -111,7 +111,7 @@ Item {
     y: 13
     width: Math.max(0, root.width - x - 16)
     text: root.output
-    color: Theme.subtle
+    color: Theme.inkSecondary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaCaptionSize
     elide: Text.ElideRight
@@ -124,7 +124,7 @@ Item {
     y: 42
     width: Math.max(0, play.x - x - 12)
     text: Media.active ? Media.title : "Nothing playing"
-    color: Theme.text
+    color: Theme.inkPrimary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaTitleSize
     font.weight: Theme.weightSemi
@@ -137,7 +137,7 @@ Item {
     width: title.width
     visible: Media.artist !== ""
     text: Media.artist
-    color: Theme.subtle
+    color: Theme.inkSecondary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaArtistSize
     elide: Text.ElideRight
@@ -151,6 +151,12 @@ Item {
     width: Theme.controlMediaPlaySize
     height: Theme.controlMediaPlaySize
     radius: height / 2
+    Accessible.role: Accessible.Button
+    Accessible.name: Media.playing ? "Pause" : "Play"
+    Accessible.focusable: true
+    Accessible.focused: playHover.activeFocus
+    Accessible.onPressAction: if (Media.active)
+      Media.toggle()
     color: Theme.withAlpha(Theme.text, playHover.containsMouse ? 1 : 0.94)
     scale: playHover.pressed ? 0.97 : 1
 
@@ -165,7 +171,7 @@ Item {
     Text {
       anchors.centerIn: parent
       text: Media.playing ? Icons.pause : Icons.play
-      color: Theme.base
+      color: Theme.inkOnAccent
       font.family: Theme.iconFont
       font.pixelSize: 20
     }
@@ -176,13 +182,16 @@ Item {
       anchors.fill: parent
       hoverEnabled: true
       enabled: Media.active
+      activeFocusOnTab: true
       cursorShape: Qt.PointingHandCursor
+      onPressed: playHover.forceActiveFocus()
       onClicked: Media.toggle()
     }
   }
 
   component Skip: Text {
     property alias hovered: skipHover.containsMouse
+    property string accessibleName: ""
 
     signal activated
 
@@ -193,6 +202,10 @@ Item {
     scale: skipHover.pressed ? 0.95 : 1
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlMediaSkipSize
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName
+    Accessible.focusable: true
+    Accessible.focused: skipHover.activeFocus
 
     Behavior on color {
       Tint {}
@@ -211,7 +224,9 @@ Item {
       anchors.margins: -6
       hoverEnabled: true
       enabled: Media.active
+      activeFocusOnTab: true
       cursorShape: Qt.PointingHandCursor
+      onPressed: skipHover.forceActiveFocus()
       onClicked: parent.activated()
     }
   }
@@ -221,6 +236,7 @@ Item {
 
     x: 16
     text: Icons.previous
+    accessibleName: "Previous track"
     onActivated: Media.previous()
   }
 
@@ -229,6 +245,7 @@ Item {
 
     x: root.width - width - 16
     text: Icons.next
+    accessibleName: "Next track"
     onActivated: Media.next()
   }
 

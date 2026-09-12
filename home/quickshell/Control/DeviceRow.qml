@@ -10,6 +10,7 @@ Rectangle {
   property string sublabel: ""
   property bool selected: false
   property bool showCheck: false
+  property string accessibleName: ""
 
   default property alias actions: slot.data
 
@@ -18,15 +19,23 @@ Rectangle {
   readonly property bool hovered: hover.containsMouse
   readonly property bool pressed: hover.pressed
 
-  readonly property color ink: selected ? Theme.base : Theme.text
+  readonly property color ink: selected ? Theme.inkOnAccent : Theme.inkPrimary
 
   implicitHeight: Theme.controlRowHeight
   radius: Theme.controlRowRadius
 
+  activeFocusOnTab: true
+  Accessible.role: Accessible.Button
+  Accessible.name: root.accessibleName !== "" ? root.accessibleName : root.label
+  Accessible.description: root.sublabel
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+  Accessible.onPressAction: root.clicked()
+
   color: {
     if (selected)
       return Theme.accent;
-    return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.highlightLow, 0.9);
+      return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
   }
 
   scale: pressed ? 0.97 : 1
@@ -45,7 +54,15 @@ Rectangle {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
+    onPressed: root.forceActiveFocus()
     onClicked: root.clicked()
+  }
+
+  Keys.onPressed: function (event) {
+    if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+      root.clicked();
+      event.accepted = true;
+    }
   }
 
   Text {
@@ -55,7 +72,7 @@ Rectangle {
     y: (parent.height - height) / 2
     visible: root.glyph !== ""
     text: root.glyph
-    color: root.selected ? Theme.base : Theme.subtle
+    color: root.selected ? Theme.inkOnAccent : Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlTileGlyphSize
   }
@@ -80,7 +97,7 @@ Rectangle {
     width: name.width
     visible: root.sublabel !== ""
     text: root.sublabel
-    color: root.selected ? Theme.withAlpha(Theme.base, 0.72) : Theme.muted
+    color: root.selected ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlTileSubSize
     elide: Text.ElideRight
@@ -104,7 +121,7 @@ Rectangle {
     anchors.verticalCenter: parent.verticalCenter
     visible: root.showCheck && root.selected
     text: Icons.check
-    color: Theme.base
+    color: Theme.inkOnAccent
     font.family: Theme.iconFont
     font.pixelSize: 16
   }

@@ -21,6 +21,7 @@ Scope {
   // "", "volume", "brightness", "kbd" or "mic".
   property string mode: ""
   property bool showing: false
+  signal flashRequested
 
   // Suppress startup signals without discarding the first later change.
   property bool ready: false
@@ -55,15 +56,18 @@ Scope {
   // not start under one, and a flash already in the air is cut short by one opening.
   readonly property bool blocked: Bus.islandHeld
 
-  onBlockedChanged: if (blocked) {
+  onBlockedChanged: {
+    if (blocked) {
     hideTimer.stop();
     showing = false;
+    }
   }
 
   function flash(which) {
     if (blocked)
       return;
     mode = which;
+    flashRequested();
     showing = true;
     hideTimer.restart();
   }
@@ -172,14 +176,51 @@ Scope {
 
       readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
-      readonly property bool open: root.showing && focused
+      readonly property bool open: root.showing && focused && !outputBlocked
 
       // Drawn from the moment the shape starts growing until it is back to pill size,
       // which is the whole time the bar must keep its island hidden.
-      readonly property bool visibleNow: open || surface.width > collapsedWidth + 0.5
+       readonly property bool visibleNow: open || origin.held || surface.width > collapsedWidth + 0.5
+       readonly property bool outputBlocked: Bus.islandHeldFor(window.screen ? window.screen.name : "")
+
+        IslandOrigin {
+          id: origin
+
+          window: window
+        }
+
+        onOpenChanged: {
+          if (!open && !origin.held)
+            origin.release();
+        }
+
+       Connections {
+         target: root
+
+         function onFlashRequested() {
+           if (window.focused && !window.outputBlocked)
+             origin.claim(Theme.osdWidth, Theme.osdHeight, Theme.osdRadius, Theme.morphSurface);
+         }
+       }
+
+       Connections {
+         target: Bus
+
+         function onSurfacesClosingForLock() {
+           root.showing = false;
+         }
+
+         function onIslandClaimed(screen) {
+           if (!window.open || !window.screen || screen !== window.screen.name)
+             return;
+           origin.publish(surface.width, surface.height, surface.surfaceRadius);
+           origin.hold(surface.width, surface.height, surface.surfaceRadius);
+           root.showing = false;
+         }
+       }
 
       screen: modelData
-      visible: visibleNow
+       visible: !Bus.locking && visibleNow
       color: "transparent"
 
       WlrLayershell.layer: WlrLayer.Overlay
@@ -198,12 +239,12 @@ Scope {
       // Empty: the whole window is click-through. The island underneath still wants its clicks.
       mask: Region {}
 
-      onVisibleNowChanged: {
-        if (visibleNow)
-          Bus.osdScreen = window.screen ? window.screen.name : "";
-        else if (window.screen && Bus.osdScreen === window.screen.name)
-          Bus.osdScreen = "";
-      }
+        onVisibleNowChanged: {
+         if (visibleNow)
+           Bus.setTransientScreen("osd", window.screen ? window.screen.name : "");
+         else if (window.screen && Bus.transientScreen("osd") === window.screen.name)
+           Bus.setTransientScreen("osd", "");
+       }
 
       FrostedSurface {
         id: surface
@@ -213,54 +254,32 @@ Scope {
 
         clipContent: true
 
-        implicitWidth: window.open ? Theme.osdWidth : window.collapsedWidth
-        implicitHeight: window.open ? Theme.osdHeight : Theme.barHeight
+       implicitWidth: window.open ? Theme.osdWidth : origin.held ? origin.heldWidth : origin.originWidth
+       implicitHeight: window.open ? Theme.osdHeight : origin.held ? origin.heldHeight : origin.originHeight
 
         // Read off the height rather than travelling; see Bar/Island.qml.
         surfaceRadius: Math.min(height / 2, Theme.osdRadius)
 
-        Behavior on implicitWidth {
-          Morph {}
-        }
+       Behavior on implicitWidth {
+         enabled: !Theme.reduceMotion
 
-        Behavior on implicitHeight {
-          Morph {}
-        }
+         SurfaceSpring {}
+       }
 
-        IslandClock {
-          id: clock
+       Behavior on implicitHeight {
+         enabled: !Theme.reduceMotion
 
-          anchors.fill: parent
-          shown: !window.open
-          clockShift: pill.clockShift
-        }
+         SurfaceSpring {}
+       }
 
-        // Drawn exactly as Bar/Island.qml draws its collapsed state, because this surface
-        // covers the island rather than replacing it; a disagreement would read as a jump.
-        Item {
+        // Drawn by the shared collapsed renderer, so OSD handoff includes the same clock,
+        // equaliser and recording mark as the bar.
+        CollapsedPill {
           id: pill
 
           anchors.fill: parent
-          opacity: window.open ? 0 : 1
-          visible: opacity > 0
-
-          Behavior on opacity {
-            Morph {
-              duration: Theme.morphContent
-            }
-          }
-
-          readonly property real collapsedGap: 7.5
-          readonly property real clockShift: Media.active ? (equaliser.implicitWidth + collapsedGap) / 2 : 0
-          Equaliser {
-            id: equaliser
-
-            x: parent.width / 2 + pill.clockShift - Theme.islandClockSize * 1.5 - pill.collapsedGap - implicitWidth
-            y: (parent.height - implicitHeight) / 2
-            playing: Media.playing
-            visible: Media.active
-          }
-
+          origin: origin
+          shown: !window.open && !origin.held
         }
 
         // Board 09's row, at the board's own positions. Nothing in here moves with the shape.
@@ -321,7 +340,7 @@ Scope {
           }
         }
 
-        // FrostedSurface draws its own hairline, so this is laid over it and fades in.
+        // The alert border is laid over the surface and fades in.
         Rectangle {
           anchors.fill: parent
           radius: surface.surfaceRadius

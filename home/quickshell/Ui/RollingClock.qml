@@ -50,7 +50,7 @@ Item {
             incoming.opacity = 1;
           }
 
-          outgoing.text = incoming.text;
+          outgoing.text = shown;
           outgoing.y = 0;
           outgoing.opacity = 1;
           incoming.y = root.rollTravel;
@@ -89,9 +89,8 @@ Item {
           NumberAnimation {
             target: incoming
 
-            duration: Theme.morphContent
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphContent)
+             easing.type: Easing.OutCubic
             from: root.rollTravel
             property: "y"
             to: 0
@@ -100,9 +99,8 @@ Item {
           NumberAnimation {
             target: outgoing
 
-            duration: Theme.morphContent
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphContent)
+             easing.type: Easing.OutCubic
             from: 0
             property: "y"
             to: -root.rollTravel
@@ -111,9 +109,8 @@ Item {
           NumberAnimation {
             target: outgoing
 
-            duration: Theme.morphContent
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphContent)
+             easing.type: Easing.OutCubic
             from: 1
             property: "opacity"
             to: 0
@@ -122,9 +119,8 @@ Item {
           NumberAnimation {
             target: incoming
 
-            duration: Theme.morphState
-            easing.type: Easing.Bezier
-            easing.bezierCurve: Theme.morphCurve
+             duration: Theme.duration(Theme.morphState)
+             easing.type: Easing.OutCubic
             from: 0
             property: "opacity"
             to: 1

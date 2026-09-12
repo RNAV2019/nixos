@@ -34,6 +34,7 @@ Singleton {
 
   property string file: ""
   property int elapsed: 0
+  property bool pendingStop: false
 
   readonly property string elapsedLabel: {
     var m = Math.floor(root.elapsed / 60);
@@ -101,6 +102,7 @@ Singleton {
       device = 'source';
 
     root.elapsed = 0;
+    root.pendingStop = false;
     // One shell, so the device lookup happens at the moment of recording. The directory is
     // made here, so a recorder that is never used creates nothing.
     var script = 'mkdir -p "$(dirname "$1")" || exit 1; kind=$2; shift 2; ' + 'if [ -n "$kind" ]; then ' + 'alias=@DEFAULT_AUDIO_SINK@; [ "$kind" = source ] && alias=@DEFAULT_AUDIO_SOURCE@; ' + 'name=$(wpctl inspect "$alias" | sed -n \'s/.*node\\.name = "\\(.*\\)"/\\1/p\' | head -1); ' + '[ "$kind" = sink ] && name="$name.monitor"; ' + 'if [ -n "$name" ]; then set -- "$@" --audio --audio-device "$name"; fi; fi; ' + 'exec "$@"';
@@ -121,14 +123,43 @@ Singleton {
       return;
     root.state = "saving";
     tick.stop();
-    // SIGINT by hand: Process has no signal method, and running = false would terminate
-    // rather than interrupt. It goes to the process group, since this runs under a shell.
+    requestInterrupt();
+  }
+
+  function requestInterrupt() {
+    if (!capture.running)
+      return;
+    if (capture.processId <= 0) {
+      pendingStop = true;
+      stopWait.restart();
+      return;
+    }
+    pendingStop = false;
+    // SIGINT by hand: terminating the process would skip the muxer's trailer. It goes to the
+    // process group because the capture command is wrapped in a shell.
     interrupt.command = ["sh", "-c", 'kill -INT -"$1" 2>/dev/null || kill -INT "$1"', "sh", String(capture.processId)];
     interrupt.running = true;
   }
 
   Process {
     id: interrupt
+  }
+
+  Timer {
+    id: stopWait
+
+    interval: 16
+    repeat: true
+    onTriggered: {
+      if (!root.pendingStop || !capture.running) {
+        stopWait.stop();
+        return;
+      }
+      if (capture.processId > 0) {
+        stopWait.stop();
+        root.requestInterrupt();
+      }
+    }
   }
 
   Timer {
@@ -167,6 +198,8 @@ Singleton {
     // A failure before the first frame leaves nothing, so the file is stat'ed, not assumed.
     onExited: function (code) {
       tick.stop();
+      pendingStop = false;
+      stopWait.stop();
       var wanted = root.file;
       root.state = "idle";
       if (wanted === "")

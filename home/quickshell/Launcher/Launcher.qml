@@ -24,7 +24,8 @@ Variants {
     id: win
 
     key: "launcher"
-    openWidth: Theme.launcherWidth
+    hideCursor: true
+    openWidth: Theme.panelWidth(modelData, Theme.launcherWidth)
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
 
@@ -125,7 +126,7 @@ Variants {
 
           x: Theme.launcherTextLeft
           y: Theme.launcherSearchHeight / 2 - height / 2
-          width: Theme.launcherWidth - x - Theme.launcherInset
+           width: win.openWidth - x - Theme.launcherInset
           color: Theme.text
           font.family: Theme.uiFont
           font.pixelSize: Theme.launcherSearchSize
@@ -180,7 +181,7 @@ Variants {
         Rectangle {
           x: Theme.launcherInset
           y: Theme.launcherSearchHeight
-          width: Theme.launcherWidth - Theme.launcherInset * 2
+           width: win.openWidth - Theme.launcherInset * 2
           height: 1
           color: Theme.withAlpha(Theme.highlightMed, 0.6)
         }
@@ -200,7 +201,7 @@ Variants {
 
           x: Theme.launcherInset
           y: Theme.launcherListTop
-          width: Theme.launcherWidth - Theme.launcherInset * 2
+           width: win.openWidth - Theme.launcherInset * 2
           height: win.listHeight
           model: rows
           spacing: Theme.launcherRowGap
@@ -273,9 +274,8 @@ Variants {
           displaced: Transition {
             NumberAnimation {
               properties: "y"
-              duration: Theme.morphSurface
-              easing.type: Easing.Bezier
-              easing.bezierCurve: Theme.morphCurve
+               duration: Theme.duration(Theme.morphSurface)
+               easing.type: Easing.OutCubic
             }
             NumberAnimation {
               property: "opacity"
@@ -285,14 +285,5 @@ Variants {
           }
         }
 
-    // The launcher is a keyboard surface, so the pointer comes off the screen while it is
-    // up. This sits over everything and accepts no buttons, so it changes nothing but the
-    // cursor, which is what outranks the query's I-beam and the rows' pointing hand. Bound
-    // rather than switched off, so the pointer returns the frame the launcher closes.
-    MouseArea {
-      anchors.fill: parent
-      acceptedButtons: Qt.NoButton
-      cursorShape: win.open ? Qt.BlankCursor : Qt.ArrowCursor
-    }
   }
 }

@@ -21,6 +21,13 @@ Item {
     width: Theme.controlBackSize
     height: Theme.controlBackSize
     radius: height / 2
+    focus: true
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Button
+    Accessible.name: "Back"
+    Accessible.focusable: true
+    Accessible.focused: back.activeFocus
+    Accessible.onPressAction: root.backed()
     color: Theme.withAlpha(Theme.highlightMed, backHover.containsMouse ? 0.95 : 0.75)
     scale: backHover.pressed ? 0.97 : 1
 
@@ -46,7 +53,15 @@ Item {
       anchors.fill: parent
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
+      onPressed: back.forceActiveFocus()
       onClicked: root.backed()
+    }
+
+    Keys.onPressed: function (event) {
+      if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+        root.backed();
+        event.accepted = true;
+      }
     }
   }
 

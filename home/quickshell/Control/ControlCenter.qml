@@ -23,7 +23,7 @@ Variants {
     id: win
 
     key: "control"
-    openWidth: Theme.controlWidth
+    openWidth: Theme.panelWidth(modelData, Theme.controlWidth)
     openHeight: win.contentHeight
     openRadius: Theme.controlRadius
 
@@ -48,6 +48,7 @@ Variants {
 
     onOpening: {
       view = "";
+      home.keyboardIndex = 0;
       // Nothing pushes a colour-temperature change, so ask now, while it is about to be seen.
       NightLight.refresh();
     }
@@ -82,10 +83,22 @@ Variants {
       settle.restart();
     }
 
+    onShowingChanged: {
+      if (!win.showing) {
+        view = "";
+        loadedView = "";
+      }
+    }
+
     onViewChanged: {
       if (view !== "") {
         loadedView = view;
         unload.stop();
+        var nextView = view;
+        Qt.callLater(function () {
+          if (win.open && win.view === nextView && win.subView)
+            win.subView.forceActiveFocus();
+        });
       } else {
         unload.restart();
       }
@@ -111,6 +124,18 @@ Variants {
             else
               return;
             break;
+          case Qt.Key_Tab:
+            if (win.view === "")
+              home.keyboardMove(event.modifiers & Qt.ShiftModifier ? -1 : 1);
+            else
+              return;
+            break;
+          case Qt.Key_Backtab:
+            if (win.view === "")
+              home.keyboardMove(-1);
+            else
+              return;
+            break;
           case Qt.Key_Return:
           case Qt.Key_Enter:
           case Qt.Key_Space:
@@ -129,6 +154,7 @@ Variants {
       id: body
 
       anchors.fill: parent
+      enabled: win.open
       opacity: win.open || win.origin.held ? 1 : 0
       visible: opacity > 0
 
@@ -143,9 +169,9 @@ Variants {
         HomeView {
           id: home
 
-          x: win.view === "" ? 0 : -Theme.controlWidth
+           x: win.view === "" ? 0 : -win.openWidth
           y: 0
-          width: Theme.controlWidth
+           width: win.openWidth
           height: contentHeight
 
           onClosed: win.hide()
@@ -159,25 +185,25 @@ Variants {
           onRecorderRequested: Bus.recorderRequested()
 
           Behavior on x {
-            Morph {
-              duration: Theme.morphSurface
-            }
+            enabled: !Theme.reduceMotion
+
+            MicroSpring {}
           }
         }
 
         Loader {
           id: subLoader
 
-          x: win.view === "" ? Theme.controlWidth : 0
+           x: win.view === "" ? win.openWidth : 0
           y: 0
-          width: Theme.controlWidth
+           width: win.openWidth
           height: item ? item.contentHeight : 0
           active: win.loadedView !== ""
 
           Behavior on x {
-            Morph {
-              duration: Theme.morphSurface
-            }
+            enabled: !Theme.reduceMotion
+
+            MicroSpring {}
           }
 
           sourceComponent: {
@@ -197,7 +223,7 @@ Variants {
           id: wifiView
 
           WifiView {
-            active: win.view === "wifi"
+            active: win.open && win.view === "wifi"
             onBacked: win.view = ""
           }
         }
@@ -206,7 +232,7 @@ Variants {
           id: audioView
 
           AudioView {
-            active: win.view === "audio"
+            active: win.open && win.view === "audio"
             onBacked: win.view = ""
           }
         }
@@ -215,7 +241,7 @@ Variants {
           id: bluetoothView
 
           BluetoothView {
-            active: win.view === "bluetooth"
+            active: win.open && win.view === "bluetooth"
             onBacked: win.view = ""
           }
         }

@@ -18,7 +18,7 @@ Variants {
     id: win
 
     key: "recorder"
-    openWidth: Theme.recorderWidth
+    openWidth: Theme.panelWidth(modelData, Theme.recorderWidth)
     openHeight: Theme.recorderHeight
     openRadius: Theme.recorderRadius
 

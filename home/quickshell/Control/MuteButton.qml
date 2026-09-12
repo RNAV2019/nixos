@@ -33,7 +33,7 @@ Rectangle {
   Text {
     anchors.centerIn: parent
     text: root.glyph
-    color: root.muted ? Theme.base : Theme.subtle
+    color: root.muted ? Theme.inkOnDanger : Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlTileGlyphSize
   }

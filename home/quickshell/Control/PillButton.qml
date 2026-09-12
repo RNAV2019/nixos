@@ -9,6 +9,7 @@ Rectangle {
   property bool destructive: false
   // Set on rows that are themselves accent filled.
   property bool onAccent: false
+  property string accessibleName: ""
 
   // Rows that only reveal an action under the pointer set this. The button is always
   // laid out and tracks its own hover; only its paint and clicks are withheld. It
@@ -21,13 +22,21 @@ Rectangle {
 
   readonly property color ink: {
     if (onAccent)
-      return Theme.base;
-    return destructive ? Theme.urgent : Theme.accent;
+      return Theme.inkOnAccent;
+    return destructive ? Theme.dangerFill : Theme.accentFill;
   }
 
   implicitWidth: text.implicitWidth + 24
   implicitHeight: 26
   radius: height / 2
+
+  activeFocusOnTab: true
+  Accessible.role: Accessible.Button
+  Accessible.name: root.accessibleName !== "" ? root.accessibleName : root.label
+  Accessible.focusable: true
+  Accessible.focused: root.activeFocus
+  Accessible.onPressAction: if (root.revealed)
+    root.clicked()
 
   opacity: revealed ? 1 : 0
 
@@ -39,8 +48,8 @@ Rectangle {
 
   color: {
     if (onAccent)
-      return Theme.withAlpha(Theme.base, hover.containsMouse ? 0.24 : 0.14);
-    return Theme.withAlpha(destructive ? Theme.urgent : Theme.accent, hover.containsMouse ? 0.2 : 0);
+      return Theme.withAlpha(Theme.inkOnAccent, hover.containsMouse ? 0.24 : 0.14);
+    return Theme.withAlpha(destructive ? Theme.dangerFill : Theme.accentFill, hover.containsMouse ? 0.2 : 0);
   }
 
   scale: hover.pressed ? 0.97 : 1
@@ -70,7 +79,15 @@ Rectangle {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: root.revealed ? Qt.PointingHandCursor : Qt.ArrowCursor
+    onPressed: root.forceActiveFocus()
     onClicked: if (root.revealed)
       root.clicked()
+  }
+
+  Keys.onPressed: function (event) {
+    if (root.revealed && (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+      root.clicked();
+      event.accepted = true;
+    }
   }
 }
