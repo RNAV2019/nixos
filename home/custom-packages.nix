@@ -9,10 +9,29 @@
   # Start Quickshell if needed and wait until every output is locked.
   lock-session = pkgs.writeShellApplication {
     name = "lock-session";
-    runtimeInputs = [pkgs.quickshell pkgs.coreutils];
+    runtimeInputs = [
+      pkgs.quickshell
+      pkgs.coreutils
+      pkgs.systemd
+      config.wayland.windowManager.hyprland.package
+    ];
     text = ''
+      # Nothing else on the session can lock, so a failure here leaves the desktop open.
+      # The shell is gone in exactly that case, so the compositor draws the warning.
+      warn_unlocked() {
+        echo "lock-session: $1" >&2
+        hyprctl notify 3 15000 "rgb(eb6f92)" "Session is NOT locked: $1" >/dev/null 2>&1 || true
+        exit 1
+      }
+
       if ! qs ipc call lock lock >/dev/null 2>&1; then
-        quickshell --daemonize --no-duplicate >/dev/null 2>&1 || true
+        # A shell started from here inherits this caller's environment, and a caller with
+        # no Wayland display - a TTY, a sandboxed terminal - makes quickshell abort in
+        # Qt's platform init. Handing the launch to the user manager runs it in the
+        # session's own environment instead. No --daemonize: systemd reaps the child the
+        # fork leaves behind, taking the shell with it.
+        systemd-run --user --collect --quiet --unit=quickshell-shell \
+          "$(command -v quickshell)" >/dev/null 2>&1 || true
 
         accepted=false
         for _ in $(seq 1 100); do
@@ -24,8 +43,7 @@
         done
 
         if [[ "$accepted" != true ]]; then
-          echo "lock-session: quickshell did not accept a lock request" >&2
-          exit 1
+          warn_unlocked "quickshell did not accept a lock request"
         fi
       fi
 
@@ -36,8 +54,7 @@
         sleep 0.1
       done
 
-      echo "lock-session: compositor did not secure the session" >&2
-      exit 1
+      warn_unlocked "the compositor did not secure the session"
     '';
   };
 

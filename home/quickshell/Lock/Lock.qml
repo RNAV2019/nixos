@@ -147,7 +147,9 @@ Scope {
   Timer {
     id: snapshotDelay
 
-    interval: 80
+    // Two frames at 60Hz, which is all the compositor needs to commit an output without
+    // the bar on it. The layer has no_anim, so there is no fade to wait out.
+    interval: 32
     onTriggered: {
       root.snapshotPending = false;
       snapshotCapture.running = true;
@@ -157,7 +159,10 @@ Scope {
   Process {
     id: snapshotCapture
 
-    command: ["grimblast", "save", "screen", root.snapshotPath]
+    // grim rather than grimblast, and stored rather than deflated: the capture is read
+    // once off tmpfs and deleted on unlock, so the compression is pure latency in front
+    // of the lock. Level 0 costs 30ms where grimblast's default costs 680ms.
+    command: ["grim", "-l", "0", root.snapshotPath]
 
     onExited: function (exitCode) {
       if (exitCode !== 0)

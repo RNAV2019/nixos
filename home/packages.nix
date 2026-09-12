@@ -262,6 +262,9 @@ in {
     networkmanagerapplet
 
     grimblast
+    # The lock screen calls grim directly: grimblast's default PNG compression costs it
+    # two thirds of a second between hiding the bar and showing the lock.
+    grim
     # The screen recorder. wl-screenrec rather than wf-recorder: it is the one with
     # --no-cursor and a named audio device. slurp draws the region and the snap targets.
     wl-screenrec

@@ -447,8 +447,10 @@ Singleton {
   readonly property int lockDotPop: 80
 
   // The lock veil is sourced from the captured desktop rather than the compositor backdrop.
+  // It tints the blurred capture rather than covering it, so it has to stay translucent:
+  // at 1.0 the whole background reads as one flat fill.
   readonly property color lockVeilColor: surface
-  readonly property real lockVeilOpacity: 1.0
+  readonly property real lockVeilOpacity: 0.55
   readonly property color lockTextPrimary: inkPrimary
   readonly property color lockTextSecondary: inkSecondary
   readonly property color lockFieldState: inkPrimary
