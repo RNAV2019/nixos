@@ -5,8 +5,9 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The calendar: the island grown into a card. The grid is six rows of seven, always,
-// so the panel keeps its height between a five-row month and a six-row one.
+// The calendar: the island grown into a card. The grid is six rows of seven, always, and the
+// agenda below the rule always reserves room for Theme.calAgendaMax rows, so the panel is the
+// same height for a five-row month as for a six-row one, and for an empty day as for a full one.
 Variants {
   id: root
 
@@ -85,9 +86,11 @@ Variants {
         }
       }
 
+        // Centred on the nav row off its own measured height rather than a constant, so the
+        // header line stays level whatever Inter reports for an 18 px cut.
         Text {
           x: Theme.calInset
-          y: Theme.calTitleTop
+          y: Theme.calNavTop + (Theme.calNavSize - height) / 2
           text: Qt.formatDateTime(Calendar.anchor, "MMMM yyyy")
           color: Theme.text
           font.family: Theme.uiFont
@@ -189,7 +192,7 @@ Variants {
         Rectangle {
           id: next
 
-          x: Theme.calWidth - Theme.calInset - width + 6
+          x: Theme.calWidth - Theme.calInset - width
           y: Theme.calNavTop
           width: Theme.calNavSize
           height: width
@@ -260,7 +263,7 @@ Variants {
             readonly property bool isSelected: Calendar.sameDay(day, Calendar.selected)
 
             x: Theme.calColumnFirst + (index % 7) * Theme.calColumnPitch - width / 2
-            y: Theme.calGridTop + Math.floor(index / 7) * Theme.calRowPitch - 8
+            y: Theme.calGridTop + Math.floor(index / 7) * Theme.calRowPitch
             width: Theme.calColumnPitch
             height: Theme.calRowPitch
 
@@ -288,7 +291,9 @@ Variants {
               font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
             }
 
-            // One dot per day that has anything, in the colour of its first calendar.
+            // One dot per day that has anything, in the colour of its first calendar. It hangs
+            // under the number but stays inside the marker, so it belongs to its own row; on the
+            // selected day it sits on the accent fill and takes the ink that goes with it.
             Rectangle {
               x: (parent.width - width) / 2
               y: parent.height / 2 + Theme.calDotDrop - height / 2
@@ -297,6 +302,8 @@ Variants {
               radius: width / 2
               visible: Calendar.hasEvents(cell.day)
               color: {
+                if (cell.isSelected)
+                  return Theme.inkOnAccent;
                 var day = Calendar.eventsOn(cell.day);
                 return day.length > 0 ? Calendar.colourFor(day[0].calendar) : Theme.accent;
               }
@@ -338,9 +345,9 @@ Variants {
 
             readonly property var event: win.agenda[index]
 
-            x: Theme.calAgendaInset
+            x: Theme.calInset
             y: Theme.calAgendaTop + index * (Theme.calAgendaHeight + Theme.calAgendaGap)
-            width: Theme.calWidth - Theme.calAgendaInset * 2
+            width: Theme.calWidth - Theme.calInset * 2
             height: Theme.calAgendaHeight
             radius: Theme.calAgendaRadius
             color: Theme.withAlpha(Theme.highlightLow, 0.9)
@@ -398,9 +405,19 @@ Variants {
         }
 
         // Covers every state the list is not in: empty, truncated, loading, or never set up.
+        //
+        // With rows above it the note is a footnote to them, so it sits under the block the
+        // panel reserves. With no rows it is the only thing in that block, and centring it
+        // there makes an empty day read as an empty day rather than as a panel that ran out
+        // of things to draw.
         Text {
+          readonly property bool alone: win.agenda.length === 0
+
           x: Theme.calInset
-          y: Theme.calAgendaTop + Math.min(win.agenda.length, Theme.calAgendaMax) * (Theme.calAgendaHeight + Theme.calAgendaGap) + 4
+          y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap * 2
+          width: Theme.calWidth - Theme.calInset * 2
+          horizontalAlignment: alone ? Text.AlignHCenter : Text.AlignLeft
+          elide: Text.ElideRight
           text: {
             if (Calendar.error !== "")
               return Calendar.error;

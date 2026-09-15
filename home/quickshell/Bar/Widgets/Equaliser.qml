@@ -41,14 +41,14 @@ Item {
 
           NumberAnimation {
             to: 3
-             duration: Theme.duration(Theme.morphState + bar.index * 30)
-             easing.type: Easing.OutCubic
+            duration: 320 + bar.index * 60
+            easing.type: Easing.InOutSine
           }
 
           NumberAnimation {
             to: root.implicitHeight
-             duration: Theme.duration(Theme.morphState + 40 + bar.index * 25)
-             easing.type: Easing.OutCubic
+            duration: 400 + bar.index * 50
+            easing.type: Easing.InOutSine
           }
         }
       }

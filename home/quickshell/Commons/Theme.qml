@@ -376,10 +376,9 @@ Singleton {
 
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: 520
-  readonly property int calHeight: 528
+  readonly property int calHeight: 600
   readonly property int calRadius: 26
   readonly property int calInset: 24
-  readonly property int calTitleTop: 26
   readonly property int calTitleSize: 18
   readonly property int calNavSize: 30
   readonly property int calNavTop: 24
@@ -388,27 +387,31 @@ Singleton {
   readonly property int calTodayBtnHeight: 28
   readonly property real calTodayBtnSize: 11.5
 
-  // Seven columns on a 68 px pitch, six rows on 46. The day number is drawn at the row top
-  // and the marker centres on it; the event dot hangs below.
-  readonly property int calWeekdayTop: 74
+  // Seven columns on a 68 px pitch, six rows on 46. calGridTop is the top of the first row
+  // rather than a baseline the delegate has to correct for. The day number centres in its
+  // cell, the marker centres on the number, and the event dot sits under the number and
+  // inside the marker, so a row's dots read as belonging to that row and not to the next one.
+  readonly property int calWeekdayTop: 76
   readonly property int calWeekdaySize: 11
-  readonly property int calGridTop: 110
+  readonly property int calGridTop: 102
   readonly property int calColumnPitch: 68
   readonly property int calRowPitch: 46
   readonly property int calColumnFirst: 56
   readonly property int calDaySize: 13
   readonly property int calTodayMarker: 34
   readonly property int calDotSize: 5
-  readonly property int calDotDrop: 22
+  readonly property int calDotDrop: 12
 
-  readonly property int calDividerTop: 360
-  readonly property int calSectionTop: 372
+  // The last grid row ends at 372, so the rule clears it by 20. Everything below the rule is
+  // a fixed block: the panel reserves room for calAgendaMax rows whether or not the chosen
+  // day fills them, which is what lets calHeight stay a constant.
+  readonly property int calDividerTop: 392
+  readonly property int calSectionTop: 406
   readonly property real calSectionSize: 11.5
-  readonly property int calAgendaTop: 386
+  readonly property int calAgendaTop: 430
   readonly property int calAgendaHeight: 38
   readonly property int calAgendaGap: 4
   readonly property int calAgendaRadius: 12
-  readonly property int calAgendaInset: 22
   readonly property int calSpineLeft: 12
   readonly property int calSpineWidth: 3
   readonly property int calSpineHeight: 20
@@ -417,8 +420,8 @@ Singleton {
   readonly property int calTitleLeft: 86
   readonly property real calEventTitleSize: 12.5
   readonly property real calMetaSize: 11
-  // Six agenda rows is what the panel has room for below the grid.
   readonly property int calAgendaMax: 3
+  readonly property int calAgendaBlock: calAgendaMax * calAgendaHeight + (calAgendaMax - 1) * calAgendaGap
 
   // Board 13: a 1920x1080 lock surface. The background is painted by the surface itself, so
   // the session-lock protocol never exposes a black frame.
