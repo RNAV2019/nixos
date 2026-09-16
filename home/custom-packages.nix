@@ -109,10 +109,10 @@
   # nix store prefetch-file "https://github.com/pingdotgg/t3code/releases/download/v<version>/T3-Code-<version>-x86_64.AppImage"
   t3code-nightly = let
     pname = "t3code-nightly";
-    version = "0.0.41-nightly.20260910.1486";
+    version = "0.0.41-nightly.20260916.1795";
     src = pkgs.fetchurl {
       url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-      hash = "sha256-qkocCKGth9xpZoSB7K22otT5SF5Bctxmz5IPpAw53Bk=";
+      hash = "sha256-GDhPL3sNRJGgEUtqRP9jwb1EYsBk8XohrFq1NHKj5Z0=";
     };
     appimageContents = pkgs.appimageTools.extract {inherit pname version src;};
   in
