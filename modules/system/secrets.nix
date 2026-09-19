@@ -1,5 +1,37 @@
-{config, ...}: let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   home = "/home/ryan";
+
+  # `sudo edit-secrets [FILE]` opens secrets/FILE, secrets.yaml by default, in
+  # sops. A command rather than a shell alias, because sudo runs executables
+  # and never sees fish's aliases. sudo drops EDITOR, so helix is named here.
+  edit-secrets = pkgs.writeShellApplication {
+    name = "edit-secrets";
+    runtimeInputs = [pkgs.sops pkgs.coreutils];
+    text = ''
+      if [[ $EUID -ne 0 ]]; then
+        echo "edit-secrets: the age key is root-only; run: sudo edit-secrets" >&2
+        exit 1
+      fi
+
+      file="${home}/nixos/secrets/''${1:-secrets.yaml}"
+      [[ -f "$file" ]] || { echo "edit-secrets: no such file: $file" >&2; exit 1; }
+
+      export SOPS_AGE_KEY_FILE=${config.sops.age.keyFile}
+      export EDITOR=${lib.getExe config.home-manager.users.ryan.programs.helix.package}
+
+      # sops exits non-zero when nothing changed, and the file is handed back
+      # to ryan either way so git and the next edit are not left with root's.
+      rc=0
+      sops "$file" || rc=$?
+      chown ryan:users "$file"
+      exit "$rc"
+    '';
+  };
 
   # Every secret here decrypts to a file owned by ryan. sops-nix writes the
   # real file under /run/secrets.d and leaves a symlink at `path`, so these
@@ -112,4 +144,6 @@ in {
     '';
   };
   system.activationScripts.setupSecrets.deps = ["userSecretDirs"];
+
+  environment.systemPackages = [edit-secrets];
 }

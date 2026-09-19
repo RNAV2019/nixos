@@ -137,10 +137,8 @@ passphrase and SSH key used by backups, the Google Calendar iCal addresses,
 the Penpot MCP URL, and the OpenRouter and opencode API keys.
 
 ```bash
-# The age key is root-only, and nothing exports SOPS_AGE_KEY_FILE, so it has
-# to be named here. Re-encrypts on save.
-sudo SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key sops secrets/secrets.yaml
-sudo chown ryan:users secrets/secrets.yaml
+sudo edit-secrets             # secrets.yaml in helix; re-encrypts on save
+sudo edit-secrets wifi.yaml   # any other file under secrets/
 rebuild
 ```
 
