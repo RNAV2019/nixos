@@ -16,6 +16,7 @@ in {
     ./boot.nix
     ./users.nix
     ./secrets.nix
+    ./wifi.nix
     ./backups.nix
   ];
 
