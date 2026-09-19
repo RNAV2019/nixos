@@ -11,6 +11,7 @@
     ./shell.nix
     ./terminal.nix
     ./desktop.nix
+    ./monitors.nix
     ./editors.nix
     ./programs.nix
     ./dev.nix
@@ -22,7 +23,6 @@
 
   home.username = "ryan";
   home.homeDirectory = "/home/ryan";
-  home.stateVersion = "25.11";
   programs.home-manager.enable = true;
   xdg.enable = true;
 

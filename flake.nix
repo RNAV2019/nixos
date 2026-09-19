@@ -91,31 +91,34 @@
       '';
     };
 
-    nixosConfigurations = {
-      ryans-nixos = nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          ./host/configuration.nix
-          ./host/hardware-configuration.nix
-          ./modules/system/default.nix
-          ./modules/system/sof-sdw-ptl-rt721.nix
-          ./modules/system/secrets.nix
-          ./modules/system/backups.nix
+    # One entry per machine, named after its hostname so that a bare
+    # `nixos-rebuild --flake ~/nixos` picks the right one. Everything specific
+    # to a machine lives in hosts/<name>; see README.
+    nixosConfigurations = let
+      mkHost = hostName:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            ./hosts/${hostName}
+            ./modules/system
+            {networking.hostName = hostName;}
 
-          sops-nix.nixosModules.sops
+            sops-nix.nixosModules.sops
 
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            # Preserve unmanaged files during activation.
-            home-manager.backupFileExtension = "hm-backup";
-            home-manager.users.ryan = import ./home/default.nix;
-            home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
-          }
-        ];
-        specialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
-      };
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              # Preserve unmanaged files during activation.
+              home-manager.backupFileExtension = "hm-backup";
+              home-manager.users.ryan = import ./home/default.nix;
+              home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
+            }
+          ];
+          specialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
+        };
+    in {
+      ryans-nixos = mkHost "ryans-nixos";
     };
   };
 }

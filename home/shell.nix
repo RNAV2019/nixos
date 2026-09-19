@@ -15,7 +15,8 @@
       lt = "eza --tree --level=2 --long --icons --git";
       la = "eza -lha --group-directories-first --icons=auto";
 
-      rebuild = "sudo nixos-rebuild switch --flake ~/nixos#ryans-nixos";
+      # Picks nixosConfigurations.<hostname>.
+      rebuild = "sudo nixos-rebuild switch --flake ~/nixos";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
 

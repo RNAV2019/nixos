@@ -12,6 +12,13 @@
     '';
   };
 in {
+  imports = [
+    ./boot.nix
+    ./users.nix
+    ./secrets.nix
+    ./backups.nix
+  ];
+
   time.timeZone = "Europe/London";
   i18n.defaultLocale = "en_GB.UTF-8";
   i18n.extraLocaleSettings = {
@@ -151,7 +158,7 @@ in {
     enable = true;
     extraPackages = with pkgs; [intel-media-driver vpl-gpu-rt];
   };
-  
+
   services.thermald.enable = true;
 
   services.power-profiles-daemon.enable = true;
