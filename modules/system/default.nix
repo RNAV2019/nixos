@@ -67,6 +67,16 @@ in {
   # Required for Bluetooth HID input.
   services.libinput.enable = true;
 
+  # The Copilot key sends Shift+Meta+F23 as one chord; turn it back into a
+  # right Ctrl.
+  services.keyd = {
+    enable = true;
+    keyboards.default = {
+      ids = ["*"];
+      settings.main."leftshift+leftmeta+f23" = "layer(control)";
+    };
+  };
+
   services.pipewire = {
     enable = true;
     alsa.enable = true;

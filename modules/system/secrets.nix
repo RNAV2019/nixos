@@ -51,6 +51,7 @@ in {
       # Consumed by the templates below rather than by a program directly.
       "gh/token" = owned;
       "openrouter/opencode-key" = owned;
+      "opencode/go-key" = owned;
 
       # Backups. Owned by ryan rather than root so that reading an archive
       # needs no privilege escalation; the scheduled job still runs as root,
@@ -88,7 +89,7 @@ in {
         // {
           path = "${home}/.local/share/opencode/auth.json";
           content = ''
-            {"openrouter":{"type":"api","key":"${config.sops.placeholder."openrouter/opencode-key"}"}}
+            {"openrouter":{"type":"api","key":"${config.sops.placeholder."openrouter/opencode-key"}"},"opencode-go":{"type":"api","key":"${config.sops.placeholder."opencode/go-key"}"}}
           '';
         };
     };
