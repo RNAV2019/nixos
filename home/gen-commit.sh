@@ -10,7 +10,7 @@ RP_FOAM="#9ccfd8"
 RP_PINE="#3e8fb0"
 RP_IRIS="#c4a7e7"
 
-MODEL="google/gemini-2.5-flash-lite"
+MODEL="meta-llama/llama-3.1-8b-instruct"
 MAX_AI_EDITS=5
 MAX_DIFF=12000
 DEBUG=false
