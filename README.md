@@ -155,22 +155,9 @@ shred -u /tmp/hash.json
 sudo chown ryan:users secrets/secrets.yaml
 ```
 
-Wi-Fi passwords live apart, in `secrets/wifi.yaml`, which can be written with
-the public key alone. `modules/system/wifi.nix` declares the networks and does
-nothing until that file exists. To capture the saved networks, from `~/nixos` in
-fish:
+Wi-Fi passwords are in `secrets/wifi.yaml`, edited the same way. A new network
+needs a line there and an entry in `modules/system/wifi.nix`.
 
-```fish
-function psk; nmcli -s -g 802-11-wireless-security.psk connection show $argv; end
-printf 'wifi-env: |\n  SKYMRFDT_PSK=%s\n  SKYP1CF7_PSK=%s\n  RYANS_S24_ULTRA_PSK=%s\n' \
-    (psk SKYMRFDT) (psk SKYP1CF7) (psk 'Ryans S24 Ultra') \
-  | sops encrypt --input-type yaml --output-type yaml \
-      --filename-override secrets/wifi.yaml /dev/stdin > secrets/wifi.yaml
-git add secrets/wifi.yaml
-```
-
-A new network needs an entry in `wifi.nix` and a line in the file, edited
-like `secrets.yaml` above.
 <br>
 
 ## Daily Ops

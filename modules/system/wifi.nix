@@ -4,8 +4,8 @@
   ...
 }: let
   # Kept apart from secrets.yaml so that it can be written with the public
-  # recipient alone; see README. Until it exists and is tracked, none of this
-  # applies and the networks saved under /etc are left to themselves.
+  # recipient alone. Without it, none of this applies and the networks saved
+  # under /etc are left to themselves.
   sopsFile = ../../secrets/wifi.yaml;
 
   # uuid is the one each network was first saved under. The copy written to
