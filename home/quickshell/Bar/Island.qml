@@ -356,7 +356,15 @@ FrostedSurface {
       font.pixelSize: Theme.islandCaptionSize
     }
 
-    // Board 02's status gauge, 16 px in from the right like the album art on the left.
+    // Board 02's gauges, the battery 16 px in from the right like the album art on the left
+    // and the system load beside it.
+    SystemGauge {
+      x: root.width - (16 + 12 + 2 * implicitWidth) * root.scaleFactor
+      y: root.midline - implicitHeight * root.scaleFactor / 2
+      transformOrigin: Item.TopLeft
+      scale: root.scaleFactor
+    }
+
     StatusGauge {
       x: root.width - (16 + implicitWidth) * root.scaleFactor
       y: root.midline - implicitHeight * root.scaleFactor / 2

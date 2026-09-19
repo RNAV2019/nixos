@@ -4,8 +4,9 @@ import Quickshell.Services.UPower
 import qs.Commons
 import qs.Services
 
-// Board 02's status gauge: a ring that is the battery, open at the bottom, with the Wi-Fi
-// glyph inside it and the system's power draw sitting in the gap.
+// Board 02's battery gauge: a ring that is the battery, open at the bottom, with the Wi-Fi
+// glyph inside it and the charge sitting in the gap. On the charger the ring turns foam and
+// the charge gains a bolt.
 Item {
   id: root
 
@@ -13,14 +14,11 @@ Item {
   readonly property bool present: battery !== null && battery.isLaptopBattery && battery.isPresent
   readonly property real level: present ? Math.max(0, Math.min(1, battery.percentage)) : 0
   readonly property bool charging: present && battery.state === UPowerDeviceState.Charging
-  readonly property bool low: present && !charging && level <= 0.2
+  // On the charger, whether it is still filling or has topped out.
+  readonly property bool plugged: charging || (present && (battery.state === UPowerDeviceState.FullyCharged || battery.state === UPowerDeviceState.PendingCharge))
+  readonly property bool low: present && !plugged && level <= 0.2
 
-  // UPower's energy rate is the battery's own flow: the whole system's draw while on
-  // battery, what goes into the cell while charging.
-  readonly property real watts: present ? Math.abs(battery.changeRate) : 0
-
-  readonly property real startAngle: 150
-  readonly property real sweep: 240
+  readonly property color tint: plugged ? Theme.foam : low ? Theme.love : Theme.accent
 
   readonly property bool connected: NetworkInfo.onEthernet || NetworkInfo.activeNetwork !== null
   readonly property real strength: {
@@ -64,45 +62,15 @@ Item {
     height: 48
     preferredRendererType: Shape.CurveRenderer
 
-    ShapePath {
+    GaugeArc {
+      radius: 21
       strokeColor: Theme.highlightMed
-      strokeWidth: 4
-      capStyle: ShapePath.RoundCap
-      fillColor: "transparent"
-
-      PathAngleArc {
-        centerX: 24
-        centerY: 24
-        radiusX: 21
-        radiusY: 21
-        startAngle: root.startAngle
-        sweepAngle: root.sweep
-      }
     }
 
-    ShapePath {
-      strokeColor: root.low ? Theme.love : Theme.accent
-      strokeWidth: root.present && root.level > 0 ? 4 : 0
-      capStyle: ShapePath.RoundCap
-      fillColor: "transparent"
-
-      PathAngleArc {
-        id: fill
-
-        centerX: 24
-        centerY: 24
-        radiusX: 21
-        radiusY: 21
-        startAngle: root.startAngle
-        sweepAngle: root.sweep * root.level
-
-        Behavior on sweepAngle {
-          NumberAnimation {
-            duration: Theme.duration(Theme.morphState)
-            easing.type: Easing.OutCubic
-          }
-        }
-      }
+    GaugeArc {
+      radius: 21
+      value: root.level
+      strokeColor: root.tint
     }
 
     // Three bars about the dot, lit by signal strength.
@@ -131,14 +99,42 @@ Item {
     color: root.barColor(root.connected)
   }
 
-  Text {
+  // The charge, led by a bolt while on the charger.
+  Row {
     anchors.horizontalCenter: parent.horizontalCenter
     y: 38
+    spacing: 2
     visible: root.present
-    text: (root.charging ? "↑ " : "↓ ") + root.watts.toFixed(1) + " W"
-    color: Theme.subtle
-    font.family: Theme.uiFont
-    font.pixelSize: 11
-    font.weight: Font.DemiBold
+
+    Shape {
+      anchors.verticalCenter: parent.verticalCenter
+      width: root.plugged ? 7 : 0
+      height: 10
+      visible: root.plugged
+      preferredRendererType: Shape.CurveRenderer
+
+      ShapePath {
+        fillColor: Theme.foam
+        strokeColor: Theme.foam
+        strokeWidth: 0.6
+        joinStyle: ShapePath.RoundJoin
+        startX: 4.4
+        startY: 0.3
+
+        PathLine { x: 0.5; y: 5.9 }
+        PathLine { x: 3.4; y: 5.9 }
+        PathLine { x: 2.6; y: 9.7 }
+        PathLine { x: 6.5; y: 4.1 }
+        PathLine { x: 3.6; y: 4.1 }
+        PathLine { x: 4.4; y: 0.3 }
+      }
+    }
+
+    GaugeLabel {
+      anchors.horizontalCenter: undefined
+      y: 0
+      text: Math.round(root.level * 100) + "%"
+      color: root.plugged ? Theme.foam : root.low ? Theme.love : Theme.subtle
+    }
   }
 }
