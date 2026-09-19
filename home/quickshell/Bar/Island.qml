@@ -17,9 +17,6 @@ import qs.Ui
 FrostedSurface {
   id: root
 
-  signal clockActivated
-  signal statusActivated
-
   // A pin holds the card open once the pointer leaves. Clicking again drops it.
   property bool pinned: false
 
@@ -359,38 +356,12 @@ FrostedSurface {
       font.pixelSize: Theme.islandCaptionSize
     }
 
-    Rectangle {
-      id: status
-
-      // Anchored right with a margin that scales like every other measurement on the card.
-      x: root.width - 88 * root.scaleFactor
-      y: root.midline - height / 2
-      width: Theme.islandStatusWidth * root.scaleFactor
-      height: 36 * root.scaleFactor
-      radius: height / 2
-      color: Theme.withAlpha(Theme.accent, 0.14)
-      border.width: 1
-      border.color: Theme.withAlpha(Theme.accent, 0.28)
-
-      WifiGlyph {
-        x: 10 * root.scaleFactor
-        y: (parent.height - implicitHeight * root.scaleFactor) / 2
-        transformOrigin: Item.TopLeft
-        scale: root.scaleFactor
-      }
-
-      BatteryGauge {
-        x: 33 * root.scaleFactor
-        y: (parent.height - implicitHeight * root.scaleFactor) / 2
-        transformOrigin: Item.TopLeft
-        scale: root.scaleFactor
-      }
-
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.statusActivated()
-      }
+    // Board 02's status gauge, 16 px in from the right like the album art on the left.
+    StatusGauge {
+      x: root.width - (16 + implicitWidth) * root.scaleFactor
+      y: root.midline - implicitHeight * root.scaleFactor / 2
+      transformOrigin: Item.TopLeft
+      scale: root.scaleFactor
     }
   }
 
@@ -419,16 +390,5 @@ FrostedSurface {
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandDisplaySize
     font.weight: Font.DemiBold
-  }
-
-  // Sits over the clock and its date, and only takes clicks once the card is open.
-  MouseArea {
-    x: root.clockLeft - 12 * root.scaleFactor
-    y: 0
-    width: clockLabel.width * clockLabel.scale + 24 * root.scaleFactor
-    height: root.height
-    enabled: root.expanded
-    cursorShape: Qt.PointingHandCursor
-    onClicked: root.clockActivated()
   }
 }

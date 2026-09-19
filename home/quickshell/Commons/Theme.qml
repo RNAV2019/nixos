@@ -138,7 +138,6 @@ Singleton {
   readonly property int islandCaptionSize: 11
   readonly property int islandArtSize: 48
   readonly property int islandArtRadius: 10
-  readonly property int islandStatusWidth: 72
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 

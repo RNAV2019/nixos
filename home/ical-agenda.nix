@@ -16,7 +16,9 @@ pkgs.writers.writePython3Bin "ical-agenda" {
   import pathlib
   import re
   import sys
+  import time
   import urllib.error
+  import urllib.parse
   import urllib.request
 
   import icalendar
@@ -37,6 +39,10 @@ pkgs.writers.writePython3Bin "ical-agenda" {
   CACHE_SECONDS = 600
 
   FETCH_TIMEOUT = 20
+
+  FETCH_ATTEMPTS = 3
+
+  RETRY_SECONDS = 2
 
 
   def fail(message):
@@ -80,6 +86,12 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       return urls
 
 
+  def redact(url):
+      """The feed's host only: the path is the secret that grants access."""
+      host = urllib.parse.urlsplit(url).hostname or "calendar"
+      return host + "/..."
+
+
   def fetch(url, refresh):
       """The feed's text, from the cache when it is fresh enough."""
       key = hashlib.sha256(url.encode("utf-8")).hexdigest()
@@ -93,11 +105,29 @@ pkgs.writers.writePython3Bin "ical-agenda" {
           except OSError:
               pass
 
-      try:
-          with urllib.request.urlopen(url, timeout=FETCH_TIMEOUT) as response:
-              body = response.read().decode("utf-8", "replace")
-      except (urllib.error.URLError, OSError, ValueError) as error:
-          fail("could not fetch " + url + ": " + str(error))
+      # A fetch fails now and then, most often in the seconds after a
+      # resume while the network is still coming up, so it is retried
+      # before giving up, and then a stale copy beats no agenda at all.
+      body = None
+      for attempt in range(FETCH_ATTEMPTS):
+          if attempt:
+              time.sleep(RETRY_SECONDS * attempt)
+          try:
+              with urllib.request.urlopen(
+                  url, timeout=FETCH_TIMEOUT
+              ) as response:
+                  body = response.read().decode("utf-8", "replace")
+              break
+          except (urllib.error.URLError, OSError, ValueError) as error:
+              last_error = error
+
+      if body is None:
+          try:
+              return cached.read_text(encoding="utf-8")
+          except OSError:
+              fail(
+                  "could not fetch " + redact(url) + ": " + str(last_error)
+              )
 
       # Written through a neighbour, so a fetch that dies half way leaves
       # no truncated feed.
@@ -154,6 +184,28 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       }
 
 
+  def pin_yearly_month(feed):
+      """Hold a yearly rule to the month it started in.
+
+      Google writes a yearly event as FREQ=YEARLY;BYMONTHDAY=17 with no
+      BYMONTH. RFC 5545 reads that as the 17th of every month, and
+      recurring_ical_events follows the letter of it; Google, like every
+      calendar people actually use, means the month of DTSTART.
+      """
+      for event in feed.walk("VEVENT"):
+          rule = event.get("RRULE")
+          start = event.get("DTSTART")
+          if rule is None or start is None:
+              continue
+          if rule.get("FREQ") != ["YEARLY"]:
+              continue
+          if not ("BYMONTHDAY" in rule or "BYDAY" in rule):
+              continue
+          if any(k in rule for k in ("BYMONTH", "BYWEEKNO", "BYYEARDAY")):
+              continue
+          rule["BYMONTH"] = [start.dt.month]
+
+
   def calendar_name(feed):
       # Google names the feed; a hand-rolled .ics need not. The shell's
       # per-calendar colour only has to be stable, not meaningful.
@@ -192,6 +244,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       rows = []
       for url in read_urls():
           feed = icalendar.Calendar.from_ical(fetch(url, args.refresh))
+          pin_yearly_month(feed)
           name = calendar_name(feed)
           occurrences = recurring_ical_events.of(feed).between(
               first, window_end

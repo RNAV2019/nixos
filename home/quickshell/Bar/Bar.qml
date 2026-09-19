@@ -67,8 +67,6 @@ Variants {
       screenName: bar.screen ? bar.screen.name : ""
        suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.transientOnScreen(bar.screen.name))
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
-      onClockActivated: Bus.toggleSurface("calendar")
-      onStatusActivated: Bus.toggleSurface("control")
     }
   }
 }
