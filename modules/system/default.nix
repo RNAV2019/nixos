@@ -159,6 +159,10 @@ in {
     extraPackages = with pkgs; [intel-media-driver vpl-gpu-rt];
   };
 
+  # Compressed swap in RAM. There is no swap partition, so without it a
+  # runaway build meets the OOM killer with nothing to page out to.
+  zramSwap.enable = true;
+
   services.thermald.enable = true;
 
   services.power-profiles-daemon.enable = true;
