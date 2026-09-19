@@ -183,6 +183,18 @@ in {
       "sh:${home}/**/.direnv"
       "sh:${home}/**/.venv"
       "sh:${home}/**/__pycache__"
+      "sh:${home}/**/.next"
+      "sh:${home}/**/.gradle"
+      "sh:${home}/**/.kotlin"
+
+      # Gradle's build/. Not build/ itself, which other tools use for source
+      # (electron-builder keeps its icons there); these children are
+      # Gradle's own and hold nearly all of the weight.
+      "sh:${home}/**/build/intermediates"
+      "sh:${home}/**/build/outputs"
+      "sh:${home}/**/build/reports"
+      "sh:${home}/**/build/kspCaches"
+      "sh:${home}/**/build/tmp"
 
       # Rewritten by home/claude.nix on every rebuild, so backing it up only
       # creates a conflict on restore. .credentials.json is deliberately kept:
