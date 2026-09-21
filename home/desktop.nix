@@ -305,13 +305,15 @@ in {
         ++ map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces
         ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
         ++ lib.concatMap (key: [
-          # Match Omarchy screenshot bindings. The built-in keyboard's PrtSc key
-          # emits XF86SelectiveScreenshot, not Print, so bind both keysyms.
+          # Match Omarchy screenshot bindings. The built-in keyboard's PrtSc
+          # key emits XF86SelectiveScreenshot without keyd, XF86Launch7 with
+          # keyd's synthetic F-key rewrite, and Print once keyd maps it back
+          # to sysrq, so bind all three keysyms.
           (bind key (exec "grimblast --notify copysave area"))
           (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
           (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))
           (bind "${mod} + CTRL + ${key}" (exec "grimblast --notify copysave screen"))
-        ]) ["Print" "XF86SelectiveScreenshot"]
+        ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
         ++ [
           (bind "${mod} + L" (exec "lock-session"))
 

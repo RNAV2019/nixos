@@ -77,11 +77,19 @@ in {
 
   # The Copilot key sends Shift+Meta+F23 as one chord; turn it back into a
   # right Ctrl.
+  #
+  # keyd cannot forward keys beyond evdev code 255, so it rewrites the
+  # built-in keyboard's PrtSc key (which emits KEY_SELECTIVE_SCREENSHOT) to a
+  # synthetic F-key. Map that back to sysrq (evdev 99), which Hyprland sees
+  # as the Print keysym its screenshot binds use.
   services.keyd = {
     enable = true;
     keyboards.default = {
       ids = ["*"];
-      settings.main."leftshift+leftmeta+f23" = "layer(control)";
+      settings = {
+        main."leftshift+leftmeta+f23" = "layer(control)";
+        main.f24 = "sysrq";
+      };
     };
   };
 
