@@ -12,20 +12,24 @@
     style = {
       # Avoid framebuffer edges left by the mismatched default wallpaper.
       wallpapers = lib.mkForce [];
-      backdrop = "191724";
+      # Boot runs before any user theme state exists, so it cannot follow the desktop theme.
+      # It is neutral grey on black instead, which sits under both themes, and black is
+      # plymouth bgrt's own, so the menu, the splash and Hyprland's first frame all match.
+      # The menu only uses a handful of palette slots, so plain grey steps are enough.
+      backdrop = "000000";
       interface = {
         branding = "NixOS";
-        brandingColor = "eb6f92";
-        helpColor = "9ccfd8";
-        helpColorBright = "c4a7e7";
+        brandingColor = "ffffff";
+        helpColor = "8c8c8c";
+        helpColorBright = "d6d6d6";
       };
       graphicalTerminal = {
-        background = "191724";
-        foreground = "e0def4";
-        brightBackground = "6e6a86";
-        brightForeground = "e0def4";
-        palette = "191724;eb6f92;9ccfd8;f6c177;31748f;c4a7e7;9ccfd8;e0def4";
-        brightPalette = "6e6a86;eb6f92;9ccfd8;f6c177;31748f;c4a7e7;9ccfd8;e0def4";
+        background = "000000";
+        foreground = "d6d6d6";
+        brightBackground = "3f3f3f";
+        brightForeground = "ffffff";
+        palette = "000000;8c8c8c;a6a6a6;bfbfbf;8c8c8c;a6a6a6;bfbfbf;d6d6d6";
+        brightPalette = "3f3f3f;a6a6a6;bfbfbf;d6d6d6;a6a6a6;bfbfbf;d6d6d6;ffffff";
       };
     };
   };

@@ -11,13 +11,19 @@ cwd=$(q '.workspace.current_dir // .cwd // ""')
 model=$(q '.model.display_name // ""')
 [ -n "$cwd" ] || cwd=$PWD
 
-# Rose Pine (Moon).
-love=$'\033[38;2;235;111;146m'
-gold=$'\033[38;2;246;193;119m'
-foam=$'\033[38;2;156;207;216m'
-iris=$'\033[38;2;196;167;231m'
-muted=$'\033[38;2;110;106;134m'
-subtle=$'\033[38;2;144;140;170m'
+# The active theme's colours (see theme.nix), with Rose Pine's as the fallback.
+theme_colors="$HOME/.local/state/theme/current/colors.sh"
+if [ -r "$theme_colors" ]; then
+  # shellcheck source=/dev/null
+  . "$theme_colors"
+fi
+sgr() { printf '\033[38;2;%sm' "$1"; }
+love=$(sgr "${THEME_LOVE_RGB:-235;111;146}")
+gold=$(sgr "${THEME_GOLD_RGB:-246;193;119}")
+foam=$(sgr "${THEME_FOAM_RGB:-156;207;216}")
+iris=$(sgr "${THEME_IRIS_RGB:-196;167;231}")
+muted=$(sgr "${THEME_MUTED_RGB:-110;106;134}")
+subtle=$(sgr "${THEME_SUBTLE_RGB:-144;140;170}")
 # Starship's own prompt styles.
 dir_style=$'\033[1;36m'
 in_style=$'\033[1;37m'

@@ -3,6 +3,32 @@
   lib,
   ...
 }: {
+  # Recolours the terminal this fish lives in after a theme switch. The theme's
+  # fish fragment (see theme.nix) sets `theme_osc` — background, foreground,
+  # cursor, selection background, selection foreground, bare hex — and every
+  # running fish picks the universal variable up and repaints its Ghostty
+  # surface over OSC. A Ghostty config reload cannot do this: it recolours only
+  # new cells and new windows, so open ones keep the colours they started with.
+  # A function file rather than an init line, so fish autoloads the handler at
+  # event time and shells that were already running when the config landed
+  # handle the next switch too. New fish emit nothing, which is right: their
+  # window already read the new theme's config.
+  xdg.configFile."fish/functions/__theme_osc.fish".text = ''
+    function __theme_rgb
+      string join / "rgb:"(string sub --length 2 --start 1 $argv[1]) \
+        (string sub --length 2 --start 3 $argv[1]) \
+        (string sub --length 2 --start 5 $argv[1])
+    end
+
+    function __theme_osc --on-variable theme_osc --description "Recolour the terminal after a theme switch"
+      test -t 1; or return 0
+      set -l c (string split ' ' -- $theme_osc)
+      test (count $c) -eq 5; or return 0
+      printf '\033]11;%s\007\033]10;%s\007\033]12;%s\007\033]17;%s\007\033]19;%s\007' \
+        (__theme_rgb $c[1]) (__theme_rgb $c[2]) (__theme_rgb $c[3]) (__theme_rgb $c[4]) (__theme_rgb $c[5])
+    end
+  '';
+
   programs.fish = {
     enable = true;
 
@@ -102,20 +128,12 @@
         format = "[ in ](bold white)[$branch]($style)";
       };
 
+      # The per-state symbols carry theme colours, so theme.nix adds them to each theme's
+      # copy of this file, and starship.toml is linked to the active one.
       git_status = {
         style = "";
         format = "([ $ahead_behind$all_status]($style))";
-        conflicted = "[!](bold fg:#eb6f92)";
-        ahead = "[⇡\${count}](bold fg:#9ccfd8)";
-        behind = "[⇣\${count}](bold fg:#f6c177)";
-        diverged = "[⇡\${ahead_count}⇣\${behind_count}](bold fg:#f6c177)";
         up_to_date = "";
-        untracked = "[?\${count} ](fg:#6e6a86)";
-        stashed = "[⊙\${count} ](fg:#c4a7e7)";
-        modified = "[!\${count} ](fg:#f6c177)";
-        staged = "[+\${count} ](fg:#9ccfd8)";
-        renamed = "[»\${count} ](fg:#c4a7e7)";
-        deleted = "[✗\${count} ](fg:#eb6f92)";
       };
 
       git_state = {
@@ -199,12 +217,10 @@
     enableFishIntegration = true;
     # Atuin owns Ctrl-R; fzf keeps Ctrl-T and Alt-C.
     historyWidget.command = "";
+    # The colours are read from FZF_DEFAULT_OPTS_FILE, which follows the theme.
     defaultOptions = [
       "--height 40%"
       "--border"
-      "--color=bg+:#26233a,bg:#191724,spinner:#ebbcba,hl:#eb6f92"
-      "--color=fg:#e0def4,header:#eb6f92,info:#c4a7e7,pointer:#ebbcba"
-      "--color=marker:#ebbcba,fg+:#e0def4,prompt:#c4a7e7,hl+:#eb6f92"
     ];
   };
 
@@ -224,10 +240,10 @@
     enableGitIntegration = true;
   };
 
-  # Theme vendored from github.com/drluckyspin/rose-pine-bat.
+  # Theme vendored from github.com/drluckyspin/rose-pine-bat. Which theme is used is set by
+  # bat/config, linked to the active theme in theme.nix.
   programs.bat = {
     enable = true;
-    config.theme = "Rose-Pine-Moon";
     themes."Rose-Pine-Moon" = {
       src = ./themes;
       file = "Rose-Pine-Moon.tmTheme";

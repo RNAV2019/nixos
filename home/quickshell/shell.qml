@@ -12,6 +12,7 @@ import qs.Power
 import qs.Recorder
 import qs.Services
 import qs.Session
+import qs.Theme
 import qs.Wallpaper
 
 ShellRoot {
@@ -25,6 +26,7 @@ ShellRoot {
   RecorderPicker {}
   SessionMenu {}
   WallpaperPicker {}
+  ThemePicker {}
   Lock {
     id: lockScreen
   }
@@ -63,6 +65,23 @@ ShellRoot {
 
     function close(): void {
       Bus.closeSurface("wallpaper");
+    }
+  }
+
+  IpcHandler {
+    target: "theme"
+
+    function toggle(): void {
+      Bus.toggleSurface("theme");
+    }
+
+    function close(): void {
+      Bus.closeSurface("theme");
+    }
+
+    // theme-switch calls this once the name is written; see Theme.reload().
+    function sync(): void {
+      Theme.reload();
     }
   }
 

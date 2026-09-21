@@ -1,7 +1,9 @@
 { config, pkgs, ... }:
 {
   home.file.".config/ghostty/config".text = ''
-    theme = Rose Pine
+    # The colours come from the active theme (see theme.nix). Included last, so they win;
+    # `?` because the file does not exist until the first activation has run.
+    config-file = ?${config.home.homeDirectory}/.local/state/theme/current/ghostty
 
     font-family = JetBrainsMono Nerd Font
     font-style = Regular
@@ -57,27 +59,17 @@
     baseIndex = 1;
     escapeTime = 0;
     historyLimit = 50000;
+    # The Rose Pine plugin moved into the rose-pine theme fragment; see theme.nix.
     plugins = with pkgs.tmuxPlugins; [
-      {
-        plugin = rose-pine;
-        extraConfig = ''
-          set -g @rose_pine_variant 'main'
-          set -g @rose_pine_host 'on'
-          set -g @rose_pine_date_time '%Y-%m-%d %H:%M'
-          set -g @rose_pine_directory 'on'
-        '';
-      }
       yank
     ];
     extraConfig = ''
       setw -g pane-base-index 1
       set -g renumber-windows on
 
-      # rose-pine sets the message styles without a `fill`, and tmux clears the
-      # status line behind the command prompt only as far as the fill reaches —
-      # without it the window list and status-right stay visible under `:`.
-      set -ag message-style ",fill=#191724"
-      set -ag message-command-style ",fill=#f6c177"
+      # Status line and message colours, from the active theme. theme-switch sources the
+      # same file into a running server.
+      source-file -q ~/.local/state/theme/current/tmux.conf
 
       # send-prefix does nothing while the prefix is off, so send the key itself.
       bind -N "Send C-a" a send-prefix
@@ -123,8 +115,7 @@
     settings = {
       onboarding = false;
 
-      # Built in, so this needs no plugin the way tmux's rose-pine did.
-      theme.name = "rose-pine";
+      # `theme.name` is added per theme, and the file linked to the active one, in theme.nix.
 
       # `herdr update` writes over its own binary, which the Nix store will
       # not allow, so suppress the nag. The agent-detection manifest check is

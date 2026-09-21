@@ -1,0 +1,115 @@
+# ASCII world: the dark theme's monochrome palette, with red, yellow and pink kept for
+# errors, warnings and a little emphasis. The background is left to the terminal, as
+# rose_pine_transparent does, so Ghostty's translucency shows through.
+
+"ui.background" = {}
+"ui.background.separator" = {}
+"ui.text" = { fg = "text" }
+"ui.text.focus" = { fg = "text", bg = "overlay" }
+"ui.text.inactive" = { fg = "muted" }
+"ui.text.info" = { fg = "subtle" }
+"ui.text.directory" = { fg = "soft", modifiers = ["bold"] }
+
+"ui.cursor" = { fg = "base", bg = "subtle" }
+"ui.cursor.primary" = { fg = "base", bg = "text" }
+"ui.cursor.match" = { fg = "text", bg = "hl_high" }
+"ui.cursor.insert" = { fg = "base", bg = "text" }
+"ui.cursor.select" = { fg = "base", bg = "soft" }
+"ui.cursorline.primary" = { bg = "hl_low" }
+"ui.selection" = { bg = "hl_med" }
+"ui.selection.primary" = { bg = "hl_high" }
+
+"ui.linenr" = { fg = "hl_high" }
+"ui.linenr.selected" = { fg = "text" }
+"ui.gutter" = {}
+"ui.virtual.ruler" = {}
+"ui.virtual.whitespace" = { fg = "hl_high" }
+"ui.virtual.indent-guide" = { fg = "hl_med" }
+"ui.virtual.inlay-hint" = { fg = "muted" }
+"ui.virtual.jump-label" = { fg = "tint", modifiers = ["bold"] }
+
+"ui.statusline" = { fg = "subtle", bg = "surface" }
+"ui.statusline.inactive" = { fg = "muted", bg = "surface" }
+"ui.statusline.normal" = { fg = "base", bg = "text", modifiers = ["bold"] }
+"ui.statusline.insert" = { fg = "base", bg = "warn", modifiers = ["bold"] }
+"ui.statusline.select" = { fg = "base", bg = "tint", modifiers = ["bold"] }
+
+"ui.bufferline" = { fg = "muted" }
+"ui.bufferline.active" = { fg = "text", modifiers = ["bold"] }
+"ui.bufferline.background" = {}
+
+"ui.popup" = { bg = "surface" }
+"ui.popup.info" = { bg = "surface" }
+"ui.window" = { fg = "hl_high" }
+"ui.help" = { fg = "subtle", bg = "surface" }
+"ui.menu" = { fg = "subtle", bg = "surface" }
+"ui.menu.selected" = { fg = "text", bg = "overlay" }
+"ui.menu.scroll" = { fg = "muted", bg = "hl_med" }
+"ui.highlight" = { bg = "hl_med" }
+
+"diagnostic.error" = { underline = { color = "alert", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "warn", style = "curl" } }
+"diagnostic.info" = { underline = { color = "subtle", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "muted", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["crossed_out"] }
+error = { fg = "alert" }
+warning = { fg = "warn" }
+info = { fg = "subtle" }
+hint = { fg = "muted" }
+
+"diff.plus" = { fg = "soft" }
+"diff.minus" = { fg = "alert" }
+"diff.delta" = { fg = "warn" }
+
+attribute = { fg = "subtle" }
+comment = { fg = "muted", modifiers = ["italic"] }
+constant = { fg = "tint" }
+"constant.numeric" = { fg = "tint" }
+"constant.character.escape" = { fg = "warn" }
+constructor = { fg = "soft" }
+function = { fg = "text", modifiers = ["bold"] }
+"function.builtin" = { fg = "text" }
+"function.macro" = { fg = "subtle", modifiers = ["bold"] }
+keyword = { fg = "subtle", modifiers = ["bold"] }
+"keyword.control" = { fg = "text", modifiers = ["bold"] }
+label = { fg = "subtle" }
+namespace = { fg = "subtle", modifiers = ["italic"] }
+operator = { fg = "subtle" }
+punctuation = { fg = "muted" }
+special = { fg = "warn" }
+string = { fg = "soft" }
+"string.regexp" = { fg = "warn" }
+"string.special" = { fg = "subtle", modifiers = ["underlined"] }
+tag = { fg = "text" }
+type = { fg = "soft", modifiers = ["italic"] }
+"type.builtin" = { fg = "soft" }
+variable = { fg = "text" }
+"variable.builtin" = { fg = "tint" }
+"variable.parameter" = { fg = "soft", modifiers = ["italic"] }
+"variable.other.member" = { fg = "soft" }
+
+"markup.heading" = { fg = "text", modifiers = ["bold"] }
+"markup.list" = { fg = "subtle" }
+"markup.bold" = { modifiers = ["bold"] }
+"markup.italic" = { modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
+"markup.link.url" = { fg = "subtle", modifiers = ["underlined"] }
+"markup.link.text" = { fg = "text" }
+"markup.quote" = { fg = "muted", modifiers = ["italic"] }
+"markup.raw" = { fg = "soft" }
+
+[palette]
+base = "#0b0b0b"
+surface = "#141414"
+overlay = "#1f1f1f"
+hl_low = "#181818"
+hl_med = "#303030"
+hl_high = "#3f3f3f"
+muted = "#8c8c8c"
+subtle = "#a6a6a6"
+soft = "#d6d6d6"
+text = "#ffffff"
+alert = "#ff5c5c"
+warn = "#ffd166"
+tint = "#ffb3b3"

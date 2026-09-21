@@ -2,31 +2,111 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 Singleton {
   id: root
 
-  readonly property color base: "#191724"
-  readonly property color surface: "#1f1d2e"
-  readonly property color overlay: "#26233a"
-  // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel tint. That ink
-  // carries almost every 11 px label in the shell, so it is lifted along the line towards
-  // `subtle` until it reads 4.7:1 on the darkest ground the shell uses.
-  readonly property color muted: "#8a86a4"
-  readonly property color subtle: "#908caa"
-  readonly property color text: "#e0def4"
-  readonly property color love: "#eb6f92"
-  readonly property color gold: "#f6c177"
-  readonly property color rose: "#ebbcba"
-  readonly property color pine: "#31748f"
-  readonly property color foam: "#9ccfd8"
-  readonly property color iris: "#c4a7e7"
-  readonly property color highlightLow: "#21202e"
-  readonly property color highlightMed: "#403d52"
-  readonly property color highlightHigh: "#524f67"
+  // The two palettes, keyed by the theme id `theme-switch` takes. They mirror
+  // home/themes/palettes.nix, which colours everything outside the shell; the dark theme
+  // carries the Rose Pine role names too, with love as its alert red, gold the warning, rose
+  // the tint, iris the accent (white), foam the soft foreground and pine the dim one.
+  readonly property var palettes: ({
+      "rose-pine": {
+        label: "Rosé Pine",
+        paletteName: "rose-pine",
+        base: "#191724",
+        surface: "#1f1d2e",
+        overlay: "#26233a",
+        // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel tint.
+        // That ink carries almost every 11 px label in the shell, so it is lifted along the
+        // line towards `subtle` until it reads 4.7:1 on the darkest ground the shell uses.
+        muted: "#8a86a4",
+        subtle: "#908caa",
+        text: "#e0def4",
+        love: "#eb6f92",
+        gold: "#f6c177",
+        rose: "#ebbcba",
+        pine: "#31748f",
+        foam: "#9ccfd8",
+        iris: "#c4a7e7",
+        highlightLow: "#21202e",
+        highlightMed: "#403d52",
+        highlightHigh: "#524f67",
+        accent: "#c4a7e7"
+      },
+      "dark": {
+        label: "Dark",
+        paletteName: "ascii-world",
+        base: "#0b0b0b",
+        surface: "#141414",
+        overlay: "#1f1f1f",
+        muted: "#8c8c8c",
+        subtle: "#a6a6a6",
+        text: "#ffffff",
+        love: "#ff5c5c",
+        gold: "#ffd166",
+        rose: "#ffb3b3",
+        pine: "#8c8c8c",
+        foam: "#d6d6d6",
+        iris: "#ffffff",
+        highlightLow: "#181818",
+        highlightMed: "#303030",
+        highlightHigh: "#3f3f3f",
+        accent: "#ffffff"
+      }
+    })
 
-  // Dark-only semantic roles. Keep these separate from the Rose Pine source names: `base` is
-  // the canvas, while `inkOnAccent` is the ink used on a selected control.
+  // In the order the theme picker shows them.
+  readonly property var themeIds: ["rose-pine", "dark"]
+
+  // Which theme is up. `theme-switch` writes the id into this file; it is watched, so a
+  // switch recolours the shell in place. Colours that already carry a Tint behaviour
+  // cross-fade; the rest change on the next frame.
+  property string name: "rose-pine"
+  readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes["rose-pine"]
+
+  FileView {
+    id: nameFile
+
+    path: Quickshell.env("HOME") + "/.local/state/theme/name"
+    watchChanges: true
+    printErrors: false
+
+    // Written in place by the switch, so an empty read is the moment between truncate and
+    // write, not a theme.
+    onFileChanged: nameFile.reload()
+    onLoaded: {
+      var id = nameFile.text().trim();
+      if (id !== "" && root.palettes[id] !== undefined)
+        root.name = id;
+    }
+  }
+
+  // A file that did not exist when the shell started is not being watched, so the switch
+  // also asks for a read over IPC (`qs ipc call theme sync`).
+  function reload() {
+    nameFile.reload();
+  }
+
+  readonly property color base: palette.base
+  readonly property color surface: palette.surface
+  readonly property color overlay: palette.overlay
+  readonly property color muted: palette.muted
+  readonly property color subtle: palette.subtle
+  readonly property color text: palette.text
+  readonly property color love: palette.love
+  readonly property color gold: palette.gold
+  readonly property color rose: palette.rose
+  readonly property color pine: palette.pine
+  readonly property color foam: palette.foam
+  readonly property color iris: palette.iris
+  readonly property color highlightLow: palette.highlightLow
+  readonly property color highlightMed: palette.highlightMed
+  readonly property color highlightHigh: palette.highlightHigh
+
+  // Semantic roles, the same in both themes. Keep these separate from the source names:
+  // `base` is the canvas, while `inkOnAccent` is the ink used on a selected control.
   readonly property color canvas: base
   readonly property color surfaceRaised: overlay
   readonly property color surfaceSubtle: highlightLow
@@ -44,9 +124,9 @@ Singleton {
   readonly property color surfaceShadow: Qt.rgba(0, 0, 0, 0.24)
 
   // The palette every colour above comes from, for the surfaces that name it.
-  readonly property string paletteName: "rose-pine"
+  readonly property string paletteName: palette.paletteName
 
-  readonly property color accent: iris
+  readonly property color accent: palette.accent
   readonly property color urgent: love
 
   readonly property real fillNormal: 0.04
@@ -106,7 +186,7 @@ Singleton {
   readonly property real surfaceShadowAlpha: 0.24
 
   // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation. This is an
-  // environment switch rather than a second appearance mode, so the shell remains dark-only.
+  // environment switch rather than part of a theme, so it applies to both.
   readonly property bool reduceMotion: Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
 
   function duration(ms) {
@@ -344,6 +424,18 @@ Singleton {
   readonly property int wallpaperDotInset: 8
   readonly property int wallpaperDotHalo: 14
   readonly property real wallpaperDotHaloAlpha: 0.7
+
+  // The theme picker is the wallpaper picker's card and row, to the pixel. Each tile is that
+  // theme's own wallpaper with a small island pill over it, carrying five dots in the theme's
+  // own colours (base, surface, text, accent, alert), so every tile previews its theme
+  // whichever theme is up. The dots are ringed in the theme's highlightHigh, because base
+  // and surface are nearly the pill's own colour.
+  readonly property int themePillHeight: 18
+  readonly property int themePillInset: 10
+  readonly property int themeSwatchSize: 8
+  readonly property int themeSwatchGap: 5
+  readonly property int themeSwatchPad: 7
+  readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
   // The screen recorder's picker. The capture row is the power menu's own tile grid, to the
   // pixel; the toggle rows below are this card's own.

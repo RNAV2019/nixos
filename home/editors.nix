@@ -20,8 +20,6 @@
     hash = "sha256-TpYnGqROkKfoB9G+JTjADWvMtpRJbv4NVaTqiUfW1Eg=";
   };
 in {
-  xdg.configFile."helix/themes/rose_pine_transparent.toml".source = ./themes/rose_pine_transparent.toml;
-
   # Steel looks for `helix.scm` first and writes an empty one if it is missing;
   # keep it managed so nothing lands in the config dir at startup.
   xdg.configFile."helix/helix.scm".text = "";
@@ -43,7 +41,8 @@ in {
     package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
     settings = {
-      theme = "rose_pine_transparent";
+      # themes/current.toml links to the active theme's file; see theme.nix.
+      theme = "current";
 
       editor = {
         # Helix prefers the tmux paste buffer over Wayland whenever $TMUX is

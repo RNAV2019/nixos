@@ -7,6 +7,10 @@ import qs.Commons
 
 // The wallpapers on disk, which one is up, and how to change it.
 //
+// Each theme has its own folder, Pictures/backgrounds/<theme>, and remembers its own last
+// wallpaper in ~/.local/share/wallpaper/<theme>, so switching theme brings its wallpaper
+// back. theme-switch does that half; this file keeps the record up to date.
+//
 // The link at ~/.local/share/wallpaper/current and awww have to move together; the link
 // is written first, so a session restarted before the daemon was told still comes up on
 // the right wallpaper. Matching is done on the resolved store path, because the path in
@@ -16,8 +20,10 @@ Singleton {
 
   readonly property string home: Quickshell.env("HOME")
 
-  readonly property string directory: home + "/Pictures/backgrounds"
+  readonly property string directory: home + "/Pictures/backgrounds/" + Theme.name
   readonly property string link: home + "/.local/share/wallpaper/current"
+  // The theme's own record of its last wallpaper, next to `current`.
+  readonly property string themeLink: home + "/.local/share/wallpaper/" + Theme.name
 
   // Every wallpaper found, name-sorted, as { path, real, name }.
   property var entries: []
@@ -42,11 +48,31 @@ Singleton {
   // The home directory is written back as a tilde, as a path in a shell surface should be.
   readonly property string directoryLabel: "~" + directory.substring(home.length) + "/"
 
+  // A refresh asked for while one is still running is queued rather than dropped: after a
+  // theme switch the one in flight is reading the old folder.
+  property bool scanQueued: false
+  property bool resolveQueued: false
+
   function refresh() {
-    if (!scan.running)
+    if (scan.running)
+      scanQueued = true;
+    else
       scan.running = true;
-    if (!resolve.running)
+    if (resolve.running)
+      resolveQueued = true;
+    else
       resolve.running = true;
+  }
+
+  // theme-switch has already pointed `current` at the new theme's wallpaper by the time
+  // the name changes, so both halves are simply read again.
+  Connections {
+    target: Theme
+
+    function onNameChanged() {
+      root.entries = [];
+      root.refresh();
+    }
   }
 
   // The link is written first; see the note at the top.
@@ -55,7 +81,7 @@ Singleton {
       return;
     root.current = entry.real;
     relink.target = entry.path;
-    relink.command = ["sh", "-c", 'ln -sfn "$1" "$2.new" && mv -T "$2.new" "$2"', "sh", entry.path, root.link];
+    relink.command = ["sh", "-c", 'ln -sfn "$1" "$2.new" && mv -T "$2.new" "$2" && ln -sfn "$1" "$3.new" && mv -T "$3.new" "$3"', "sh", entry.path, root.link, root.themeLink];
     relink.running = true;
   }
 
@@ -93,6 +119,15 @@ Singleton {
 
     command: ["readlink", "-f", root.link]
 
+    onExited: {
+      if (root.resolveQueued) {
+        root.resolveQueued = false;
+        Qt.callLater(function () {
+          resolve.running = true;
+        });
+      }
+    }
+
     stdout: StdioCollector {
       onStreamFinished: {
         var line = text.trim();
@@ -108,6 +143,15 @@ Singleton {
     id: scan
 
     command: ["sh", "-c", 'for f in "$1"/*; do [ -f "$f" ] || continue; printf "%s\t%s\n" "$f" "$(readlink -f "$f")"; done', "sh", root.directory]
+
+    onExited: {
+      if (root.scanQueued) {
+        root.scanQueued = false;
+        Qt.callLater(function () {
+          scan.running = true;
+        });
+      }
+    }
 
     stdout: StdioCollector {
       onStreamFinished: {

@@ -90,6 +90,7 @@ in {
 
           border_size = 2;
 
+          # Rose Pine's. The active theme's are applied over these; see theme.nix.
           col = {
             active_border = "rgba(524f67aa)";
             inactive_border = "rgba(26233aaa)";
@@ -121,8 +122,10 @@ in {
           force_default_wallpaper = 0;
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
-          # Covers the handoff from Plymouth to the lock surface.
-          background_color = "rgba(191724ff)";
+          # Covers the handoff from Plymouth to the lock surface. Plain black, which is
+          # bgrt's own, and deliberately outside the theme: the boot chain runs before any
+          # theme state exists, so the frame between splash and lock is the same either way.
+          background_color = "rgba(000000ff)";
         };
       };
 
@@ -325,6 +328,8 @@ in {
 
           (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
 
+          (bind "ALT + T" (exec "qs ipc call theme toggle"))
+
           # The same chord starts and stops: it opens the picker, or stops and saves.
           (bind "ALT + R" (exec "qs ipc call recorder toggle"))
 
@@ -374,7 +379,7 @@ in {
       # control how the opaque cards appear and disappear.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|recorder|calendar|session|profiles|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|notifications|osd|panel)";
           no_anim = true;
         }
       ];
@@ -398,6 +403,7 @@ in {
     ];
   };
 
+  # The colours are included from the active theme; see theme.nix.
   programs.fuzzel = {
     enable = true;
     settings = {
@@ -410,15 +416,6 @@ in {
         inner-pad = 4;
         placeholder = "Launch...";
         icons-enabled = "no";
-      };
-      colors = {
-        background = "191724dd";
-        text = "e0def4ff";
-        match = "eb6f92ff";
-        selection = "26233aff";
-        selection-text = "e0def4ff";
-        selection-match = "eb6f92ff";
-        border = "403d52ff";
       };
       border = {
         width = 1;

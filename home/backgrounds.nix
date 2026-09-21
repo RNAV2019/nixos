@@ -3,16 +3,38 @@
   lib,
   pkgs,
   ...
-}: {
-  home.file."Pictures/backgrounds/ching-yeh.png".source = ../backgrounds/rosepine/ching-yeh.png;
-  home.file."Pictures/backgrounds/symbols.jpg".source = ../backgrounds/rosepine/symbols.jpg;
-  home.file."Pictures/backgrounds/nasa.png".source = ../backgrounds/rosepine/nasa.png;
-  home.file."Pictures/backgrounds/nbhd_v2.jpg".source = ../backgrounds/rosepine/nbhd_v2.jpg;
+}: let
+  # One folder per theme, each installed as Pictures/backgrounds/<theme>/<file>. Read off
+  # the tree rather than listed, so a new wallpaper only needs a `git add`.
+  root = ../backgrounds;
+  themes = lib.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir root));
+  filesOf = theme: lib.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir (root + "/${theme}")));
+in {
+  home.file = lib.listToAttrs (lib.concatMap (theme:
+    map (file: {
+      name = "Pictures/backgrounds/${theme}/${file}";
+      value.source = root + "/${theme}/${file}";
+    }) (filesOf theme))
+  themes);
 
-  home.activation.initWallpaper = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    mkdir -p "$HOME/.local/share/wallpaper"
-    if [ ! -L "$HOME/.local/share/wallpaper/current" ]; then
-      ln -sf "$HOME/Pictures/backgrounds/ching-yeh.png" "$HOME/.local/share/wallpaper/current"
+  # `current` is the wallpaper that is up. Next to it, one link per theme records the last
+  # wallpaper used with that theme, so switching back reopens on it. The wallpapers used to
+  # sit flat in the folder; a link still pointing there dangles once they move, and is sent
+  # to the Rose Pine default rather than left for awww to fail on. After linkGeneration, so
+  # the old links are already gone and the new ones already there.
+  home.activation.initWallpaper = lib.hm.dag.entryAfter ["linkGeneration"] ''
+    dir="$HOME/.local/share/wallpaper"
+    fallback="$HOME/Pictures/backgrounds/rose-pine/nbhd_v2.jpg"
+    mkdir -p "$dir"
+    if [ ! -e "$dir/current" ]; then
+      ln -sfn "$fallback" "$dir/current.new" && mv -T "$dir/current.new" "$dir/current"
+    fi
+    if [ ! -e "$dir/rose-pine" ]; then
+      case "$(readlink "$dir/current")" in
+        "$HOME/Pictures/backgrounds/rose-pine/"*) target="$(readlink "$dir/current")" ;;
+        *) target="$fallback" ;;
+      esac
+      ln -sfn "$target" "$dir/rose-pine.new" && mv -T "$dir/rose-pine.new" "$dir/rose-pine"
     fi
   '';
 

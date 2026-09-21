@@ -17,6 +17,7 @@
     ./dev.nix
     ./custom-packages.nix
     ./backgrounds.nix
+    ./theme.nix
     ./claude.nix
     ./opencode.nix
   ];

@@ -1,14 +1,20 @@
 set -euo pipefail
 
-RP_OVERLAY="#393552"
-RP_MUTED="#6e6a86"
-RP_SUBTLE="#908caa"
-RP_TEXT="#e0def4"
-RP_LOVE="#eb6f92"
-RP_GOLD="#f6c177"
-RP_FOAM="#9ccfd8"
-RP_PINE="#3e8fb0"
-RP_IRIS="#c4a7e7"
+# The active theme's colours (see home/theme.nix), with Rose Pine Moon's as the fallback.
+THEME_COLORS="${HOME:-}/.local/state/theme/current/colors.sh"
+if [[ -r "$THEME_COLORS" ]]; then
+  # shellcheck source=/dev/null
+  source "$THEME_COLORS"
+fi
+RP_OVERLAY="${THEME_OVERLAY:-#393552}"
+RP_MUTED="${THEME_MUTED:-#6e6a86}"
+RP_SUBTLE="${THEME_SUBTLE:-#908caa}"
+RP_TEXT="${THEME_TEXT:-#e0def4}"
+RP_LOVE="${THEME_LOVE:-#eb6f92}"
+RP_GOLD="${THEME_GOLD:-#f6c177}"
+RP_FOAM="${THEME_FOAM:-#9ccfd8}"
+RP_PINE="${THEME_PINE:-#3e8fb0}"
+RP_IRIS="${THEME_IRIS:-#c4a7e7}"
 
 MODEL="meta-llama/llama-3.1-8b-instruct"
 MAX_AI_EDITS=5

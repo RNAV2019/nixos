@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "recorder", "calendar", "session", "profiles"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles"]
 
   function prepareForLock() {
     if (locking)
@@ -39,7 +39,8 @@ Singleton {
   signal recorderRequested
 
   // Opening and closing an island surface, by key rather than by name: "launcher",
-  // "control", "wallpaper", "recorder", "calendar", "session", "profiles", "osd", "notify".
+  // "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "osd",
+  // "notify".
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 

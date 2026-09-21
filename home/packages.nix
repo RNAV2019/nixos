@@ -161,6 +161,7 @@
     meta.description = "Rosé Pine theme for GTK";
   });
 in {
+  # Rose Pine is the default; the dark theme swaps the GTK and icon theme at runtime.
   gtk = {
     enable = true;
     theme = {
@@ -190,22 +191,21 @@ in {
     size = 24;
   };
 
-  # Rose Pine via Kvantum for Qt 5/6.
+  # Kvantum for Qt 5/6, in the active theme's colours.
   qt = {
     enable = true;
     platformTheme.name = "qtct";
     style.name = "kvantum";
   };
 
+  # kvantum.kvconfig, which picks the theme, is linked to the active theme in theme.nix.
   xdg.configFile = {
-    "Kvantum/kvantum.kvconfig".text = ''
-      [General]
-      theme=rose-pine-love
-    '';
     "Kvantum/rose-pine-love".source = "${pkgs.rose-pine-kvantum}/share/Kvantum/themes/rose-pine-love";
   };
 
-  # libadwaita/GTK 4 color scheme.
+  # libadwaita/GTK 4 color scheme. The GTK and icon theme names here are the Rose Pine
+  # defaults only: theme.nix writes the active theme's over them after every activation,
+  # and theme-switch writes them live.
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
