@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   helium-browser,
   llm-agents,
@@ -130,6 +131,13 @@
     '';
   });
 
+  # The same Helium, launched so that it follows the desktop theme live; see themes/helium.nix.
+  helium-themed = import ./themes/helium.nix {
+    inherit pkgs helium;
+    inherit (pkgs) lib;
+    stateDir = "${config.home.homeDirectory}/.local/state/theme";
+  };
+
   # Dropped from nixpkgs in 2026-08 along with its GTK2 murrine dependency.
   # Only the GTK3/GTK4 assets are used here, so it is vendored without the
   # GTK2 engines the old derivation pulled in.
@@ -219,7 +227,7 @@ in {
   xdg.userDirs.setSessionVariables = true;
 
   home.packages = with pkgs; [
-    helium
+    helium-themed
     firefox
 
     llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code

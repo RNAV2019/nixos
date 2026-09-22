@@ -9,10 +9,10 @@
   # running fish picks the universal variable up and repaints its Ghostty
   # surface over OSC. A Ghostty config reload cannot do this: it recolours only
   # new cells and new windows, so open ones keep the colours they started with.
-  # A function file rather than an init line, so fish autoloads the handler at
-  # event time and shells that were already running when the config landed
-  # handle the next switch too. New fish emit nothing, which is right: their
-  # window already read the new theme's config.
+  # fish registers an --on-variable handler only once its file is loaded, and
+  # autoloading waits for a call that never comes, so interactiveShellInit
+  # loads it. New fish emit nothing, which is right: their window already read
+  # the new theme's config.
   xdg.configFile."fish/functions/__theme_osc.fish".text = ''
     function __theme_rgb
       string join / "rgb:"(string sub --length 2 --start 1 $argv[1]) \
@@ -34,6 +34,8 @@
 
     interactiveShellInit = ''
       set fish_greeting ""
+      # Load the theme OSC handler now, so fish registers its --on-variable hook.
+      functions -q __theme_osc
     '';
 
     shellAliases = {
