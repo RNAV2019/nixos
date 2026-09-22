@@ -1,12 +1,6 @@
-# Helium follows the desktop theme through Chrome theme extensions, one per theme, built from
-# rose-pine/google-chrome's template role for role so the dark one is shaded the same way.
-#
-# Chromium has no way for an extension to switch themes: enabling a theme applies it, but the
-# theme it replaces is uninstalled a moment later and nothing inside the browser can load it
-# again. The DevTools protocol can (Extensions.loadUnpacked), so `helium` here is a launcher that
-# starts the browser with a private DevTools pipe, loads the active theme, and loads the next
-# one whenever theme-switch writes a new name. Loading a theme applies it to every open window
-# at once.
+# Helium follows the desktop theme via one Chrome theme extension per palette. `helium` is a
+# launcher that opens a private DevTools pipe and loads the active theme with
+# Extensions.loadUnpacked whenever theme-switch writes a new name.
 {
   pkgs,
   lib,
@@ -16,9 +10,7 @@
   palettes = import ./palettes.nix;
   ids = lib.attrNames palettes;
 
-  # Fixed keys give the extensions fixed IDs, which the launcher uninstalls by. Only the public
-  # halves exist: unpacked extensions are never signed. Nix cannot hash the decoded key, so each
-  # ID is written out and checked at build time.
+  # Public keys fix the extension IDs the launcher uninstalls by. IDs are checked at build time.
   keys = {
     rose-pine = {
       id = "lcaeofnkgjinbeemhdbhpmmpalfacafd";
@@ -35,8 +27,7 @@
   in
     map (i: lib.fromHexString (builtins.substring i 2 h)) [0 2 4];
 
-  # rose-pine/google-chrome's manifest for its main variant, each colour replaced by the role
-  # it was generated from. The frame and toolbar are drawn from solid swatch images.
+  # rose-pine/google-chrome's manifest with each colour mapped back to its palette role.
   manifest = id: p: {
     manifest_version = 3;
     name = p.label;
@@ -117,11 +108,8 @@
       }
       themeIds=(${lib.concatMapStringsSep " " (id: keys.${id}.id) ids})
 
-      # The DevTools pipe: Chromium reads commands from fd 3 and writes replies to fd 4, each a
-      # JSON message ending in a NUL. The browser gets both FIFOs read-write, so it holds a
-      # writer on its own input: Chromium closes itself when that pipe reaches EOF, and this
-      # way a launcher that dies never takes the browser with it. Anything going wrong before
-      # the browser starts falls back to plain Helium.
+      # DevTools pipe on fds 3/4, NUL-terminated JSON. FIFOs are opened read-write so the
+      # browser never sees EOF if the launcher dies. Any setup failure falls back to plain Helium.
       fifos="$(mktemp -d "''${XDG_RUNTIME_DIR:-/tmp}/helium-theme.XXXXXX")" || exec "$browser" "$@"
       if ! mkfifo "$fifos/in" "$fifos/out"; then
         rm -rf "$fifos"
@@ -130,15 +118,13 @@
       exec 5<>"$fifos/in" 6<>"$fifos/out"
       rm -rf "$fifos"
 
-      # If Helium is already running, this browser hands its arguments to that one and exits,
-      # and so does the launcher; the running one's launcher keeps doing the theming.
+      # If Helium is already running, this hands off its arguments and both exit.
       "$browser" --remote-debugging-pipe --enable-unsafe-extension-debugging "$@" 3<&5 4<&6 5<&- 6<&- &
       pid=$!
       trap 'kill -TERM "$pid" 2>/dev/null || true' TERM INT HUP
 
       n=0
-      # Sends one command and waits for its reply; fails on an error reply, or on no reply
-      # within ten seconds or before the browser exits (the pipe never reaches EOF).
+      # Send one command and wait up to 10s for a non-error reply.
       call() {
         n=$((n + 1))
         printf '{"id":%d,"method":"%s","params":%s}\0' "$n" "$1" "$2" >&5
@@ -156,9 +142,8 @@
         return 1
       }
 
-      # Chromium keeps a replaced theme installed but disabled for a while, and loading a
-      # disabled extension again leaves it disabled, so the wanted theme is uninstalled first.
-      # The others go after it: uninstalling the theme in use would flash Helium's own colours.
+      # Uninstall the wanted theme first (reloading a disabled one keeps it disabled), then
+      # the rest afterwards to avoid flashing Helium's default colours.
       apply() {
         local name dir want id
         name="$(cat "$state/name" 2>/dev/null)" || return 0

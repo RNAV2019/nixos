@@ -6,15 +6,9 @@
   note-tui,
   ...
 }: let
-  # Declarative Helium extensions, one list, one mechanism. Helium's
-  # policy-driven extension download silently never installs (imputnet/helium
-  # #1737), so nothing is installed through enterprise policy here; every
-  # extension is instead loaded from a pinned Chrome Web Store CRX via
-  # --load-extension below. Each CRX is unpacked at build time and its
-  # original signing key is injected into the manifest, which keeps the
-  # official extension ID - and therefore profile settings and native
-  # messaging origins - intact. To update an extension, bump its version and
-  # hash (the build fails loudly until you do).
+  # Pinned Web Store CRXes loaded via --load-extension, since policy installs are
+  # broken (imputnet/helium#1737). The signing key is injected to keep official IDs.
+  # To update, bump version and hash.
   helium-extensions = {
     bitwarden = {
       id = "nngceckbapebfimnlniiiahkandclblb"; # Bitwarden Password Manager
@@ -38,10 +32,8 @@
     };
   };
 
-  # The extension ID Chromium computes for a key is the first 16 bytes of the
-  # key's SHA-256, hex digits mapped to a-p. Searching the CRX3 header for the
-  # DER SPKI that hashes to the expected ID recovers the extension's original
-  # signing key, whatever proof layout Google's signer used.
+  # Finds the DER key in the CRX3 header whose SHA-256 (hex mapped to a-p) matches
+  # the extension ID, and writes it into manifest.json.
   crx-key-inject = pkgs.writers.writePython3Bin "crx-key-inject" {} ''
     import base64
     import hashlib
@@ -93,11 +85,8 @@
         json.dump(manifest, f, indent=2)
   '';
 
-  # A CRX is a protobuf header followed by a zip of the unpacked extension.
-  # Give the fetchurl output a fixed name: a derived store path would
-  # otherwise carry "?" and "&" from the URL, which do not survive bash
-  # unquoted (an unquoted `if=<path?>` loses its argument entirely under
-  # bash 5.3).
+  # A CRX is a protobuf header followed by a zip. The fetchurl name keeps the
+  # URL's "?" and "&" out of the store path.
   unpack-helium-extension = name: ext:
     pkgs.runCommand "helium-extension-${name}" {} ''
       mkdir -p $out
@@ -120,10 +109,8 @@
   helium-extension-flags =
     " --load-extension=" + pkgs.lib.concatStringsSep "," helium-extension-dirs;
 
-  # The upstream wrapper passes --disable-background-networking, which also
-  # disables the extension updater that policy-forced installs go through, so
-  # the managed extensions never download. Auto-update and component update
-  # stay off via their own flags.
+  # Drop the wrapper's --disable-background-networking (auto-update stays off via
+  # its own flags) and add the extensions.
   helium = (helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default).overrideAttrs (old: {
     postFixup = (old.postFixup or "") + ''
       sed -i 's/ --disable-background-networking//' $out/bin/helium
@@ -138,9 +125,7 @@
     stateDir = "${config.home.homeDirectory}/.local/state/theme";
   };
 
-  # Dropped from nixpkgs in 2026-08 along with its GTK2 murrine dependency.
-  # Only the GTK3/GTK4 assets are used here, so it is vendored without the
-  # GTK2 engines the old derivation pulled in.
+  # Dropped from nixpkgs in 2026-08; vendored with only the GTK3/GTK4 assets.
   rose-pine-gtk-theme = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "rose-pine-gtk-theme";
     version = "2.2.0";
@@ -211,9 +196,7 @@ in {
     "Kvantum/rose-pine-love".source = "${pkgs.rose-pine-kvantum}/share/Kvantum/themes/rose-pine-love";
   };
 
-  # libadwaita/GTK 4 color scheme. The GTK and icon theme names here are the Rose Pine
-  # defaults only: theme.nix writes the active theme's over them after every activation,
-  # and theme-switch writes them live.
+  # Rose Pine defaults; theme.nix and theme-switch overwrite them with the active theme.
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
@@ -254,7 +237,7 @@ in {
     pavucontrol
     mpv
 
-    # notify-send. The shell's own server, quickshell/Services/NotificationStore, receives it.
+    # notify-send; the shell's NotificationStore is the server.
     libnotify
 
     # dlopen dependencies for locally built Wayland apps.
@@ -270,11 +253,9 @@ in {
     networkmanagerapplet
 
     grimblast
-    # The lock screen calls grim directly: grimblast's default PNG compression costs it
-    # two thirds of a second between hiding the bar and showing the lock.
+    # Used directly by the lock screen; grimblast's PNG compression is too slow.
     grim
-    # The screen recorder. wl-screenrec rather than wf-recorder: it is the one with
-    # --no-cursor and a named audio device. slurp draws the region and the snap targets.
+    # Screen recorder; chosen over wf-recorder for --no-cursor and named audio devices.
     wl-screenrec
     slurp
     hyprpicker
@@ -293,12 +274,9 @@ in {
 
     cloudflared
 
-    # Editing secrets/secrets.yaml: `sops secrets/secrets.yaml` from the flake
-    # root, with SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key.
     sops
     age
-    # cargo/rustc/clippy/rustfmt/rust-src/rust-analyzer, all one stable
-    # release. Defined in modules/system/default.nix.
+    # Defined in modules/system/default.nix.
     rustToolchain
     nodejs_latest
     # Pinned newer than nixpkgs (1.32.0)
@@ -310,24 +288,19 @@ in {
         tag = "v${finalAttrs.version}";
         hash = "sha256-CtqKNNKj4QUz6nZU/PVL/b8nnmBh6Lahj+ngUl34iVg=";
       };
-      # buildRustPackage bakes cargoHash into the vendor derivation before
-      # overrideAttrs runs, so the vendored deps have to be replaced directly.
+      # cargoHash is baked in before overrideAttrs, so replace cargoDeps directly.
       cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
         inherit (finalAttrs) src;
         hash = "sha256-Pj7TBxzaCJMP3AcDWMlG1iE+nlSzx0NjU6aFVV5kGrc=";
       };
-      # The lifecycle-script tests run `node`, which is not otherwise in the
-      # build sandbox.
+      # Lifecycle-script tests run `node`.
       nativeCheckInputs = prev.nativeCheckInputs ++ [pkgs.nodejs];
       checkFlags = [
-        # Upstream's .cargo/config.toml sets RUST_TEST_THREADS=1 because the
-        # aube-util killswitch tests mutate process env; the cargo setup hook
-        # replaces that config, so the serialization has to be restored here.
+        # Upstream's .cargo/config.toml serialises tests, but the cargo hook replaces it.
         "--test-threads=1"
-        # Wants the release-only generated popularity corpus; the source
-        # tarball ships without it, so the lookup returns nothing.
+        # Needs a release-only corpus missing from the source tarball.
         "--skip=commands::add_supply_chain::tests::bundled_corpus_detects_common_package_typo"
-        # Execs /bin/echo, which does not exist in the Nix build sandbox.
+        # Execs /bin/echo, absent in the sandbox.
         "--skip=commands::exec::tests::bin_command_executes_native_target_behind_generated_shim"
       ];
     }))
@@ -350,8 +323,7 @@ in {
     tectonic
     typst
     tinymist
-    # Typst notes TUI. Its live preview needs typst/tinymist above and the
-    # helium launcher, and reads the tinymist data-plane host set in editors.nix.
+    # Typst notes TUI; previews via tinymist and Helium (see editors.nix).
     note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
     # Pinned newer than nixpkgs (1.43.2)
     (stripe-cli.overrideAttrs (finalAttrs: _prev: {

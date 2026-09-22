@@ -1,9 +1,5 @@
-# One attrset per theme, keyed by theme id. Every program fragment in ../theme.nix is
-# generated from these; the Quickshell palette in Commons/Theme.qml mirrors them.
-#
-# Both palettes carry the Rose Pine role names, so a fragment can be written once. In the
-# dark theme love is the alert red, gold the warning, rose the tint, iris the accent (white),
-# foam the soft foreground and pine the dim one.
+# Theme palettes keyed by id, using Rose Pine role names; ../theme.nix generates every
+# program's colours from these and Commons/Theme.qml mirrors them.
 {
   rose-pine = {
     label = "Rosé Pine";
@@ -52,8 +48,7 @@
 
     accent = "#ffffff";
 
-    # The design has no ANSI set, so this one is made up: greys in place of the hues,
-    # keeping red, yellow and magenta as the design's three warm colours.
+    # Greys in place of hues, keeping red, yellow and magenta warm.
     ansi = [
       "#0b0b0b" # black
       "#ff5c5c" # red

@@ -6,9 +6,8 @@
 }: let
   home = "/home/ryan";
 
-  # `sudo edit-secrets [FILE]` opens secrets/FILE, secrets.yaml by default, in
-  # sops. A command rather than a shell alias, because sudo runs executables
-  # and never sees fish's aliases. sudo drops EDITOR, so helix is named here.
+  # `sudo edit-secrets [FILE]` opens secrets/FILE (default secrets.yaml) in sops.
+  # A command, not an alias, since sudo can't see fish aliases and drops EDITOR.
   edit-secrets = pkgs.writeShellApplication {
     name = "edit-secrets";
     runtimeInputs = [pkgs.sops pkgs.coreutils];
@@ -24,8 +23,7 @@
       export SOPS_AGE_KEY_FILE=${config.sops.age.keyFile}
       export EDITOR=${lib.getExe config.home-manager.users.ryan.programs.helix.package}
 
-      # sops exits non-zero when nothing changed, and the file is handed back
-      # to ryan either way so git and the next edit are not left with root's.
+      # sops exits non-zero when nothing changed; hand the file back to ryan either way.
       rc=0
       sops "$file" || rc=$?
       chown ryan:users "$file"
@@ -33,11 +31,8 @@
     '';
   };
 
-  # Every secret here decrypts to a file owned by ryan. sops-nix writes the
-  # real file under /run/secrets.d and leaves a symlink at `path`, so these
-  # locations are read-only: a program that rewrites its own config (gh auth
-  # login, opencode) fails against them, and the new value belongs in
-  # secrets/secrets.yaml instead.
+  # Secrets are read-only symlinks into /run/secrets.d, so programs that rewrite
+  # their own config (gh auth login, opencode) must be updated via secrets.yaml.
   owned = {
     owner = "ryan";
     group = "users";
@@ -48,8 +43,7 @@ in {
   sops = {
     defaultSopsFile = ../../secrets/secrets.yaml;
 
-    # Restored by hand from Bitwarden as the first step on new hardware; see
-    # README. Nothing else can decrypt secrets/secrets.yaml.
+    # Restored by hand from Bitwarden on new hardware; see README.
     age = {
       keyFile = "/etc/nixos-secrets/age.key";
       generateKey = false;
@@ -61,23 +55,17 @@ in {
       # gen-commit reads this exact path; see home/gen-commit.sh.
       "openrouter/gen-commit-key" = ownedAt "${home}/.config/gen-commit/api-key";
       "cloudflared/cert" = ownedAt "${home}/.cloudflared/cert.pem";
-      # cloudflared derives this filename from the tunnel UUID, and forward-dev
-      # runs the tunnel by name, so it must keep the UUID it was issued under.
+      # cloudflared names this file after the tunnel UUID.
       "cloudflared/tunnel-credentials" =
         ownedAt "${home}/.cloudflared/ea0861b0-1304-4833-9fa8-504167927194.json";
 
-      # Decrypted before users are created, so users.users.ryan can point at
-      # it. neededForUsers secrets stay root-owned under
-      # /run/secrets-for-users and take no owner or mode of their own.
+      # Decrypted before users are created; stays root-owned under /run/secrets-for-users.
       "users/ryan-hashed-password".neededForUsers = true;
 
-      # Claude Code has no declarative MCP config, so home/claude.nix merges
-      # this URL into ~/.claude.json during activation. The Penpot user token
-      # is carried in the query string, which is why the whole URL is secret.
+      # Merged into ~/.claude.json by home/claude.nix; the URL carries the Penpot token.
       "penpot/mcp-url" = ownedAt "${home}/.config/claude/penpot-mcp-url";
 
-      # Google Calendar, as secret iCal addresses, one per line. Each is a bearer credential:
-      # anyone holding one reads that calendar without signing in. See home/ical-agenda.nix.
+      # Secret Google Calendar iCal URLs, one per line; see home/ical-agenda.nix.
       "calendar/ical-urls" = ownedAt "${home}/.config/quickshell-calendar/ical-urls";
 
       # Consumed by the templates below rather than by a program directly.
@@ -85,15 +73,11 @@ in {
       "openrouter/opencode-key" = owned;
       "opencode/go-key" = owned;
 
-      # Backups. Owned by ryan rather than root so that reading an archive
-      # needs no privilege escalation; the scheduled job still runs as root,
-      # which can read these anyway and is what keeps ownership correct on
-      # restore. See modules/system/backups.nix.
+      # Owned by ryan so reading an archive needs no sudo; the backup job runs as root.
       "borg/passphrase" = owned;
       "borg/ssh-key" = owned;
 
-      # Guards the tunnel hostname, so reaching the SSH handshake at all
-      # requires a Cloudflare credential.
+      # Cloudflare Access guards the tunnel hostname in front of SSH.
       "cloudflare/access-token-id" = owned;
       "cloudflare/access-token-secret" = owned;
     };
@@ -103,8 +87,7 @@ in {
         owned
         // {
           path = "${home}/.config/gh/hosts.yml";
-          # git_protocol stays https: there is no SSH key on this machine yet,
-          # despite the ssh default in home/dev.nix.
+          # https because this machine has no SSH key yet.
           content = ''
             github.com:
                 users:
@@ -127,8 +110,7 @@ in {
     };
   };
 
-  # sops-nix creates missing parent directories as root, which would leave a
-  # fresh machine unable to write anything else into them. Claim them first.
+  # Create parent dirs as ryan before sops-nix would create them as root.
   system.activationScripts.userSecretDirs = {
     deps = ["users" "groups"];
     text = ''

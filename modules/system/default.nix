@@ -55,8 +55,7 @@ in {
 
   nixpkgs.config.allowUnfree = true;
 
-  # Ventoy ships prebuilt binary blobs nixpkgs cannot audit (NixOS/nixpkgs#404663), so it
-  # is marked insecure. Pinned to the exact version so a bump fails loudly.
+  # Ventoy ships unauditable binary blobs (NixOS/nixpkgs#404663). Pinned so a bump fails loudly.
   nixpkgs.config.permittedInsecurePackages = ["ventoy-1.1.17"];
 
   networking.networkmanager.enable = true;
@@ -75,16 +74,8 @@ in {
   # Required for Bluetooth HID input.
   services.libinput.enable = true;
 
-  # The Copilot key sends Shift+Meta+F23 as one chord; turn it back into a
-  # right Ctrl.
-  #
-  # The built-in keyboard's PrtSc key sends Shift+Meta+S as one chord, the
-  # Windows snipping shortcut; turn it into sysrq (evdev 99), which Hyprland
-  # sees as the Print keysym its screenshot binds use.
-  #
-  # keyd cannot forward keys beyond evdev code 255, so it rewrites
-  # KEY_SELECTIVE_SCREENSHOT from the Ideapad extra buttons device to F16;
-  # see the table in keyd's src/device.c. Map that to sysrq as well.
+  # Copilot key (Shift+Meta+F23) becomes Ctrl. PrtSc (Shift+Meta+S) and the Ideapad
+  # screenshot button (which keyd rewrites to F16) become sysrq, Hyprland's Print.
   services.keyd = {
     enable = true;
     keyboards.default = {
@@ -97,9 +88,8 @@ in {
     };
   };
 
-  # keyd grabs the built-in keyboard and types through a virtual one, which
-  # libinput takes for external and never pairs with the touchpad, so
-  # disable-while-typing never fires and palm taps eat keystrokes.
+  # Mark keyd's virtual keyboard as internal so libinput's disable-while-typing
+  # still pairs it with the touchpad.
   environment.etc."libinput/local-overrides.quirks".text = ''
     [keyd virtual keyboard]
     MatchUdevType=keyboard
@@ -129,10 +119,8 @@ in {
 
     fenix.overlays.default
 
-    # One derivation holding the whole Rust toolchain, every component taken
-    # from the same upstream stable manifest. Single source of truth so the
-    # editor's rust-analyzer can never drift from the compiler it analyses
-    # against; bump it with `nix flake update fenix`.
+    # Whole Rust toolchain from one stable manifest, so rust-analyzer never drifts
+    # from rustc. Bump with `nix flake update fenix`.
     (final: _prev: {
       rustToolchain = final.fenix.combine (with final.fenix.stable; [
         cargo
@@ -174,7 +162,7 @@ in {
     nodelay = true;
   };
 
-  # Panther Lake Xe3 needs a current kernal; there is no i915 fallback
+  # Panther Lake Xe3 needs a current kernel; there is no i915 fallback
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   hardware.graphics = {
@@ -182,8 +170,7 @@ in {
     extraPackages = with pkgs; [intel-media-driver vpl-gpu-rt];
   };
 
-  # Compressed swap in RAM. There is no swap partition, so without it a
-  # runaway build meets the OOM killer with nothing to page out to.
+  # Compressed swap in RAM; there is no swap partition.
   zramSwap.enable = true;
 
   services.thermald.enable = true;
@@ -194,11 +181,8 @@ in {
   # D-Bus power state for the shell and upower CLI.
   services.upower.enable = true;
 
-  # Helium extensions are declared in home/packages.nix and loaded via
-  # --load-extension from pinned web store CRXes. Enterprise policy
-  # (force_installed) is not used: Helium's policy-driven CRX download is
-  # broken upstream (imputnet/helium#1737), and a managed extension blocks
-  # every other install path with a "blocked by the administrator" error.
+  # Helium extensions load from pinned CRXes in home/packages.nix rather than
+  # enterprise policy, which is broken upstream (imputnet/helium#1737).
 
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
@@ -209,17 +193,11 @@ in {
   ];
 
   fonts.fontconfig = {
-    # eDP-1 is a 1920x1200 OLED at 163 DPI. Subpixel rendering assumes a vertical
-    # RGB stripe, and this panel's layout is not exposed anywhere we can read, so
-    # the colour fringes it produces are a gamble that only paid off on the denser
-    # 2880x1800 panel that preceded it, where they were too small to see.
-    # Grayscale has no layout to get wrong.
+    # The OLED's subpixel layout is unknown, so grayscale AA avoids colour fringes.
     subpixel.rgba = "none";
     hinting = {
       enable = true;
-      # Full hinting distorts outlines to put stems on whole pixels. That trade
-      # is worth less at 163 DPI than the even spacing slight hinting keeps, and
-      # slight is the better partner for grayscale.
+      # Keeps glyph spacing even and suits grayscale better than full hinting.
       style = "slight";
     };
     defaultFonts = {

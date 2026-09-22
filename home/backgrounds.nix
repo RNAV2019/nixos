@@ -4,16 +4,12 @@
   pkgs,
   ...
 }: let
-  # One folder per theme, each installed as Pictures/backgrounds/<theme>/<file>. Read off
-  # the tree rather than listed, so a new wallpaper only needs a `git add`.
+  # backgrounds/<theme>/<file> is installed to Pictures/backgrounds; just `git add` new ones.
   root = ../backgrounds;
   themes = lib.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir root));
   filesOf = theme: lib.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir (root + "/${theme}")));
 
-  # The wallpaper a session with no state of its own comes up on. Named rather than taken off
-  # the tree, because which one it is was a choice; checked against the tree, because a name
-  # that no longer exists would leave `current` pointing at nothing and awww with nothing to
-  # paint, and a rename should be caught at build time instead.
+  # Wallpaper for a fresh session; checked at build time so a rename can't dangle.
   defaultTheme = "rose-pine";
   defaultWallpaper = let
     file = "nbhd_v2.jpg";
@@ -29,11 +25,8 @@ in {
     }) (filesOf theme))
   themes);
 
-  # `current` is the wallpaper that is up. Next to it, one link per theme records the last
-  # wallpaper used with that theme, so switching back reopens on it. The wallpapers used to
-  # sit flat in the folder; a link still pointing there dangles once they move, and is sent
-  # to the Rose Pine default rather than left for awww to fail on. After linkGeneration, so
-  # the old links are already gone and the new ones already there.
+  # `current` is the active wallpaper; per-theme links remember each theme's last one.
+  # Seeds both with the default when missing.
   home.activation.initWallpaper = lib.hm.dag.entryAfter ["linkGeneration"] ''
     dir="$HOME/.local/share/wallpaper"
     fallback="$HOME/Pictures/backgrounds/${defaultTheme}/${defaultWallpaper}"
@@ -50,8 +43,7 @@ in {
     fi
   '';
 
-  # A bare `awww-daemon &` from start-desktop dies unsupervised, and every
-  # later `awww img` then fails with exit 1. systemd owns it instead.
+  # Supervised by systemd so a crash doesn't break every later `awww img`.
   systemd.user.services.awww-daemon = {
     Unit = {
       Description = "awww wallpaper daemon";

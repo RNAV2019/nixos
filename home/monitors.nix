@@ -13,8 +13,6 @@
     '';
   };
 
-  # The host rules come first so they win, then a catch-all lights up any
-  # output the host has never seen.
   config.wayland.windowManager.hyprland.settings.monitor =
     config.desktop.monitors
     ++ [

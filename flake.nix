@@ -24,22 +24,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Typst notes TUI, installed as the `note` command. The tinymist preview
-    # it drives is configured in home/editors.nix.
+    # Typst notes TUI, installed as `note`; its tinymist preview lives in home/editors.nix.
     note-tui = {
       url = "github:RNAV2019/note-tui";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Rust toolchains straight from the upstream release manifests, so every
-    # component is pinned to one release rather than to the nixpkgs bump.
+    # Rust toolchains pinned to upstream release manifests rather than nixpkgs.
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Secrets. The age identity that decrypts secrets/secrets.yaml lives at
-    # /etc/nixos-secrets/age.key and is never in this repo.
+    # Decryption key lives at /etc/nixos-secrets/age.key, never in this repo.
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -91,9 +88,8 @@
       '';
     };
 
-    # One entry per machine, named after its hostname so that a bare
-    # `nixos-rebuild --flake ~/nixos` picks the right one. Everything specific
-    # to a machine lives in hosts/<name>; see README.
+    # Named after each hostname so a bare `nixos-rebuild --flake ~/nixos` picks
+    # the right one. Per-machine config lives in hosts/<name>.
     nixosConfigurations = let
       mkHost = hostName:
         nixpkgs.lib.nixosSystem {

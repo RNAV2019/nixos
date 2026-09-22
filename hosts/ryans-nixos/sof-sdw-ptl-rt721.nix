@@ -1,18 +1,6 @@
-# Speaker, headset and internal mic on this Panther Lake laptop.
-#
-# The BIOS declares an rt722 on SoundWire link 3 alongside the rt721 and
-# rt1320 that are actually fitted. The kernel has no match-table entry for
-# rt721, so it falls back to the generic SDCA machine driver, wires the jack
-# and speaker onto the absent rt722, and every non-HDMI PCM fails with -ENOLINK.
-# See sof-sdw-ptl-rt721.patch for the full write-up.
-#
-# The fix is a data-only change to snd-soc-acpi-intel-match, which is a module
-# (CONFIG_SND_SOC_ACPI_INTEL_MATCH=m), so it is rebuilt on its own against the
-# packaged kernel's build tree rather than via boot.kernelPatches. That keeps
-# the kernel itself on cache.nixos.org; this derivation takes seconds to build.
-#
-# Dropped once the entry lands upstream: the build fails loudly if the patch
-# stops applying, which is the wanted behaviour on a kernel bump.
+# Fixes speaker, headset and mic: the kernel lacks a match entry for rt721+rt1320
+# (see sof-sdw-ptl-rt721.patch). Only the match module is rebuilt, so the kernel
+# stays cached. Drop once upstream; the build fails if the patch stops applying.
 {
   config,
   lib,
@@ -30,8 +18,7 @@
     hardeningDisable = ["pic" "format"];
     enableParallelBuilding = true;
 
-    # Only sound/soc/intel/common is needed; unpacking the whole tree would
-    # cost a gigabyte of I/O for two dozen files.
+    # Only unpack sound/soc/intel/common, not the whole tree.
     unpackPhase = ''
       runHook preUnpack
       mkdir source
@@ -50,9 +37,7 @@
 
     patches = [./sof-sdw-ptl-rt721.patch];
 
-    # The in-tree Makefile is reused as-is: an external module build reads the
-    # kernel's auto.conf, so obj-$(CONFIG_SND_SOC_ACPI_INTEL_MATCH) resolves to
-    # obj-m and a future kernel adding another -match.c is picked up for free.
+    # Reuses the in-tree Makefile; the kernel's auto.conf makes it build as obj-m.
     buildPhase = ''
       runHook preBuild
       make -C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build \
@@ -60,9 +45,7 @@
       runHook postBuild
     '';
 
-    # "updates/" outranks "kernel/" in depmod's default search order, so this
-    # shadows the stock module without colliding with it in the buildEnv that
-    # aggregateModules uses to assemble /run/current-system/kernel-modules.
+    # depmod prefers updates/ over kernel/, so this shadows the stock module.
     installPhase = ''
       runHook preInstall
       install -Dm444 sound/soc/intel/common/snd-soc-acpi-intel-match.ko \
@@ -77,12 +60,9 @@
     };
   };
 
-  # alsa-ucm-conf 1.2.16.1 ships ucm2/sof-soundwire/rt721+rt1320.conf but not the
-  # ucm2/codecs/rt721+rt1320/init.conf that sof-soundwire.conf includes for a
-  # combined speaker codec name, so UCM fails to import with -ENOENT and
-  # WirePlumber falls back to the raw "Pro" profile. Supply the missing file via
-  # ALSA_CONFIG_UCM2 rather than an overlay, which would rebuild alsa-lib and
-  # every one of its dependents from source.
+  # alsa-ucm-conf 1.2.16.1 lacks codecs/rt721+rt1320/init.conf, so UCM fails and
+  # WirePlumber falls back to "Pro". Supplied via ALSA_CONFIG_UCM2, since an
+  # overlay would rebuild alsa-lib and its dependents.
   ucm2 = pkgs.runCommand "alsa-ucm-conf-rt721-rt1320" {} ''
     cp -r ${pkgs.alsa-ucm-conf}/share/alsa/ucm2 "$out"
     chmod -R u+w "$out"
@@ -100,8 +80,7 @@ in {
   systemd.user.services.pipewire.environment.ALSA_CONFIG_UCM2 = "${ucm2}";
   systemd.user.services.wireplumber.environment.ALSA_CONFIG_UCM2 = "${ucm2}";
 
-  # The HiFi verb exposes one sink per display-audio PCM whether or not a
-  # display is attached. Nothing on this machine outputs over them.
+  # Hide the always-present, unused HDMI sinks.
   services.pipewire.wireplumber.extraConfig."51-sof-sdw-no-hdmi" = {
     "monitor.alsa.rules" = [
       {

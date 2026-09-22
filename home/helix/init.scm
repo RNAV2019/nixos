@@ -1,5 +1,4 @@
-;; Steel init script, run by the plugin-enabled Helix after helix.scm.
-;; Everything else (theme, editor options, languages) still comes from the
+;; Steel init script, run after helix.scm. Other settings live in the
 ;; home-manager-generated config.toml / languages.toml.
 
 (require "helix/keymaps.scm")
@@ -12,13 +11,10 @@
 ;; 'snacks = persistent sidebar, 'mini = floating Miller columns.
 (forest-set-style! 'snacks)
 
-;; Left unset on purpose: giving the sidebar its own background would paint over
-;; rose_pine_transparent.
+;; No sidebar background, so the transparent theme shows through.
 ;; (forest-set-sidebar-bg! #:focused "#191724" #:unfocused "#1f1d2e")
 
-;; The divider now defaults to the fg helix uses for its own split dividers
-;; (rose-pine overlay, #26233a). Override with a rose-pine value if you want it
-;; louder: highlight_med #403d52, muted #6e6a86.
+;; The divider matches Helix's own split dividers by default.
 ;; (forest-set-separator-color! "#403d52")
 
 (keymap (global)

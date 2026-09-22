@@ -7,8 +7,6 @@
 
     font-family = JetBrainsMono Nerd Font
     font-style = Regular
-    # 163 DPI draws a glyph with well under half the pixels the old 2880x1800
-    # panel gave it, so buy some of them back with size.
     font-size = 12
 
     window-theme = ghostty
@@ -18,15 +16,9 @@
     gtk-toolbar-style = flat
 
     background-opacity = 0.75
-    # herdr paints its panes with an explicit background (rose-pine surface,
-    # #1f1d2e) rather than leaving the terminal default. Ghostty applies
-    # background-opacity only to the default background, so those cells come
-    # out fully opaque and Hyprland sees nothing translucent to blur. tmux did
-    # not set one, which is why the blur survived until the migration.
+    # herdr paints explicit cell backgrounds, which would otherwise be opaque.
     background-opacity-cells = true
-    # Must stay `native`: linear modes blend the background-opacity into an
-    # opaque intermediate buffer, and the compositor only sees a uniform alpha
-    # with no per-pixel edges, so Hyprland's blur never applies to the window.
+    # Linear modes break Hyprland's blur behind the window.
     alpha-blending = native
     minimum-contrast = 1.1
 
@@ -59,7 +51,7 @@
     baseIndex = 1;
     escapeTime = 0;
     historyLimit = 50000;
-    # The Rose Pine plugin moved into the rose-pine theme fragment; see theme.nix.
+    # The Rose Pine plugin is loaded by the theme fragment; see theme.nix.
     plugins = with pkgs.tmuxPlugins; [
       yank
     ];
@@ -67,8 +59,7 @@
       setw -g pane-base-index 1
       set -g renumber-windows on
 
-      # Status line and message colours, from the active theme. theme-switch sources the
-      # same file into a running server.
+      # Colours from the active theme; theme-switch re-sources this live.
       source-file -q ~/.local/state/theme/current/tmux.conf
 
       # send-prefix does nothing while the prefix is off, so send the key itself.
@@ -117,9 +108,7 @@
 
       # `theme.name` is added per theme, and the file linked to the active one, in theme.nix.
 
-      # `herdr update` writes over its own binary, which the Nix store will
-      # not allow, so suppress the nag. The agent-detection manifest check is
-      # plain data and stays on.
+      # `herdr update` can't overwrite a store binary, so skip the nag.
       update.version_check = false;
 
       terminal = {
@@ -130,8 +119,7 @@
       keys = {
         prefix = "ctrl+a";
 
-        # `v` splits vertically and `s` horizontally, as in the tmux config.
-        # herdr puts split_horizontal on prefix+minus and settings on prefix+s.
+        # Match the tmux splits; settings moves off prefix+s.
         split_vertical = "prefix+v";
         split_horizontal = "prefix+s";
         settings = "prefix+shift+s";
@@ -141,8 +129,7 @@
 
         # focus_pane_{left,down,up,right} already default to prefix+h/j/k/l.
 
-        # tmux resized with `H/J/K/L`. herdr has no per-direction resize
-        # bindings; it enters a modal resize mode instead.
+        # herdr has a modal resize mode instead of per-direction binds.
         resize_mode = "prefix+r";
       };
 

@@ -4,8 +4,7 @@
   helix-steel,
   ...
 }: let
-  # Cogs the Steel module resolver finds under $STEEL_HOME/cogs. Vendored here
-  # rather than installed with `forge`, so activation stays declarative.
+  # Steel cogs, vendored instead of installed with `forge`.
   notify-hx = pkgs.fetchFromGitHub {
     owner = "chuwy";
     repo = "notify.hx";
@@ -20,14 +19,11 @@
     hash = "sha256-TpYnGqROkKfoB9G+JTjADWvMtpRJbv4NVaTqiUfW1Eg=";
   };
 in {
-  # Steel looks for `helix.scm` first and writes an empty one if it is missing;
-  # keep it managed so nothing lands in the config dir at startup.
+  # Steel creates an empty helix.scm if missing; manage it instead.
   xdg.configFile."helix/helix.scm".text = "";
   xdg.configFile."helix/init.scm".source = ./helix/init.scm;
 
-  # `(require "forest/forest.scm")` resolves relative to the requiring file, then
-  # against $STEEL_HOME/cogs. $STEEL_HOME defaults to $XDG_DATA_HOME/steel unless
-  # ~/.steel exists, so pin it rather than depend on which one wins.
+  # Pinned so cog lookup doesn't depend on whether ~/.steel exists.
   home.sessionVariables.STEEL_HOME = "${config.xdg.dataHome}/steel";
 
   xdg.dataFile = {
@@ -45,9 +41,7 @@ in {
       theme = "current";
 
       editor = {
-        # Helix prefers the tmux paste buffer over Wayland whenever $TMUX is
-        # set, so a yank inside tmux never reaches wl-clipboard or cliphist.
-        # Pin the provider so every Helix shares the one system clipboard.
+        # Otherwise Helix uses tmux's buffer under $TMUX, bypassing wl-clipboard.
         clipboard-provider = "wayland";
 
         bufferline = "always";
@@ -94,8 +88,7 @@ in {
 
     languages = {
       language-server = {
-        # Taken from the pinned toolchain rather than resolved from PATH, so
-        # it always matches the compiler it analyses against.
+        # From the pinned toolchain so it always matches rustc.
         rust-analyzer = {
           command = "${pkgs.rustToolchain}/bin/rust-analyzer";
           config.check.command = "clippy";

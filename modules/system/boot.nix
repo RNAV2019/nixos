@@ -12,10 +12,8 @@
     style = {
       # Avoid framebuffer edges left by the mismatched default wallpaper.
       wallpapers = lib.mkForce [];
-      # Boot runs before any user theme state exists, so it cannot follow the desktop theme.
-      # It is neutral grey on black instead, which sits under both themes, and black is
-      # plymouth bgrt's own, so the menu, the splash and Hyprland's first frame all match.
-      # The menu only uses a handful of palette slots, so plain grey steps are enough.
+      # Boot can't follow the runtime theme, so use neutral greys on black, which
+      # matches the plymouth splash and Hyprland's first frame.
       backdrop = "000000";
       interface = {
         branding = "NixOS";
@@ -60,10 +58,8 @@
     theme = "bgrt";
   };
 
-  # Release DRM without exposing the VT before Hyprland paints.
-  # The leading "-" keeps activation green when no splash is running
-  # (plymouth quit exits 1), and the unit is boot-only so nixos-rebuild
-  # switch must not re-run it.
+  # Release DRM without exposing the VT before Hyprland paints. "-" tolerates
+  # plymouth quit exiting 1 when no splash is running; boot-only, so no restart.
   systemd.services.plymouth-quit = {
     restartIfChanged = false;
     serviceConfig.ExecStart = lib.mkForce [

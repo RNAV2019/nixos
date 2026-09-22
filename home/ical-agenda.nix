@@ -1,9 +1,6 @@
 {pkgs}:
-# The calendar's backend. It replaces gcalcli, whose OAuth client and refresh token lived
-# in a config folder of its own; a secret iCal address is one line in secrets/secrets.yaml.
-#
-# The output is deliberately the TSV gcalcli printed, header row and all, so the QML
-# service parses it exactly as before.
+# Calendar backend reading secret iCal URLs. Prints the same TSV gcalcli did, which
+# the QML service parses.
 pkgs.writers.writePython3Bin "ical-agenda" {
   libraries = with pkgs.python3Packages; [icalendar recurring-ical-events];
 } ''
@@ -34,8 +31,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       "location",
   ]
 
-  # Feeds are cached on disk for this long; --refresh asks for current
-  # data.
+  # On-disk feed cache lifetime; --refresh bypasses it.
   CACHE_SECONDS = 600
 
   FETCH_TIMEOUT = 20
@@ -105,9 +101,8 @@ pkgs.writers.writePython3Bin "ical-agenda" {
           except OSError:
               pass
 
-      # A fetch fails now and then, most often in the seconds after a
-      # resume while the network is still coming up, so it is retried
-      # before giving up, and then a stale copy beats no agenda at all.
+      # Retry (the network may still be up after resume), then fall back
+      # to a stale copy.
       body = None
       for attempt in range(FETCH_ATTEMPTS):
           if attempt:
@@ -129,8 +124,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
                   "could not fetch " + redact(url) + ": " + str(last_error)
               )
 
-      # Written through a neighbour, so a fetch that dies half way leaves
-      # no truncated feed.
+      # Atomic write, so no truncated feed is left behind.
       try:
           cached.parent.mkdir(parents=True, exist_ok=True)
           partial = cached.with_suffix(".part")
@@ -159,8 +153,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       end_field = component.get("DTEND")
       end = end_field.dt if end_field is not None else start
 
-      # An all-day event is the one whose DTSTART is a plain date. gcalcli
-      # left both times empty and the QML service still reads it that way.
+      # All-day events have a plain-date DTSTART and empty times.
       all_day = not isinstance(start, datetime.datetime)
 
       if all_day:
@@ -187,10 +180,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
   def pin_yearly_month(feed):
       """Hold a yearly rule to the month it started in.
 
-      Google writes a yearly event as FREQ=YEARLY;BYMONTHDAY=17 with no
-      BYMONTH. RFC 5545 reads that as the 17th of every month, and
-      recurring_ical_events follows the letter of it; Google, like every
-      calendar people actually use, means the month of DTSTART.
+      Google omits BYMONTH, which RFC 5545 reads as every month.
       """
       for event in feed.walk("VEVENT"):
           rule = event.get("RRULE")
@@ -207,8 +197,6 @@ pkgs.writers.writePython3Bin "ical-agenda" {
 
 
   def calendar_name(feed):
-      # Google names the feed; a hand-rolled .ics need not. The shell's
-      # per-calendar colour only has to be stable, not meaningful.
       return one_line(feed.get("X-WR-CALNAME")) or "Calendar"
 
 
@@ -233,8 +221,7 @@ pkgs.writers.writePython3Bin "ical-agenda" {
       parser.add_argument("end", help="last day of the window, inclusive")
       args = parser.parse_args()
 
-      # The window is inclusive at both ends: a month with a week of
-      # padding either side.
+      # Inclusive at both ends.
       first = day(args.start, "start")
       last = day(args.end, "end")
       if last < first:

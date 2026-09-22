@@ -10,11 +10,8 @@
     text = builtins.readFile ./claude-statusline.sh;
   };
 
-  # Rate-limit percentages for the bar widget. Reads the OAuth token Claude Code
-  # already stores; the token is only refreshed by Claude Code itself, so an
-  # expired one is reported as a distinct `expired` state rather than burning a
-  # request. The last good reading is cached so a failed poll degrades to a
-  # stale value instead of blanking the bar.
+  # Rate-limit percentages for the bar, via Claude Code's stored OAuth token.
+  # Expired tokens report `expired`; failed polls fall back to the cached reading.
   usage = pkgs.writeShellApplication {
     name = "claude-usage";
     runtimeInputs = [pkgs.curl pkgs.jq pkgs.coreutils];
@@ -22,8 +19,7 @@
       creds="$HOME/.claude/.credentials.json"
       cache="''${XDG_RUNTIME_DIR:-/tmp}/claude-usage.json"
 
-      # Re-emit the last good reading tagged with $1, so a failed poll keeps a
-      # number on the bar. Exit $2 when there has never been one to show.
+      # Re-emit the cached reading with status $1, or exit $2 if there is none.
       emit_cached() {
         if [ -r "$cache" ]; then
           jq -ce --arg s "$1" '.status = $s' "$cache" && exit 0
@@ -56,8 +52,7 @@
       esac
 
       jq -ce '
-          # Qt cannot parse the microsecond precision the API returns, so
-          # reset times go out as epoch seconds.
+          # Epoch seconds, since Qt can't parse the API's microseconds.
           def epoch: if . == null then 0 else sub("\\.[0-9]+";"") | sub("\\+00:00$";"Z") | fromdateiso8601 end;
           {
             status: "ok",
@@ -73,10 +68,8 @@
     '';
   };
 
-  # Claude Code keeps user-scope MCP servers in ~/.claude.json and reads none
-  # from settings.json, so a server cannot simply be declared above.
-  # ~/.claude.json is also Claude Code's own scratch state, so the entry is
-  # merged into the live file rather than the file being generated.
+  # User-scope MCP servers only live in ~/.claude.json, which is also Claude
+  # Code's mutable state, so entries are merged into it rather than generated.
   mcpMerge = pkgs.writeShellApplication {
     name = "claude-mcp-merge";
     runtimeInputs = [pkgs.jq pkgs.coreutils];
@@ -85,8 +78,7 @@
       url_file="$2"
       config="$HOME/.claude.json"
 
-      # The URL arrives from sops, which decrypts after this on a fresh
-      # machine's first boot. Skip rather than fail the whole activation.
+      # On first boot sops may not have decrypted it yet; don't fail activation.
       if [ ! -r "$url_file" ]; then
         echo "claude-mcp-merge: $url_file not readable, skipping $name" >&2
         exit 0
@@ -139,15 +131,12 @@
 in {
   home.packages = [statusline usage];
 
-  # Claude Code rewrites settings.json itself (/model, /config, plugin toggles),
-  # so it is installed as a writable copy rather than a store symlink. Runtime
-  # edits survive until the next rebuild, when the values above win again.
+  # A writable copy, since Claude Code edits settings.json itself; rebuilds reset it.
   home.activation.claudeSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run install -Dm600 ${settingsFile} ${config.home.homeDirectory}/.claude/settings.json
   '';
 
-  # The Penpot user token is the URL's query string, so the whole URL is a
-  # secret; see modules/system/secrets.nix for the path.
+  # The URL embeds the Penpot token; see modules/system/secrets.nix.
   home.activation.claudeMcpServers = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run ${mcpMerge}/bin/claude-mcp-merge penpot \
       ${config.home.homeDirectory}/.config/claude/penpot-mcp-url

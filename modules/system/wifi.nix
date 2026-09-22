@@ -3,15 +3,12 @@
   lib,
   ...
 }: let
-  # Kept apart from secrets.yaml so that it can be written with the public
-  # recipient alone. Without it, none of this applies and the networks saved
-  # under /etc are left to themselves.
+  # Separate from secrets.yaml so it can be written with the public recipient
+  # alone. If it is missing, this module does nothing.
   sopsFile = ../../secrets/wifi.yaml;
 
-  # uuid is the one each network was first saved under. The copy written to
-  # /run then shadows the one in /etc rather than sitting beside it as a second
-  # profile with the same name. No interface is pinned, so the profiles work
-  # on whatever the next machine calls its card.
+  # Reusing each network's original uuid makes the /run profile shadow the one
+  # in /etc instead of duplicating it. No interface is pinned.
   networks = {
     skymrfdt = {
       ssid = "SKYMRFDT";

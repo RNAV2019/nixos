@@ -4,12 +4,9 @@
   pkgs,
   ...
 }: let
-  # The desktop has two themes, switched at runtime rather than at build time. Every
-  # program's colours live in one store directory per theme, generated below from
-  # themes/palettes.nix. ~/.local/state/theme/current links to the active one, and each
-  # program reads its colours through that link, so switching is a matter of moving the link
-  # and telling whatever is already running. `theme-switch <id>` does both; Quickshell's
-  # theme picker (ALT+T) calls it.
+  # Runtime theme switching: each theme is a store directory of program configs built
+  # from themes/palettes.nix, and ~/.local/state/theme/current links to the active one.
+  # `theme-switch <id>` moves the link and notifies running programs.
   palettes = import ./themes/palettes.nix;
   ids = lib.attrNames palettes;
   rp = palettes.rose-pine;
@@ -29,8 +26,7 @@
     map (i: lib.fromHexString (builtins.substring i 2 h)) [0 2 4];
   rgbWith = sep: hex: lib.concatMapStringsSep sep toString (rgb hex);
 
-  # Several fragments are upstream Rose Pine files written in its own hex values. The dark
-  # version of each is the same file with every role's value swapped for the dark one.
+  # Recolours upstream Rose Pine files by swapping each role's hex for another palette's.
   roles = ["base" "surface" "overlay" "muted" "subtle" "text" "love" "gold" "rose" "pine" "foam" "iris" "highlightLow" "highlightMed" "highlightHigh"];
   recolour = p: text: let
     from = map (r: rp.${r}) roles;
@@ -90,9 +86,7 @@
     theme[process_end]="#eb6f92"
   '';
 
-  # Everything the switch script needs to know about a theme that is not a colour.
-  # `colorScheme` is the freedesktop appearance value the settings portal
-  # broadcasts: Helium and every libadwaita app follow it live.
+  # Non-colour per-theme settings. `colorScheme` is broadcast by the settings portal.
   extras = {
     rose-pine = {
       ghostty = "theme = Rose Pine\n";
@@ -120,9 +114,8 @@
         ''
         + lib.concatStrings (lib.imap0 (i: c: "palette = ${toString i}=${c}\n") p.ansi);
       helix = ./themes/ascii_world.toml;
-      # bat's built-in ANSI theme, which draws in the terminal's own sixteen colours.
+      # Built-in themes that use the terminal's own colours.
       bat = "ansi";
-      # herdr's built-in `terminal` theme does the same.
       herdr = "terminal";
       gtkTheme = "Adwaita-dark";
       iconTheme = "Adwaita";
@@ -143,14 +136,11 @@
       set -g @rose_pine_directory 'on'
       run-shell ${pkgs.tmuxPlugins.rose-pine}/share/tmux-plugins/rose-pine/rose-pine.tmux
 
-      # rose-pine sets the message styles without a `fill`, and tmux clears the
-      # status line behind the command prompt only as far as the fill reaches —
-      # without it the window list and status-right stay visible under `:`.
+      # Without a `fill`, the status line shows through the `:` prompt.
       set -ag message-style ",fill=${p.base}"
       set -ag message-command-style ",fill=${p.gold}"
     ''
-    # Every option the rose-pine plugin sets is set here too, so switching away from it
-    # leaves nothing of it behind.
+    # Overrides every option the rose-pine plugin sets, so switching away is clean.
     else ''
       set -g status on
       set -g status-justify left
@@ -175,8 +165,7 @@
       set -g clock-mode-colour "${p.text}"
     '';
 
-  # From rose-pine/fish's "Rosé Pine" theme, role for role. Universal, so every running
-  # shell picks the change up.
+  # rose-pine/fish's roles, as universals so running shells pick them up.
   fishFragment = p: let
     c = bare;
   in ''
@@ -211,11 +200,8 @@
     set -U fish_pager_color_selected_description ${c p.text}
   '';
 
-  # Appended to the fish fragment below: the payload the OSC handler in shell.nix
-  # paints onto every running Ghostty surface — background, foreground, cursor,
-  # selection background, selection foreground, as bare hex. A config reload
-  # recolours only new cells and new windows; these dynamic colours are what an
-  # already-open window needs.
+  # bg, fg, cursor, selection bg/fg for shell.nix's OSC handler, which repaints
+  # already-open Ghostty windows that a config reload doesn't.
   oscFragment = p: ''
     set -U theme_osc "${bare p.base} ${bare p.text} ${bare p.text} ${bare p.highlightMed} ${bare p.text}"
   '';
@@ -281,8 +267,7 @@
     border=${bare p.highlightMed}ff
   '';
 
-  # Sourced by the claude status line and gen-commit: each role as hex, and as the
-  # `r;g;b` a 24-bit SGR escape wants.
+  # Each role as hex and `r;g;b`, for the claude status line and gen-commit.
   colorsFragment = p:
     lib.concatMapStrings (r: let
       name = lib.toUpper (lib.concatStringsSep "_" (lib.splitString "-" (lib.replaceStrings ["highlight"] ["highlight-"] r)));
@@ -335,10 +320,8 @@
 
   themes = lib.genAttrs ids themeDir;
 
-  # GTK 3 reads its theme and icons from dconf, which takes no schema lookup, so this works
-  # from activation as well as from the session. The appearance colour scheme rides the same
-  # dconf: the settings portal watches it and broadcasts changes, which is how Helium and the
-  # libadwaita apps follow the theme live.
+  # Plain dconf writes work from activation too. The portal broadcasts color-scheme
+  # changes, so Helium and libadwaita apps follow live.
   setGtk = ''
     setGtk() {
       # shellcheck source=/dev/null
@@ -368,17 +351,16 @@
       state="${stateDir}"
       mkdir -p "$state"
 
-      # Already up: nothing to move and nothing to repaint.
       if [ -e "$state/current" ] && [ "$(cat "$state/name" 2>/dev/null)" = "$id" ]; then
         exit 0
       fi
 
-      # Renamed over the old link, so there is never a moment it does not exist.
+      # Atomic rename so the link always exists.
       ln -sfn "$dir" "$state/current.new"
       mv -T "$state/current.new" "$state/current"
 
-      # The wallpaper this theme was last used with, or the first in its folder. The link is
-      # written before the name, so Quickshell, which watches the name, finds it in place.
+      # The theme's last wallpaper, or the first in its folder. Linked before the name
+      # is written, since Quickshell watches the name.
       wallpapers="$HOME/.local/share/wallpaper"
       wallpaper=""
       if [ -e "$wallpapers/$id" ]; then
@@ -397,16 +379,14 @@
         mv -T "$wallpapers/current.new" "$wallpapers/current"
       fi
 
-      # Written in place rather than renamed, so the file watcher keeps its inode. The shell
-      # is also asked to read it, because a file created after the shell started (the first
-      # activation) has no watch on it.
+      # Written in place to keep the watcher's inode; the IPC call covers a file created
+      # after the shell started.
       printf '%s\n' "$id" >"$state/name"
       if command -v qs >/dev/null; then
         qs ipc call theme sync >/dev/null 2>&1 || true
       fi
 
-      # Everything below is a courtesy to whatever is already running. None of it may stop
-      # the switch: a program that is not up has nothing to be told.
+      # Best-effort live updates for running programs.
       if [ -n "$wallpaper" ]; then
         awww img "$wallpaper" --transition-type grow --transition-pos center \
           --transition-duration 0.9 --transition-fps 120 || true
@@ -417,10 +397,8 @@
       if command -v hyprctl >/dev/null; then
         hyprctl reload >/dev/null || true
       fi
-      # Ghostty runs as `.ghostty-wrapped`, so it is matched by substring. The reload
-      # recolours new cells and new windows; the background, foreground, cursor and
-      # selection of the windows already open are repainted by the fish OSC handler,
-      # which the `theme_osc` set in the fragment below wakes.
+      # Ghostty runs as `.ghostty-wrapped`, hence no -x. Open windows are repainted
+      # by the fish OSC handler when `theme_osc` changes.
       pkill -USR2 ghostty || true
       pkill -USR1 -x hx || true
       tmux source-file "$state/current/tmux.conf" 2>/dev/null || true
@@ -438,9 +416,8 @@ in {
     pkgs.adwaita-icon-theme
   ];
 
-  # First run starts on Rose Pine. After that, a rebuild keeps the chosen theme and only
-  # re-points the link at that theme's rebuilt directory. After dconfSettings, because that
-  # writes the Rose Pine GTK names back on every activation.
+  # Keep the chosen theme (default Rose Pine) and re-point it at the rebuilt directory.
+  # Runs after dconfSettings, which rewrites the Rose Pine GTK names.
   home.activation.themeState = lib.hm.dag.entryAfter ["linkGeneration" "dconfSettings"] ''
     if [ -z "''${DRY_RUN:-}" ]; then
       state="${stateDir}"
@@ -467,9 +444,8 @@ in {
     fi
   '';
 
-  # Hyprland: the border colours come from the theme; see desktop.nix for the rest.
+  # Hyprland border colours, re-read on every `hyprctl reload`.
   wayland.windowManager.hyprland.extraConfig = ''
-    -- The theme's border colours, re-read on every `hyprctl reload`.
     do
       local ok, theme = pcall(dofile, "${current}/hyprland.lua")
       if ok and type(theme) == "table" then
@@ -478,13 +454,11 @@ in {
     end
   '';
 
-  # Ghostty and Helix read their theme through the state link; see terminal.nix and
-  # editors.nix for the lines that include them.
+  # Ghostty and Helix include these from terminal.nix and editors.nix.
   xdg.configFile."helix/themes/current.toml".source = link "${current}/helix.toml";
 
-  # Programs that read one config file at a fixed path get that path pointed at the theme.
-  # The starship and lazygit modules write home.file rather than xdg.configFile, so those
-  # two are overridden there.
+  # Point fixed config paths at the theme. starship and lazygit use home.file, not
+  # xdg.configFile, so they're overridden there.
   home.file."${config.xdg.configHome}/starship.toml".source = lib.mkForce (link "${current}/starship.toml");
   xdg.configFile."bat/config".source = link "${current}/bat";
   home.file."${config.xdg.configHome}/lazygit/config.yml".source = lib.mkForce (link "${current}/lazygit.yml");

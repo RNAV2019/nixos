@@ -1,14 +1,11 @@
-# backup - borg against the NAS repository, with the sharp edges filed off.
-#
-# BORG_REPO, BORG_PASSCOMMAND, BORG_RSH, BACKUP_UNIT and BACKUP_BORG are baked
-# in by modules/system/backups.nix, so this script never learns where a secret
-# lives and there is exactly one definition of how to reach the server.
+# backup - friendly wrapper around borg and the NAS repository.
+# BORG_REPO, BORG_PASSCOMMAND, BORG_RSH, BACKUP_UNIT and BACKUP_BORG come from
+# modules/system/backups.nix.
 
 HELIUM_PROFILE="$HOME/.config/net.imput.helium"
 MOUNTPOINT="${XDG_RUNTIME_DIR:-/tmp}/backup"
 
-# Rose Pine Moon, to match the rest of the system. Dropped when the output is
-# not a terminal, so piping into a file or a log stays readable.
+# Rose Pine Moon colours, only when stdout is a terminal.
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
   C_DIM=$'\033[38;2;110;106;134m'
   C_OK=$'\033[38;2;156;207;216m'
@@ -25,9 +22,7 @@ fi
 
 interactive() { [[ -t 1 ]]; }
 
-# gum draws its interface on stderr, so it can still ask a question when stdout
-# has been captured by a command substitution. That is the descriptor to test
-# before offering a chooser.
+# gum draws on stderr, so it can prompt even when stdout is captured.
 has_tui() { [[ -t 2 ]]; }
 
 die() {
@@ -52,8 +47,7 @@ duration() {
   fi
 }
 
-# gum needs a terminal to draw on, and swallows stdout, so this is only ever
-# wrapped around commands whose output we do not need to capture.
+# gum swallows stdout, so only wrap commands whose output isn't needed.
 spin() {
   local title="$1"
   shift
@@ -86,9 +80,7 @@ the server is append-only and pruning needs the admin key.
 USAGE
 }
 
-# borg's own message is nearly always the useful one, so it is passed through
-# rather than replaced with a guess about what went wrong. Capturing stdout
-# separately is what makes that possible.
+# Run borg for JSON, passing its own error message through on failure.
 repo_json() {
   local err out rc=0
   err=$(mktemp)
@@ -104,7 +96,6 @@ repo_json() {
   printf '%s' "$out"
 }
 
-# One round trip, all the numbers worth seeing after a run.
 summarise_latest() {
   local json name nfiles orig comp dedup uniq dur
 
@@ -130,8 +121,7 @@ summarise_latest() {
   row "took" "$(duration "$dur")"
 }
 
-# The manual and scheduled paths deliberately run the same unit. Two entry
-# points would mean two chunk caches and two things to keep in step.
+# Runs the same unit as the timer, so there's one chunk cache and one config.
 cmd_now() {
   local verbose=false
   case "${1:-}" in
@@ -146,9 +136,7 @@ cmd_now() {
 
   sudo -v || die "need sudo to start $BACKUP_UNIT"
 
-  # --wait blocks until the unit deactivates. Without it this returns as soon
-  # as borg is forked, because the unit is Type=simple, and the result read
-  # below would belong to the previous run rather than this one.
+  # --wait, or the Type=simple unit returns at fork and we'd read the previous result.
   if [[ "$verbose" == true ]]; then
     sudo journalctl -fu "$BACKUP_UNIT" -n 0 &
     follower=$!
@@ -188,8 +176,7 @@ cmd_status() {
   next=$(systemctl show "${BACKUP_UNIT%.service}.timer" \
     --property=NextElapseUSecRealtime --value)
 
-  # A running job has no exit timestamp yet, and the result it reports is
-  # left over from the run before it. Reporting either would be a lie.
+  # A running job's exit time and result still belong to the previous run.
   if systemctl is-active --quiet "$BACKUP_UNIT"; then
     row "last run" "in progress since $(
       systemctl show "$BACKUP_UNIT" --property=ExecMainStartTimestamp --value
@@ -202,8 +189,7 @@ cmd_status() {
 
   row "next run" "${next:-unscheduled}"
 
-  # status is the command you reach for when something is wrong, so it reports
-  # the failure and carries on rather than aborting on it.
+  # Report read failures and carry on; status is for when things are broken.
   local err
   err=$(mktemp)
   if ! json=$("$BACKUP_BORG" list --json 2>"$err"); then
@@ -222,8 +208,7 @@ cmd_status() {
       ] | @tsv'
   )"
 
-  # A second round trip that can fail on its own, and for the same reason as
-  # the listing above it must not take the rest of the report down with it.
+  # Likewise non-fatal.
   err=$(mktemp)
   if info=$("$BACKUP_BORG" info --json --last 1 2>"$err"); then
     uniq=$(printf '%s' "$info" | jq -r '.cache.stats.unique_csize')
@@ -233,8 +218,7 @@ cmd_status() {
   fi
   rm -f "$err"
 
-  # An empty repository leaves the newest start time empty, which date reads as
-  # today, so an age would be reported for a backup that was never taken.
+  # An empty repo has no start time, which `date -d` would read as today.
   if [[ -n "$when" ]]; then
     age=$((($(date +%s) - $(date -d "${when%.*}" +%s)) / 86400))
     row "newest" "$newest"
@@ -254,8 +238,7 @@ cmd_status() {
     ((age < 3)) || warn "The newest archive is $age days old."
   fi
 
-  # Append-only means nothing on this machine can trim the repository, so the
-  # reminder has to come from somewhere.
+  # The repo is append-only from here, so nudge towards a manual prune.
   ((count < 60)) || warn "$count archives. Time to prune with the admin key."
 }
 
@@ -277,9 +260,7 @@ cmd_list() {
     done
 }
 
-# Restoring is the one command here that destroys work, so the archive is
-# always chosen deliberately rather than defaulted to. Newest is first in the
-# list, which makes the common case one keystroke without making it automatic.
+# Restores overwrite files, so the archive is always picked explicitly (newest first).
 pick_archive() {
   local json chosen
 
@@ -301,9 +282,7 @@ helium_running() {
   pgrep -x helium >/dev/null 2>&1 || [[ -e "$HELIUM_PROFILE/SingletonLock" ]]
 }
 
-# Only a restore that writes into the profile can damage a running browser, so
-# that is the whole tree, or a named path inside it. Paths arrive here with the
-# leading slash already stripped, the way the archive stores them.
+# True for a full restore or any path inside the Helium profile (paths lack a leading /).
 restore_touches_helium() {
   (($# == 0)) && return 0
 
@@ -314,15 +293,11 @@ restore_touches_helium() {
   return 1
 }
 
-# Archives store paths with the leading slash stripped, and borg extracts
-# relative to the working directory. Restoring from anywhere but / quietly
-# builds a nested copy of the tree instead of putting anything back.
 cmd_restore() {
   local archive="" force=false
   local -a paths=()
 
-  # Every positional is a path. The archive comes from the picker, or from
-  # --archive when there is nobody at the keyboard to answer it.
+  # Positionals are paths; the archive comes from --archive or the picker.
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --force) force=true ;;
@@ -350,14 +325,12 @@ cmd_restore() {
     printf '  /%s\n' "${paths[@]}"
   fi
 
-  # gum pre-selects the affirmative, and this is the one prompt in the program
-  # where a stray Enter overwrites live files.
+  # Default to no: a stray Enter here overwrites live files.
   gum confirm --default=false \
     "Overwrite existing files with the archived versions?" \
     || die "cancelled"
 
-  # Ownership is restored by name rather than by number, so a rebuilt machine
-  # gets the right owner even if the numeric id moved.
+  # Archive paths are relative, so extract from / or get a nested copy.
   cd / || die "cannot change to /"
   sudo --preserve-env=BORG_REPO,BORG_PASSCOMMAND,BORG_RSH \
     "$BACKUP_BORG" extract --progress "::$archive" "${paths[@]}"
@@ -372,8 +345,7 @@ cmd_mount() {
     "$BACKUP_BORG" mount "::$1" "$MOUNTPOINT" || die "mount failed"
     ok "Mounted $1 at $MOUNTPOINT"
   else
-    # The whole repository, so every archive is browsable side by side. This
-    # is what replaces reaching for a GUI restore tool.
+    # Mount the whole repository so every archive is browsable side by side.
     "$BACKUP_BORG" mount "$BORG_REPO" "$MOUNTPOINT" || die "mount failed"
     ok "Mounted every archive at $MOUNTPOINT"
   fi
@@ -388,9 +360,7 @@ cmd_umount() {
   ok "Unmounted"
 }
 
-# --repair is not offered on purpose: the server rejects it from this key, and
-# reaching for it is nearly always the wrong move on a repository that still
-# has a good copy somewhere.
+# No --repair: the server rejects it from this key.
 cmd_check() {
   local -a args=(check --progress)
   [[ "${1:-}" == "--data" ]] && args+=(--verify-data)

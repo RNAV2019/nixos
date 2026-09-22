@@ -3,16 +3,8 @@
   lib,
   ...
 }: {
-  # Recolours the terminal this fish lives in after a theme switch. The theme's
-  # fish fragment (see theme.nix) sets `theme_osc` — background, foreground,
-  # cursor, selection background, selection foreground, bare hex — and every
-  # running fish picks the universal variable up and repaints its Ghostty
-  # surface over OSC. A Ghostty config reload cannot do this: it recolours only
-  # new cells and new windows, so open ones keep the colours they started with.
-  # fish registers an --on-variable handler only once its file is loaded, and
-  # autoloading waits for a call that never comes, so interactiveShellInit
-  # loads it. New fish emit nothing, which is right: their window already read
-  # the new theme's config.
+  # Repaints already-open Ghostty windows over OSC when the universal `theme_osc`
+  # (set by the theme's fish fragment in theme.nix) changes.
   xdg.configFile."fish/functions/__theme_osc.fish".text = ''
     function __theme_rgb
       string join / "rgb:"(string sub --length 2 --start 1 $argv[1]) \
@@ -130,8 +122,7 @@
         format = "[ in ](bold white)[$branch]($style)";
       };
 
-      # The per-state symbols carry theme colours, so theme.nix adds them to each theme's
-      # copy of this file, and starship.toml is linked to the active one.
+      # Coloured per-state symbols are added per theme in theme.nix.
       git_status = {
         style = "";
         format = "([ $ahead_behind$all_status]($style))";
@@ -219,7 +210,7 @@
     enableFishIntegration = true;
     # Atuin owns Ctrl-R; fzf keeps Ctrl-T and Alt-C.
     historyWidget.command = "";
-    # The colours are read from FZF_DEFAULT_OPTS_FILE, which follows the theme.
+    # Colours come from FZF_DEFAULT_OPTS_FILE, set in theme.nix.
     defaultOptions = [
       "--height 40%"
       "--border"
@@ -242,8 +233,7 @@
     enableGitIntegration = true;
   };
 
-  # Theme vendored from github.com/drluckyspin/rose-pine-bat. Which theme is used is set by
-  # bat/config, linked to the active theme in theme.nix.
+  # Theme vendored from github.com/drluckyspin/rose-pine-bat; selected in theme.nix.
   programs.bat = {
     enable = true;
     themes."Rose-Pine-Moon" = {

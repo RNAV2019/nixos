@@ -7,12 +7,8 @@
   home = "/home/ryan";
   nasHost = "backup.ryannavsaria.co.uk";
 
-  # Set to the NAS's address on your own network, as host:port, to bypass the
-  # tunnel for the one-time seed of the first archive, then set it back to
-  # null. Going through Cloudflare sends the first few gigabytes up your home
-  # link and straight back down it again; on the LAN the same run takes
-  # minutes. Borg identifies a repository by its id rather than its URL, so
-  # switching back afterwards costs nothing and the chunk cache stays warm.
+  # Set to the NAS's LAN host:port to seed the first archive without the tunnel,
+  # then reset to null. Borg keys repos by id, so switching back is free.
   lanSeed = null; # e.g. "192.168.0.216:2222"
 
   seeding = lanSeed != null;
@@ -35,22 +31,13 @@
 
   secret = name: config.sops.secrets.${name}.path;
 
-  # Taken from `docker exec borgserver cat /sshkeys/host/ssh_host_ed25519_key.pub`
-  # once the container has started for the first time. While it is empty the
-  # SSH connection falls back to trust-on-first-use, which is tolerable for the
-  # LAN seed and must not survive it: with the repository reachable from the
-  # internet, an unpinned host key is the whole of the authentication story on
-  # the server's side.
-  # The trailing comment on the generated key names the container id, which
-  # changes whenever the container is recreated. The key itself lives in the
-  # sshkeys volume and survives, so only the key material is recorded here.
+  # From `docker exec borgserver cat /sshkeys/host/ssh_host_ed25519_key.pub`,
+  # minus its container-id comment. Empty means trust-on-first-use (LAN seed only).
   nasHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPVKEhuXeZ9Tj737g1wLPHSePp+Mg9PglbZUSTyiZVyx";
 
   hostKeyPinned = nasHostKey != "";
 
-  # Opens the tunnel and hands ssh a bidirectional stream on stdio. The service
-  # token goes in through the environment rather than as a flag, because flags
-  # are readable by any process that can run `ps`.
+  # ssh ProxyCommand through the tunnel. The token goes via env, not flags, to stay out of `ps`.
   nasProxy = pkgs.writeShellApplication {
     name = "borg-nas-proxy";
     runtimeInputs = [pkgs.cloudflared pkgs.coreutils];
@@ -63,9 +50,7 @@
     '';
   };
 
-  # borg splits BORG_RSH with shell quoting rules, so every element here has to
-  # survive as its own word. The proxy is a store path and cannot contain
-  # spaces, which is what lets the -o argument go through unquoted.
+  # borg word-splits BORG_RSH, so no element may contain spaces.
   borgRsh = lib.concatStringsSep " " (
     [
       "ssh"
@@ -80,22 +65,8 @@
     ++ lib.optional (!seeding) "-o ProxyCommand=${nasProxy}/bin/borg-nas-proxy"
   );
 
-  # Cheap liveness probe used as the timer's precondition. Closing stdin makes
-  # the forced `borg serve` on the far end exit on its own, so this costs one
-  # tunnel handshake and nothing else.
-  #
-  # Only a transport failure counts as unreachable. ssh reports every
-  # connection-side error as 255, so the exit status on its own cannot tell a
-  # NAS that is out of reach from one that is refusing us, and ssh's message is
-  # the only thing that can. A rejected Cloudflare service token, a rotated or
-  # revoked borg key, and a host key that no longer matches the pinned one are
-  # all faults that have to be fixed rather than waited out; skipping on those
-  # would leave the timer quietly declining to back anything up for as long as
-  # the fault lasted. Those are therefore reported as reachable, with ssh's own
-  # message left in the journal, so that the job runs and fails loudly.
-  # Everything else — a closed tunnel, a timeout, a refused or reset
-  # connection — is the transient case the condition exists for, and still
-  # skips silently.
+  # Liveness probe gating the backup job; only transport failures skip it.
+  # Auth and host-key errors report reachable so the job runs and fails loudly.
   nasReachable = pkgs.writeShellApplication {
     name = "borg-nas-reachable";
     runtimeInputs = [pkgs.openssh pkgs.gnugrep];
@@ -142,9 +113,7 @@
       + builtins.readFile ./backup.sh;
   };
 in {
-  # The tunnel name and the LAN address reach the same container, and so the
-  # same host key, but ssh keys known_hosts by the name it was given. Both are
-  # declared so that the seed is checked as strictly as everything after it.
+  # Pin the key under the LAN address too, so the seed is checked as strictly.
   programs.ssh.knownHosts = lib.optionalAttrs hostKeyPinned {
     borg-nas = {
       hostNames = [nasHost] ++ lib.optional seeding "[${lanHost}]:${lanPort}";
@@ -169,15 +138,13 @@ in {
       "${home}/.claude"
       "${home}/.config/net.imput.helium"
 
-      # Shell history and directory frecency. Small, and the difference
-      # between a restored machine and one that only looks restored.
+      # Shell history and directory frecency.
       "${home}/.local/share/atuin"
       "${home}/.local/share/zoxide"
     ];
 
     exclude = [
-      # Build output. Cargo tags its own directories and --exclude-caches
-      # below catches those; these are the ones that do not self-identify.
+      # Build output that isn't CACHEDIR.TAG-tagged like Cargo's.
       "sh:${home}/Projects/**/node_modules"
       "sh:${home}/Work/**/node_modules"
       "sh:${home}/**/.direnv"
@@ -187,18 +154,14 @@ in {
       "sh:${home}/**/.gradle"
       "sh:${home}/**/.kotlin"
 
-      # Gradle's build/. Not build/ itself, which other tools use for source
-      # (electron-builder keeps its icons there); these children are
-      # Gradle's own and hold nearly all of the weight.
+      # Gradle's heavy build/ children; build/ itself can hold source.
       "sh:${home}/**/build/intermediates"
       "sh:${home}/**/build/outputs"
       "sh:${home}/**/build/reports"
       "sh:${home}/**/build/kspCaches"
       "sh:${home}/**/build/tmp"
 
-      # Rewritten by home/claude.nix on every rebuild, so backing it up only
-      # creates a conflict on restore. .credentials.json is deliberately kept:
-      # it is what makes Claude Code come back logged in.
+      # Rewritten by home/claude.nix on every rebuild.
       "${home}/.claude/settings.json"
 
       # Re-downloadable, and large.
@@ -207,10 +170,8 @@ in {
       "${home}/.claude/shell-snapshots"
       "${home}/.claude/telemetry"
 
-      # Helium. Cookies, history, bookmarks and extension state are kept; this
-      # machine runs no keyring, so Chromium's basic password store encrypts
-      # them under a build-time constant and they decrypt on any machine.
-      # Enabling gnome-keyring or kwallet later would silently end that.
+      # Helium caches. Profile data is kept and portable because no keyring is
+      # running; enabling one would tie it to this machine.
       "sh:${home}/.config/net.imput.helium/*/Cache"
       "sh:${home}/.config/net.imput.helium/*/Code Cache"
       "sh:${home}/.config/net.imput.helium/*/GPUCache"
@@ -226,31 +187,19 @@ in {
     ];
 
     encryption = {
-      # The key lives in the repository, wrapped by the passphrase, so the
-      # passphrase alone is enough to restore. That is what keeps the recovery
-      # flow down to the age key plus Bitwarden.
+      # Key stored in the repo, so the passphrase alone is enough to restore.
       mode = "repokey-blake2";
       passCommand = "cat ${secret "borg/passphrase"}";
     };
 
     environment.BORG_RSH = borgRsh;
 
-    # borg exits 1 when a file changed size or vanished while it was being
-    # read, and the set above is full of files that do exactly that: a running
-    # browser profile, atuin's database, which is written on every shell
-    # command, and Downloads. With the nixpkgs default the archive is written
-    # correctly and the unit is still marked failed, which trains the eye to
-    # ignore a red `backup status`. A real error exits 2 and still fails.
+    # Files changing mid-read (browser profile, atuin db) make borg exit 1 with
+    # a good archive. Real errors exit 2 and still fail.
     failOnWarnings = false;
 
-    # The nixpkgs module reads this as "run `borg list`, and create the
-    # repository if that fails for any reason at all". The precondition above
-    # only proves the transport works, so a repository that is unreadable
-    # rather than absent — a renamed or mistyped path, a `./backup` volume
-    # restored empty — would be answered by silently initialising a fresh
-    # empty one and backing into it, leaving `backup status` showing a single
-    # healthy archive with the real history nowhere in sight. The repository is
-    # created once, by hand, during the LAN seed; see the README backup section.
+    # doInit would silently create a fresh repo whenever `borg list` fails, e.g. on
+    # a mistyped path. The repo is created by hand during the LAN seed; see README.
     doInit = false;
 
     compression = "auto,zstd";
@@ -258,18 +207,14 @@ in {
     persistentTimer = true;
     extraCreateArgs = ["--stats" "--exclude-caches"];
 
-    # No prune. The server refuses it from this key by design, and retention
-    # is an admin-key operation run by hand; see the README backup section.
+    # No prune: this key can't, by design. Retention is done by hand; see README.
   };
 
-  # A laptop is asleep or elsewhere often enough that an unreachable NAS is
-  # normal rather than exceptional. Skipping keeps the unit out of the failed
-  # list; the persistent timer catches up at the next opportunity.
+  # An unreachable NAS is normal on a laptop; skip rather than fail and let the
+  # persistent timer catch up.
   systemd.services.borgbackup-job-nas.serviceConfig.ExecCondition =
     lib.getExe nasReachable;
 
-  # Nothing depends on backups landing at exactly midnight, and every machine
-  # on a default timer waking together is how home links get saturated.
   systemd.timers.borgbackup-job-nas.timerConfig.RandomizedDelaySec = "30m";
 
   environment.systemPackages = [backup];

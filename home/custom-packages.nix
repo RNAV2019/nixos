@@ -16,8 +16,7 @@
       config.wayland.windowManager.hyprland.package
     ];
     text = ''
-      # Nothing else on the session can lock, so a failure here leaves the desktop open.
-      # The shell is gone in exactly that case, so the compositor draws the warning.
+      # Failure leaves the desktop open and the shell gone, so Hyprland shows the warning.
       warn_unlocked() {
         echo "lock-session: $1" >&2
         hyprctl notify 3 15000 "rgb(eb6f92)" "Session is NOT locked: $1" >/dev/null 2>&1 || true
@@ -25,11 +24,8 @@
       }
 
       if ! qs ipc call lock lock >/dev/null 2>&1; then
-        # A shell started from here inherits this caller's environment, and a caller with
-        # no Wayland display - a TTY, a sandboxed terminal - makes quickshell abort in
-        # Qt's platform init. Handing the launch to the user manager runs it in the
-        # session's own environment instead. No --daemonize: systemd reaps the child the
-        # fork leaves behind, taking the shell with it.
+        # Start via the user manager so it gets the session environment even from a TTY.
+        # No --daemonize: systemd would reap the forked child along with the shell.
         systemd-run --user --collect --quiet --unit=quickshell-shell \
           "$(command -v quickshell)" >/dev/null 2>&1 || true
 
@@ -104,9 +100,9 @@
     '';
   };
 
-  # T3 Code nightlies are AppImage-only.
-  # Update `version` from `gh api repos/pingdotgg/t3code/releases -q '.[0].tag_name'`, then run:
-  # nix store prefetch-file "https://github.com/pingdotgg/t3code/releases/download/v<version>/T3-Code-<version>-x86_64.AppImage"
+  # T3 Code nightlies are AppImage-only. Get `version` from
+  # `gh api repos/pingdotgg/t3code/releases -q '.[0].tag_name'` and the hash via
+  # `nix store prefetch-file` on the AppImage URL.
   t3code-nightly = let
     pname = "t3code-nightly";
     version = "0.0.43-nightly.20260922.2110";

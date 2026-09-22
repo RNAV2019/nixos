@@ -28,8 +28,7 @@
   # Window resize keys repeat while held.
   binde = bindWith {repeating = true;};
 
-  # Grow/shrink the focused window. On a US layout `SUPER + "+"` reaches the
-  # compositor as SUPER + SHIFT + plus, so bind the shifted symbols too.
+  # Grow/shrink the focused window; shifted symbols are bound too.
   resizeStep = 60;
   resizeBinds = delta:
     map (keys: binde keys "hl.dsp.window.resize({ x = ${toString delta}, y = ${toString delta}, relative = true })");
@@ -124,9 +123,7 @@ in {
           force_default_wallpaper = 0;
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
-          # Covers the handoff from Plymouth to the lock surface. Plain black, which is
-          # bgrt's own, and deliberately outside the theme: the boot chain runs before any
-          # theme state exists, so the frame between splash and lock is the same either way.
+          # Matches Plymouth's black for the handoff to the lock screen.
           background_color = "rgba(000000ff)";
         };
       };
@@ -310,11 +307,8 @@ in {
         ++ map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces
         ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
         ++ lib.concatMap (key: [
-          # Match Omarchy screenshot bindings. The built-in keyboard's PrtSc
-          # key sends Super+Shift+S, which keyd turns into sysrq, the Print
-          # keysym. KEY_SELECTIVE_SCREENSHOT reaches Hyprland as
-          # XF86SelectiveScreenshot without keyd and as XF86Launch7 (F16)
-          # without keyd's f16 mapping, so bind those keysyms too.
+          # Omarchy screenshot bindings. The extra keysyms cover the screenshot
+          # key when keyd or its f16 mapping isn't active.
           (bind key (exec "grimblast --notify copysave area"))
           (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
           (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))
@@ -333,7 +327,7 @@ in {
 
           (bind "ALT + T" (exec "qs ipc call theme toggle"))
 
-          # The same chord starts and stops: it opens the picker, or stops and saves.
+          # Opens the picker, or stops and saves a running recording.
           (bind "ALT + R" (exec "qs ipc call recorder toggle"))
 
           (bind "ALT + C" (exec "qs ipc call calendar toggle"))
@@ -348,8 +342,7 @@ in {
           (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
           (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
 
-          # Quickshell performs these and renders the OSD, so a press at either
-          # rail still shows feedback.
+          # Routed through Quickshell so the OSD shows even at the limits.
           (bindel "XF86AudioRaiseVolume" (exec "qs ipc call volume up"))
           (bindel "XF86AudioLowerVolume" (exec "qs ipc call volume down"))
           (bindel "XF86MonBrightnessUp" (exec "qs ipc call brightness up"))
@@ -357,10 +350,8 @@ in {
         ];
 
       window_rule = [
-        # Electron restores a saved maximized state on launch, which leaves the
-        # window tiled in the dwindle tree but drawn over the whole workspace on
-        # top of its neighbours. A tiled layout has no use for client-requested
-        # maximize, so drop the request for everything.
+        # Ignore client maximize requests; Electron's restored maximize state
+        # otherwise draws a tiled window over its neighbours.
         {
           match.class = ".*";
           suppress_event = "maximize";
@@ -378,8 +369,7 @@ in {
         }
       ];
 
-      # Keep panel layer windows from adding a compositor fade; their own surface animations
-      # control how the opaque cards appear and disappear.
+      # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
           match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|notifications|osd|panel)";
@@ -439,8 +429,7 @@ in {
     };
   };
 
-  # The night light tile drives hyprsunset over hyprctl, so the daemon has to be up for the
-  # session. It starts at identity: the shell takes the daemon's temperature as the state.
+  # Driven by the shell's night light tile; starts at identity.
   systemd.user.services.hyprsunset = {
     Unit = {
       Description = "hyprsunset colour temperature daemon";
