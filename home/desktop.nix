@@ -119,6 +119,12 @@ in {
         };
 
         misc = {
+          # Adaptive sync. The built-in panel's EDID reports a 30-120 Hz vertical
+          # range, so the compositor can follow whatever is actually being drawn
+          # rather than holding 120 Hz for a still desktop. 1 is always on; 2
+          # would restrict it to fullscreen surfaces if a panel ever flickers.
+          vrr = 1;
+
           force_default_wallpaper = 0;
           disable_hyprland_logo = true;
           disable_splash_rendering = true;

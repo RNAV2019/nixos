@@ -118,36 +118,36 @@ Variants {
     }
 
     onKeyPressed: function (event) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-            win.hide();
-            break;
-          // h and l alongside the arrows, because a row is a row.
-          case Qt.Key_Left:
-          case Qt.Key_Up:
-          case Qt.Key_H:
-          case Qt.Key_Backtab:
-            win.step(-1);
-            break;
-          case Qt.Key_Right:
-          case Qt.Key_Down:
-          case Qt.Key_L:
-          case Qt.Key_Tab:
-            win.step(1);
-            break;
-          case Qt.Key_Home:
-            win.selected = 0;
-            break;
-          case Qt.Key_End:
-            win.selected = Math.max(0, win.count - 1);
-            break;
-          case Qt.Key_Return:
-          case Qt.Key_Enter:
-            win.activate();
-            break;
-          default:
-            return;
-          }
+      switch (event.key) {
+      case Qt.Key_Escape:
+        win.hide();
+        break;
+      // h and l alongside the arrows, because a row is a row.
+      case Qt.Key_Left:
+      case Qt.Key_Up:
+      case Qt.Key_H:
+      case Qt.Key_Backtab:
+        win.step(-1);
+        break;
+      case Qt.Key_Right:
+      case Qt.Key_Down:
+      case Qt.Key_L:
+      case Qt.Key_Tab:
+        win.step(1);
+        break;
+      case Qt.Key_Home:
+        win.selected = 0;
+        break;
+      case Qt.Key_End:
+        win.selected = Math.max(0, win.count - 1);
+        break;
+      case Qt.Key_Return:
+      case Qt.Key_Enter:
+        win.activate();
+        break;
+      default:
+        return;
+      }
       event.accepted = true;
     }
 
@@ -166,133 +166,133 @@ Variants {
         }
       }
 
-        Text {
-          x: Theme.wallpaperInset
-          y: Theme.wallpaperTitleTop
-          text: "Wallpaper"
-          color: Theme.text
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.wallpaperTitleSize
-          font.weight: Font.Medium
-        }
+      Text {
+        x: Theme.wallpaperInset
+        y: Theme.wallpaperTitleTop
+        text: "Wallpaper"
+        color: Theme.text
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.wallpaperTitleSize
+        font.weight: Font.Medium
+      }
 
-        Text {
-          x: Theme.wallpaperWidth - Theme.wallpaperInset - width
-          y: Theme.wallpaperMetaTop
-          text: Theme.paletteName
-          color: Theme.subtle
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.wallpaperMetaSize
-        }
+      Text {
+        x: Theme.wallpaperWidth - Theme.wallpaperInset - width
+        y: Theme.wallpaperMetaTop
+        text: Theme.paletteName
+        color: Theme.subtle
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.wallpaperMetaSize
+      }
 
-        // Clipped to the panel rather than the inset, so a long row is cut by the panel's
-        // own edge and reads as running on past it.
+      // Clipped to the panel rather than the inset, so a long row is cut by the panel's
+      // own edge and reads as running on past it.
+      Item {
+        id: strip
+
+        x: 0
+        y: 0
+        width: Theme.wallpaperWidth
+        height: Theme.wallpaperHeight
+        clip: true
+
         Item {
-          id: strip
+          id: rail
 
-          x: 0
+          x: win.stripX
           y: 0
-          width: Theme.wallpaperWidth
-          height: Theme.wallpaperHeight
-          clip: true
+          width: win.stripWidth
+          height: parent.height
 
-          Item {
-            id: rail
+          Behavior on x {
+            enabled: !Theme.reduceMotion
 
-            x: win.stripX
-            y: 0
-            width: win.stripWidth
-            height: parent.height
+            SurfaceSpring {}
+          }
 
-            Behavior on x {
-              enabled: !Theme.reduceMotion
+          Repeater {
+            model: win.entries
 
-              SurfaceSpring {}
-            }
+            WallpaperTile {
+              id: tile
 
-            Repeater {
-              model: win.entries
+              required property int index
+              required property var modelData
 
-              WallpaperTile {
-                id: tile
+              x: win.tileX(index)
+              y: Theme.wallpaperRowMid - height / 2
+              width: win.tileWidth(index)
+              height: win.tileHeight(index)
+              source: "file://" + modelData.real
+              selected: index === win.selected
+              active: index === Wallpapers.index
+              onActivated: {
+                win.selected = tile.index;
+                win.activate();
+              }
 
-                required property int index
-                required property var modelData
+              // Every tile travels and resizes on the one curve, which keeps the gaps
+              // between them constant: a sum of identical eases is the same ease of the sum.
+              Behavior on x {
+                enabled: !Theme.reduceMotion
 
-                x: win.tileX(index)
-                y: Theme.wallpaperRowMid - height / 2
-                width: win.tileWidth(index)
-                height: win.tileHeight(index)
-                source: "file://" + modelData.real
-                 selected: index === win.selected
-                 active: index === Wallpapers.index
-                 onActivated: {
-                   win.selected = tile.index;
-                   win.activate();
-                 }
+                SurfaceSpring {}
+              }
 
-                // Every tile travels and resizes on the one curve, which keeps the gaps
-                // between them constant: a sum of identical eases is the same ease of the sum.
-                Behavior on x {
-                  enabled: !Theme.reduceMotion
+              Behavior on width {
+                enabled: !Theme.reduceMotion
 
-                  SurfaceSpring {}
-                }
+                SurfaceSpring {}
+              }
 
-                Behavior on width {
-                  enabled: !Theme.reduceMotion
+              Behavior on height {
+                enabled: !Theme.reduceMotion
 
-                  SurfaceSpring {}
-                }
+                SurfaceSpring {}
+              }
 
-                Behavior on height {
-                  enabled: !Theme.reduceMotion
-
-                  SurfaceSpring {}
-                }
-
-                MouseArea {
-                  anchors.fill: parent
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    tile.activated();
-                  }
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  tile.activated();
                 }
               }
             }
           }
         }
+      }
 
-        // The directory is dimmed and the file name is not, so the name reads at a glance.
-        Text {
-          id: directory
+      // The directory is dimmed and the file name is not, so the name reads at a glance.
+      Text {
+        id: directory
 
-          x: Theme.wallpaperInset
-          y: Theme.wallpaperFooterTop
-          text: Wallpapers.directoryLabel
-          color: Theme.muted
-          font.family: Theme.monoFont
-          font.pixelSize: Theme.wallpaperMetaSize
-        }
+        x: Theme.wallpaperInset
+        y: Theme.wallpaperFooterTop
+        text: Wallpapers.directoryLabel
+        color: Theme.muted
+        font.family: Theme.monoFont
+        font.pixelSize: Theme.wallpaperMetaSize
+      }
 
-        Text {
-          x: directory.x + directory.width
-          y: Theme.wallpaperFooterTop
-          text: win.selected >= 0 && win.selected < win.count ? win.entries[win.selected].name : ""
-          color: Theme.subtle
-          font.family: Theme.monoFont
-          font.pixelSize: Theme.wallpaperMetaSize
-          font.weight: Font.DemiBold
-        }
+      Text {
+        x: directory.x + directory.width
+        y: Theme.wallpaperFooterTop
+        text: win.selected >= 0 && win.selected < win.count ? win.entries[win.selected].name : ""
+        color: Theme.subtle
+        font.family: Theme.monoFont
+        font.pixelSize: Theme.wallpaperMetaSize
+        font.weight: Font.DemiBold
+      }
 
-        Text {
-          x: Theme.wallpaperWidth - Theme.wallpaperInset - width
-          y: Theme.wallpaperFooterTop
-          text: win.count > 0 ? (win.selected + 1) + " / " + win.count + "   ·   Enter to apply" : "No wallpapers in this folder"
-          color: Theme.muted
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.wallpaperMetaSize
-        }
+      Text {
+        x: Theme.wallpaperWidth - Theme.wallpaperInset - width
+        y: Theme.wallpaperFooterTop
+        text: win.count > 0 ? (win.selected + 1) + " / " + win.count + "   ·   Enter to apply" : "No wallpapers in this folder"
+        color: Theme.muted
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.wallpaperMetaSize
       }
     }
   }
+}

@@ -23,12 +23,12 @@
     better-lyrics = {
       id = "effdbpeggelllpfkjppbokhmmiinhlmg"; # Better Lyrics (for YT Music)
       version = "2.3.3";
-      hash = "sha256-VvwvtRNhTr3G/4Fb7zU1XL4KtzV/3g2LDxdOPDd3pvI=";
+      hash = "sha256-ozei1UtnBBP2v49I8DTmrACnNvlj7ay0N4P0ycfOwyM=";
     };
     better-lyrics-shaders = {
       id = "mffpncjphfmkppebdoaehdlnagnlpfai"; # Better Lyrics Shaders
       version = "1.2.0";
-      hash = "sha256-RXtMcUYihh/nlVajWAlkonMRBMr/O8KmFUgfaOMS+Ws=";
+      hash = "sha256-h6zGfE7b1d+SInTZU9gLomS0c3uMepufh67F9sjRG4w=";
     };
     pdf-viewer = {
       id = "oemmndcbldboiebfnladdacbdfmadadm"; # PDF Viewer (pdfjs.robwu.nl)

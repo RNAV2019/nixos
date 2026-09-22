@@ -9,6 +9,18 @@
   root = ../backgrounds;
   themes = lib.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir root));
   filesOf = theme: lib.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir (root + "/${theme}")));
+
+  # The wallpaper a session with no state of its own comes up on. Named rather than taken off
+  # the tree, because which one it is was a choice; checked against the tree, because a name
+  # that no longer exists would leave `current` pointing at nothing and awww with nothing to
+  # paint, and a rename should be caught at build time instead.
+  defaultTheme = "rose-pine";
+  defaultWallpaper = let
+    file = "nbhd_v2.jpg";
+  in
+    lib.throwIf (!lib.elem file (filesOf defaultTheme))
+    "backgrounds: the default wallpaper ${defaultTheme}/${file} is no longer in the tree"
+    file;
 in {
   home.file = lib.listToAttrs (lib.concatMap (theme:
     map (file: {
@@ -24,17 +36,17 @@ in {
   # the old links are already gone and the new ones already there.
   home.activation.initWallpaper = lib.hm.dag.entryAfter ["linkGeneration"] ''
     dir="$HOME/.local/share/wallpaper"
-    fallback="$HOME/Pictures/backgrounds/rose-pine/nbhd_v2.jpg"
+    fallback="$HOME/Pictures/backgrounds/${defaultTheme}/${defaultWallpaper}"
     mkdir -p "$dir"
     if [ ! -e "$dir/current" ]; then
       ln -sfn "$fallback" "$dir/current.new" && mv -T "$dir/current.new" "$dir/current"
     fi
-    if [ ! -e "$dir/rose-pine" ]; then
+    if [ ! -e "$dir/${defaultTheme}" ]; then
       case "$(readlink "$dir/current")" in
-        "$HOME/Pictures/backgrounds/rose-pine/"*) target="$(readlink "$dir/current")" ;;
+        "$HOME/Pictures/backgrounds/${defaultTheme}/"*) target="$(readlink "$dir/current")" ;;
         *) target="$fallback" ;;
       esac
-      ln -sfn "$target" "$dir/rose-pine.new" && mv -T "$dir/rose-pine.new" "$dir/rose-pine"
+      ln -sfn "$target" "$dir/${defaultTheme}.new" && mv -T "$dir/${defaultTheme}.new" "$dir/${defaultTheme}"
     fi
   '';
 

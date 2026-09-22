@@ -35,8 +35,14 @@ Singleton {
     return previews[id] !== undefined ? previews[id] : "";
   }
 
+  // A refresh asked for while one is still running is queued rather than dropped: the switch
+  // exiting and the wallpaper it moved both ask for one, within a frame of each other.
+  property bool scanQueued: false
+
   function refresh() {
-    if (!scan.running)
+    if (scan.running)
+      scanQueued = true;
+    else
       scan.running = true;
   }
 
@@ -66,6 +72,15 @@ Singleton {
     id: scan
 
     command: ["sh", "-c", 'for id in "$@"; do w="$(readlink -e "$HOME/.local/share/wallpaper/$id")"; if [ -z "$w" ]; then for f in "$HOME/Pictures/backgrounds/$id"/*; do [ -f "$f" ] && { w="$(readlink -f "$f")"; break; }; done; fi; printf "%s\t%s\n" "$id" "$w"; done', "sh"].concat(Theme.themeIds)
+
+    onExited: {
+      if (root.scanQueued) {
+        root.scanQueued = false;
+        Qt.callLater(function () {
+          scan.running = true;
+        });
+      }
+    }
 
     stdout: StdioCollector {
       onStreamFinished: {
