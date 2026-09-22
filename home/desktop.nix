@@ -311,9 +311,10 @@ in {
         ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
         ++ lib.concatMap (key: [
           # Match Omarchy screenshot bindings. The built-in keyboard's PrtSc
-          # key emits XF86SelectiveScreenshot without keyd, XF86Launch7 with
-          # keyd's synthetic F-key rewrite, and Print once keyd maps it back
-          # to sysrq, so bind all three keysyms.
+          # key sends Super+Shift+S, which keyd turns into sysrq, the Print
+          # keysym. KEY_SELECTIVE_SCREENSHOT reaches Hyprland as
+          # XF86SelectiveScreenshot without keyd and as XF86Launch7 (F16)
+          # without keyd's f16 mapping, so bind those keysyms too.
           (bind key (exec "grimblast --notify copysave area"))
           (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
           (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))

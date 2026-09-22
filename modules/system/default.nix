@@ -78,20 +78,34 @@ in {
   # The Copilot key sends Shift+Meta+F23 as one chord; turn it back into a
   # right Ctrl.
   #
-  # keyd cannot forward keys beyond evdev code 255, so it rewrites the
-  # built-in keyboard's PrtSc key (which emits KEY_SELECTIVE_SCREENSHOT) to a
-  # synthetic F-key. Map that back to sysrq (evdev 99), which Hyprland sees
-  # as the Print keysym its screenshot binds use.
+  # The built-in keyboard's PrtSc key sends Shift+Meta+S as one chord, the
+  # Windows snipping shortcut; turn it into sysrq (evdev 99), which Hyprland
+  # sees as the Print keysym its screenshot binds use.
+  #
+  # keyd cannot forward keys beyond evdev code 255, so it rewrites
+  # KEY_SELECTIVE_SCREENSHOT from the Ideapad extra buttons device to F16;
+  # see the table in keyd's src/device.c. Map that to sysrq as well.
   services.keyd = {
     enable = true;
     keyboards.default = {
       ids = ["*"];
       settings = {
         main."leftshift+leftmeta+f23" = "layer(control)";
-        main.f24 = "sysrq";
+        main."leftshift+leftmeta+s" = "sysrq";
+        main.f16 = "sysrq";
       };
     };
   };
+
+  # keyd grabs the built-in keyboard and types through a virtual one, which
+  # libinput takes for external and never pairs with the touchpad, so
+  # disable-while-typing never fires and palm taps eat keystrokes.
+  environment.etc."libinput/local-overrides.quirks".text = ''
+    [keyd virtual keyboard]
+    MatchUdevType=keyboard
+    MatchName=keyd virtual keyboard
+    AttrKeyboardIntegration=internal
+  '';
 
   services.pipewire = {
     enable = true;
