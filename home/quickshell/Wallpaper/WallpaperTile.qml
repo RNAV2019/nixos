@@ -4,13 +4,13 @@ import qs.Commons
 import qs.Ui
 
 // One preview in the carousel. The picture is cropped into a fixed box rather than
-// fitted to it, so the row stays a row of equal rectangles.
+// fitted, so the row stays a row of equal rectangles.
 Item {
   id: root
 
   property string source: ""
 
-  // Where the keys are. Carried by the ring and by the tile's size.
+  // Where the keys are; carried by the ring and by the tile's size.
   property bool selected: false
 
   // The wallpaper that is currently up, independent of where the keys are.
@@ -71,9 +71,8 @@ Item {
     }
   }
 
-  // Drawn over the picture rather than around the tile, so the row keeps its pitch.
-  // Three weights: the full ring for the tile being chosen, an accent hairline for the
-  // one that is up, and a muted hairline for the rest.
+  // Drawn over the picture, not around the tile, so the row keeps its pitch. Three
+  // weights: full ring for the chosen, accent hairline for the active, muted for the rest.
   Rectangle {
     anchors.fill: parent
     radius: root.cornerRadius

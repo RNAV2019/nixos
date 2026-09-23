@@ -3,9 +3,8 @@ import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 
-// The one collapsed renderer used by transient surfaces and handoff stills. Keeping the clock,
-// equaliser and recording mark together prevents a transient surface from handing back a subtly
-// different pill than the bar owns.
+// The one collapsed renderer used by transient surfaces and handoff stills, so a surface
+// never hands back a subtly different pill than the bar owns.
 Item {
   id: root
 

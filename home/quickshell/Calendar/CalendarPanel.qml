@@ -5,9 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The calendar: the island grown into a card. The grid is six rows of seven, always, and the
-// agenda below the rule always reserves room for Theme.calAgendaMax rows, so the panel is the
-// same height for a five-row month as for a six-row one, and for an empty day as for a full one.
+// The calendar: the island grown into a card. The grid is always six rows of seven, and the
+// agenda always reserves Theme.calAgendaMax rows, so height never varies with month or day.
 Variants {
   id: root
 
@@ -21,8 +20,7 @@ Variants {
     openHeight: Theme.calHeight
     openRadius: Theme.calRadius
 
-    // The first cell: the Monday on or before the first of the month. The (day + 6) % 7
-    // shift is because JavaScript counts Sunday as zero.
+    // First cell: the Monday on or before the 1st; the (day + 6) % 7 shift is for JS's Sunday=0.
     readonly property date gridStart: {
       var first = new Date(Calendar.anchor.getFullYear(), Calendar.anchor.getMonth(), 1);
       var shift = (first.getDay() + 6) % 7;
@@ -86,8 +84,8 @@ Variants {
         }
       }
 
-        // Centred on the nav row off its own measured height rather than a constant, so the
-        // header line stays level whatever Inter reports for an 18 px cut.
+        // Centred off its measured height, not a constant, so the header stays level whatever
+        // Inter reports for an 18 px cut.
         Text {
           x: Theme.calInset
           y: Theme.calNavTop + (Theme.calNavSize - height) / 2
@@ -267,8 +265,7 @@ Variants {
             width: Theme.calColumnPitch
             height: Theme.calRowPitch
 
-            // Today is where the selection starts, so a ring says "today, but you are
-            // looking elsewhere".
+            // Today is where the selection starts, so a ring says "today, but looking elsewhere".
             Rectangle {
               x: (parent.width - Theme.calTodayMarker) / 2
               y: (parent.height - Theme.calTodayMarker) / 2
@@ -291,9 +288,8 @@ Variants {
               font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
             }
 
-            // One dot per day that has anything, in the colour of its first calendar. It hangs
-            // under the number but stays inside the marker, so it belongs to its own row; on the
-            // selected day it sits on the accent fill and takes the ink that goes with it.
+            // One dot per day with events, in its first calendar's colour. It hangs under the
+            // number but stays inside the marker; on the selected day it takes the ink on the fill.
             Rectangle {
               x: (parent.width - width) / 2
               y: parent.height / 2 + Theme.calDotDrop - height / 2
@@ -404,12 +400,8 @@ Variants {
           }
         }
 
-        // Covers every state the list is not in: empty, truncated, loading, or never set up.
-        //
-        // With rows above it the note is a footnote to them, so it sits under the block the
-        // panel reserves. With no rows it is the only thing in that block, and centring it
-        // there makes an empty day read as an empty day rather than as a panel that ran out
-        // of things to draw.
+        // Covers the states the list is not in: empty, truncated, loading, or never set up. With
+        // rows it is a footnote under the reserved block; with none it is centred, reading as empty.
         Text {
           readonly property bool alone: win.agenda.length === 0
 

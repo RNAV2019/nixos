@@ -1,6 +1,5 @@
-# backup - friendly wrapper around borg and the NAS repository.
-# BORG_REPO, BORG_PASSCOMMAND, BORG_RSH, BACKUP_UNIT and BACKUP_BORG come from
-# modules/system/backups.nix.
+# backup - friendly wrapper around borg and the NAS repository. BORG_REPO,
+# BORG_PASSCOMMAND, BORG_RSH, BACKUP_UNIT and BACKUP_BORG come from backups.nix.
 
 HELIUM_PROFILE="$HOME/.config/net.imput.helium"
 MOUNTPOINT="${XDG_RUNTIME_DIR:-/tmp}/backup"
@@ -208,7 +207,6 @@ cmd_status() {
       ] | @tsv'
   )"
 
-  # Likewise non-fatal.
   err=$(mktemp)
   if info=$("$BACKUP_BORG" info --json --last 1 2>"$err"); then
     uniq=$(printf '%s' "$info" | jq -r '.cache.stats.unique_csize')

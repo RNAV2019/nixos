@@ -6,9 +6,8 @@ import qs.Services
 import qs.Control
 import qs.Ui
 
-// The screen recorder's picker: the island in another shape. From the keyboard or the
-// pill it grows out of the pill; from the control centre the same morph runs backwards,
-// out of the larger shape that surface was wearing.
+// The screen recorder's picker: from the keyboard or pill it grows out of the pill; from
+// the control centre the same morph runs backwards, out of that larger shape.
 Variants {
   id: root
 

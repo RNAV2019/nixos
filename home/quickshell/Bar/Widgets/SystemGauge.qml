@@ -5,7 +5,7 @@ import qs.Commons
 import qs.Services
 
 // Board 02's system gauge, beside the battery one: memory on the ring, CPU load in the chip
-// at its centre, and the power draw in the gap, rising while charging and falling on battery.
+// at its centre, power draw in the gap, rising while charging and falling on battery.
 Item {
   id: root
 
@@ -13,8 +13,7 @@ Item {
   readonly property bool present: battery !== null && battery.isLaptopBattery && battery.isPresent
   readonly property bool charging: present && battery.state === UPowerDeviceState.Charging
 
-  // UPower's energy rate is the battery's own flow: the whole system's draw while on
-  // battery, what goes into the cell while charging.
+  // UPower's energy rate is the battery's flow: system draw on battery, cell input while charging.
   readonly property real watts: present ? Math.abs(battery.changeRate) : 0
 
   implicitWidth: 48
@@ -37,8 +36,7 @@ Item {
     }
   }
 
-  // A CPU chip whose core fills from the bottom with load, as the Wi-Fi bars light with
-  // signal on the battery gauge.
+  // A CPU chip whose core fills from the bottom with load, like the Wi-Fi bars light with signal.
   Item {
     id: chip
 

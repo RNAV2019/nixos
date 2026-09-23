@@ -5,8 +5,7 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// Quickshell's Networking API exposes neither disconnect nor forget, so those go
-// out through nmcli.
+// Quickshell's Networking API has no disconnect or forget, so those go via nmcli.
 Item {
   id: root
 
@@ -35,7 +34,7 @@ Item {
 
   readonly property int contentHeight: Math.min(Theme.controlViewMaxHeight, Theme.controlHeaderHeight + Math.ceil(body.implicitHeight) + Theme.controlPadBottom)
 
-  // Scanning is a radio cost, so it runs only while this view is on screen.
+  // Scanning costs radio, so it runs only while this view is on screen.
   onActiveChanged: {
     if (active) {
       scanOn.restart();

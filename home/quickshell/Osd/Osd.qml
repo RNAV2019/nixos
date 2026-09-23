@@ -7,12 +7,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The on-screen displays: the island in another shape rather than a card over the
-// desktop. It starts at the island's own collapsed pill and grows into a fixed 278 px
-// pill whose contents are laid out at their final positions from the first frame.
-//
-// Nothing here takes input. The window's mask is empty, so every click passes straight
-// through to the island underneath.
+// The on-screen displays: the island grows from its collapsed pill into a fixed 278 px
+// pill, contents laid out at final positions from the first frame. Clicks pass through.
 Scope {
   id: root
 
@@ -52,8 +48,7 @@ Scope {
     }
   }
 
-  // The launcher and the control centre own the pill while they are open, so an OSD does
-  // not start under one, and a flash already in the air is cut short by one opening.
+  // A user-opened panel owns the pill, so no OSD starts under one; a flash is cut short.
   readonly property bool blocked: Bus.islandHeld
 
   onBlockedChanged: {
@@ -81,8 +76,7 @@ Scope {
   onMicMutedChanged: if (ready)
     flash("mic")
 
-  // A keypress at either rail moves nothing, so the value signals never fire for it.
-  // adjusted covers the press; the value signals stay, so changes from elsewhere show.
+  // Keypresses at a rail move nothing, so adjusted covers them; value changes show too.
   Connections {
     target: Brightness
 
@@ -153,7 +147,7 @@ Scope {
     return Math.round(Math.max(0, Math.min(1, level)) * 100) + "%";
   }
 
-  // A hot microphone is the one state here you must not misread, so it takes its own colour.
+  // A hot microphone must not be misread, so it takes its own colour.
   readonly property bool alarming: mode === "mic" && root.micMuted
 
   readonly property color ink: {
@@ -178,8 +172,7 @@ Scope {
 
       readonly property bool open: root.showing && focused && !outputBlocked
 
-      // Drawn from the moment the shape starts growing until it is back to pill size,
-      // which is the whole time the bar must keep its island hidden.
+      // Drawn from the start of growth until back to pill size, keeping the island hidden.
        readonly property bool visibleNow: open || origin.held || surface.width > collapsedWidth + 0.5
        readonly property bool outputBlocked: Bus.islandHeldFor(window.screen ? window.screen.name : "")
 
@@ -272,8 +265,7 @@ Scope {
          SurfaceSpring {}
        }
 
-        // Drawn by the shared collapsed renderer, so OSD handoff includes the same clock,
-        // equaliser and recording mark as the bar.
+        // Shared collapsed renderer, so handoff keeps the same clock, equaliser and recording mark.
         CollapsedPill {
           id: pill
 
@@ -282,7 +274,7 @@ Scope {
           shown: !window.open && !origin.held
         }
 
-        // Board 09's row, at the board's own positions. Nothing in here moves with the shape.
+        // Board 09's row, at the board's own positions; nothing here moves with the shape.
         Item {
           id: readout
 
@@ -340,7 +332,6 @@ Scope {
           }
         }
 
-        // The alert border is laid over the surface and fades in.
         Rectangle {
           anchors.fill: parent
           radius: surface.surfaceRadius

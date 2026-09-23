@@ -3,8 +3,8 @@ import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 
-// PipeWire pushes every node update, so enumeration and tracking are gated on
-// this view being on screen.
+// PipeWire pushes every node update, so enumeration and tracking are gated on this view being
+// on screen.
 Item {
   id: root
 

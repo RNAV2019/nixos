@@ -4,18 +4,17 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Writes only. The OSD, bar widget and audio panel each read the sink straight
-// from Pipewire, so this singleton exists to own the wpctl calls the volume
-// keys make and to announce them.
+// Writes only: the OSD, bar and audio panel read the sink from Pipewire directly, so this
+// singleton owns the wpctl calls the volume keys make and announces them.
 Singleton {
   id: root
 
-  // Emitted per keypress, including when the volume is already railed, so the
-  // OSD can appear without waiting on a Pipewire change that never comes.
+  // Emitted per keypress even at the rail, so the OSD can appear without waiting on
+  // a Pipewire change that never comes.
   signal adjusted
 
-  // Key repeat can outpace wpctl. A signed pending delta preserves the net change while
-  // allowing opposite presses to cancel before a process is started.
+  // Key repeat can outpace wpctl: a signed pending delta preserves the net change and
+  // lets opposite presses cancel before a process starts.
   readonly property int stepPercent: 5
   readonly property int writeInterval: 20
   property int _pendingPercent: 0

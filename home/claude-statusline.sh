@@ -1,8 +1,5 @@
-# Claude Code status line.
-#
-# Mirrors the starship prompt from shell.nix (directory, branch, git status),
-# then appends the model, context-window usage as a bar, and the 5h/7d rate
-# limits, in the same Rose Pine palette.
+# Claude Code status line: mirrors the starship prompt from shell.nix, then adds
+# the model, a context-window bar, and the 5h/7d rate limits in the same palette.
 
 input=$(cat)
 q() { printf '%s' "$input" | jq -r "$1"; }
@@ -24,7 +21,6 @@ foam=$(sgr "${THEME_FOAM_RGB:-156;207;216}")
 iris=$(sgr "${THEME_IRIS_RGB:-196;167;231}")
 muted=$(sgr "${THEME_MUTED_RGB:-110;106;134}")
 subtle=$(sgr "${THEME_SUBTLE_RGB:-144;140;170}")
-# Starship's own prompt styles.
 dir_style=$'\033[1;36m'
 in_style=$'\033[1;37m'
 branch_style=$'\033[1;35m'
@@ -33,7 +29,7 @@ r=$'\033[0m'
 sep="${muted} · ${r}"
 out=""
 
-# append SEGMENT -- joins segments with the dot separator
+# Joins segments with the dot separator.
 append() {
   [ -n "$1" ] || return 0
   [ -n "$out" ] && out+="$sep"
@@ -51,7 +47,6 @@ severity() {
   fi
 }
 
-# bar PERCENT WIDTH
 bar() {
   local pct=$1 width=$2 filled i acc=""
   filled=$((pct * width / 100))
@@ -64,8 +59,6 @@ bar() {
   for ((i = filled; i < width; i++)); do acc+="▱"; done
   printf '%s%s' "$acc" "$r"
 }
-
-# --- directory, branch, git status -------------------------------------------
 
 dir=${cwd/#$HOME/\~}
 IFS='/' read -ra parts <<<"$dir"
@@ -124,8 +117,6 @@ if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 append "$prompt"
-
-# --- model, context window, rate limits --------------------------------------
 
 [ -n "$model" ] && append "${subtle}${model}${r}"
 

@@ -4,8 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 
-// Per-screen surfaces need to know which output the compositor considers
-// focused; Hyprland reports that by monitor name.
+// Per-screen surfaces need the focused output; Hyprland reports it by monitor name.
 Singleton {
   id: root
 

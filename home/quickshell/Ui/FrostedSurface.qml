@@ -7,8 +7,8 @@ import qs.Commons
 Item {
   id: root
 
-  // Defaults to the stadium. Callers pass their own radius through min(height / 2, r)
-  // rather than animating it; see Bar/Island.qml.
+  // Defaults to the stadium. Callers pass min(height / 2, r) rather than animating it;
+  // see Bar/Island.qml.
   property real surfaceRadius: height / 2
   property real screenOffsetX: 0
   property real screenOffsetY: 0
@@ -38,8 +38,8 @@ Item {
     }
   }
 
-  // The opaque fill makes contrast deterministic; this outline keeps the material legible when
-  // the desktop behind it is close to the dark canvas. It is intentionally quieter than a glow.
+  // The opaque fill makes contrast deterministic; this outline keeps the material legible
+  // against a near-black desktop. Intentionally quieter than a glow.
   Rectangle {
     anchors.fill: parent
     radius: root.surfaceRadius

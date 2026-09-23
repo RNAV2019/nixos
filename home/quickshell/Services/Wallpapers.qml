@@ -5,16 +5,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// The wallpapers on disk, which one is up, and how to change it.
-//
-// Each theme has its own folder, Pictures/backgrounds/<theme>, and remembers its own last
-// wallpaper in ~/.local/share/wallpaper/<theme>, so switching theme brings its wallpaper
-// back. theme-switch does that half; this file keeps the record up to date.
-//
-// The link at ~/.local/share/wallpaper/current and awww have to move together; the link
-// is written first, so a session restarted before the daemon was told still comes up on
-// the right wallpaper. Matching is done on the resolved store path, because the path in
-// the pictures folder is itself a symlink home-manager writes.
+// Wallpapers on disk, which is up, and how to change it. Each theme keeps its own folder
+// and last-used link; `current` and awww move together, link first, matched on resolved path.
 Singleton {
   id: root
 
@@ -28,7 +20,7 @@ Singleton {
   // Every wallpaper found, name-sorted, as { path, real, name }.
   property var entries: []
 
-  // Empty until the first read comes back, which is why the url below falls back to the link.
+  // Empty until the first read; the url below falls back to the link.
   property string current: ""
 
   // Keyed on the resolved file: an Image keyed on the link would never reload, since the
@@ -45,11 +37,10 @@ Singleton {
 
   readonly property string name: index >= 0 ? entries[index].name : ""
 
-  // The home directory is written back as a tilde, as a path in a shell surface should be.
+  // Home is written back as a tilde, as a path in a shell surface should be.
   readonly property string directoryLabel: "~" + directory.substring(home.length) + "/"
 
-  // A refresh asked for while one is still running is queued rather than dropped: after a
-  // theme switch the one in flight is reading the old folder.
+  // Refreshes during a run are queued: after a switch the one in flight reads the old folder.
   property bool scanQueued: false
   property bool resolveQueued: false
 
@@ -64,8 +55,7 @@ Singleton {
       resolve.running = true;
   }
 
-  // theme-switch has already pointed `current` at the new theme's wallpaper by the time
-  // the name changes, so both halves are simply read again.
+  // theme-switch has already pointed `current` at the new wallpaper, so both halves are read again.
   Connections {
     target: Theme
 
@@ -85,8 +75,8 @@ Singleton {
     relink.running = true;
   }
 
-  // Renamed over the old one, because rename is the only way to replace a symlink without
-  // a moment where it does not exist.
+  // Renamed over the old one, because rename is the only way to replace a symlink
+  // without a moment where it does not exist.
   Process {
     id: relink
 
@@ -108,8 +98,7 @@ Singleton {
     return ["awww", "img", target, "--transition-type", "grow", "--transition-pos", "center", "--transition-duration", Theme.reduceMotion ? "0" : "0.9", "--transition-fps", "120"];
   }
 
-  // No daemon means nothing to tell, and the link is already written, so failing quietly
-  // is the whole handling.
+  // No daemon means nothing to tell and the link is already written, so failing quietly is fine.
   Process {
     id: paint
   }
@@ -137,8 +126,8 @@ Singleton {
     }
   }
 
-  // A glob in one shell rather than find, because both the path and the file it resolves
-  // to are wanted per line and find can only print one of them.
+  // A glob in one shell rather than find: both the path and its resolved file are wanted
+  // per line, and find can only print one.
   Process {
     id: scan
 

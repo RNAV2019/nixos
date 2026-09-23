@@ -7,10 +7,8 @@ import Quickshell.Io
 Singleton {
   id: root
 
-  // The two palettes, keyed by the theme id `theme-switch` takes. They mirror
-  // home/themes/palettes.nix, which colours everything outside the shell; the dark theme
-  // carries the Rose Pine role names too, with love as its alert red, gold the warning, rose
-  // the tint, iris the accent (white), foam the soft foreground and pine the dim one.
+  // The two palettes, keyed by the theme id `theme-switch` takes; they mirror
+  // home/themes/palettes.nix. The dark theme reuses the Rose Pine role names.
   readonly property var palettes: ({
       "rose-pine": {
         label: "Rosé Pine",
@@ -18,9 +16,8 @@ Singleton {
         base: "#191724",
         surface: "#1f1d2e",
         overlay: "#26233a",
-        // Rose Pine's own muted is #6e6a86, which lands at 3.2:1 against the panel tint.
-        // That ink carries almost every 11 px label in the shell, so it is lifted along the
-        // line towards `subtle` until it reads 4.7:1 on the darkest ground the shell uses.
+        // Rose Pine's muted #6e6a86 is only 3.2:1 against the panel tint, and carries almost
+        // every 11 px label; lifted towards `subtle` to read 4.7:1 on the darkest ground.
         muted: "#8a86a4",
         subtle: "#908caa",
         text: "#e0def4",
@@ -60,9 +57,8 @@ Singleton {
   // In the order the theme picker shows them.
   readonly property var themeIds: ["rose-pine", "dark"]
 
-  // Which theme is up. `theme-switch` writes the id into this file; it is watched, so a
-  // switch recolours the shell in place. Colours that already carry a Tint behaviour
-  // cross-fade; the rest change on the next frame.
+  // Which theme is up. `theme-switch` writes the id into this watched file, so a switch
+  // recolours in place: Tint colours cross-fade, the rest change on the next frame.
   property string name: "rose-pine"
   readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes["rose-pine"]
 
@@ -73,8 +69,7 @@ Singleton {
     watchChanges: true
     printErrors: false
 
-    // Written in place by the switch, so an empty read is the moment between truncate and
-    // write, not a theme.
+    // Written in place, so an empty read is the gap between truncate and write, not a theme.
     onFileChanged: nameFile.reload()
     onLoaded: {
       var id = nameFile.text().trim();
@@ -83,8 +78,8 @@ Singleton {
     }
   }
 
-  // A file that did not exist when the shell started is not being watched, so the switch
-  // also asks for a read over IPC (`qs ipc call theme sync`).
+  // A file absent at shell start is not watched, so the switch also asks for an IPC read
+  // (`qs ipc call theme sync`).
   function reload() {
     nameFile.reload();
   }
@@ -105,8 +100,8 @@ Singleton {
   readonly property color highlightMed: palette.highlightMed
   readonly property color highlightHigh: palette.highlightHigh
 
-  // Semantic roles, the same in both themes. Keep these separate from the source names:
-  // `base` is the canvas, while `inkOnAccent` is the ink used on a selected control.
+  // Semantic roles, the same in both themes; kept separate from source names, since `base`
+  // is the canvas while `inkOnAccent` is the ink on a selected control.
   readonly property color canvas: base
   readonly property color surfaceRaised: overlay
   readonly property color surfaceSubtle: highlightLow
@@ -139,8 +134,8 @@ Singleton {
     return Qt.rgba(c.r, c.g, c.b, a);
   }
 
-  // The Nerd Font carries the icon glyphs and holds digits on a fixed advance, so it stays
-  // for icons, identifiers and live readouts. Prose and labels use a proportional face.
+  // The Nerd Font carries icons and holds digits on a fixed advance, so it stays for icons,
+  // identifiers and live readouts; prose and labels use a proportional face.
   readonly property string fontFamily: "JetBrainsMono Nerd Font"
   readonly property string iconFont: fontFamily
   readonly property string monoFont: fontFamily
@@ -175,9 +170,8 @@ Singleton {
     return Math.min(desired, Math.max(280, screen.width - panelSideMargin * 2));
   }
 
-  // Panel surfaces are solid so shell UI does not depend on the desktop behind it for contrast.
-  // Lower shell surfaces are hidden during handoff instead of entering that surface.
-  // MultiEffect blur is a fraction of blurMax, not a pixel radius.
+  // Panel surfaces are solid, so shell UI does not depend on the desktop for contrast. Lower
+  // surfaces hide during handoff; MultiEffect blur is a fraction of blurMax, not a pixel radius.
   readonly property int surfaceBlurMax: 64
   readonly property real surfaceBlur: 0.53
   readonly property int surfaceShadowOffset: 6
@@ -185,16 +179,16 @@ Singleton {
   readonly property real surfaceShadowBlur: 0.75
   readonly property real surfaceShadowAlpha: 0.24
 
-  // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation. This is an
-  // environment switch rather than part of a theme, so it applies to both.
+  // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation; an
+  // environment switch, not a theme, so it applies to both.
   readonly property bool reduceMotion: Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
 
   function duration(ms) {
     return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
   }
 
-  // SpringAnimation's damping is a Qt-specific friction value, not a normalized damping ratio.
-  // These are deliberately kept in one place and tuned against a 60 fps surface trace.
+  // SpringAnimation's damping is a Qt friction value, not a normalized ratio. Kept in one
+  // place and tuned against a 60 fps surface trace.
   readonly property real surfaceSpring: 5.0
   readonly property real surfaceDamping: 0.65
   readonly property real surfaceMass: 1.0
@@ -204,8 +198,8 @@ Singleton {
   readonly property real microMass: 0.8
   readonly property real microEpsilon: 0.005
 
-  // The island: one pill carrying the clock, which grows an equaliser while something is
-  // playing and expands into a media and status card on hover.
+  // The island: one pill carrying the clock, growing an equaliser while playing and
+  // expanding into a media and status card on hover.
   readonly property int islandRadius: 18
   readonly property int islandIdleWidth: 118
   readonly property int islandPlayingWidth: 140
@@ -221,9 +215,8 @@ Singleton {
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
-  // The mini calendar the expanded card carries while nothing is playing. Five days centred
-  // on today on a 32 px pitch; the plate is 1.14 pitches wide, which gives the three-letter
-  // label its room.
+  // The mini calendar the expanded card carries while nothing plays: five days centred on
+  // today on a 32 px pitch; the plate is 1.14 pitches wide, for the three-letter label.
   readonly property int islandCalDays: 5
   readonly property int islandCalPitch: 32
   readonly property int islandCalLabelSize: 10
@@ -239,9 +232,8 @@ Singleton {
   readonly property real islandCalWeekendDayAlpha: 0.75
   readonly property real islandCalPlateAlpha: 0.08
 
-  // The app launcher. The island pill grows into this and shrinks back out of it, so the two
-  // share a top edge and a centre line. A 68 px search row above a rule, then rows on a 45 px
-  // pitch, each 42 px tall with a 3 px gap.
+  // The app launcher, which the island pill grows into, sharing a top edge and centre line.
+  // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap.
   readonly property int launcherWidth: 520
   readonly property int launcherRadius: 26
   readonly property int launcherInset: 14
@@ -265,8 +257,8 @@ Singleton {
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
 
-  // The notification toast: the pill grows into one card, holds while it is read, and melts
-  // back into the clock. One card, not a stack; a second notification replaces the first.
+  // The notification toast: the pill grows into one card, holds while read, then melts back.
+  // One card, not a stack; a second notification replaces the first.
   readonly property int notifWidth: 450
   readonly property int notifRadius: 28
   readonly property int notifInset: 16
@@ -292,8 +284,8 @@ Singleton {
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
-  // The power menu: three tiles on one row. Lock acts on the first press; the two that end
-  // the session arm first, turning love and relabelling themselves Confirm.
+  // The power menu: three tiles on one row. Lock acts on first press; the two that end the
+  // session arm first, turning love and relabelling Confirm.
   readonly property int powerHeight: 112
   readonly property int powerRadius: 26
   readonly property int powerInset: 11
@@ -309,9 +301,8 @@ Singleton {
   readonly property real powerTileFillAlpha: 0.9
   readonly property real powerTileBorderAlpha: 0.7
 
-  // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds
-  // for a beat and melts back into the clock. Everything is laid out at fixed positions in a
-  // fixed-width pill, so the growing shape uncovers contents already where they belong.
+  // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
+  // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
   readonly property int osdWidth: 278
   readonly property int osdHeight: 48
   readonly property int osdRadius: 24
@@ -326,8 +317,7 @@ Singleton {
   readonly property int osdDwell: 1500
 
   // The control centre: the same 520 px column the launcher grows into, carrying a tile grid,
-  // two sliders, the media card and the notification list. Measured off the source frames as
-  // 520 x 716 on a 1920 px output.
+  // two sliders, the media card and notifications. Source frames: 520 x 716 at 1920 px.
   readonly property int controlWidth: 520
   readonly property int controlRadius: 26
   readonly property int controlInset: 13
@@ -336,8 +326,8 @@ Singleton {
   readonly property int controlBackSize: 36
   readonly property int controlBackLeft: 20
 
-  // Tiles. Two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; the first row is
-  // one narrow tile beside one wide, the second is three equal.
+  // Tiles: two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; row one is a
+  // narrow beside a wide tile, row two three equal.
   readonly property int controlTileHeight: 59
   readonly property int controlTileGap: 12
   readonly property int controlTileRadius: 29
@@ -353,7 +343,7 @@ Singleton {
   readonly property int controlSliderGap: 17
   readonly property int controlSliderGlyphLeft: 13
 
-  // The media card, and the gap that separates each block from the next.
+  // The media card; the gap separates each block from the next.
   readonly property int controlBlockGap: 15
   readonly property int controlMediaHeight: 140
   readonly property int controlMediaRadius: 16
@@ -364,7 +354,6 @@ Singleton {
   readonly property int controlMediaSkipSize: 16
   readonly property real controlMediaProgressHeight: 3
 
-  // The notification list.
   readonly property int controlSectionGap: 23
   readonly property int controlSectionHeight: 22
   readonly property int controlSectionSize: 11
@@ -385,9 +374,8 @@ Singleton {
   readonly property int controlRowInset: 16
   readonly property int controlViewMaxHeight: 620
 
-  // The wallpaper picker: the pill grows into a wide, short card carrying one row of previews.
-  // The column is the board's 800 rather than the source's 1008, which is the shell's own
-  // proportion of the screen and fits four wallpapers exactly.
+  // The wallpaper picker: the pill grows into a wide, short card with one row of previews.
+  // The column is 800, not the source's 1008, fitting four wallpapers exactly.
   readonly property int wallpaperWidth: 800
   readonly property int wallpaperHeight: 232
   readonly property int wallpaperRadius: 26
@@ -404,19 +392,18 @@ Singleton {
   readonly property int wallpaperTileRadius: 10
 
   // The chosen wallpaper is drawn larger and every other one the same, so the row has one
-  // focus rather than a gradient of importance. The first is the selected width, the last is
-  // everything else; four at these sizes come to 720, inside the 752 the panel has.
+  // focus. First is the selected width, last everything else; four come to 720 inside 752.
   readonly property var wallpaperTileWidths: [192, 160]
 
-  // 16:9, as the board draws them. Previews are cropped to it rather than letterboxed, so a
-  // tile is never part panel background.
+  // 16:9, as the board draws them; previews are cropped rather than letterboxed, so a tile
+  // is never part panel background.
   readonly property real wallpaperTileAspect: 16 / 9
 
   readonly property real wallpaperTileBorderAlpha: 0.7
   readonly property int wallpaperSelectedBorder: 2
 
-  // Which wallpaper the keys are on is carried by the ring and the size; which one is up is
-  // the accent border below, held well under the ring's weight.
+  // The keys' wallpaper is carried by the ring and size; the one that is up is the accent
+  // border, held well under the ring's weight.
   readonly property real wallpaperActiveBorderAlpha: 0.55
 
   // The dot sits on a disc of base, because a bare accent dot is lost in a pale corner.
@@ -425,11 +412,8 @@ Singleton {
   readonly property int wallpaperDotHalo: 14
   readonly property real wallpaperDotHaloAlpha: 0.7
 
-  // The theme picker is the wallpaper picker's card and row, to the pixel. Each tile is that
-  // theme's own wallpaper with a small island pill over it, carrying five dots in the theme's
-  // own colours (base, surface, text, accent, alert), so every tile previews its theme
-  // whichever theme is up. The dots are ringed in the theme's highlightHigh, because base
-  // and surface are nearly the pill's own colour.
+  // The theme picker is the wallpaper picker's card and row. Each tile is that theme's own
+  // wallpaper with a pill carrying five dots in its colours, ringed in its highlightHigh.
   readonly property int themePillHeight: 18
   readonly property int themePillInset: 10
   readonly property int themeSwatchSize: 8
@@ -437,8 +421,8 @@ Singleton {
   readonly property int themeSwatchPad: 7
   readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
-  // The screen recorder's picker. The capture row is the power menu's own tile grid, to the
-  // pixel; the toggle rows below are this card's own.
+  // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel;
+  // the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
   readonly property int recorderHeight: 228
   readonly property int recorderRadius: 26
@@ -461,7 +445,7 @@ Singleton {
   readonly property int recorderRowLabelSize: 12
 
   // The recording mark the pill carries: love rather than the accent, so it does not read as
-  // one more thing that is merely on.
+  // one more thing merely on.
   readonly property int recorderDotSize: 8
   readonly property int recorderDotGap: 10
 
@@ -478,10 +462,8 @@ Singleton {
   readonly property int calTodayBtnHeight: 28
   readonly property real calTodayBtnSize: 11.5
 
-  // Seven columns on a 68 px pitch, six rows on 46. calGridTop is the top of the first row
-  // rather than a baseline the delegate has to correct for. The day number centres in its
-  // cell, the marker centres on the number, and the event dot sits under the number and
-  // inside the marker, so a row's dots read as belonging to that row and not to the next one.
+  // Seven columns on a 68 px pitch, six rows on 46; calGridTop is the first row's top, not a
+  // baseline. Day centres in its cell, marker on the number, dot under it inside the marker.
   readonly property int calWeekdayTop: 76
   readonly property int calWeekdaySize: 11
   readonly property int calGridTop: 102
@@ -493,9 +475,8 @@ Singleton {
   readonly property int calDotSize: 5
   readonly property int calDotDrop: 12
 
-  // The last grid row ends at 372, so the rule clears it by 20. Everything below the rule is
-  // a fixed block: the panel reserves room for calAgendaMax rows whether or not the chosen
-  // day fills them, which is what lets calHeight stay a constant.
+  // The last grid row ends at 372, so the rule clears it by 20. Below it is a fixed block:
+  // room is reserved for calAgendaMax rows regardless, letting calHeight stay constant.
   readonly property int calDividerTop: 392
   readonly property int calSectionTop: 406
   readonly property real calSectionSize: 11.5
@@ -514,8 +495,8 @@ Singleton {
   readonly property int calAgendaMax: 3
   readonly property int calAgendaBlock: calAgendaMax * calAgendaHeight + (calAgendaMax - 1) * calAgendaGap
 
-  // Board 13: a 1920x1080 lock surface. The background is painted by the surface itself, so
-  // the session-lock protocol never exposes a black frame.
+  // Board 13: a 1920x1080 lock surface. The surface paints its own background, so the
+  // session-lock protocol never exposes a black frame.
   readonly property int lockDateTop: 150
   readonly property int lockDateSize: 20
   readonly property int lockClockTop: 175
@@ -540,9 +521,8 @@ Singleton {
   readonly property int lockDotGap: 4
   readonly property int lockDotPop: 80
 
-  // The lock veil is sourced from the captured desktop rather than the compositor backdrop.
-  // It tints the blurred capture rather than covering it, so it has to stay translucent:
-  // at 1.0 the whole background reads as one flat fill.
+  // The veil comes from the captured desktop, not the compositor backdrop, and tints the
+  // blurred capture rather than covering it; at 1.0 the background reads as one flat fill.
   readonly property color lockVeilColor: surface
   readonly property real lockVeilOpacity: 0.55
   readonly property color lockTextPrimary: inkPrimary
@@ -560,10 +540,8 @@ Singleton {
   readonly property int lockIn: 350
   readonly property int lockOut: 350
 
-  // The pill's shut width, one per combination. The widths are the design's: the pill grows
-  // for a player and again for a recording, but neither moves the clock. It is centred in
-  // whichever width is in play, and the equaliser and the dot sit in the padding either side,
-  // so that padding is not always equal.
+  // The pill's shut width, one per combination: it grows for a player and again for a
+  // recording, but neither moves the clock, which stays centred in the current width.
   function islandCollapsedWidth(media, recording) {
     return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
   }
@@ -576,36 +554,25 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  // Every morph in the shell rides one curve for one duration, both settled by a survey of
-  // ten recordings at 1440p60: 186 morphs found, 176 fitted. One duration replaces a split
-  // between a 320 ms panel morph and a 240 ms reflex morph the source does not have. The
-  // measured quartiles are 36 / 68 / 104 / 148 ms of travel; the fit reproduces 33 / 64 / 103 / 143.
-  //
-  // A surface changing shape.
+  // Every morph rides one curve for one duration, settled by a survey of ten 1440p60
+  // recordings: 186 found, 176 fitted; measured quartiles 36/68/104/148 ms, fit 33/64/103/143.
   readonly property int morphSurface: reduceMotion ? 1 : 190
 
   // A control changing state rather than shape: a toggle, a slider, a hover or a press.
   readonly property int morphState: reduceMotion ? 1 : 115
 
-  // Content swaps are not morphs. A surface takes about 300 ms to change shape while the
-  // contents it carries change over about five frames, so fading them on the geometry's clock
-  // would read as a dissolve rather than a reveal.
+  // Content swaps are not morphs. A surface takes ~300 ms to change shape while its contents
+  // change over ~five frames, so fading on the geometry's clock would read as a dissolve.
   readonly property int morphContent: reduceMotion ? 1 : 50
 
-  // The handover's own content pass, for a surface growing out of another surface rather than
-  // out of the island. Out of the pill the clip is the transition; panel to panel there is
-  // nothing to uncover, and the 80 ms above fired on the first frame would put the contents at
-  // rest while the box is still two thirds from its target.
-  //
-  // Chosen rather than fitted: the recordings have no panel-to-panel switch to measure.
+  // The handover's content pass, for a surface growing out of another surface, not the island.
+  // Panel to panel there is nothing to uncover; chosen rather than fitted, with no recording.
 
-  // The outgoing contents dissolve inside the still. Short, because it has to be finished
-  // before the taker's first frame lands on top of it.
+  // The outgoing contents dissolve inside the still, short so it finishes before the taker lands.
   readonly property int morphFarewell: reduceMotion ? 1 : 70
 
-  // The still's ground outlives its contents: it covers the gap before the taker presents.
-  // The taker may land anywhere in 147-216 ms, so the fade is laid across that whole window.
-  // Two grounds at once would stack their tint, and a hole would read as a blink.
+  // The still's ground outlives its contents, covering the gap before the taker presents.
+  // The taker may land in 147-216 ms, so the fade spans that window; no stacked tint or blink.
   readonly property int morphGround: reduceMotion ? 1 : 70
   readonly property int morphGroundFade: reduceMotion ? 1 : 60
 
@@ -613,38 +580,27 @@ Singleton {
   readonly property int morphEnterDelay: reduceMotion ? 0 : 45
   readonly property int morphEnter: reduceMotion ? 1 : 90
 
-  // And they settle through a few pixels, taken in the direction the height is travelling, so
-  // a switch between two columns of the same width has an axis to read.
+  // They settle through a few pixels in the direction the height travels, so a switch between
+  // two same-width columns has an axis to read.
   readonly property real morphEnterTravel: 10
 
   // The clock's digit roll, measured at 60 fps: each digit travels about half a glyph's height
-  // and the two cross-fade. Held as a fraction of the font's own size, so the roll reads the
-  // same at the pill's size and the card's.
+  // and cross-fades; a fraction of font size, so it reads the same at pill and card size.
   readonly property real clockRollTravel: 0.45
 
-  // How long a surface that has just handed the island over keeps riding the taker's morph.
-  // The taker maps in single-digit milliseconds but its first rendered frame lands 147-216 ms
-  // later, and without the hold the bare pill shows through that gap; 260 covers it.
+  // How long a surface that just handed the island over keeps riding the taker's morph: the
+  // taker's first frame lands 147-216 ms later, and 260 covers the bare pill showing through.
   readonly property int morphHold: 240
 
-  // The lock screen's two cross-fades, fitted frame by frame at 60 fps. Neither is a morph:
-  // the digits never move and never change size, so neither direction uses the spring.
-  //
-  // One progress value drives all of it. The blur radius and the dim veil ride the same curve
-  // over the same window: measured as sharpness over contrast, which the veil cannot touch,
-  // the radius tracks the veil to within 0.02 of its travel in both directions.
-  //
-  // The content lags the ground going in and leads it coming out, which is what lets the
-  // island pill read as returning partway through the unlock. The clock is the extreme at
-  // both ends. The date and the avatar land between the two tiers, so they are grouped by
-  // what they are instead.
+  // The lock screen's two cross-fades, fitted frame by frame at 60 fps; neither is a morph.
+  // One progress drives blur and veil (tracking within 0.02); content lags in and leads out.
   readonly property int lockInClock: 70
   readonly property int lockInLogin: 100
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
 
-  // Fallback curve for direct NumberAnimations that have not moved to a spring component yet.
-  // It intentionally never overshoots; geometry uses SurfaceSpring and colour uses Tint.
+  // Fallback curve for direct NumberAnimations not yet on a spring. Never overshoots;
+  // geometry uses SurfaceSpring and colour uses Tint.
   readonly property var morphCurve: [0.22, 0.61, 0.36, 1.0]
 }

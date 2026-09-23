@@ -5,9 +5,8 @@ import Quickshell
 import Quickshell.Services.Notifications
 import qs.Commons
 
-// The notification server and the two lists it feeds. Toasts get the live Notification
-// object in `popups`; the control centre gets a snapshot in `history`, so a row outlives
-// the toast it came from.
+// The notification server and the two lists it feeds: `popups` gets the live objects
+// for toasts, `history` a snapshot so a control-centre row outlives its toast.
 Singleton {
   id: root
 
@@ -40,15 +39,14 @@ Singleton {
     };
   }
 
-  // Neither field can be trusted to load: an application may send a path, a data URI or
-  // a bare theme name in either. A theme name handed to IconImage resolves against the
-  // module directory and fails, so each candidate is resolved and the first hit wins.
+  // Neither field can be trusted: either may hold a path, data URI or bare theme name.
+  // A bare name handed to IconImage resolves against the module dir and fails, so try both.
   function _resolve(candidate) {
     if (!candidate)
       return "";
     var s = String(candidate);
-    // Quickshell wraps an application icon as image://icon/<name>, and that provider
-    // paints a placeholder rather than failing, so unwrap and ask the theme instead.
+    // Quickshell wraps an app icon as image://icon/<name>, and that provider paints a
+    // placeholder rather than failing, so unwrap and ask the theme instead.
     if (s.indexOf("image://icon/") === 0)
       return Quickshell.iconPath(s.substring(13), true);
     if (s.indexOf("/") === 0 || s.indexOf("://") > 0 || s.indexOf("data:") === 0)

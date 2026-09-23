@@ -5,13 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The wallpaper picker: the island in another shape. It starts at the pill's own size,
-// radius and centre line and grows in its place, and the bar stands its island down for
-// as long as it is on screen.
-//
-// It carries one row of previews, clipped by the panel rather than wrapped into a grid,
-// so a collection larger than the row runs on past both edges. The count in the footer is
-// what says how much of it is out of sight.
+// The wallpaper picker: the island in another shape, growing from the pill's own size,
+// radius and centre line. One row of previews, clipped by the panel rather than wrapped.
 Variants {
   id: root
 
@@ -35,8 +30,8 @@ Variants {
     // The room the row has, and the room it wants.
     readonly property real inner: Theme.wallpaperWidth - 2 * Theme.wallpaperInset
 
-    // The selected tile takes the first width, everything else the last. Indexed by
-    // distance from the selection and clamped to its end; see the note on the token.
+    // The selected tile takes the first width, everything else the last, indexed by
+    // distance from the selection and clamped to its end; see the token note.
     function tileWidth(i) {
       var widths = Theme.wallpaperTileWidths;
       var d = Math.abs(i - win.selected);
@@ -47,8 +42,7 @@ Variants {
       return Math.round(win.tileWidth(i) / Theme.wallpaperTileAspect);
     }
 
-    // A tile's left edge is everything before it, so choosing the tile to the right pushes
-    // the row left as that tile grows.
+    // A tile's left edge is the sum before it, so selecting right pushes the row left.
     function tileX(i) {
       var x = 0;
       for (var j = 0; j < i; j++)
@@ -58,8 +52,8 @@ Variants {
 
     readonly property real stripWidth: count > 0 ? win.tileX(count) - Theme.wallpaperTileGap : 0
 
-    // A row that fits is centred. One that does not is pulled so the selection sits on the
-    // centre line, then held back so neither end can come in past the inset.
+    // A fitting row is centred; otherwise the selection is pulled to the centre line,
+    // then clamped so neither end passes the inset.
     readonly property real stripX: {
       if (stripWidth <= inner)
         return Theme.wallpaperInset + (inner - stripWidth) / 2;
@@ -98,8 +92,8 @@ Variants {
       }
     }
 
-    // The row is a ring: stepping past either end comes out at the other. The modulo is
-    // written to survive a negative delta, since JavaScript's % keeps the left sign.
+    // The row is a ring: stepping past either end comes out at the other. The modulo
+    // survives a negative delta, since JavaScript's % keeps the left sign.
     function step(delta) {
       if (count === 0)
         return;
@@ -108,7 +102,7 @@ Variants {
     }
 
     // Enter applies and leaves. Nothing previews: changing the wallpaper under every arrow
-    // key would repaint the desktop half a dozen times on the way to a choice.
+    // key would repaint the desktop repeatedly on the way to a choice.
     function activate() {
       if (selected < 0 || selected >= count)
         return;
@@ -185,8 +179,8 @@ Variants {
         font.pixelSize: Theme.wallpaperMetaSize
       }
 
-      // Clipped to the panel rather than the inset, so a long row is cut by the panel's
-      // own edge and reads as running on past it.
+      // Clipped to the panel, not the inset, so a long row is cut by the panel's own edge
+      // and reads as running on past it.
       Item {
         id: strip
 
@@ -231,8 +225,8 @@ Variants {
                 win.activate();
               }
 
-              // Every tile travels and resizes on the one curve, which keeps the gaps
-              // between them constant: a sum of identical eases is the same ease of the sum.
+              // Every tile travels and resizes on one curve, keeping gaps constant: a sum of
+              // identical eases is the same ease of the sum.
               Behavior on x {
                 enabled: !Theme.reduceMotion
 

@@ -4,11 +4,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The theme picker: the wallpaper picker's card, with a tile per theme. It grows out of the
-// island in its place, as every island surface does, and Enter switches to the theme under
-// the ring. Nothing switches while arrowing: a theme change repaints the whole desktop.
-//
-// Board 07c on both Penpot pages.
+// The theme picker: the wallpaper picker's card, a tile per theme. Enter switches to the
+// theme under the ring; arrowing does not (a change repaints the desktop). Board 07c.
 Variants {
   id: root
 
@@ -207,8 +204,8 @@ Variants {
         }
       }
 
-      // The footer names the wallpaper folder the chosen theme brings with it: the parent
-      // dimmed, the theme's own folder not, so it reads at a glance.
+      // The footer names the wallpaper folder the chosen theme brings: the parent dimmed,
+      // the theme's own folder not, so it reads at a glance.
       Text {
         id: directory
 

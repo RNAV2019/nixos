@@ -50,22 +50,22 @@
 
     # Greys in place of hues, keeping red, yellow and magenta warm.
     ansi = [
-      "#0b0b0b" # black
-      "#ff5c5c" # red
-      "#d6d6d6" # green
-      "#ffd166" # yellow
-      "#a6a6a6" # blue
-      "#ffb3b3" # magenta
-      "#8c8c8c" # cyan
-      "#d6d6d6" # white
-      "#3f3f3f" # bright black
-      "#ff8a8a" # bright red
-      "#ffffff" # bright green
-      "#ffe09a" # bright yellow
-      "#d6d6d6" # bright blue
-      "#ffd1d1" # bright magenta
-      "#a6a6a6" # bright cyan
-      "#ffffff" # bright white
+      "#0b0b0b"
+      "#ff5c5c"
+      "#d6d6d6"
+      "#ffd166"
+      "#a6a6a6"
+      "#ffb3b3"
+      "#8c8c8c"
+      "#d6d6d6"
+      "#3f3f3f"
+      "#ff8a8a"
+      "#ffffff"
+      "#ffe09a"
+      "#d6d6d6"
+      "#ffd1d1"
+      "#a6a6a6"
+      "#ffffff"
     ];
   };
 }

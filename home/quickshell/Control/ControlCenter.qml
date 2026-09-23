@@ -5,15 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The control centre: the island in another shape rather than a panel. It starts at the
-// pill's exact size, radius and centre line and grows down into a 520 px column, and the
-// bar stands its island down for as long as it is on screen.
-//
-// The panel is clipped and its contents are laid out at their final metrics from the
-// first frame, so the open is a reveal rather than a fade.
-//
-// Sub-views push in from the right rather than replacing the contents, and the surface's
-// height travels with them.
+// The control centre: the island in another shape, starting at the pill's size, radius and
+// centre and growing into a 520 px column; clipped, so the open is a reveal; sub-views push in.
 Variants {
   id: root
 
@@ -30,12 +23,10 @@ Variants {
     // "" is the root view; anything else is the name of a sub-view.
     property string view: ""
 
-    // What the sub-view loader is holding. It outlives `view` by one slide, so the view
-    // being left is still drawn while it travels off the right edge.
+    // What the loader holds; it outlives `view` by one slide so the view being left stays drawn.
     property string loadedView: ""
 
-    // Raised for the open and the close, when the height rides the shape's own curve
-    // rather than a sub-view's slide.
+    // Raised for open/close, when height rides the shape's own curve rather than a sub-view's slide.
     property bool morphing: false
 
     readonly property var subView: subLoader.item
@@ -179,9 +170,8 @@ Variants {
             win.view = name;
           }
 
-          // The picker claims the island through the shared protocol, and the claim is what
-          // stands this panel down: dismiss() runs inside it and publishes this panel's live
-          // shape, so the picker contracts out of it rather than jumping back to the pill.
+          // The picker claims the island through the shared protocol, which stands this panel
+          // down: dismiss() publishes this panel's live shape so the picker contracts out of it.
           onRecorderRequested: Bus.recorderRequested()
 
           Behavior on x {
@@ -247,8 +237,7 @@ Variants {
         }
       }
 
-    // The progress bar is the only thing that needs MPRIS polled, so the poll is tied to
-    // this surface being on screen.
+    // The progress bar is the only thing needing MPRIS polled, so the poll is tied to this surface.
     Binding {
       target: Media
       property: "trackPosition"

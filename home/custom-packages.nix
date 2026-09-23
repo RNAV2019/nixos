@@ -100,9 +100,8 @@
     '';
   };
 
-  # T3 Code nightlies are AppImage-only. Get `version` from
-  # `gh api repos/pingdotgg/t3code/releases -q '.[0].tag_name'` and the hash via
-  # `nix store prefetch-file` on the AppImage URL.
+  # T3 Code nightlies are AppImage-only. Get `version` from the latest release tag
+  # and the hash via `nix store prefetch-file` on the AppImage URL.
   t3code-nightly = let
     pname = "t3code-nightly";
     version = "0.0.43-nightly.20260922.2110";

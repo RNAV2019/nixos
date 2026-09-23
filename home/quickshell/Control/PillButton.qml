@@ -7,13 +7,12 @@ Rectangle {
 
   property string label: ""
   property bool destructive: false
-  // Set on rows that are themselves accent filled.
+  // Set on rows that are themselves accent-filled.
   property bool onAccent: false
   property string accessibleName: ""
 
-  // Rows that only reveal an action under the pointer set this. The button is always
-  // laid out and tracks its own hover; only its paint and clicks are withheld. It
-  // cannot be `visible`: hiding would hand the hover back to the row and flicker.
+  // Reveal-under-pointer rows set this: the button stays laid out and tracks its own
+  // hover; it cannot use `visible`, or the hover returns to the row and flickers.
   property bool revealed: true
 
   readonly property bool hovered: hover.containsMouse

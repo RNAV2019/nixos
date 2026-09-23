@@ -4,9 +4,8 @@
   pkgs,
   ...
 }: let
-  # Runtime theme switching: each theme is a store directory of program configs built
-  # from themes/palettes.nix, and ~/.local/state/theme/current links to the active one.
-  # `theme-switch <id>` moves the link and notifies running programs.
+  # Runtime theme switching: themes/palettes.nix builds each theme as a store directory
+  # of program configs; `theme-switch <id>` repoints state/theme/current and notifies apps.
   palettes = import ./themes/palettes.nix;
   ids = lib.attrNames palettes;
   rp = palettes.rose-pine;
@@ -126,44 +125,6 @@
             pkgs.writeText "ascii-world-${file}" (recolour p (builtins.readFile "${yaziRosePine}/${file}"))));
     };
   };
-
-  tmuxFragment = id: p:
-    if id == "rose-pine"
-    then ''
-      set -g @rose_pine_variant 'main'
-      set -g @rose_pine_host 'on'
-      set -g @rose_pine_date_time '%Y-%m-%d %H:%M'
-      set -g @rose_pine_directory 'on'
-      run-shell ${pkgs.tmuxPlugins.rose-pine}/share/tmux-plugins/rose-pine/rose-pine.tmux
-
-      # Without a `fill`, the status line shows through the `:` prompt.
-      set -ag message-style ",fill=${p.base}"
-      set -ag message-command-style ",fill=${p.gold}"
-    ''
-    # Overrides every option the rose-pine plugin sets, so switching away is clean.
-    else ''
-      set -g status on
-      set -g status-justify left
-      set -g status-style "fg=${p.subtle},bg=${p.base}"
-      set -g status-left "#[fg=${p.base},bg=${p.text},bold] #S #[default] "
-      set -g status-left-length 40
-      set -g status-right "#[fg=${p.muted}]#{b:pane_current_path}  #[fg=${p.subtle}]%Y-%m-%d %H:%M #[fg=${p.base},bg=${p.foam}] #h "
-      set -g status-right-length 120
-      set -g window-status-separator ""
-      set -g window-status-style "fg=${p.muted},bg=${p.base}"
-      set -g window-status-current-style "fg=${p.text},bg=${p.base},bold"
-      set -g window-status-activity-style "fg=${p.gold},bg=${p.base}"
-      set -g window-status-format " #I #W "
-      set -g window-status-current-format " #I #W "
-      set -g pane-border-style "fg=${p.highlightMed}"
-      set -g pane-active-border-style "fg=${p.subtle}"
-      set -g message-style "fg=${p.text},bg=${p.surface},fill=${p.surface}"
-      set -g message-command-style "fg=${p.base},bg=${p.gold},fill=${p.gold}"
-      set -g mode-style "fg=${p.base},bg=${p.foam}"
-      set -g display-panes-colour "${p.muted}"
-      set -g display-panes-active-colour "${p.text}"
-      set -g clock-mode-colour "${p.text}"
-    '';
 
   # rose-pine/fish's roles, as universals so running shells pick them up.
   fishFragment = p: let
@@ -295,7 +256,6 @@
       '';
       "ghostty" = text "ghostty" x.ghostty;
       "helix.toml" = x.helix;
-      "tmux.conf" = text "tmux.conf" (tmuxFragment id p);
       "fish.fish" = text "fish.fish" (fishFragment p + oscFragment p);
       "starship.toml" = toml.generate "${id}-starship.toml" (starshipFragment p);
       "fzf" = text "fzf" (fzfFragment p);
@@ -337,7 +297,7 @@
 
   theme-switch = pkgs.writeShellApplication {
     name = "theme-switch";
-    runtimeInputs = [pkgs.coreutils pkgs.procps pkgs.dconf pkgs.awww pkgs.fish pkgs.tmux];
+    runtimeInputs = [pkgs.coreutils pkgs.procps pkgs.dconf pkgs.awww pkgs.fish];
     text = ''
       ${setGtk}
       id="''${1:-}"
@@ -401,7 +361,6 @@
       # by the fish OSC handler when `theme_osc` changes.
       pkill -USR2 ghostty || true
       pkill -USR1 -x hx || true
-      tmux source-file "$state/current/tmux.conf" 2>/dev/null || true
       if command -v herdr >/dev/null; then
         herdr server reload-config >/dev/null 2>&1 || true
       fi

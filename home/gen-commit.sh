@@ -125,10 +125,8 @@ leave_tui() {
   fi
 }
 
-# gum (bubbletea) probes the terminal for kitty-keyboard support at startup, but a
-# short run exits before the reply lands; the tty then echoes the stray answer
-# (ESC [ ? 1 u) straight after the spinner title. Mute echo while gum runs and
-# swallow whatever the terminal sent back.
+# gum (bubbletea) probes for kitty-keyboard support, but a short run exits before the
+# reply lands and the tty echoes the stray ESC[?1u. Mute echo and swallow the reply.
 mute_tty() {
   tty_state=""
   [[ -e /dev/tty ]] || return 0

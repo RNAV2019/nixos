@@ -1,6 +1,5 @@
-# Fixes speaker, headset and mic: the kernel lacks a match entry for rt721+rt1320
-# (see sof-sdw-ptl-rt721.patch). Only the match module is rebuilt, so the kernel
-# stays cached. Drop once upstream; the build fails if the patch stops applying.
+# Kernel lacks an rt721+rt1320 match entry (see patch), breaking speaker/headset/mic.
+# Only this module rebuilds; drop once upstream or the build fails when the patch stops applying.
 {
   config,
   lib,
@@ -61,8 +60,7 @@
   };
 
   # alsa-ucm-conf 1.2.16.1 lacks codecs/rt721+rt1320/init.conf, so UCM fails and
-  # WirePlumber falls back to "Pro". Supplied via ALSA_CONFIG_UCM2, since an
-  # overlay would rebuild alsa-lib and its dependents.
+  # WirePlumber falls back to "Pro"; injected via ALSA_CONFIG_UCM2, avoiding an alsa-lib rebuild.
   ucm2 = pkgs.runCommand "alsa-ucm-conf-rt721-rt1320" {} ''
     cp -r ${pkgs.alsa-ucm-conf}/share/alsa/ucm2 "$out"
     chmod -R u+w "$out"

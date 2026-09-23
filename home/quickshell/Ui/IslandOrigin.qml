@@ -3,26 +3,16 @@ import Quickshell
 import qs.Commons
 import qs.Services
 
-// The shape an island surface grows out of, and the handover protocol it follows when
-// another surface takes the island from it.
-//
-// A surface here is not a panel. It takes the island's own place, starting at whatever the
-// island is wearing when it is asked for - the pill, the island's open card, or the live
-// shape of another island surface letting go - and growing from that into its own geometry.
-// Reading the measurements at the instant of the claim is what turns two shapes into one morph.
-//
-// One of these is attached to every island surface. The handover is keyed on the owning
-// window's output, so a surface opening on one monitor never picks up a shape from another.
+// The shape an island surface grows out of, and the handover protocol when another surface
+// takes the island. Keyed on the owning window's output so monitors never cross.
 QtObject {
   id: origin
 
   // The owning PanelWindow. The handover and the card are both matched against its screen.
   property var window
 
-  // The shape the surface grows out of, when that is not the pill. Zero is the pill. The
-  // card is the same 520 px column at the same radius the panels settle at, so growing out
-  // of it is a change of height and nothing else. Only a width and a height: no surface
-  // animates its corner, which is read off its own live height; see Bar/Island.qml.
+  // The shape the surface grows out of when not the pill (zero is the pill). The card is the
+  // same 520 px column and radius, so it is a change of height only; corner is read off height.
   property real fromWidth: 0
   property real fromHeight: 0
 
@@ -51,22 +41,16 @@ QtObject {
   // it replaced had no clock showing, so whatever rides on this cuts instead of crossfading.
   property bool handedOver: false
 
-  // The still a dismissing surface leaves on screen. The taker is a separate layer surface,
-  // and its first rendered frame lands 150-216 ms after the open even though the window maps
-  // in five, so cutting away at the claim would show the bare pill for that whole gap.
-  //
-  // So the holder rides the taker's own morph: same start shape, target, duration and curve,
-  // begun on the same frame, since the claim and the open are one call stack. From the
-  // taker's first presented frame its box covers the still exactly.
+  // The still a dismissing surface leaves on screen. The taker's first frame lands 150-216 ms
+  // after the open though the window maps in five, so cutting at the claim would bare the pill.
   property bool held: false
   property real heldWidth: 0
   property real heldHeight: 0
   property real heldRadius: 0
   property int heldDuration: 0
 
-  // The claim this surface's still was armed for. A still is owed to exactly one taker; a
-  // second claim makes it stale, and stales left up through a run of fast switches stack up
-  // beside the surface that is actually growing.
+  // The claim this surface's still was armed for. A still is owed to one taker; a second
+  // claim makes it stale, and stale stills stack up beside the surface actually growing.
   property int heldSerial: 0
 
   function hold(width, height, radius) {
@@ -105,10 +89,8 @@ QtObject {
 
   readonly property string screenName: origin.window && origin.window.screen ? origin.window.screen.name : ""
 
-  // Take the shape of the card already standing open on this output. Its measurements are
-  // read into locals first, because claiming the island is what shuts the card. Matched on
-  // the card's `screenName`: the card is a surface, not a window, so reaching through
-  // it for a `win` found undefined and every panel grew out of the pill instead.
+  // Take the shape of the card open on this output. Measurements are read into locals first,
+  // because claiming the island shuts the card; matched on the card's `screenName`, not a `win`.
   function adopt() {
     var card = Bus.islandCardFor(origin.screenName);
     if (!card || card.screenName === "" || card.screenName !== origin.screenName)
@@ -123,9 +105,8 @@ QtObject {
     snapping = false;
   }
 
-  // Take the shape the other island surface was wearing when it let go, if it let go in this
-  // same handover and on this output. It outranks the pill. Consumed on read, and dropped
-  // unused, so it can never be mistaken for the shape of some later open.
+  // Take the shape the other surface was wearing when it let go in this same handover and
+  // output. Outranks the pill. Consumed on read, so it cannot leak into a later open.
   function adoptHandoff() {
     var handoff = Bus.consumeHandoff(origin.screenName);
     if (!handoff)
@@ -147,10 +128,8 @@ QtObject {
     Bus.islandDropped(screenName);
   }
 
-  // Take the island. adopt() must run before the claim, because claiming the island is what
-  // shuts the card; adoptHandoff() must run after, because the surface letting go publishes
-  // its shape inside the claim. The holder's still then rides the shape, duration and curve
-  // this surface is about to travel, so the handover reads as one morph.
+  // Take the island. adopt() before the claim (claiming shuts the card), adoptHandoff() after
+  // (the letting-go surface publishes inside the claim), so the handover reads as one morph.
   function claim(width, height, radius, duration) {
     handedOver = false;
     held = false;

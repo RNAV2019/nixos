@@ -62,6 +62,5 @@
     MOZ_ENABLE_WAYLAND = "1";
   };
 
-  # Forward Home Manager variables into UWSM.
   xdg.configFile."uwsm/env".source = "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
 }

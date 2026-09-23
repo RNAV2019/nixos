@@ -13,8 +13,8 @@ Item {
 
   signal moved(real value)
 
-  // Keep the thumb responsive to the pointer while limiting the rate at which a backing
-  // service or PipeWire property is written.
+  // Keep the thumb responsive to the pointer while limiting how often the backing service or
+  // PipeWire property is written.
   property real _previewValue: 0
   property real _pendingValue: 0
   property bool _previewing: false

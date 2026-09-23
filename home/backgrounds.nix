@@ -25,8 +25,8 @@ in {
     }) (filesOf theme))
   themes);
 
-  # `current` is the active wallpaper; per-theme links remember each theme's last one.
-  # Seeds both with the default when missing.
+  # `current` is the active wallpaper; per-theme links remember each theme's last,
+  # seeded with the default when missing.
   home.activation.initWallpaper = lib.hm.dag.entryAfter ["linkGeneration"] ''
     dir="$HOME/.local/share/wallpaper"
     fallback="$HOME/Pictures/backgrounds/${defaultTheme}/${defaultWallpaper}"

@@ -5,32 +5,24 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The centred surface, and the only one that changes shape. Idle it is a clock and nothing
-// else; with a player running it grows an equaliser beside the clock; hovered, or pinned by
-// a click, it opens into a card carrying the track, the clock with its date, and the two
-// readings worth watching all day.
-//
-// The open is not a cross-fade. The card's contents scale up with the pill and the track
-// block is cut off by the room it has, so the title is revealed letter by letter as the
-// pill widens. The clock is the one element both states share, and it interpolates its own
-// size rather than being swapped for a second copy.
+// The centred surface, the only one that changes shape. The open is not a cross-fade: contents
+// scale with the pill and the track block clips, revealing the title letter by letter.
 FrostedSurface {
   id: root
 
-  // A pin holds the card open once the pointer leaves. Clicking again drops it.
+  // A pin holds the card open after the pointer leaves; clicking again drops it.
   property bool pinned: false
 
-  // The output this island is on. The card is an item on the bar rather than a window of
-  // its own, so a surface growing out of it matches against this; see Ui/IslandOrigin.qml.
+  // The output this island is on; the card is a bar item, so a surface growing out of it
+  // matches against this. See Ui/IslandOrigin.qml.
   property string screenName: ""
 
-  // Raised while another surface has taken the island's place. The island stays mapped for
-  // handoff timing, but is not painted while the covering surface samples the desktop.
+  // Raised while another surface covers the island; it stays mapped for handoff timing
+  // but is not painted while the covering surface samples the desktop.
   property bool suppressed: false
 
-  // Whether the surface covering it is one that stays. For the launcher and the control
-  // centre a pin is dropped, so the card is not found still open underneath when they close.
-  // The OSD is not: a volume key has no business closing a card the user pinned open.
+  // Whether the covering surface stays: the launcher and control centre drop a pin so the
+  // card is not found open underneath; the OSD does not, since a volume key should not close it.
   property bool replaced: false
 
   // Keep the pill out of Hyprland's backdrop-blur sample while another surface grows over it.
@@ -49,8 +41,8 @@ FrostedSurface {
   property bool hoverOpen: false
   readonly property bool expanded: !suppressed && (pinned || hoverOpen)
 
-  // Opening is quick, while closing has hysteresis so a pointer crossing the pill's edge does
-  // not make the card flicker shut.
+  // Opening is quick; closing has hysteresis so a pointer crossing the pill's edge does not
+  // flicker the card shut.
   Timer {
     id: openDelay
 
@@ -78,8 +70,8 @@ FrostedSurface {
     }
   }
 
-  // Offer the card to whatever might have to grow out of it. Only one island can be under
-  // the pointer, so only one is ever the one on offer.
+  // Offer the card to whatever might grow out of it; only one island is under the pointer,
+  // so only one is ever on offer.
   onExpandedChanged: {
     if (expanded)
       Bus.setIslandCard(root.screenName, root);
@@ -94,10 +86,8 @@ FrostedSurface {
   implicitWidth: expanded ? Theme.islandExpandedWidth : collapsedWidth
   implicitHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
 
-  // The corner is read off the height rather than animated. A per-frame fit against the
-  // recordings gives radius = min(height / 2, the surface's own radius) to 1.25 px rms,
-  // against 5.32 px for an interpolated radius, and it keeps the shape a true stadium until
-  // it is tall enough for the corner to bite.
+  // Corner read off height, not animated: a per-frame fit gives radius = min(height / 2,
+  // surface radius) to 1.25 px rms vs 5.32 px interpolated, keeping a true stadium longer.
   surfaceRadius: Math.min(height / 2, Theme.islandExpandedRadius)
 
   Behavior on implicitWidth {
@@ -121,12 +111,11 @@ FrostedSurface {
   readonly property real targetHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
-  // Everything the card draws is sized against the pill's own height, so one animated
-  // property carries the whole layout and nothing can fall out of step with the shape.
+  // The card is sized against the pill's height, so one animated property carries the layout
+  // and nothing falls out of step with the shape.
   readonly property real scaleFactor: height / Theme.islandExpandedHeight
 
-  // The same progress as 0 while shut and 1 while open, for the things that travel between
-  // two fixed states rather than scale.
+  // Progress 0 shut, 1 open, for things that travel between two fixed states rather than scale.
   readonly property real openness: {
     var span = Theme.islandExpandedHeight - Theme.barHeight;
     return span <= 0 ? 1 : Math.max(0, Math.min(1, (height - Theme.barHeight) / span));
@@ -134,24 +123,22 @@ FrostedSurface {
 
   readonly property real midline: height / 2
 
-  // The clock is drawn at its open size and scaled, so its left edge is not where its
-  // unscaled box begins. Everything that stops short of the clock measures against this.
+  // The clock is drawn at open size and scaled, so its shown left edge differs from its
+  // unscaled box; everything stopping short of the clock measures against this.
   readonly property real clockLeft: clockLabel.x + clockLabel.width * (1 - clockLabel.scale) / 2
 
-  // The date is wider than the clock, so while the card is small it is the date the track
-  // block has to stop short of.
+  // The date is wider than the clock, so while the card is small the track block stops short
+  // of the date.
   readonly property real centreLeft: Math.min(clockLeft, date.x + date.width * (1 - date.scale) / 2)
 
-  // Do not infer completion from clamped openness: a spring may cross the target before it rests.
+  // Do not infer completion from clamped openness; a spring may cross the target before resting.
   readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
 
-  // The shut pill is one row on 34 px margins, and every board width is that row plus 68.
-  // The equaliser's shoulder and the dot's differ, so the clock shifts with the row and only
-  // the idle pill finds it back on the centre line. See Theme.islandCollapsedWidth.
+  // The shut pill is one row on 34 px margins; every board width is that row plus 68. The
+  // equaliser shoulder and dot differ, so the clock shifts; see Theme.islandCollapsedWidth.
   readonly property real collapsedGap: 7.5
 
-  // Where the shut row puts the clock's left edge. The label is drawn at its open size and
-  // scaled, so this is the shown left edge, measured the way clockLeft measures it.
+  // Where the shut row puts the clock's shown left edge, measured as clockLeft measures it.
   readonly property real collapsedClockLeft: {
     var shoulder = Media.active ? collapsedEq.implicitWidth + collapsedGap : 0;
     var row = shoulder + clockLabel.width * clockLabel.scale;
@@ -166,8 +153,7 @@ FrostedSurface {
     precision: SystemClock.Minutes
   }
 
-  // Clicking empty island space pins the card open; clicking again releases it. The controls
-  // sit on top of this and act without disturbing the pin.
+  // Clicking empty island space pins the card open; controls on top act without disturbing it.
   MouseArea {
     id: hover
 
@@ -200,9 +186,8 @@ FrostedSurface {
     opacity: 0.9
   }
 
-  // The recording mark, the trailing element on the pill after the clock, so the equaliser
-  // keeps the place beside the clock it already had. Love rather than accent, and shown only
-  // while the pill is shut: a red dot in the open card would be a second subject.
+  // The recording mark, trailing the clock so the equaliser keeps its place. Shown only while
+  // shut: a red dot in the open card would be a second subject.
   Rectangle {
     x: root.clockLeft + clockLabel.width * clockLabel.scale + Theme.recorderDotGap
     y: root.midline - height / 2
@@ -220,7 +205,7 @@ FrostedSurface {
     }
   }
 
-  // The equaliser the shut pill carries. The open card has its own, so this one hands over.
+  // The shut pill's equaliser; the open card has its own, so this one hands over.
   Equaliser {
     id: collapsedEq
 
@@ -237,8 +222,7 @@ FrostedSurface {
     }
   }
 
-  // The card, laid out against the pill's live width rather than a fixed design width, which
-  // is what makes the contents reflow as it opens.
+  // Card laid out against the pill's live width, which makes contents reflow as it opens.
   Item {
     id: card
 
@@ -252,9 +236,8 @@ FrostedSurface {
       }
     }
 
-    // The track block is drawn once at its open metrics and scaled as a whole, and the room
-    // it has is a clip rather than an elide. Animating each font size instead re-fits the
-    // glyphs every frame, and the trailing letters flicker against the ellipsis.
+    // Track block drawn once at open metrics and scaled, clipped rather than elided; animating
+    // font size re-fits glyphs every frame and the trailing letters flicker against the ellipsis.
     Item {
       id: media
 
@@ -311,9 +294,8 @@ FrostedSurface {
       }
     }
 
-    // With nothing playing, the room the track block would have taken carries the week
-    // instead, drawn from the card's own left inset and scaled as a whole like the block it
-    // replaces, so the strip grows with the pill rather than reflowing inside it.
+    // With nothing playing the track block's room carries the week instead, drawn from the
+    // card's left inset and scaled like the block it replaces, so the strip grows with the pill.
     MiniCalendar {
       x: 16 * root.scaleFactor
       y: root.midline - height * root.scaleFactor / 2
@@ -323,8 +305,8 @@ FrostedSurface {
       visible: !Media.active
     }
 
-    // Left and right buttons skip, so the card is a transport as well as a readout. Kept
-    // outside the scaled block so it stays in real coordinates.
+    // Left/right buttons skip, so the card is a transport as well as a readout; kept outside
+    // the scaled block so it stays in real coordinates.
     MouseArea {
       x: 0
       y: 0
@@ -356,8 +338,8 @@ FrostedSurface {
       font.pixelSize: Theme.islandCaptionSize
     }
 
-    // Board 02's gauges, the battery 16 px in from the right like the album art on the left
-    // and the system load beside it.
+    // Board 02's gauges: the battery 16 px in from the right like the album art, system load
+    // beside it.
     SystemGauge {
       x: root.width - (16 + 12 + 2 * implicitWidth) * root.scaleFactor
       y: root.midline - implicitHeight * root.scaleFactor / 2
@@ -373,18 +355,17 @@ FrostedSurface {
     }
   }
 
-  // The clock belongs to neither state and survives both. It grows from the shut size to the
-  // open one and slides onto the pill's centre line, so it is never seen to be replaced. On
-  // the minute its digits roll to their next value; see Ui/RollingClock.qml.
+  // The clock belongs to neither state and survives both, growing from the shut size and
+  // sliding onto the centre line so it is never seen replaced; see Ui/RollingClock.qml.
   RollingClock {
     id: clockLabel
 
-    // Set at the open size and scaled down rather than animating its pixel size, so the
-    // digits are laid out once and the advance between them never shifts.
+    // Set at the open size and scaled down rather than animating pixel size, so the digits are
+    // laid out once and the advance between them never shifts.
     readonly property real shownSize: Theme.islandClockSize + root.openness * (Theme.islandDisplaySize - Theme.islandClockSize)
 
-    // Slides from the shut row's clock slot to the open card's centre line, riding the same
-    // openness that already carries its size.
+    // Slides from the shut clock slot to the open centre line, riding the same openness that
+    // already carries its size.
     x: {
       var openX = (root.width - width) / 2;
       var shutX = root.collapsedClockLeft - width * (1 - scale) / 2;

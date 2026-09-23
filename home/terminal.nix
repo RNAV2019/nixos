@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 {
   home.file.".config/ghostty/config".text = ''
     # The colours come from the active theme (see theme.nix). Included last, so they win;
@@ -42,64 +42,6 @@
     resize-overlay = never
   '';
 
-  programs.tmux = {
-    enable = true;
-    mouse = true;
-    keyMode = "vi";
-    terminal = "tmux-256color";
-    prefix = "C-a";
-    baseIndex = 1;
-    escapeTime = 0;
-    historyLimit = 50000;
-    # The Rose Pine plugin is loaded by the theme fragment; see theme.nix.
-    plugins = with pkgs.tmuxPlugins; [
-      yank
-    ];
-    extraConfig = ''
-      setw -g pane-base-index 1
-      set -g renumber-windows on
-
-      # Colours from the active theme; theme-switch re-sources this live.
-      source-file -q ~/.local/state/theme/current/tmux.conf
-
-      # send-prefix does nothing while the prefix is off, so send the key itself.
-      bind -N "Send C-a" a send-prefix
-
-      # Splits in current working directory
-      bind -N "Split vertical" v split-window -h -c "#{pane_current_path}"
-      bind -N "Split horizontal" s split-window -v -c "#{pane_current_path}"
-      unbind '"'
-      unbind %
-
-      # New window in current path
-      bind -N "New window" c new-window -c "#{pane_current_path}"
-
-      bind -N "Go left" h select-pane -L
-      bind -N "Go down" j select-pane -D
-      bind -N "Go up" k select-pane -U
-      bind -N "Go right" l select-pane -R
-
-      bind -r -N "Resize left" H resize-pane -L 5
-      bind -r -N "Resize down" J resize-pane -D 5
-      bind -r -N "Resize up" K resize-pane -U 5
-      bind -r -N "Resize right" L resize-pane -R 5
-
-      bind -N "Reload config" r source-file ~/.config/tmux/tmux.conf \; display-message "tmux.conf reloaded"
-
-      bind -r -N "Move window left" "<" swap-window -d -t -1
-      bind -r -N "Move window right" ">" swap-window -d -t +1
-
-      bind -N "Sessions" S choose-tree -Zs
-
-      # Copy mode — helix-style
-      bind -T copy-mode-vi v send-keys -X begin-selection
-      bind -T copy-mode-vi x send-keys -X select-line
-      bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "wl-copy"
-      bind -T copy-mode-vi Escape send-keys -X cancel
-    '';
-  };
-
-  # Migrating off tmux; both stay enabled until the herdr keymap sticks.
   programs.herdr = {
     enable = true;
 
@@ -112,19 +54,19 @@
       update.version_check = false;
 
       terminal = {
-        # tmux passed `-c "#{pane_current_path}"` on every split and window.
+        # New panes follow the current directory.
         new_cwd = "follow";
       };
 
       keys = {
         prefix = "ctrl+a";
 
-        # Match the tmux splits; settings moves off prefix+s.
+        # settings moves off prefix+s.
         split_vertical = "prefix+v";
         split_horizontal = "prefix+s";
         settings = "prefix+shift+s";
 
-        # tmux detached with prefix+d; herdr defaults to prefix+q.
+        # herdr defaults to prefix+q.
         detach = "prefix+d";
 
         # focus_pane_{left,down,up,right} already default to prefix+h/j/k/l.
@@ -134,11 +76,11 @@
       };
 
       ui = {
-        # tmux's new-window does not ask for a name.
+        # Don't prompt for a new tab name.
         prompt_new_tab_name = false;
       };
 
-      # tmux counted 50000 scrollback lines; herdr counts bytes.
+      # herdr counts scrollback in bytes.
       advanced.scrollback_limit_bytes = 20000000;
     };
   };

@@ -51,8 +51,8 @@ Item {
     }
   }
 
-  // Ask for a size no theme keeps, so it hands back its largest variant and downsamples
-  // cleanly. Loaded synchronously: small local files, and async shows a blank frame.
+  // Ask for a size no theme keeps, so it returns its largest variant and downsamples
+  // cleanly. Loaded synchronously: async shows a blank frame.
   Image {
     id: icon
 

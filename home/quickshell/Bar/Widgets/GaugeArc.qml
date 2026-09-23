@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Shapes
 import qs.Commons
 
-// One ring of an island gauge: 240 degrees about a 48 px box, open at the bottom where the
-// gauge's label sits. With `value` left at 1 it is the track.
+// One island-gauge ring: 240 degrees about a 48 px box, open at the bottom where the label
+// sits. With `value` left at 1 it is the track.
 ShapePath {
   id: arc
 

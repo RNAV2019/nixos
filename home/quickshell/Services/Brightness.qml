@@ -16,20 +16,15 @@ Singleton {
 
   property int _max: 0
 
-  // Emitted per keypress, including when the value is already railed, so the
-  // OSD can appear without waiting on a sysfs change that never comes.
+  // Emitted per keypress, even at a rail, so the OSD appears without a sysfs change.
   signal adjusted
 
-  // Every control works in the raw sysfs range, which is also the space
-  // `value` reports and the panel slider draws. brightnessctl's -e flag would
-  // put a step or a target somewhere up an exponential curve instead, which
-  // leaves the reported percentage disagreeing with what was asked for.
+  // Everything works in the raw sysfs range, which `value` and the slider share.
+  // brightnessctl's -e flag would put a step up an exponential curve and disagree.
   readonly property int stepPercent: 5
 
-  // A flat 5% step is right for a tap but slow for a hold: the keyboard
-  // repeats 25 times a second, so crossing the range takes 20 of them. Once a
-  // run of presses is clearly a held key rather than tapping, grow the step so
-  // the ends arrive in roughly half a second while a single press stays fine.
+  // A flat 5% step suits a tap but not a hold: the key repeats 25 times a second, so
+  // crossing the range takes 20. After a run, grow the step to arrive in ~0.5 s.
   readonly property int maxStepPercent: 20
   readonly property int stepGrowth: 2
   // Presses at the base size before the run starts accelerating.
@@ -41,8 +36,7 @@ Singleton {
   property real _lastAt: 0
   property bool _lastUp: false
 
-  // Slider motion and key repeat can arrive faster than brightnessctl can finish. Keep the
-  // latest absolute target and allow only one short-lived writer at a time.
+  // Slider and key repeat outrun brightnessctl, so keep the latest target and one writer.
   readonly property int writeInterval: 20
   property real _requestedValue: 0
   property bool _hasRequestedValue: false

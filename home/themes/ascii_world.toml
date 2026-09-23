@@ -1,6 +1,5 @@
-# ASCII world: the dark theme's monochrome palette, with red, yellow and pink kept for
-# errors, warnings and a little emphasis. The background is left to the terminal, as
-# rose_pine_transparent does, so Ghostty's translucency shows through.
+# ASCII world: dark monochrome palette, with red, yellow and pink for errors, warnings
+# and emphasis. Background is left to the terminal so Ghostty's translucency shows through.
 
 "ui.background" = {}
 "ui.background.separator" = {}

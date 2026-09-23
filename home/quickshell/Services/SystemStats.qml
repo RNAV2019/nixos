@@ -4,8 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// CPU and memory load, read straight from procfs every couple of seconds for the island's
-// system gauge.
+// CPU and memory load, read from procfs every couple of seconds for the island's gauge.
 Singleton {
   id: root
 
@@ -13,8 +12,7 @@ Singleton {
   property real cpu: 0
   property real memory: 0
 
-  // /proc/stat's first line is cumulative, so CPU load is the busy share of the ticks that
-  // passed since the previous read.
+  // /proc/stat is cumulative, so CPU load is the busy share of ticks since the previous read.
   property real _lastIdle: -1
   property real _lastTotal: 0
 

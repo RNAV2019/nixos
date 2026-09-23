@@ -63,8 +63,7 @@ Singleton {
     }
   }
 
-  // The daemon and quickshell come up in either order, so this backs off forever
-  // rather than giving up after a fixed number of tries.
+  // The daemon and quickshell come up in either order, so this backs off forever.
   property int _tries: 0
 
   readonly property int eagerTries: 15

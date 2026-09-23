@@ -5,15 +5,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// The screen recorder. Recording is one long-lived wl-screenrec process, which writes
-// until it is asked to stop.
-//
-// wl-screenrec rather than wf-recorder because the toggles have to be real: wf-recorder
-// always burns the cursor in, while wl-screenrec has --no-cursor, takes slurp's own
-// geometry format and records audio from a named device.
-//
-// Stopping is SIGINT, never SIGKILL: the muxer has to write its trailer or the file is
-// unplayable. That is also why `saving` is a state of its own.
+// The screen recorder: one long-lived wl-screenrec process, chosen over wf-recorder so
+// the toggles are real. Stop is SIGINT, never SIGKILL, so the muxer writes its trailer.
 Singleton {
   id: root
 
@@ -26,7 +19,7 @@ Singleton {
   readonly property bool recording: state === "recording"
   readonly property bool busy: state !== "idle"
 
-  // What the picker was left on. These outlive a recording, so the next one opens on them.
+  // What the picker was left on; these outlive a recording, so the next opens on them.
   property string target: "screen"
   property bool cursor: true
   property bool desktopAudio: true
@@ -44,7 +37,6 @@ Singleton {
 
   readonly property string targetLabel: target === "screen" ? "Screen" : target === "window" ? "Window" : "Region"
 
-  // What the control centre tile says under its name.
   readonly property string status: {
     if (root.state === "recording")
       return root.targetLabel + " · " + root.elapsedLabel + "  ·  tap to stop";
@@ -65,8 +57,8 @@ Singleton {
       Bus.recorderRequested();
   }
 
-  // Called by the picker once the user has chosen; it closes itself first, because slurp
-  // cannot run while that surface holds the keyboard.
+  // Called by the picker once chosen; it closes itself first, since slurp cannot run
+  // while that surface holds the keyboard.
   function start() {
     if (root.busy)
       return;
@@ -92,9 +84,8 @@ Singleton {
     if (!root.cursor)
       args.push("--no-cursor");
 
-    // One device, because wl-screenrec takes a single --audio-device and mixes nothing.
-    // With both asked for the desktop wins. The name is resolved in the shell below, since
-    // it is whatever wireplumber currently calls the default.
+    // wl-screenrec takes a single --audio-device and mixes nothing, so one device only;
+    // with both asked for the desktop wins. The name is resolved in the shell below.
     var device = "";
     if (root.desktopAudio)
       device = 'sink';
@@ -103,8 +94,8 @@ Singleton {
 
     root.elapsed = 0;
     root.pendingStop = false;
-    // One shell, so the device lookup happens at the moment of recording. The directory is
-    // made here, so a recorder that is never used creates nothing.
+    // One shell, so the device lookup happens at record time. The directory is made here,
+    // so a recorder that is never used creates nothing.
     var script = 'mkdir -p "$(dirname "$1")" || exit 1; kind=$2; shift 2; ' + 'if [ -n "$kind" ]; then ' + 'alias=@DEFAULT_AUDIO_SINK@; [ "$kind" = source ] && alias=@DEFAULT_AUDIO_SOURCE@; ' + 'name=$(wpctl inspect "$alias" | sed -n \'s/.*node\\.name = "\\(.*\\)"/\\1/p\' | head -1); ' + '[ "$kind" = sink ] && name="$name.monitor"; ' + 'if [ -n "$name" ]; then set -- "$@" --audio --audio-device "$name"; fi; fi; ' + 'exec "$@"';
     capture.command = ["sh", "-c", script, "sh", root.file, device].concat(args);
     capture.running = true;
@@ -135,8 +126,8 @@ Singleton {
       return;
     }
     pendingStop = false;
-    // SIGINT by hand: terminating the process would skip the muxer's trailer. It goes to the
-    // process group because the capture command is wrapped in a shell.
+    // SIGINT by hand: terminating would skip the muxer's trailer. It goes to the process
+    // group because the capture command is wrapped in a shell.
     interrupt.command = ["sh", "-c", 'kill -INT -"$1" 2>/dev/null || kill -INT "$1"', "sh", String(capture.processId)];
     interrupt.running = true;
   }
@@ -231,8 +222,7 @@ Singleton {
     }
   }
 
-  // The shell is the notification server, so this goes out the same door as everyone
-  // else's and comes back as a toast with real actions.
+  // The shell is the notification server, so this comes back as a toast with real actions.
   Process {
     id: announce
 

@@ -4,8 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Networking
 
-// The bar widget and the panel both need the same device lookups; evaluating
-// them once here keeps a single scan of Networking.devices per change.
+// The bar widget and panel need the same device lookups; evaluating them once here
+// keeps a single scan of Networking.devices per change.
 Singleton {
   id: root
 

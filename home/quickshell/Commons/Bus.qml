@@ -38,9 +38,8 @@ Singleton {
   // Raised when something asks to record but nothing has been chosen yet.
   signal recorderRequested
 
-  // Opening and closing an island surface, by key rather than by name: "launcher",
-  // "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "osd",
-  // "notify".
+  // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
+  // "theme", "recorder", "calendar", "session", "profiles", "osd", "notify".
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 
@@ -52,14 +51,12 @@ Singleton {
     surfaceClosed(key);
   }
 
-  // Which output each surface currently owns. Absent means it is not on screen anywhere.
-  // Reassigned wholesale rather than mutated, because a binding cannot see a property
-  // written into a JavaScript object in place.
+  // Which output each surface owns; absent means not on screen. Reassigned wholesale
+  // rather than mutated, since a binding cannot see an in-place property write.
   property var owners: ({})
 
-  // Transient surfaces dismiss themselves, so they never claim the island through owners. The
-  // markers are keyed by output because a second monitor must not hide its own island when the
-  // focused output is showing an OSD.
+  // Transient surfaces dismiss themselves, so they never claim the island through owners.
+  // Keyed by output, so a second monitor does not hide its island for another's OSD.
   property var transientScreens: ({})
 
   function setTransientScreen(key, screenName) {
@@ -109,8 +106,8 @@ Singleton {
     return transientKeys.indexOf(key) !== -1;
   }
 
-  // True while a surface the user has to dismiss is holding the island. The unasked two
-  // wait on this rather than shoving an opened panel off the screen.
+  // True while a user-dismissed surface holds the island. The unasked two wait on this
+  // rather than shoving an opened panel off the screen.
   readonly property bool islandHeld: {
     for (var k in owners) {
       if (!root.isTransient(k))
@@ -151,19 +148,16 @@ Singleton {
     return false;
   }
 
-  // Emitted by whichever surface is about to take the island, just before it starts to
-  // grow, carrying the output. On that output the holder cuts itself away, since something
-  // is growing in its place; on any other it takes its own close. Cutting rather than
-  // shrinking is what avoids two headers and two clocks at once.
+  // Emitted by a surface about to take the island, just before it grows, carrying the
+  // output. The holder cuts away rather than shrinks, avoiding two headers/clocks at once.
   signal islandClaimed(string screen)
 
   // Raised by a surface letting the island go with nothing growing in its place. Whoever
-  // is holding a still for it drops it, or the panel before last would come back on the
-  // way down.
+  // holds a still drops it, or the panel before last would return on the way down.
   signal islandDropped(string screen)
 
-  // Per-output handoff transactions. A singleton mailbox is safe only on one monitor; maps keep
-  // simultaneous claims and fractional geometry isolated from one another.
+  // Per-output handoff transactions. A singleton mailbox is safe only on one monitor; maps
+  // keep simultaneous claims and fractional geometry isolated.
   property var islandClaims: ({})
   property var islandHandoffs: ({})
 
@@ -222,14 +216,12 @@ Singleton {
     return handoff;
   }
 
-  // Bumped once per claim. A surface holding a still records the serial it armed it for,
-  // which is how it tells that handover from a later one; see Ui/IslandOrigin.qml.
+  // Bumped once per claim. A surface holding a still records the serial it armed for, to
+  // tell that handover from a later one; see Ui/IslandOrigin.qml.
   property int claimSerial: 0
 
-  // The island card that is currently standing open, or null while every island is a pill.
-  // A surface taking the island's place starts at the shape the island is actually wearing.
-  // The card itself is published rather than its measurements, so the shape can be picked
-  // up part way if the card is still growing.
+  // The open island card, or null while every island is a pill. A surface taking its place
+  // starts at the island's actual shape, so the card is published rather than measurements.
   property var islandCards: ({})
 
   function setIslandCard(screen, card) {

@@ -13,7 +13,7 @@ Item {
   signal closed
   signal opened(string view)
 
-  // Only the panel knows the box the picker has to contract out of.
+  // Only the panel knows the box the picker contracts out of.
   signal recorderRequested
 
   property int keyboardIndex: 0
@@ -73,7 +73,7 @@ Item {
     objects: root.sink ? [root.sink] : []
   }
 
-  // Each block starts a fixed gap below the one above, so a missing card leaves no hole.
+  // Each block sits a fixed gap below the previous, so a missing card leaves no hole.
   readonly property int tilesTop: Theme.controlHeaderHeight
   readonly property int tilesBottom: tilesTop + Theme.controlTileHeight * 3 + Theme.controlTileGap * 2
   readonly property int slidersTop: tilesBottom + Theme.controlBlockGap
@@ -141,7 +141,7 @@ Item {
     onOpened: root.opened("audio")
   }
 
-  // The remainder from the division goes to the last tile, so the row ends on the inset.
+  // Floor division leaves the remainder to the last tile, so the row ends on the inset.
   readonly property int thirdWidth: Math.floor((span - Theme.controlTileGap * 2) / 3)
 
   Tile {
@@ -329,7 +329,7 @@ Item {
       Repeater {
         model: NotificationStore.history
 
-        // The rows are snapshots and never change, so a one-shot read is the whole story.
+        // Rows are snapshots that never change, so a one-shot read is enough.
         NotificationCard {
           id: card
 

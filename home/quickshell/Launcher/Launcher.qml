@@ -5,16 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The app launcher: the island in another shape rather than a panel. It starts at the
-// pill's exact size, radius and centre line and grows down into a 520 px column, and the
-// bar stands its island down for as long as it is on screen.
-//
-// The clock is the one thing the two states share: it stays drawn in the growing box and
-// fades as the search row takes over.
-//
-// The panel is clipped, so the rows do not fade in on the open: they are laid out at
-// their final positions and the growing shape uncovers them. Reflow while typing is the
-// part that animates.
+// The app launcher: the island grown into a 520 px column from the pill's exact size,
+// radius and centre line. The clipped panel uncovers pre-laid rows; reflow animates.
 Variants {
   id: root
 
@@ -46,8 +38,8 @@ Variants {
       hide();
     }
 
-    // Rebuilt in place rather than replaced, so the list keeps its delegates across a
-    // query change and can animate what happened to each one; a reset would read as a cut.
+    // Rebuilt in place, not replaced, so delegates survive a query change and can
+    // animate; a reset would read as a cut.
     function syncRows() {
       var want = AppSearch.results;
       var i, j;
@@ -62,8 +54,8 @@ Variants {
           rows.remove(i);
       }
 
-      // What survives is already in the right relative order, so this scan finds its match
-      // at or just after the position it is looking to fill.
+      // Survivors keep their relative order, so each match is found at or after the
+      // position being filled.
       for (i = 0; i < want.length; i++) {
         var at = -1;
         for (j = i; j < rows.count; j++) {
@@ -84,13 +76,12 @@ Variants {
       }
     }
 
-    // Hyprland focuses an OnDemand surface when it first maps, but not when an already
-    // mapped one goes None -> OnDemand, and this stays mapped through its close animation.
-    // Exclusive covers that, but cannot be permanent: it would route every pointer event here.
+    // Hyprland skips focus when a mapped OnDemand surface goes None -> OnDemand, so
+    // Exclusive covers the close animation (permanent would swallow all pointer events).
     onOpenChanged: {
       if (open) {
-        // Layer-shell hands the surface focus, but Qt still needs an active-focus target
-        // inside it before the input sees a key.
+        // Layer-shell gives the surface focus, but Qt needs an active-focus target
+        // inside it before input sees a key.
         Qt.callLater(function () {
           if (win.open)
             query.forceActiveFocus();
@@ -269,8 +260,7 @@ Variants {
             }
           }
 
-          // Survivors travel on the curve of the shape they sit in, which is why two can be
-          // seen crossing rather than shoving.
+          // Survivors travel on the shape's curve, so two can be seen crossing, not shoving.
           displaced: Transition {
             NumberAnimation {
               properties: "y"

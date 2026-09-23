@@ -4,7 +4,7 @@
   pkgs,
   ...
 }: let
-  # The Penpot MCP URL embeds a token, so it's merged in from sops at activation
+  # The Penpot MCP URL embeds a token, so it's merged from sops at activation
   # rather than baked into the store, like claude.nix.
   mcpMerge = pkgs.writeShellApplication {
     name = "opencode-mcp-merge";

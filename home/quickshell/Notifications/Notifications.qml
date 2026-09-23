@@ -5,14 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The toast: the island in another shape. The pill grows in place into a 450 px card,
-// holds while the notification is read, and melts back into the clock.
-//
-// One card, not a stack. The island can only be one shape, so this draws the newest and
-// the rest wait behind it; the control centre's list is where the whole run lives.
-//
-// Only the card takes input. The window covers the screen so the card can be centred in
-// it, but its mask is the card alone.
+// The toast: the island grows into a 450 px card, then melts back into the clock.
+// One card, not a stack; only the card takes input (the window covers the screen).
 Variants {
   id: root
 
@@ -25,11 +19,10 @@ Variants {
 
     readonly property bool focused: Monitors.isFocused(win.screen)
 
-    // The one being shown. Newest first, which is the order the store keeps.
+    // The toast being shown; popups[0] is the newest.
     readonly property var current: NotificationStore.popups.length > 0 ? NotificationStore.popups[0] : null
 
-    // A toast is not asked for, so it waits behind a panel the user opened, and gives way
-    // to an OSD, which is the direct result of a key just pressed.
+    // Waits behind a user-opened panel, but yields to an OSD from a keypress.
     readonly property bool blocked: Bus.islandHeldFor(win.screen ? win.screen.name : "") || Bus.transientScreen("osd") !== ""
     readonly property bool wantsOpen: current !== null && focused && !blocked
     property bool open: false
@@ -73,8 +66,7 @@ Variants {
 
     readonly property string iconSource: current ? NotificationStore.iconFor(current.image, current.appIcon) : ""
 
-    // "default" is the whole-card click by convention, so it is never drawn as a button;
-    // two is as many as the row has room for beside dismiss.
+    // "default" is the whole-card click, so never drawn; two is the row's limit.
     readonly property var buttons: {
       var out = [];
       if (!current)
@@ -89,8 +81,7 @@ Variants {
 
     readonly property int bodyLines: bodyText === "" ? 0 : Math.min(Theme.notifBodyLines, bodyMetrics.lineCount)
 
-    // The board has a source line under the title, but nothing on this bus carries one, so
-    // the body sits where the source would have started and the line is not drawn at all.
+    // Nothing on this bus carries a source line, so the body starts where it would have.
     readonly property int bodyTop: Theme.notifBodyTopBare
 
     readonly property int bodyBottom: bodyLines > 0 ? bodyTop + bodyLines * Theme.notifBodyLeading - 3 : Theme.notifTitleTop + 18
@@ -99,8 +90,7 @@ Variants {
 
     readonly property int openHeight: Math.max(Theme.notifAvatarSize + Theme.notifInset * 2, actionsTop + Theme.notifActionHeight + Theme.notifPadBottom)
 
-    // Counted down rather than run off one long Timer, because hovering has to hold it
-    // where it is: a restarted Timer hands back time the notification had already spent.
+    // Counted down so hovering holds it; a restarted Timer would return spent time.
     property int remaining: 0
 
     function reset() {
@@ -109,8 +99,7 @@ Variants {
 
     onTimeoutChanged: reset()
 
-    // Dismissed on the bus, which tells the application nobody is looking at it any more,
-    // and dropped from the store, which shrinks this surface back to the pill.
+    // Dismiss on the bus and drop from the store, shrinking the surface to the pill.
     function close() {
       if (!current)
         return;
@@ -119,7 +108,7 @@ Variants {
       NotificationStore.forgetPopup(n);
     }
 
-    // The same, but as the timeout: expire() is what the specification wants here.
+    // Same, via expire(), which is what the spec wants for a timeout.
     function expire() {
       if (!current)
         return;
@@ -134,8 +123,7 @@ Variants {
     }
 
     Timer {
-      // Only while the card is up, only while it expires at all, and only while the pointer
-      // is somewhere else.
+      // Only while the card is up and expiring, and the pointer is elsewhere.
       running: win.open && win.timeout > 0 && !cardHover.containsMouse
       interval: 100
       repeat: true
@@ -146,7 +134,7 @@ Variants {
       }
     }
 
-    // For the timestamp, the only thing on the card that changes while it is looked at.
+    // Drives the timestamp, the only thing that changes while the card is up.
     SystemClock {
       id: clock
 
@@ -261,8 +249,7 @@ Variants {
         enabled: win.open
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        // Clicking the card invokes the default action, which opens the application that
-        // sent it. Anything without one is just dismissed.
+        // Clicking invokes the default action (opens the sender); otherwise just dismiss.
         onClicked: {
           var actions = win.current ? win.current.actions : [];
           for (var i = 0; i < actions.length; i++) {
@@ -275,8 +262,7 @@ Variants {
         }
       }
 
-      // Reuse the complete collapsed renderer, not only the clock, so the handoff preserves
-      // media and recording state when the toast gives the island back.
+      // Reuse the collapsed renderer so handoff preserves media and recording state.
       CollapsedPill {
         anchors.fill: parent
         origin: origin
@@ -296,7 +282,7 @@ Variants {
           }
         }
 
-        // The sender's icon, or its initial on a wash of a colour picked off the name.
+        // The sender's icon, or its initial on a colour picked off the name.
         Rectangle {
           id: avatar
 
@@ -410,8 +396,7 @@ Variants {
           wrapMode: Text.WordWrap
           maximumLineCount: Theme.notifBodyLines
           elide: Text.ElideRight
-          // Fixed leading, so the card's height follows from a line count rather than
-          // being measured after the fact.
+          // Fixed leading, so height follows from a line count, not a measurement.
           lineHeightMode: Text.FixedHeight
           lineHeight: Theme.notifBodyLeading
           font.family: Theme.uiFont
@@ -475,8 +460,8 @@ Variants {
             }
           }
 
-          // Always present and always leftmost. A critical notification says Ignore rather
-          // than Dismiss, because sending it away is not dealing with it.
+          // Always present and leftmost. A critical notification says Ignore, not
+          // Dismiss, because sending it away is not dealing with it.
           Pill {
             label: win.urgent ? "Ignore" : "Dismiss"
             primary: win.buttons.length === 0

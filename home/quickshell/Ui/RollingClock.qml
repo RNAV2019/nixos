@@ -1,9 +1,8 @@
 import QtQuick
 import qs.Commons
 
-// The pill's clock, drawn one Text per character so a digit that changes on the minute
-// cross-fades to its next value. Each slot keeps its character's own advance, so the
-// glyphs that did not change never move.
+// The pill's clock, one Text per character: a changed digit cross-fades to its next value.
+// Each slot keeps its own advance, so glyphs that did not change never move.
 Item {
   id: root
 
@@ -30,8 +29,7 @@ Item {
 
         readonly property string glyph: root.text.charAt(index)
 
-        // The glyph this slot has settled on; comparing against it keeps an unchanged
-        // digit perfectly still.
+        // The glyph this slot has settled on; comparing against it keeps an unchanged digit still.
         property string shown
         property bool armed: false
 
@@ -42,8 +40,7 @@ Item {
           if (!armed || glyph === shown)
             return;
 
-          // A change mid-roll: the arriving glyph snaps to rest first, so the next roll
-          // always starts from a settled glyph.
+          // A change mid-roll: snap the arriving glyph to rest so the next roll starts settled.
           if (roll.running) {
             roll.stop();
             incoming.y = 0;
@@ -81,8 +78,8 @@ Item {
           font: root.font
         }
 
-        // Travel and the outgoing ink ride the content clock; the incoming ink trails
-        // on the fast one, which dips the pair's total ink mid-roll.
+        // Travel and outgoing ink ride the content clock; incoming trails on the fast one,
+        // dipping the pair's total ink mid-roll.
         ParallelAnimation {
           id: roll
 

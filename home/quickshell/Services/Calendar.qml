@@ -5,14 +5,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// Google Calendar, read through ical-agenda. Board 14.
-//
-// The Google side is a secret iCal address held in secrets/secrets.yaml: sops-nix
-// decrypts it to a root-written file that only ical-agenda opens, so there is no OAuth
-// client and no refresh token, and nothing here ever sees an address.
-//
-// ical-agenda does the fetching, the recurrence expansion and the merge, and prints TSV.
-// See home/ical-agenda.nix. Events are read a month at a time and cached by month key.
+// Google Calendar via ical-agenda (see home/ical-agenda.nix): the secret iCal address
+// is decrypted by sops-nix, so nothing here sees it. Events are cached by month.
 Singleton {
   id: root
 
@@ -120,10 +114,8 @@ Singleton {
     return d.getFullYear() + "-" + root.pad(d.getMonth() + 1) + "-" + root.pad(d.getDate());
   }
 
-  // The grid draws days from the neighbouring months, so the fetch is padded a week
-  // either side.
-  // `force` is the user asking again rather than the grid moving, and goes down as
-  // --refresh so the feeds are re-downloaded.
+  // The grid shows neighbouring months, so the fetch is padded a week either side.
+  // `force` is the user asking again and goes down as --refresh to re-download feeds.
   function load(force) {
     if (root.months[root.monthKey] !== undefined)
       return;
@@ -141,8 +133,8 @@ Singleton {
     watchdog.restart();
   }
 
-  // A process that cannot start at all only warns and never exits, so without this the
-  // panel would sit on "Loading…" forever. It also catches a feed that will not answer.
+  // A process that cannot start only warns and never exits, so without this the panel
+  // would sit on "Loading…" forever; it also catches a feed that will not answer.
   Timer {
     id: watchdog
 
@@ -260,8 +252,8 @@ Singleton {
     }
   }
 
-  // Built field by field rather than handed to Date(), which parses a bare date string
-  // as UTC and would put a late evening event on the wrong day.
+  // Built field by field rather than handed to Date(), which parses a bare date as UTC
+  // and would put a late evening event on the wrong day.
   function parse(date, time) {
     var d = date.split("-");
     var t = time !== "" ? time.split(":") : ["0", "0"];

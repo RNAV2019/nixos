@@ -5,9 +5,8 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Services
 
-// The lock screen's picture and nothing else: no session lock, no PAM, no watchdog.
-// Hosted twice, by Lock.qml and by the IPC preview in LockPreview.qml, so every visual
-// change can be rehearsed on a live desktop.
+// The lock screen's picture only: no session lock, no PAM, no watchdog. Hosted by
+// Lock.qml and the IPC preview in LockPreview.qml so visuals can be rehearsed live.
 Item {
   id: view
 
@@ -258,8 +257,8 @@ Item {
               readonly property bool filled: index < input.text.length
 
               width: filled ? canvas.u(Theme.lockDotSize + Theme.lockDotGap) : 0
-              // Every child of the row is the caret's height, so the positioner lines
-              // them up without anchors, which it would ignore.
+              // Every child is the caret's height, so the positioner lines them up
+              // without anchors, which it would ignore.
               height: canvas.u(Theme.lockCaretHeight)
 
               Behavior on width {

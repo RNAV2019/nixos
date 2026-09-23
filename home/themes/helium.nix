@@ -1,6 +1,5 @@
-# Helium follows the desktop theme via one Chrome theme extension per palette. `helium` is a
-# launcher that opens a private DevTools pipe and loads the active theme with
-# Extensions.loadUnpacked whenever theme-switch writes a new name.
+# Helium follows the desktop theme via one Chrome theme extension per palette; `helium`
+# loads the active one with Extensions.loadUnpacked whenever theme-switch writes a name.
 {
   pkgs,
   lib,
@@ -108,8 +107,8 @@
       }
       themeIds=(${lib.concatMapStringsSep " " (id: keys.${id}.id) ids})
 
-      # DevTools pipe on fds 3/4, NUL-terminated JSON. FIFOs are opened read-write so the
-      # browser never sees EOF if the launcher dies. Any setup failure falls back to plain Helium.
+      # DevTools pipe on fds 3/4, NUL-terminated JSON. FIFOs opened read-write so the browser
+      # never sees EOF if the launcher dies; setup failure falls back to plain Helium.
       fifos="$(mktemp -d "''${XDG_RUNTIME_DIR:-/tmp}/helium-theme.XXXXXX")" || exec "$browser" "$@"
       if ! mkfifo "$fifos/in" "$fifos/out"; then
         rm -rf "$fifos"

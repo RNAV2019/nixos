@@ -5,8 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The power profiles card: the island in another shape. Unlike the power menu it
-// commits at once, since a profile switch is instant and reversible.
+// The power profiles card: unlike the power menu it commits at once, since a profile
+// switch is instant and reversible.
 Variants {
   id: root
 
@@ -20,7 +20,6 @@ Variants {
     openHeight: Theme.powerHeight
     openRadius: Theme.recorderRadius
 
-    // Which tile the keyboard is on.
     property int current: 0
 
     readonly property var tiles: [
@@ -108,8 +107,8 @@ Variants {
         }
       }
 
-        // With nothing answering, the tiles grey out. A nested item, because the body's
-        // own opacity is the open/close fade.
+        // With nothing answering, the tiles grey out. Nested, because the body's own
+        // opacity is the open/close fade.
         Item {
           anchors.fill: parent
           opacity: PowerProfiles.available ? 1 : 0.5

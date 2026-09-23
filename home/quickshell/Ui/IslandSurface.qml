@@ -4,22 +4,8 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 
-// One island surface: the window, the shape, and the handover. Seven surfaces stand in for
-// the island, and each used to carry an identical copy of what is in this file.
-//
-// A caller supplies a key, an open shape, and a body:
-//
-//   IslandSurface {
-//     key: "launcher"
-//     openWidth: Theme.launcherWidth
-//     openHeight: ...
-//     openRadius: Theme.launcherRadius
-//
-//     Item { ... }
-//   }
-//
-// The surface must be the delegate of the caller's own Variants rather than wrapping one,
-// because a default-property body assigned to a Variants would belong to the Variants.
+// One island surface: the window, the shape, and the handover. Caller supplies a key,
+// openWidth/openHeight/openRadius and a body; must be the caller's Variants delegate.
 PanelWindow {
   id: win
 
@@ -35,8 +21,8 @@ PanelWindow {
   property real openRadius: Theme.controlRadius
 
   property bool open: false
-  // Some keyboard-first surfaces need to hide the pointer for their entire mapped window, not
-  // only over the opaque card. The guard below accepts no buttons and only owns the cursor.
+  // Some keyboard-first surfaces hide the pointer for their whole mapped window, not just the
+  // card. The guard below accepts no buttons and only owns the cursor.
   property bool hideCursor: false
   property alias origin: origin
   property alias surface: surface
@@ -69,14 +55,12 @@ PanelWindow {
   // Separate from `handover`, which also disables the shape Behaviors.
   property bool farewell: false
 
-  // True while this surface's contents are arriving out of another surface rather than out
-  // of the island. Panel to panel there is no clip to reveal them, so they enter on their
-  // own delayed schedule instead.
+  // True while contents arrive out of another surface rather than the island. Panel to panel
+  // there is no clip to reveal them, so they enter on their own delayed schedule.
   readonly property bool entering: win.open && origin.handedOver
 
-  // The few pixels the arriving contents settle through, signed by the direction the height
-  // is travelling, so they move with the box. Set once per open, because openHeight is
-  // usually a live binding.
+  // The few pixels arriving contents settle through, signed by the height's direction so they
+  // move with the box. Set once per open, since openHeight is usually a live binding.
   property real enterTravel: 0
 
   readonly property bool focused: Monitors.isFocused(win.screen)
@@ -131,9 +115,8 @@ PanelWindow {
 
   exclusionMode: ExclusionMode.Ignore
 
-  // Hyprland focuses an OnDemand surface when it first maps, but not when an already mapped
-  // one goes None -> OnDemand, and this surface stays mapped through its close animation.
-  // Exclusive covers that, but cannot be permanent: it would route every pointer event here.
+  // Hyprland focuses an OnDemand surface when it first maps but not on None -> OnDemand, and
+  // this one stays mapped through its close. Exclusive covers it, but would eat all pointers.
   property bool focusPrimed: false
 
   WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
@@ -226,23 +209,13 @@ PanelWindow {
   FrostedSurface {
     id: surface
 
-    // The still bridges the mapping gap with pixels. The taker's window maps in single-digit
-    // milliseconds but does not present a frame for 147-216 ms, and the bar keeps its pill
-    // stood down throughout, so cutting the whole surface here left a hole.
-    //
-    // So the still fades in two parts. Its contents go first and go quickly, because the
-    // taker's blur samples what is behind it and the old panel's text is the one thing it
-    // must not find. The ground stays through the gap: a flat tint is what that blur wants.
+    // The still bridges the mapping gap: the taker's window maps in single-digit ms but
+    // presents no frame for 147-216 ms, so it fades in two parts - contents fast, ground held.
     contentOpacity: win.farewell ? 0 : 1
     backdropOpacity: win.farewell ? 0 : 1
 
-    // Only the fade out is animated. The reset happens off screen, between one open and the
-    // next, and has to land in a single frame.
-    //
-    // Guarded on `handover` and not on `farewell`. A Behavior's `enabled` is a binding like
-    // any other, and on the frame `farewell` changes the value binding is evaluated before
-    // it, so a guard read off `farewell` answers for the frame before and got both ends
-    // wrong. Both call sites move `handover` immediately before `farewell`.
+    // Only the fade out is animated; the reset lands off screen in one frame. Guarded on
+    // `handover`, not `farewell`: a Behavior's enabled binding is evaluated before farewell changes.
     Behavior on contentOpacity {
       enabled: win.handover
 
@@ -274,9 +247,8 @@ PanelWindow {
     implicitWidth: win.open ? win.openWidth : origin.held ? origin.heldWidth : origin.originWidth
     implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
 
-    // Read off the height rather than travelling; see Bar/Island.qml. The radius asked for is
-    // this surface's own in every state including the close, but a still riding a taker's
-    // morph asks for the taker's, as it does for the target shape and duration.
+    // Read off the height rather than travelling; see Bar/Island.qml. A still riding a taker's
+    // morph asks for the taker's radius, as it does for target shape and duration.
     surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
 
     Behavior on implicitWidth {
@@ -319,12 +291,8 @@ PanelWindow {
       shown: !win.open && !origin.held
     }
 
-    // Everything the surface draws, cross-faded against that clock. Nothing inside fades on
-    // its own; the growing shape uncovers it.
-    //
-    // Out of another panel there is no growing shape to uncover anything, so the contents
-    // wait for the box to be most of the way to its target and then arrive, settling through
-    // a few pixels: the container leads and the contents follow.
+    // Everything the surface draws, cross-faded against that clock; nothing inside fades on
+    // its own. Out of another panel there is no clip, so contents arrive late and settle a few px.
     Item {
       id: bodyHolder
 

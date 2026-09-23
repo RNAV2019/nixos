@@ -24,7 +24,7 @@ Item {
     objects: root.sink ? [root.sink] : []
   }
 
-  // Masked together, so the blur cannot bleed past the card's corners.
+  // Masked together so the blur cannot bleed past the card's corners.
   Item {
     id: ground
 
@@ -40,7 +40,7 @@ Item {
       color: Theme.surfaceRaised
     }
 
-    // Overscanned, because a blur that samples the card's own edge fades it out.
+    // Overscanned: a blur sampling the card's own edge fades it out.
     Item {
       id: crop
 
@@ -249,7 +249,7 @@ Item {
     onActivated: Media.next()
   }
 
-  // The bar is a seek target too, so its hit area is taller than the 3 px it draws.
+  // The bar is also a seek target, so its hit area is taller than the 3 px drawn.
   Item {
     id: progress
 

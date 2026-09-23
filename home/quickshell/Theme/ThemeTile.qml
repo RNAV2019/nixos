@@ -3,10 +3,8 @@ import QtQuick.Effects
 import qs.Commons
 import qs.Ui
 
-// One theme in the carousel: the wallpaper that theme would come up on, cropped, with a
-// small island pill over it carrying five dots in the theme's own colours. The pill and the
-// dots are drawn from `colors`, never from Theme, so each tile shows its own theme
-// whichever one is up.
+// One theme in the carousel: its wallpaper, cropped, with a mini island pill of dots in the
+// theme's own colours. Pill and dots come from `colors`, never Theme, so each tile is itself.
 Item {
   id: root
 
@@ -14,7 +12,7 @@ Item {
   property string label: ""
   property var colors: ({})
 
-  // Where the keys are. Carried by the ring and by the tile's size.
+  // Where the keys are; drives the ring and the tile's size.
   property bool selected: false
 
   // The theme that is currently up, independent of where the keys are.
@@ -74,8 +72,7 @@ Item {
     }
   }
 
-  // The mini island, bottom centre. Fixed size, so as the tile grows it stays put against
-  // the bottom edge rather than scaling.
+  // The mini island, bottom centre. Fixed size, so it stays put against the bottom edge.
   Rectangle {
     id: pill
 
@@ -110,9 +107,8 @@ Item {
     }
   }
 
-  // Drawn over the picture rather than around the tile, so the row keeps its pitch.
-  // Three weights: the full ring for the tile being chosen, an accent hairline for the
-  // theme that is up, and a muted hairline for the rest.
+  // Drawn over the picture rather than around the tile, so the row keeps its pitch. Three
+  // weights: full ring (chosen), accent hairline (up), muted hairline (rest).
   Rectangle {
     anchors.fill: parent
     radius: root.cornerRadius

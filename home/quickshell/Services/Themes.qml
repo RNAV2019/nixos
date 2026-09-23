@@ -5,11 +5,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// The themes the picker offers, the wallpaper each one would come up on, and how to switch.
-//
-// Switching is `theme-switch <id>`, the same command the rest of the desktop uses: it moves
-// the theme link, brings back that theme's wallpaper and tells every running program. The
-// shell itself follows through Theme.name, which watches the file the switch writes.
+// The themes the picker offers, each one's wallpaper preview, and how to switch.
+// Switching runs `theme-switch <id>`; the shell follows through Theme.name.
 Singleton {
   id: root
 
@@ -26,17 +23,15 @@ Singleton {
 
   readonly property int index: Theme.themeIds.indexOf(Theme.name)
 
-  // The resolved wallpaper each theme would come up on, keyed by id: its last-used link if
-  // that resolves, otherwise the first file in its folder, as theme-switch picks it. An id
-  // is absent until the first read comes back.
+  // Resolved wallpaper per theme id: last-used link if it resolves, else first file in its
+  // folder, as theme-switch picks it. An id is absent until the first read comes back.
   property var previews: ({})
 
   function preview(id) {
     return previews[id] !== undefined ? previews[id] : "";
   }
 
-  // A refresh asked for while one is still running is queued rather than dropped: the switch
-  // exiting and the wallpaper it moved both ask for one, within a frame of each other.
+  // Refreshes during a run are queued: the switch exiting and the wallpaper it moved both ask.
   property bool scanQueued: false
 
   function refresh() {
@@ -53,8 +48,7 @@ Singleton {
     switcher.running = true;
   }
 
-  // Nothing to handle on failure: the name file is the record, and it only changes when
-  // the switch went through.
+  // Nothing to handle on failure: the name file only changes when the switch went through.
   Process {
     id: switcher
 
@@ -97,8 +91,7 @@ Singleton {
     }
   }
 
-  // Choosing a wallpaper rewrites the active theme's link, and a switch moves `current`;
-  // either way the previews are read again.
+  // A wallpaper choice or a switch moves `current`, so previews are read again.
   Connections {
     target: Wallpapers
 

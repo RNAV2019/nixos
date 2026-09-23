@@ -19,7 +19,7 @@
 | Desktop shell | quickshell (bar, control center, launcher, wallpaper, calendar, recorder, profiles, notifications, OSD, lock) |
 | Wallpaper | awww |
 | CLI shell | fish + starship + atuin + zoxide + fzf |
-| Terminal | ghostty + herdr (tmux kept during the migration) |
+| Terminal | ghostty + herdr |
 | Editor | helix (Steel plugin fork) |
 | Browser | helium, extensions pinned in Nix |
 | AI agents | Claude Code, opencode, T3 Code nightly |
@@ -68,7 +68,7 @@
     ├── default.nix                # entry point, XDG, session vars
     ├── desktop.nix, monitors.nix  # hyprland, hypridle, fuzzel; per-host monitor rules
     ├── shell.nix                  # fish, starship, atuin, zoxide, fzf, git
-    ├── terminal.nix               # ghostty, herdr, tmux
+    ├── terminal.nix               # ghostty, herdr
     ├── editors.nix, helix/        # helix and its Steel plugins
     ├── programs.nix               # yazi, zathura, lazygit, btop, …
     ├── packages.nix               # user packages, GTK/Qt theming, helium

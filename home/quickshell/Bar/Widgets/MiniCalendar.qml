@@ -1,10 +1,8 @@
 import QtQuick
 import qs.Commons
 
-// The week the expanded card shows on its left while nothing is playing. Board 02b.
-// The board's edge ramp is a gradient mask; here it is carried by the columns instead,
-// because a second MultiEffect mask nested in the surface's own layer comes back with
-// an empty mask texture and takes the whole strip with it.
+// The week the expanded card shows while nothing is playing. The edge ramp is carried by the
+// columns, not a gradient mask: a nested MultiEffect mask comes back empty and kills the strip.
 Item {
   id: root
 

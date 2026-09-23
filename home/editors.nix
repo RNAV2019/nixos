@@ -41,7 +41,6 @@ in {
       theme = "current";
 
       editor = {
-        # Otherwise Helix uses tmux's buffer under $TMUX, bypassing wl-clipboard.
         clipboard-provider = "wayland";
 
         bufferline = "always";

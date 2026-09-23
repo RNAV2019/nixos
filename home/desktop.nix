@@ -12,7 +12,7 @@
   # Hyprland does not expand variables in `env`, so this has to be absolute.
   screenshotsDir = "${config.home.homeDirectory}/Pictures/screenshots";
 
-  # `hl.bind(keys, dispatcher[, opts])`. The dispatcher is raw Lua.
+  # The dispatcher is raw Lua.
   bind = keys: dispatcher: {_args = [keys (mkLuaInline dispatcher)];};
   bindWith = opts: keys: dispatcher: {_args = [keys (mkLuaInline dispatcher) opts];};
 
@@ -25,17 +25,15 @@
   };
   bindm = bindWith {mouse = true;};
 
-  # Window resize keys repeat while held.
   binde = bindWith {repeating = true;};
 
-  # Grow/shrink the focused window; shifted symbols are bound too.
+  # Grow/shrink focused window; shifted symbols are also bound.
   resizeStep = 60;
   resizeBinds = delta:
     map (keys: binde keys "hl.dsp.window.resize({ x = ${toString delta}, y = ${toString delta}, relative = true })");
 
   workspaces = lib.range 1 9;
 
-  # Rose Pine floating overlays share the same shape.
   floatingOverlay = class: {
     match.class = class;
     float = true;

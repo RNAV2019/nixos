@@ -6,27 +6,26 @@
   note-tui,
   ...
 }: let
-  # Pinned Web Store CRXes loaded via --load-extension, since policy installs are
-  # broken (imputnet/helium#1737). The signing key is injected to keep official IDs.
-  # To update, bump version and hash.
+  # Pinned Web Store CRXes via --load-extension, since policy installs are broken
+  # (imputnet/helium#1737); signing key injected to keep IDs. Bump version and hash to update.
   helium-extensions = {
     bitwarden = {
-      id = "nngceckbapebfimnlniiiahkandclblb"; # Bitwarden Password Manager
+      id = "nngceckbapebfimnlniiiahkandclblb";
       version = "2026.8.0";
       hash = "sha256-0aWULZwjTQM4LamSeZMgVQZMquejLMmxV5QMhjFl1Z8=";
     };
     better-lyrics = {
-      id = "effdbpeggelllpfkjppbokhmmiinhlmg"; # Better Lyrics (for YT Music)
+      id = "effdbpeggelllpfkjppbokhmmiinhlmg";
       version = "2.3.3";
       hash = "sha256-ozei1UtnBBP2v49I8DTmrACnNvlj7ay0N4P0ycfOwyM=";
     };
     better-lyrics-shaders = {
-      id = "mffpncjphfmkppebdoaehdlnagnlpfai"; # Better Lyrics Shaders
+      id = "mffpncjphfmkppebdoaehdlnagnlpfai";
       version = "1.2.0";
       hash = "sha256-h6zGfE7b1d+SInTZU9gLomS0c3uMepufh67F9sjRG4w=";
     };
     pdf-viewer = {
-      id = "oemmndcbldboiebfnladdacbdfmadadm"; # PDF Viewer (pdfjs.robwu.nl)
+      id = "oemmndcbldboiebfnladdacbdfmadadm";
       version = "4.6.129";
       hash = "sha256-NVvF8Y/4b4qbinKU4cmxh6WE0CqMMxGjJp8Wi03hodA=";
     };
@@ -263,10 +262,10 @@ in {
     fd
     ripgrep
     eza
-    tokei # Line counter
-    silicon # Code screenshot generator
-    glow # Render markdown in terminal
-    just # Command runner
+    tokei
+    silicon
+    glow
+    just
     hyperfine
 
     nitch
@@ -337,8 +336,8 @@ in {
       vendorHash = "sha256-ab3um1ewUzTUGUlIsm8ed8xtDKulmXiRN+HJK2wP2h8=";
       doCheck = false;
     }))
-    nixd # Nix language server
-    alejandra # Nix formatter
+    nixd
+    alejandra
     gnumake
     espeak-ng
   ];

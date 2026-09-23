@@ -97,8 +97,7 @@ Singleton {
   }
 
   // Icon names are theme names, not URLs, so they go through the theme lookup; `check`
-  // makes an unknown name come back empty rather than a broken path. Absolute paths
-  // are used as they are.
+  // makes an unknown name come back empty. Absolute paths are used as they are.
   function iconFor(entry) {
     if (!entry || !entry.icon)
       return "";

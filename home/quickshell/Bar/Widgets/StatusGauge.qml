@@ -5,8 +5,7 @@ import qs.Commons
 import qs.Services
 
 // Board 02's battery gauge: a ring that is the battery, open at the bottom, with the Wi-Fi
-// glyph inside it and the charge sitting in the gap. On the charger the ring turns foam and
-// the charge gains a bolt.
+// glyph inside and the charge in the gap. On the charger the ring turns foam and gains a bolt.
 Item {
   id: root
 

@@ -28,7 +28,7 @@ Variants {
       right: true
     }
 
-    // Tall enough for the island's expanded card; the strip itself is transparent.
+    // Tall enough for the island's expanded card; the strip is transparent.
     implicitHeight: Theme.islandExpandedHeight
     margins.top: Theme.barMarginTop
 
@@ -56,8 +56,8 @@ Variants {
       screenOffsetY: Theme.barMarginTop
     }
 
-    // The launcher and the control centre cover the island, which stays mapped for
-    // handoff timing but is not painted, so it cannot enter the panel's blur sample.
+    // The launcher and control centre cover the island; it stays mapped for handoff
+    // timing but is not painted, so it cannot enter the panel's blur sample.
     Island {
       id: island
 

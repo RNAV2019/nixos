@@ -53,7 +53,7 @@ Rectangle {
       anchors.fill: parent
       anchors.margins: 3
       source: root.iconSource
-      // An unresolved icon falls back to the letter rather than a hole in the avatar.
+      // An unresolved icon falls back to the letter, not a hole in the avatar.
       visible: root.iconSource !== "" && status !== Image.Error && status !== Image.Null
     }
   }
