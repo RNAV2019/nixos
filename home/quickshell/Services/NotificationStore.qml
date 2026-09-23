@@ -66,11 +66,7 @@ Singleton {
 
   // A stable colour per application, independent of arrival order.
   function avatarColour(name) {
-    var palette = [Theme.foam, Theme.iris, Theme.gold, Theme.rose, Theme.pine];
-    var h = 0;
-    for (var i = 0; i < name.length; i++)
-      h = (h * 31 + name.charCodeAt(i)) % 997;
-    return palette[h % palette.length];
+    return Theme.stableAccent(name);
   }
 
   function forgetPopup(notification) {

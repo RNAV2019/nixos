@@ -19,80 +19,40 @@ Variants {
     openHeight: Theme.wallpaperHeight
     openRadius: Theme.wallpaperRadius
 
-    // Which theme the ring is on, not the one that is up: that is Themes.index.
-    property int selected: 0
-
     readonly property var entries: Themes.entries
-    readonly property int count: entries.length
-
-    // The room the row has.
-    readonly property real inner: Theme.wallpaperWidth - 2 * Theme.wallpaperInset
-
-    // The selected tile takes the first width, everything else the last.
-    function tileWidth(i) {
-      var widths = Theme.wallpaperTileWidths;
-      var d = Math.abs(i - win.selected);
-      return widths[Math.min(d, widths.length - 1)];
-    }
-
-    function tileHeight(i) {
-      return Math.round(win.tileWidth(i) / Theme.wallpaperTileAspect);
-    }
-
-    function tileX(i) {
-      var x = 0;
-      for (var j = 0; j < i; j++)
-        x += win.tileWidth(j) + Theme.wallpaperTileGap;
-      return x;
-    }
-
-    readonly property real stripWidth: count > 0 ? win.tileX(count) - Theme.wallpaperTileGap : 0
-
-    // Two themes always fit, so the row is simply centred.
-    readonly property real stripX: Theme.wallpaperInset + (inner - stripWidth) / 2
 
     onOpening: {
       // Open on the theme that is up, with fresh previews.
       Themes.refresh();
-      selected = Math.max(0, Themes.index);
-    }
-
-    // The row is a ring, as the wallpaper picker's is.
-    function step(delta) {
-      if (count === 0)
-        return;
-      selected = ((selected + delta) % count + count) % count;
+      carousel.selected = Math.max(0, Themes.index);
     }
 
     function activate() {
-      if (selected < 0 || selected >= count)
+      if (carousel.selected < 0 || carousel.selected >= carousel.count)
         return;
-      Themes.apply(entries[selected].id);
+      Themes.apply(win.entries[carousel.selected].id);
       hide();
     }
 
     onKeyPressed: function (event) {
       switch (event.key) {
-      case Qt.Key_Escape:
-        win.hide();
-        break;
       case Qt.Key_Left:
       case Qt.Key_Up:
       case Qt.Key_H:
       case Qt.Key_Backtab:
-        win.step(-1);
+        carousel.step(-1);
         break;
       case Qt.Key_Right:
       case Qt.Key_Down:
       case Qt.Key_L:
       case Qt.Key_Tab:
-        win.step(1);
+        carousel.step(1);
         break;
       case Qt.Key_Home:
-        win.selected = 0;
+        carousel.selected = 0;
         break;
       case Qt.Key_End:
-        win.selected = Math.max(0, win.count - 1);
+        carousel.selected = Math.max(0, carousel.count - 1);
         break;
       case Qt.Key_Return:
       case Qt.Key_Enter:
@@ -108,16 +68,6 @@ Variants {
       id: body
 
       anchors.fill: parent
-      opacity: win.open || win.origin.held ? 1 : 0
-      visible: opacity > 0
-
-      Behavior on opacity {
-        enabled: !win.origin.held
-
-        Morph {
-          duration: Theme.morphContent
-        }
-      }
 
       Text {
         x: Theme.wallpaperInset
@@ -138,67 +88,29 @@ Variants {
         font.pixelSize: Theme.wallpaperMetaSize
       }
 
-      Item {
-        id: rail
+      // Which theme the ring is on, not the one that is up: that is Themes.index.
+      CarouselRow {
+        id: carousel
 
-        x: win.stripX
-        y: 0
-        width: win.stripWidth
-        height: Theme.wallpaperHeight
+        anchors.fill: parent
+        model: win.entries
 
-        Behavior on x {
-          enabled: !Theme.reduceMotion
-
-          SurfaceSpring {}
-        }
-
-        Repeater {
-          model: win.entries
-
+        tile: Component {
           ThemeTile {
-            id: tile
-
             required property int index
             required property var modelData
 
-            x: win.tileX(index)
-            y: Theme.wallpaperRowMid - height / 2
-            width: win.tileWidth(index)
-            height: win.tileHeight(index)
+            x: carousel.tileX(index)
+            width: carousel.tileWidth(index)
+            height: carousel.tileHeight(index)
             source: Themes.preview(modelData.id)
             label: modelData.label
             colors: modelData.palette
-            selected: index === win.selected
+            selected: index === carousel.selected
             active: index === Themes.index
             onActivated: {
-              win.selected = tile.index;
+              carousel.selected = index;
               win.activate();
-            }
-
-            Behavior on x {
-              enabled: !Theme.reduceMotion
-
-              SurfaceSpring {}
-            }
-
-            Behavior on width {
-              enabled: !Theme.reduceMotion
-
-              SurfaceSpring {}
-            }
-
-            Behavior on height {
-              enabled: !Theme.reduceMotion
-
-              SurfaceSpring {}
-            }
-
-            MouseArea {
-              anchors.fill: parent
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                tile.activated();
-              }
             }
           }
         }
@@ -211,7 +123,7 @@ Variants {
 
         x: Theme.wallpaperInset
         y: Theme.wallpaperFooterTop
-        text: "~/Pictures/backgrounds/"
+        text: "~" + Paths.backgroundsDir.substring(Paths.home.length) + "/"
         color: Theme.muted
         font.family: Theme.monoFont
         font.pixelSize: Theme.wallpaperMetaSize
@@ -220,7 +132,7 @@ Variants {
       Text {
         x: directory.x + directory.width
         y: Theme.wallpaperFooterTop
-        text: win.selected >= 0 && win.selected < win.count ? win.entries[win.selected].id + "/" : ""
+        text: carousel.selected >= 0 && carousel.selected < carousel.count ? win.entries[carousel.selected].id + "/" : ""
         color: Theme.subtle
         font.family: Theme.monoFont
         font.pixelSize: Theme.wallpaperMetaSize
@@ -230,7 +142,7 @@ Variants {
       Text {
         x: Theme.wallpaperWidth - Theme.wallpaperInset - width
         y: Theme.wallpaperFooterTop
-        text: (win.selected + 1) + " / " + win.count + "   ·   Enter to apply"
+        text: (carousel.selected + 1) + " / " + carousel.count + "   ·   Enter to apply"
         color: Theme.muted
         font.family: Theme.uiFont
         font.pixelSize: Theme.wallpaperMetaSize

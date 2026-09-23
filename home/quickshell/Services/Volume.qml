@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Writes only: the OSD, bar and audio panel read the sink from Pipewire directly, so this
 // singleton owns the wpctl calls the volume keys make and announces them.
@@ -43,6 +44,15 @@ Singleton {
     root.adjusted();
   }
 
+  // The glyph a sink shows: muted, or the ladder step for its level. `sink` is any
+  // Pipewire node, or null, and the OSD, bar and audio panel all read the same answer.
+  function glyph(sink) {
+    var audio = sink && sink.audio ? sink.audio : null;
+    var muted = audio !== null && audio.muted;
+    var percent = audio !== null ? audio.volume * 100 : 0;
+    return muted ? Icons.volumeMuted : Icons.step(Icons.volume, percent);
+  }
+
   Timer {
     id: writeTimer
 
@@ -54,7 +64,20 @@ Singleton {
   Process {
     id: setter
 
+    property string errorText: ""
+
+    stderr: StdioCollector {
+      onStreamFinished: setter.errorText = text
+    }
+
     onRunningChanged: if (!setter.running)
       root.flush()
+
+    onExited: function (code) {
+      if (code !== 0) {
+        var said = setter.errorText.trim();
+        console.warn("wpctl set-volume:", said !== "" ? said : "exit code " + code);
+      }
+    }
   }
 }

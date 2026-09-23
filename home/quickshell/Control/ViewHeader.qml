@@ -29,7 +29,7 @@ Item {
     Accessible.focused: back.activeFocus
     Accessible.onPressAction: root.backed()
     color: Theme.withAlpha(Theme.highlightMed, backHover.containsMouse ? 0.95 : 0.75)
-    scale: backHover.pressed ? 0.97 : 1
+    scale: backHover.pressed ? Theme.pressScale : 1
 
     Behavior on color {
       Tint {}

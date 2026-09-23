@@ -12,8 +12,6 @@ import qs.Ui
 Scope {
   id: root
 
-  readonly property int startupGrace: 1500
-
   // "", "volume", "brightness", "kbd" or "mic".
   property string mode: ""
   property bool showing: false
@@ -24,7 +22,7 @@ Scope {
 
   Timer {
     running: true
-    interval: root.startupGrace
+    interval: Theme.osdDwell
     onTriggered: root.ready = true
   }
 
@@ -253,17 +251,17 @@ Scope {
         // Read off the height rather than travelling; see Bar/Island.qml.
         surfaceRadius: Math.min(height / 2, Theme.osdRadius)
 
-       Behavior on implicitWidth {
-         enabled: !Theme.reduceMotion
+        Behavior on implicitWidth {
+          enabled: !Theme.reduceMotion && !origin.snapping
 
-         SurfaceSpring {}
-       }
+          SurfaceSpring {}
+        }
 
-       Behavior on implicitHeight {
-         enabled: !Theme.reduceMotion
+        Behavior on implicitHeight {
+          enabled: !Theme.reduceMotion && !origin.snapping
 
-         SurfaceSpring {}
-       }
+          SurfaceSpring {}
+        }
 
         // Shared collapsed renderer, so handoff keeps the same clock, equaliser and recording mark.
         CollapsedPill {
@@ -315,7 +313,7 @@ Scope {
               // Held keys repeat about every 40 ms, so a longer tween never finishes.
               Behavior on width {
                 NumberAnimation {
-                  duration: 80
+                  duration: Theme.morphFill
                 }
               }
             }

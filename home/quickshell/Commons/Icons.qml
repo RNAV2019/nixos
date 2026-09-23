@@ -22,6 +22,11 @@ Singleton {
   readonly property string bluetoothConnected: "󰂱"
   readonly property string bluetoothNoAdapter: ""
 
+  // Peripherals BlueZ reports; matched against the device's advertised icon.
+  readonly property string phone: "󰄜"
+  readonly property string keyboard: "󰌌"
+  readonly property string mouse: "󰦋"
+
   readonly property string volumeMuted: ""
   readonly property string headphone: ""
   readonly property var volume: ["", " ", " "]

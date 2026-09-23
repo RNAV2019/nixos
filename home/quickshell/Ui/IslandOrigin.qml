@@ -58,10 +58,12 @@ QtObject {
     heldWidth = claim ? claim.width : width;
     heldHeight = claim ? claim.height : height;
     heldRadius = claim ? claim.radius : radius;
-    heldDuration = claim ? claim.duration : Theme.morphHold;
+    // The claim carries the taker's own morph duration; with no taker the still is a
+    // deliberate beat, so it stays short under reduce motion like the morphs do.
+    heldDuration = claim ? claim.duration : Theme.duration(Theme.morphHold);
     held = true;
     heldSerial = claim ? claim.serial : Bus.claimSerial;
-    holdTimer.interval = heldDuration + 260;
+    holdTimer.interval = heldDuration + Theme.morphHoldBuffer;
     holdTimer.restart();
   }
 

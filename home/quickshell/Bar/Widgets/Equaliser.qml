@@ -6,6 +6,7 @@ Item {
 
   property bool playing: false
 
+  // The bars' idle heights, one per bar: a descending rhythm that still reads as a wave.
   readonly property var restHeights: [7, 12, 15, 9]
   readonly property real barWidth: 2.5
   readonly property real barGap: 1.5
@@ -36,18 +37,20 @@ Item {
         color: Theme.accent
 
         SequentialAnimation on level {
-          running: root.playing && !Theme.reduceMotion
+          // Visibility too: the shut pill hands the equaliser over with an opacity cross-fade,
+          // so a hidden bar must not keep animating underneath.
+          running: root.playing && !Theme.reduceMotion && visible
           loops: Animation.Infinite
 
           NumberAnimation {
             to: 3
-            duration: 320 + bar.index * 60
+            duration: Theme.eqRiseBase + bar.index * Theme.eqRiseStagger
             easing.type: Easing.InOutSine
           }
 
           NumberAnimation {
             to: root.implicitHeight
-            duration: 400 + bar.index * 50
+            duration: Theme.eqFallBase + bar.index * Theme.eqFallStagger
             easing.type: Easing.InOutSine
           }
         }

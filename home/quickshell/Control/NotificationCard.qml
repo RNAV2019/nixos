@@ -44,7 +44,7 @@ Rectangle {
       color: root.accentColour
       font.family: Theme.uiFont
       font.pixelSize: Theme.controlNotifBodySize
-      font.weight: Font.Bold
+      font.weight: Theme.weightBold
     }
 
     IconImage {
@@ -99,40 +99,20 @@ Rectangle {
     elide: Text.ElideRight
   }
 
-  Text {
+  IconButton {
     id: dismiss
 
     x: root.width - 30
     y: 14
     text: Icons.close
-    Accessible.role: Accessible.Button
-    Accessible.name: "Dismiss notification"
-    Accessible.focusable: true
-    Accessible.focused: dismissHover.activeFocus
-    Accessible.onPressAction: root.dismissed()
-    color: dismissHover.containsMouse ? Theme.inkPrimary : Theme.inkTertiary
-    scale: dismissHover.pressed ? 0.95 : 1
-
-    Behavior on color {
-      Tint {}
-    }
-
-    Behavior on scale {
-      Morph { duration: Theme.morphState }
-    }
     font.family: Theme.iconFont
     font.pixelSize: 14
+    baseColor: Theme.inkTertiary
+    hoverColor: Theme.inkPrimary
+    hitSlop: 8
+    accessibleName: "Dismiss notification"
+    activeFocusOnTab: true
 
-    MouseArea {
-      id: dismissHover
-
-      anchors.fill: parent
-      anchors.margins: -8
-      hoverEnabled: true
-      activeFocusOnTab: true
-      cursorShape: Qt.PointingHandCursor
-      onPressed: dismissHover.forceActiveFocus()
-      onClicked: root.dismissed()
-    }
+    onClicked: root.dismissed()
   }
 }

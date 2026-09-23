@@ -231,13 +231,13 @@ Variants {
       surfaceRadius: Math.min(height / 2, Theme.notifRadius)
 
       Behavior on implicitWidth {
-        enabled: !Theme.reduceMotion
+        enabled: !Theme.reduceMotion && !origin.snapping
 
         SurfaceSpring {}
       }
 
       Behavior on implicitHeight {
-        enabled: !Theme.reduceMotion
+        enabled: !Theme.reduceMotion && !origin.snapping
 
         SurfaceSpring {}
       }

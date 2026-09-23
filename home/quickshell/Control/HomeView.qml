@@ -4,6 +4,7 @@ import Quickshell.Bluetooth
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
 import qs.Commons
+import qs.Control
 import qs.Services
 import qs.Ui
 
@@ -62,11 +63,10 @@ Item {
   readonly property var connectedDevice: {
     if (!adapter)
       return null;
-    for (var i = 0; i < adapter.devices.values.length; i++) {
-      if (adapter.devices.values[i].connected)
-        return adapter.devices.values[i];
-    }
-    return null;
+    var out = Util.filterDevices(adapter.devices.values, function (d) {
+      return d.connected;
+    });
+    return out.length > 0 ? out[0] : null;
   }
 
   PwObjectTracker {
@@ -99,7 +99,8 @@ Item {
 
     x: root.inset
     y: root.tilesTop
-    width: 156
+    // The same third the second row divides the span into; the remainder lands on Audio.
+    width: root.thirdWidth
     label: "Wi-Fi"
     glyph: {
       if (NetworkInfo.onEthernet)
@@ -129,7 +130,7 @@ Item {
     y: root.tilesTop
     width: root.span - wifi.width - Theme.controlTileGap
     label: "Audio"
-    glyph: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
+    glyph: Volume.glyph(root.sink)
     sublabel: root.sink ? (root.sink.nickname || root.sink.description || root.sink.name) : "No output"
     on: root.sink !== null && root.sink.audio !== null && !root.sink.audio.muted
     keyFocused: root.keyboardIndex === 1
@@ -226,19 +227,12 @@ Item {
     }
   }
 
-  BigSlider {
+  VolumeRow {
     x: root.inset
     y: root.slidersTop
     width: root.span
-    glyph: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
-    value: root.sink && root.sink.audio ? root.sink.audio.volume : 0
-    dimmed: root.sink !== null && root.sink.audio !== null && root.sink.audio.muted
-    onMoved: function (v) {
-      if (root.sink && root.sink.audio) {
-        root.sink.audio.muted = false;
-        root.sink.audio.volume = v;
-      }
-    }
+    showMute: false
+    node: root.sink
   }
 
   BigSlider {
@@ -251,6 +245,9 @@ Item {
     onMoved: function (v) {
       Brightness.set(v);
     }
+
+    // When brightness is unavailable this row leaves a gap; reflowing the fixed offset
+    // math below it is not worth the churn.
   }
 
   MediaCard {
@@ -269,36 +266,22 @@ Item {
     font.weight: Theme.weightMedium
   }
 
-  Text {
+  IconButton {
     id: clearAll
 
     x: root.inset + root.span - width
     y: root.sectionTop - 1
     visible: root.count > 0
     text: "Clear all"
-    color: clearHover.containsMouse ? Theme.text : Theme.accent
-    scale: clearHover.pressed ? 0.97 : 1
-
-    Behavior on color {
-      Tint {}
-    }
-
-    Behavior on scale {
-      Morph { duration: Theme.morphState }
-    }
+    baseColor: Theme.accent
+    hoverColor: Theme.text
     font.family: Theme.uiFont
     font.pixelSize: 12
     font.weight: Theme.weightMedium
+    hitSlop: 6
+    accessibleName: "Clear all"
 
-    MouseArea {
-      id: clearHover
-
-      anchors.fill: parent
-      anchors.margins: -6
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: NotificationStore.clear()
-    }
+    onClicked: NotificationStore.clear()
   }
 
   Text {

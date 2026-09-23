@@ -7,7 +7,7 @@ import qs.Commons
 ShapePath {
   id: arc
 
-  property real radius: 21
+  property real radius: Theme.islandGaugeRadius
   property real value: 1
 
   strokeWidth: value > 0 ? 4 : 0
@@ -15,12 +15,12 @@ ShapePath {
   fillColor: "transparent"
 
   PathAngleArc {
-    centerX: 24
-    centerY: 24
+    centerX: Theme.islandGaugeSize / 2
+    centerY: Theme.islandGaugeSize / 2
     radiusX: arc.radius
     radiusY: arc.radius
     startAngle: 150
-    sweepAngle: 240 * Math.max(0, Math.min(1, arc.value))
+    sweepAngle: 240 * Theme.clamp01(arc.value)
 
     Behavior on sweepAngle {
       NumberAnimation {

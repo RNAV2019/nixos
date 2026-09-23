@@ -67,13 +67,7 @@ Singleton {
 
   // A stable colour per calendar, independent of which event arrived first.
   function colourFor(name) {
-    var palette = [Theme.foam, Theme.iris, Theme.gold, Theme.rose, Theme.pine];
-    if (!name)
-      return palette[0];
-    var h = 0;
-    for (var i = 0; i < name.length; i++)
-      h = (h * 31 + name.charCodeAt(i)) % 997;
-    return palette[h % palette.length];
+    return Theme.stableAccent(name);
   }
 
   function step(months) {
@@ -242,9 +236,14 @@ Singleton {
         root.finishPending();
       if (code === 0)
         return;
-      // ical-agenda fails with one line, and it says it better than this could.
+      // ical-agenda fails with one line, and it says it better than this could. The
+      // stderr text may not have flushed by the time exit fires, so an empty line only
+      // supplies the generic message when nothing else has said what went wrong.
       var said = fetch.stderr.text.trim().split("\n")[0];
-      root.error = said === "" ? "The calendar is not set up" : said;
+      if (said !== "")
+        root.error = said;
+      else if (root.error === "")
+        root.error = "The calendar is not set up";
       var next = Object.assign({}, root.months);
       next[fetch.key] = [];
       root.months = next;

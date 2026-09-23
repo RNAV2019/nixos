@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // The week the expanded card shows while nothing is playing. The edge ramp is carried by the
 // columns, not a gradient mask: a nested MultiEffect mask comes back empty and kills the strip.
@@ -75,6 +76,10 @@ Item {
         font.family: Theme.uiFont
         font.pixelSize: Theme.islandCalLabelSize
         font.weight: column.isToday ? Font.Bold : Font.Medium
+
+        Behavior on color {
+          Tint {}
+        }
       }
 
       Text {
@@ -91,6 +96,16 @@ Item {
         font.family: Theme.uiFont
         font.pixelSize: column.isToday ? Theme.islandCalTodaySize : Theme.islandCalDaySize
         font.weight: column.isToday ? Font.DemiBold : Font.Medium
+
+        Behavior on color {
+          Tint {}
+        }
+
+        Behavior on font.pixelSize {
+          Morph {
+            duration: Theme.morphState
+          }
+        }
       }
     }
   }

@@ -38,7 +38,7 @@ Rectangle {
       return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
   }
 
-  scale: pressed ? 0.97 : 1
+  scale: pressed ? Theme.pressScale : 1
 
   Behavior on scale {
     Morph { duration: Theme.morphState }
@@ -120,9 +120,22 @@ Rectangle {
     anchors.rightMargin: Theme.controlRowInset
     anchors.verticalCenter: parent.verticalCenter
     visible: root.showCheck && root.selected
+    opacity: visible ? 1 : 0
+    scale: visible ? 1 : 0.5
     text: Icons.check
     color: Theme.inkOnAccent
     font.family: Theme.iconFont
     font.pixelSize: 16
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: Theme.duration(Theme.morphState)
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on scale {
+      Morph { duration: Theme.morphState }
+    }
   }
 }

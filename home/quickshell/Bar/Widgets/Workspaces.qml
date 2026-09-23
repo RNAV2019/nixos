@@ -37,6 +37,10 @@ FrostedSurface {
     return null;
   }
 
+  function focus(id) {
+    Hyprland.dispatch("hl.dsp.focus({ workspace = " + id + " })");
+  }
+
   implicitWidth: row.implicitWidth + Theme.workspacePadding * 2
   implicitHeight: Theme.barHeight
   surfaceRadius: Theme.workspaceRadius
@@ -73,7 +77,7 @@ FrostedSurface {
         Accessible.name: "Workspace " + slot.modelData
         Accessible.focusable: true
         Accessible.focused: slot.activeFocus
-        Accessible.onPressAction: Hyprland.dispatch("hl.dsp.focus({ workspace = " + slot.modelData + " })")
+        Accessible.onPressAction: root.focus(slot.modelData)
         color: {
           if (isActive)
             return Theme.accent;
@@ -100,7 +104,7 @@ FrostedSurface {
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
           onPressed: slot.forceActiveFocus()
-          onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + slot.modelData + " })")
+          onClicked: root.focus(slot.modelData)
         }
       }
     }

@@ -13,6 +13,23 @@ Singleton {
 
   readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles"]
 
+  // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
+  // property write, so every change builds a fresh object and reassigns the property.
+  function writeMap(map, key, value) {
+    var next = {};
+    for (var k in map)
+      next[k] = map[k];
+    if (value === "" || value === null || value === undefined)
+      delete next[key];
+    else
+      next[key] = value;
+    return next;
+  }
+
+  function lookup(map, key, fallback) {
+    return map[key] !== undefined ? map[key] : fallback;
+  }
+
   function prepareForLock() {
     if (locking)
       return;
@@ -60,18 +77,11 @@ Singleton {
   property var transientScreens: ({})
 
   function setTransientScreen(key, screenName) {
-    var next = {};
-    for (var k in transientScreens)
-      next[k] = transientScreens[k];
-    if (screenName === "")
-      delete next[key];
-    else
-      next[key] = screenName;
-    transientScreens = next;
+    transientScreens = writeMap(transientScreens, key, screenName);
   }
 
   function transientScreen(key) {
-    return transientScreens[key] !== undefined ? transientScreens[key] : "";
+    return lookup(transientScreens, key, "");
   }
 
   function transientOnScreen(name) {
@@ -85,18 +95,11 @@ Singleton {
   }
 
   function setOwner(key, screenName) {
-    var next = {};
-    for (var k in owners)
-      next[k] = owners[k];
-    if (screenName === "")
-      delete next[key];
-    else
-      next[key] = screenName;
-    owners = next;
+    owners = writeMap(owners, key, screenName);
   }
 
   function ownerOf(key) {
-    return owners[key] !== undefined ? owners[key] : "";
+    return lookup(owners, key, "");
   }
 
   // The two that arrive unasked, as against everything else, which is up until dismissed.
@@ -163,56 +166,40 @@ Singleton {
 
   function claimIsland(screen, width, height, radius, duration) {
     claimSerial++;
-    var next = {};
-    for (var k in islandClaims)
-      next[k] = islandClaims[k];
-    next[screen] = {
-      serial: claimSerial,
-      width: width,
-      height: height,
-      radius: radius,
-      duration: duration
-    };
-    islandClaims = next;
+    islandClaims = writeMap(islandClaims, screen, {
+        serial: claimSerial,
+        width: width,
+        height: height,
+        radius: radius,
+        duration: duration
+      });
     islandClaimed(screen);
   }
 
   function claimFor(screen) {
-    return islandClaims[screen] !== undefined ? islandClaims[screen] : null;
+    return lookup(islandClaims, screen, null);
   }
 
   function clearClaim(screen, serial) {
     var claim = claimFor(screen);
     if (!claim || (serial !== undefined && claim.serial !== serial))
       return;
-    var next = {};
-    for (var k in islandClaims)
-      next[k] = islandClaims[k];
-    delete next[screen];
-    islandClaims = next;
+    islandClaims = writeMap(islandClaims, screen, "");
   }
 
   function publishHandoff(screen, width, height, radius) {
-    var next = {};
-    for (var k in islandHandoffs)
-      next[k] = islandHandoffs[k];
-    next[screen] = {
-      width: width,
-      height: height,
-      radius: radius
-    };
-    islandHandoffs = next;
+    islandHandoffs = writeMap(islandHandoffs, screen, {
+        width: width,
+        height: height,
+        radius: radius
+      });
   }
 
   function consumeHandoff(screen) {
-    var handoff = islandHandoffs[screen] !== undefined ? islandHandoffs[screen] : null;
+    var handoff = lookup(islandHandoffs, screen, null);
     if (!handoff)
       return null;
-    var next = {};
-    for (var k in islandHandoffs)
-      next[k] = islandHandoffs[k];
-    delete next[screen];
-    islandHandoffs = next;
+    islandHandoffs = writeMap(islandHandoffs, screen, "");
     return handoff;
   }
 
@@ -227,17 +214,10 @@ Singleton {
   function setIslandCard(screen, card) {
     if (screen === "")
       return;
-    var next = {};
-    for (var k in islandCards)
-      next[k] = islandCards[k];
-    if (card)
-      next[screen] = card;
-    else
-      delete next[screen];
-    islandCards = next;
+    islandCards = writeMap(islandCards, screen, card);
   }
 
   function islandCardFor(screen) {
-    return islandCards[screen] !== undefined ? islandCards[screen] : null;
+    return lookup(islandCards, screen, null);
   }
 }

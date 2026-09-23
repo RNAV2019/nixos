@@ -1,23 +1,25 @@
 import QtQuick
 import QtQuick.Shapes
-import Quickshell.Services.UPower
+import qs.Ui
 import qs.Commons
 import qs.Services
 
 // Board 02's battery gauge: a ring that is the battery, open at the bottom, with the Wi-Fi
 // glyph inside and the charge in the gap. On the charger the ring turns foam and gains a bolt.
-Item {
+Gauge {
   id: root
 
-  readonly property var battery: UPower.displayDevice
-  readonly property bool present: battery !== null && battery.isLaptopBattery && battery.isPresent
-  readonly property real level: present ? Math.max(0, Math.min(1, battery.percentage)) : 0
-  readonly property bool charging: present && battery.state === UPowerDeviceState.Charging
-  // On the charger, whether it is still filling or has topped out.
-  readonly property bool plugged: charging || (present && (battery.state === UPowerDeviceState.FullyCharged || battery.state === UPowerDeviceState.PendingCharge))
-  readonly property bool low: present && !plugged && level <= 0.2
+  readonly property bool plugged: Battery.charging || (Battery.present && (Battery.battery.state === UPowerDeviceState.FullyCharged || Battery.battery.state === UPowerDeviceState.PendingCharge))
+  readonly property bool low: Battery.present && !plugged && Battery.level <= 0.2
 
   readonly property color tint: plugged ? Theme.foam : low ? Theme.love : Theme.accent
+
+  value: Battery.level
+  strokeColor: root.tint
+
+  Behavior on strokeColor {
+    Tint {}
+  }
 
   readonly property bool connected: NetworkInfo.onEthernet || NetworkInfo.activeNetwork !== null
   readonly property real strength: {
@@ -53,40 +55,20 @@ Item {
     return lit ? Theme.text : Theme.highlightHigh;
   }
 
-  implicitWidth: 48
-  implicitHeight: 52
+  // Three bars about the dot, lit by signal strength.
+  WifiBar {
+    radius: 14.5
+    lit: root.strength >= 0.66
+  }
 
-  Shape {
-    width: 48
-    height: 48
-    preferredRendererType: Shape.CurveRenderer
+  WifiBar {
+    radius: 10
+    lit: root.strength >= 0.33
+  }
 
-    GaugeArc {
-      radius: 21
-      strokeColor: Theme.highlightMed
-    }
-
-    GaugeArc {
-      radius: 21
-      value: root.level
-      strokeColor: root.tint
-    }
-
-    // Three bars about the dot, lit by signal strength.
-    WifiBar {
-      radius: 14.5
-      lit: root.strength >= 0.66
-    }
-
-    WifiBar {
-      radius: 10
-      lit: root.strength >= 0.33
-    }
-
-    WifiBar {
-      radius: 5.5
-      lit: root.connected
-    }
+  WifiBar {
+    radius: 5.5
+    lit: root.connected
   }
 
   Rectangle {
@@ -101,9 +83,9 @@ Item {
   // The charge, led by a bolt while on the charger.
   Row {
     anchors.horizontalCenter: parent.horizontalCenter
-    y: 38
+    y: Theme.islandGaugeLabelY
     spacing: 2
-    visible: root.present
+    visible: Battery.present
 
     Shape {
       anchors.verticalCenter: parent.verticalCenter
@@ -130,9 +112,7 @@ Item {
     }
 
     GaugeLabel {
-      anchors.horizontalCenter: undefined
-      y: 0
-      text: Math.round(root.level * 100) + "%"
+      text: Math.round(Battery.level * 100) + "%"
       color: root.plugged ? Theme.foam : root.low ? Theme.love : Theme.subtle
     }
   }

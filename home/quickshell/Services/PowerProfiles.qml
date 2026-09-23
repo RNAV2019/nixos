@@ -12,11 +12,10 @@ Singleton {
   // The active profile as the daemon spells it; empty until something answers.
   property string profile: ""
 
-  property bool available: false
+  property bool available: probe.available
 
   function refresh() {
-    if (!query.running)
-      query.running = true;
+    probe.refresh();
   }
 
   function set(name) {
@@ -30,52 +29,21 @@ Singleton {
     id: apply
 
     // powerprofilesctl returns before the daemon has finished switching.
-    onExited: settle.restart()
+    onExited: probe.settle()
   }
 
-  Timer {
-    id: settle
-
-    interval: 120
-    onTriggered: root.refresh()
-  }
-
-  Process {
-    id: query
+  DaemonProbe {
+    id: probe
 
     command: ["powerprofilesctl", "get"]
 
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var value = text.trim();
-        if (value === "") {
-          root.available = false;
-          return;
-        }
-        root.available = true;
-        root.profile = value;
-      }
+    parse: function (text) {
+      var value = text.trim();
+      return value === "" ? null : value;
     }
 
-    onExited: function (code) {
-      if (code !== 0)
-        root.available = false;
-    }
-  }
-
-  // The daemon and quickshell come up in either order, so this backs off forever.
-  property int _tries: 0
-
-  readonly property int eagerTries: 15
-
-  Timer {
-    running: !root.available
-    interval: root._tries < root.eagerTries ? 2000 : 60000
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: {
-      root._tries++;
-      root.refresh();
+    onAnswered: function (value) {
+      root.profile = value;
     }
   }
 }

@@ -41,32 +41,32 @@ Item {
       target: reveal
       property: "ground"
       to: 1
-      duration: Theme.lockIn
+      duration: Theme.duration(Theme.lockIn)
       easing.type: Easing.OutQuad
     }
 
     SequentialAnimation {
       PauseAnimation {
-        duration: Theme.lockInClock
+        duration: Theme.duration(Theme.lockInClock)
       }
       NumberAnimation {
         target: reveal
         property: "clockAlpha"
         to: 1
-        duration: Theme.lockInContent
+        duration: Theme.duration(Theme.lockInContent)
         easing.type: Easing.OutCubic
       }
     }
 
     SequentialAnimation {
       PauseAnimation {
-        duration: Theme.lockInLogin
+        duration: Theme.duration(Theme.lockInLogin)
       }
       NumberAnimation {
         target: reveal
         property: "loginAlpha"
         to: 1
-        duration: Theme.lockInContent
+        duration: Theme.duration(Theme.lockInContent)
         easing.type: Easing.OutCubic
       }
     }
@@ -80,7 +80,7 @@ Item {
         target: reveal
         property: "ground"
         to: 0
-        duration: Theme.lockOut
+        duration: Theme.duration(Theme.lockOut)
         easing.type: Easing.OutCubic
       }
 
@@ -88,26 +88,26 @@ Item {
         target: reveal
         property: "loginAlpha"
         to: 0
-        duration: Theme.lockOutContent
+        duration: Theme.duration(Theme.lockOutContent)
         easing.type: Easing.OutCubic
       }
 
       SequentialAnimation {
         PauseAnimation {
-          duration: Theme.lockOutClock
+          duration: Theme.duration(Theme.lockOutClock)
         }
         NumberAnimation {
           target: reveal
           property: "clockAlpha"
           to: 0
-          duration: Theme.lockOutContent
+          duration: Theme.duration(Theme.lockOutContent)
           easing.type: Easing.OutCubic
         }
       }
     }
 
     PauseAnimation {
-      duration: 50
+      duration: Theme.duration(Theme.morphBeat)
     }
 
     ScriptAction {

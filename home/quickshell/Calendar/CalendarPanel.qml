@@ -38,34 +38,31 @@ Variants {
     }
 
     onKeyPressed: function (event) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-            win.hide();
-            break;
-          case Qt.Key_Left:
-          case Qt.Key_H:
-            Calendar.step(-1);
-            break;
-          case Qt.Key_Right:
-          case Qt.Key_L:
-            Calendar.step(1);
-            break;
-          case Qt.Key_Up:
-            Calendar.stepDay(-7);
-            break;
-          case Qt.Key_Down:
-            Calendar.stepDay(7);
-            break;
-          case Qt.Key_T:
-          case Qt.Key_Home:
-            Calendar.today();
-            break;
-          case Qt.Key_R:
-            Calendar.refresh();
-            break;
-          default:
-            return;
-          }
+      switch (event.key) {
+      case Qt.Key_Left:
+      case Qt.Key_H:
+        Calendar.step(-1);
+        break;
+      case Qt.Key_Right:
+      case Qt.Key_L:
+        Calendar.step(1);
+        break;
+      case Qt.Key_Up:
+        Calendar.stepDay(-7);
+        break;
+      case Qt.Key_Down:
+        Calendar.stepDay(7);
+        break;
+      case Qt.Key_T:
+      case Qt.Key_Home:
+        Calendar.today();
+        break;
+      case Qt.Key_R:
+        Calendar.refresh();
+        break;
+      default:
+        return;
+      }
       event.accepted = true;
     }
 
@@ -73,16 +70,6 @@ Variants {
       id: body
 
       anchors.fill: parent
-      opacity: win.open || win.origin.held ? 1 : 0
-      visible: opacity > 0
-
-      Behavior on opacity {
-        enabled: !win.origin.held
-
-        Morph {
-          duration: Theme.morphContent
-        }
-      }
 
         // Centred off its measured height, not a constant, so the header stays level whatever
         // Inter reports for an 18 px cut.
@@ -276,6 +263,10 @@ Variants {
               color: cell.isSelected ? Theme.accent : "transparent"
               border.width: cell.isSelected ? 0 : 1
               border.color: Theme.withAlpha(Theme.accent, 0.55)
+
+              Behavior on color {
+                Tint {}
+              }
             }
 
             Text {
@@ -286,6 +277,10 @@ Variants {
               font.family: Theme.uiFont
               font.pixelSize: Theme.calDaySize
               font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
+
+              Behavior on color {
+                Tint {}
+              }
             }
 
             // One dot per day with events, in its first calendar's colour. It hangs under the
@@ -308,7 +303,7 @@ Variants {
             MouseArea {
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-               onClicked: Calendar.selectDay(cell.day)
+              onClicked: Calendar.selectDay(cell.day)
             }
           }
         }

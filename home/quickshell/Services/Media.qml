@@ -73,17 +73,18 @@ Singleton {
   }
 
   function toggle() {
-    if (player)
+    // Capable players only: a player that cannot answer is skipped rather than no-op'ing on the bus.
+    if (player && player.canPlay)
       player.togglePlaying();
   }
 
   function next() {
-    if (player)
+    if (player && player.canGoNext)
       player.next();
   }
 
   function previous() {
-    if (player)
+    if (player && player.canGoPrevious)
       player.previous();
   }
 }

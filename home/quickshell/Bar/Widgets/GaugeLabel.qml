@@ -1,10 +1,9 @@
 import QtQuick
 import qs.Commons
 
-// The reading in the gap at the foot of an island gauge.
+// The reading in the gap at the foot of an island gauge. Anchors are left to the caller:
+// gauge layouts differ about whether the label shares the gap.
 Text {
-  anchors.horizontalCenter: parent.horizontalCenter
-  y: 38
   color: Theme.subtle
   font.family: Theme.uiFont
   font.pixelSize: 11

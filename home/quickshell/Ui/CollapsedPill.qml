@@ -53,6 +53,11 @@ Item {
     visible: root.recording && opacity > 0
     opacity: root.shown ? 1 : 0
 
+    // The dot slides out of the clock rather than teleporting while its opacity fades.
+    Behavior on x {
+      MicroSpring {}
+    }
+
     Behavior on opacity {
       Morph { duration: Theme.morphContent }
     }

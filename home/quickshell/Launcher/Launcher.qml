@@ -117,7 +117,7 @@ Variants {
 
           x: Theme.launcherTextLeft
           y: Theme.launcherSearchHeight / 2 - height / 2
-           width: win.openWidth - x - Theme.launcherInset
+          width: win.openWidth - x - Theme.launcherInset
           color: Theme.text
           font.family: Theme.uiFont
           font.pixelSize: Theme.launcherSearchSize
@@ -172,7 +172,7 @@ Variants {
         Rectangle {
           x: Theme.launcherInset
           y: Theme.launcherSearchHeight
-           width: win.openWidth - Theme.launcherInset * 2
+          width: win.openWidth - Theme.launcherInset * 2
           height: 1
           color: Theme.withAlpha(Theme.highlightMed, 0.6)
         }
@@ -192,7 +192,7 @@ Variants {
 
           x: Theme.launcherInset
           y: Theme.launcherListTop
-           width: win.openWidth - Theme.launcherInset * 2
+          width: win.openWidth - Theme.launcherInset * 2
           height: win.listHeight
           model: rows
           spacing: Theme.launcherRowGap
@@ -205,7 +205,7 @@ Variants {
           highlightRangeMode: ListView.ApplyRange
           preferredHighlightBegin: 0
           preferredHighlightEnd: height
-          highlightMoveDuration: Theme.morphSurface
+          highlightMoveDuration: Theme.duration(Theme.morphSurface)
           highlightMoveVelocity: -1
           highlightResizeDuration: 0
 
@@ -260,12 +260,13 @@ Variants {
             }
           }
 
-          // Survivors travel on the shape's curve, so two can be seen crossing, not shoving.
+          // Survivors travel on an OutCubic ease for the surface duration, so two can be
+          // seen crossing, not shoving.
           displaced: Transition {
             NumberAnimation {
               properties: "y"
-               duration: Theme.duration(Theme.morphSurface)
-               easing.type: Easing.OutCubic
+              duration: Theme.duration(Theme.morphSurface)
+              easing.type: Easing.OutCubic
             }
             NumberAnimation {
               property: "opacity"

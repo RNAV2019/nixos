@@ -10,7 +10,7 @@ import qs.Commons
 Singleton {
   id: root
 
-  readonly property string home: Quickshell.env("HOME")
+  readonly property string home: Paths.home
 
   // { id, label, palette }, in the order the picker shows them.
   readonly property var entries: Theme.themeIds.map(function (id) {
@@ -31,14 +31,8 @@ Singleton {
     return previews[id] !== undefined ? previews[id] : "";
   }
 
-  // Refreshes during a run are queued: the switch exiting and the wallpaper it moved both ask.
-  property bool scanQueued: false
-
   function refresh() {
-    if (scan.running)
-      scanQueued = true;
-    else
-      scan.running = true;
+    scan.run();
   }
 
   function apply(id) {
@@ -62,19 +56,10 @@ Singleton {
     onExited: root.refresh()
   }
 
-  Process {
+  QueuedProcess {
     id: scan
 
-    command: ["sh", "-c", 'for id in "$@"; do w="$(readlink -e "$HOME/.local/share/wallpaper/$id")"; if [ -z "$w" ]; then for f in "$HOME/Pictures/backgrounds/$id"/*; do [ -f "$f" ] && { w="$(readlink -f "$f")"; break; }; done; fi; printf "%s\t%s\n" "$id" "$w"; done', "sh"].concat(Theme.themeIds)
-
-    onExited: {
-      if (root.scanQueued) {
-        root.scanQueued = false;
-        Qt.callLater(function () {
-          scan.running = true;
-        });
-      }
-    }
+    command: ["sh", "-c", 'for id in "$@"; do w="$(readlink -e "' + Paths.wallpaperDir + '/$id")"; if [ -z "$w" ]; then for f in "' + Paths.backgroundsDir + '/$id"/*; do [ -f "$f" ] && { w="$(readlink -f "$f")"; break; }; done; fi; printf "%s\t%s\n" "$id" "$w"; done', "sh"].concat(Theme.themeIds)
 
     stdout: StdioCollector {
       onStreamFinished: {

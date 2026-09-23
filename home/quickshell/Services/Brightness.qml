@@ -8,13 +8,8 @@ import Quickshell.Io
 Singleton {
   id: root
 
-  property real value: 0
-  property bool available: false
-
-  // Discover the backlight because sysfs device names vary by driver.
-  property string devicePath: ""
-
-  property int _max: 0
+  property real value: gauge.value
+  property bool available: gauge.available
 
   // Emitted per keypress, even at a rail, so the OSD appears without a sysfs change.
   signal adjusted
@@ -37,12 +32,20 @@ Singleton {
   property bool _lastUp: false
 
   // Slider and key repeat outrun brightnessctl, so keep the latest target and one writer.
+  // (Volume.qml carries the same throttle shape; the queues differ - a latest target
+  // here, a pending delta there - so the writer stays per-service.)
   readonly property int writeInterval: 20
   property real _requestedValue: 0
   property bool _hasRequestedValue: false
   property real _lastTarget: 0
   property bool _hasLastTarget: false
   property real _lastWriteAt: 0
+
+  SysfsGauge {
+    id: gauge
+
+    glob: "/sys/class/backlight/*"
+  }
 
   function clamp(v) {
     return Math.max(0, Math.min(1, v));
@@ -122,46 +125,5 @@ Singleton {
 
     onRunningChanged: if (!setter.running)
       root.flushValue()
-  }
-
-  Process {
-    id: findDevice
-    running: true
-    command: ["sh", "-c", "for d in /sys/class/backlight/*; do [ -r \"$d/brightness\" ] && { echo \"$d\"; exit 0; }; done"]
-    stdout: StdioCollector {
-      onStreamFinished: root.devicePath = text.trim()
-    }
-  }
-
-  FileView {
-    id: maxFile
-    path: root.devicePath === "" ? "" : root.devicePath + "/max_brightness"
-    onLoaded: {
-      var m = parseInt(maxFile.text());
-      if (isFinite(m) && m > 0) {
-        root._max = m;
-        currentFile.reload();
-      }
-    }
-  }
-
-  FileView {
-    id: currentFile
-
-    path: root.devicePath === "" ? "" : root.devicePath + "/brightness"
-    watchChanges: true
-
-    // Sysfs emits write and close notifications; duplicate reloads are safe.
-    onFileChanged: currentFile.reload()
-
-    onLoaded: {
-      if (root._max <= 0)
-        return;
-      var current = parseInt(currentFile.text());
-      if (!isFinite(current))
-        return;
-      root.value = current / root._max;
-      root.available = true;
-    }
   }
 }

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -26,9 +25,6 @@ Variants {
     // What the loader holds; it outlives `view` by one slide so the view being left stays drawn.
     property string loadedView: ""
 
-    // Raised for open/close, when height rides the shape's own curve rather than a sub-view's slide.
-    property bool morphing: false
-
     readonly property var subView: subLoader.item
 
     readonly property int contentHeight: {
@@ -52,14 +48,6 @@ Variants {
         hide();
     }
 
-    // The same focus prime the launcher needs; see Launcher/Launcher.qml.
-    Timer {
-      id: settle
-
-      interval: Theme.morphSurface + 30
-      onTriggered: win.morphing = false
-    }
-
     // The view being left has to stay drawn until it has finished travelling.
     Timer {
       id: unload
@@ -67,11 +55,6 @@ Variants {
       interval: Theme.morphSurface + 40
       onTriggered: if (win.view === "")
         win.loadedView = ""
-    }
-
-    onOpenChanged: {
-      morphing = true;
-      settle.restart();
     }
 
     onShowingChanged: {
@@ -96,48 +79,48 @@ Variants {
     }
 
     onKeyPressed: function (event) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-          case Qt.Key_Backspace:
-            win.back();
-            break;
-          case Qt.Key_Left:
-          case Qt.Key_Up:
-            if (win.view === "")
-              home.keyboardMove(-1);
-            else
-              return;
-            break;
-          case Qt.Key_Right:
-          case Qt.Key_Down:
-            if (win.view === "")
-              home.keyboardMove(1);
-            else
-              return;
-            break;
-          case Qt.Key_Tab:
-            if (win.view === "")
-              home.keyboardMove(event.modifiers & Qt.ShiftModifier ? -1 : 1);
-            else
-              return;
-            break;
-          case Qt.Key_Backtab:
-            if (win.view === "")
-              home.keyboardMove(-1);
-            else
-              return;
-            break;
-          case Qt.Key_Return:
-          case Qt.Key_Enter:
-          case Qt.Key_Space:
-            if (win.view === "")
-              home.keyboardActivate();
-            else
-              return;
-            break;
-          default:
-            return;
-          }
+      switch (event.key) {
+      case Qt.Key_Escape:
+      case Qt.Key_Backspace:
+        win.back();
+        break;
+      case Qt.Key_Left:
+      case Qt.Key_Up:
+        if (win.view === "")
+          home.keyboardMove(-1);
+        else
+          return;
+        break;
+      case Qt.Key_Right:
+      case Qt.Key_Down:
+        if (win.view === "")
+          home.keyboardMove(1);
+        else
+          return;
+        break;
+      case Qt.Key_Tab:
+        if (win.view === "")
+          home.keyboardMove(event.modifiers & Qt.ShiftModifier ? -1 : 1);
+        else
+          return;
+        break;
+      case Qt.Key_Backtab:
+        if (win.view === "")
+          home.keyboardMove(-1);
+        else
+          return;
+        break;
+      case Qt.Key_Return:
+      case Qt.Key_Enter:
+      case Qt.Key_Space:
+        if (win.view === "")
+          home.keyboardActivate();
+        else
+          return;
+        break;
+      default:
+        return;
+      }
       event.accepted = true;
     }
 
@@ -155,87 +138,87 @@ Variants {
         Morph {
           duration: Theme.morphContent
         }
+      }
+
+      HomeView {
+        id: home
+
+        x: win.view === "" ? 0 : -win.openWidth
+        y: 0
+        width: win.openWidth
+        height: contentHeight
+
+        onClosed: win.hide()
+        onOpened: function (name) {
+          win.view = name;
         }
 
-        HomeView {
-          id: home
+        // The picker claims the island through the shared protocol, which stands this panel
+        // down: dismiss() publishes this panel's live shape so the picker contracts out of it.
+        onRecorderRequested: Bus.recorderRequested()
 
-           x: win.view === "" ? 0 : -win.openWidth
-          y: 0
-           width: win.openWidth
-          height: contentHeight
+        Behavior on x {
+          enabled: !Theme.reduceMotion
 
-          onClosed: win.hide()
-          onOpened: function (name) {
-            win.view = name;
-          }
-
-          // The picker claims the island through the shared protocol, which stands this panel
-          // down: dismiss() publishes this panel's live shape so the picker contracts out of it.
-          onRecorderRequested: Bus.recorderRequested()
-
-          Behavior on x {
-            enabled: !Theme.reduceMotion
-
-            MicroSpring {}
-          }
-        }
-
-        Loader {
-          id: subLoader
-
-           x: win.view === "" ? win.openWidth : 0
-          y: 0
-           width: win.openWidth
-          height: item ? item.contentHeight : 0
-          active: win.loadedView !== ""
-
-          Behavior on x {
-            enabled: !Theme.reduceMotion
-
-            MicroSpring {}
-          }
-
-          sourceComponent: {
-            switch (win.loadedView) {
-            case "wifi":
-              return wifiView;
-            case "audio":
-              return audioView;
-            case "bluetooth":
-              return bluetoothView;
-            }
-            return null;
-          }
-        }
-
-        Component {
-          id: wifiView
-
-          WifiView {
-            active: win.open && win.view === "wifi"
-            onBacked: win.view = ""
-          }
-        }
-
-        Component {
-          id: audioView
-
-          AudioView {
-            active: win.open && win.view === "audio"
-            onBacked: win.view = ""
-          }
-        }
-
-        Component {
-          id: bluetoothView
-
-          BluetoothView {
-            active: win.open && win.view === "bluetooth"
-            onBacked: win.view = ""
-          }
+          MicroSpring {}
         }
       }
+
+      Loader {
+        id: subLoader
+
+        x: win.view === "" ? win.openWidth : 0
+        y: 0
+        width: win.openWidth
+        height: item ? item.contentHeight : 0
+        active: win.loadedView !== ""
+
+        Behavior on x {
+          enabled: !Theme.reduceMotion
+
+          MicroSpring {}
+        }
+
+        sourceComponent: {
+          switch (win.loadedView) {
+          case "wifi":
+            return wifiView;
+          case "audio":
+            return audioView;
+          case "bluetooth":
+            return bluetoothView;
+          }
+          return null;
+        }
+      }
+
+      Component {
+        id: wifiView
+
+        WifiView {
+          active: win.open && win.view === "wifi"
+          onBacked: win.view = ""
+        }
+      }
+
+      Component {
+        id: audioView
+
+        AudioView {
+          active: win.open && win.view === "audio"
+          onBacked: win.view = ""
+        }
+      }
+
+      Component {
+        id: bluetoothView
+
+        BluetoothView {
+          active: win.open && win.view === "bluetooth"
+          onBacked: win.view = ""
+        }
+      }
+    }
 
     // The progress bar is the only thing needing MPRIS polled, so the poll is tied to this surface.
     Binding {

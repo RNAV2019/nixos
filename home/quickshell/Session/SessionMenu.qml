@@ -17,7 +17,7 @@ Variants {
     id: win
 
     key: "session"
-    openWidth: Theme.panelWidth(modelData, win.contentWidth)
+    openWidth: Theme.panelWidth(modelData, tilesGrid.contentWidth)
     openHeight: Theme.powerHeight
     openRadius: Theme.powerRadius
 
@@ -46,14 +46,6 @@ Variants {
       }
     ]
 
-    readonly property int count: tiles.length
-
-    readonly property int contentWidth: Theme.powerInset * 2 + count * Theme.powerTileWidth + (count - 1) * Theme.powerTileGap
-
-    function tileX(i) {
-      return Theme.powerInset + i * (Theme.powerTileWidth + Theme.powerTileGap);
-    }
-
     onOpening: {
       current = 0;
       armed = -1;
@@ -62,7 +54,7 @@ Variants {
     // Moving disarms, so an armed tile is never left waiting for a later Return.
     function move(delta) {
       armed = -1;
-      current = (current + delta + count) % count;
+      current = (current + delta + tilesGrid.count) % tilesGrid.count;
     }
 
     function activate(i) {
@@ -95,32 +87,32 @@ Variants {
     }
 
     onKeyPressed: function (event) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-            // The first Escape stands an armed tile down; the second closes.
-            if (win.armed >= 0)
-              win.armed = -1;
-            else
-              win.hide();
-            break;
-          case Qt.Key_Left:
-          case Qt.Key_H:
-          case Qt.Key_Backtab:
-            win.move(-1);
-            break;
-          case Qt.Key_Right:
-          case Qt.Key_L:
-          case Qt.Key_Tab:
-            win.move(1);
-            break;
-          case Qt.Key_Return:
-          case Qt.Key_Enter:
-          case Qt.Key_Space:
-            win.activate(win.current);
-            break;
-          default:
-            return;
-          }
+      switch (event.key) {
+      case Qt.Key_Escape:
+        // The first Escape stands an armed tile down; the second closes.
+        if (win.armed >= 0)
+          win.armed = -1;
+        else
+          win.hide();
+        break;
+      case Qt.Key_Left:
+      case Qt.Key_H:
+      case Qt.Key_Backtab:
+        win.move(-1);
+        break;
+      case Qt.Key_Right:
+      case Qt.Key_L:
+      case Qt.Key_Tab:
+        win.move(1);
+        break;
+      case Qt.Key_Return:
+      case Qt.Key_Enter:
+      case Qt.Key_Space:
+        win.activate(win.current);
+        break;
+      default:
+        return;
+      }
       event.accepted = true;
     }
 
@@ -128,30 +120,22 @@ Variants {
       id: body
 
       anchors.fill: parent
-      opacity: win.open || win.origin.held ? 1 : 0
-      visible: opacity > 0
 
-      Behavior on opacity {
-        enabled: !win.origin.held
+      ChoiceTiles {
+        id: tilesGrid
 
-        Morph {
-          duration: Theme.morphContent
+        model: win.tiles
+        currentIndex: win.current
+        activeIndex: win.armed
+        activeColor: Theme.love
+        activeLabel: "Confirm"
+        activeIsCommitting: true
+        onEntered: function (index) {
+          if (win.armed < 0)
+            win.current = index;
         }
-      }
-
-        ChoiceTiles {
-          model: win.tiles
-          currentIndex: win.current
-          activeIndex: win.armed
-          activeColor: Theme.love
-          activeLabel: "Confirm"
-          activeIsCommitting: true
-          onEntered: function (index) {
-            if (win.armed < 0)
-              win.current = index;
-          }
-          onActivated: win.activate(index)
-        }
+        onActivated: win.activate(index)
       }
     }
   }
+}

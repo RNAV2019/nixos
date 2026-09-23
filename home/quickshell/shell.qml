@@ -32,39 +32,23 @@ ShellRoot {
   }
   LockPreview {}
 
-  IpcHandler {
-    target: "control"
+  // The six island surfaces with the same toggle/close pair; the still and session targets
+  // stay handwritten below, since they differ.
+  Variants {
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session")
 
-    function toggle(): void {
-      Bus.toggleSurface("control");
-    }
+    IpcHandler {
+      required property string modelData
 
-    function close(): void {
-      Bus.closeSurface("control");
-    }
-  }
+      target: modelData
 
-  IpcHandler {
-    target: "launcher"
+      function toggle(): void {
+        Bus.toggleSurface(modelData);
+      }
 
-    function toggle(): void {
-      Bus.toggleSurface("launcher");
-    }
-
-    function close(): void {
-      Bus.closeSurface("launcher");
-    }
-  }
-
-  IpcHandler {
-    target: "wallpaper"
-
-    function toggle(): void {
-      Bus.toggleSurface("wallpaper");
-    }
-
-    function close(): void {
-      Bus.closeSurface("wallpaper");
+      function close(): void {
+        Bus.closeSurface(modelData);
+      }
     }
   }
 
@@ -86,46 +70,10 @@ ShellRoot {
   }
 
   IpcHandler {
-    target: "calendar"
-
-    function toggle(): void {
-      Bus.toggleSurface("calendar");
-    }
-
-    function close(): void {
-      Bus.closeSurface("calendar");
-    }
-  }
-
-  IpcHandler {
-    target: "recorder"
-
-    function toggle(): void {
-      Bus.toggleSurface("recorder");
-    }
-
-    function close(): void {
-      Bus.closeSurface("recorder");
-    }
-  }
-
-  IpcHandler {
     target: "session"
 
     function toggle(): void {
       Bus.toggleSurface("session");
-    }
-  }
-
-  IpcHandler {
-    target: "profiles"
-
-    function toggle(): void {
-      Bus.toggleSurface("profiles");
-    }
-
-    function close(): void {
-      Bus.closeSurface("profiles");
     }
   }
 

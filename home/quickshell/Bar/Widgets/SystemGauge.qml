@@ -1,40 +1,14 @@
 import QtQuick
-import QtQuick.Shapes
-import Quickshell.Services.UPower
 import qs.Commons
 import qs.Services
 
 // Board 02's system gauge, beside the battery one: memory on the ring, CPU load in the chip
 // at its centre, power draw in the gap, rising while charging and falling on battery.
-Item {
+Gauge {
   id: root
 
-  readonly property var battery: UPower.displayDevice
-  readonly property bool present: battery !== null && battery.isLaptopBattery && battery.isPresent
-  readonly property bool charging: present && battery.state === UPowerDeviceState.Charging
-
-  // UPower's energy rate is the battery's flow: system draw on battery, cell input while charging.
-  readonly property real watts: present ? Math.abs(battery.changeRate) : 0
-
-  implicitWidth: 48
-  implicitHeight: 52
-
-  Shape {
-    width: 48
-    height: 48
-    preferredRendererType: Shape.CurveRenderer
-
-    GaugeArc {
-      radius: 21
-      strokeColor: Theme.highlightMed
-    }
-
-    GaugeArc {
-      radius: 21
-      value: SystemStats.memory
-      strokeColor: Theme.rose
-    }
-  }
+  value: SystemStats.memory
+  strokeColor: Theme.rose
 
   // A CPU chip whose core fills from the bottom with load, like the Wi-Fi bars light with signal.
   Item {
@@ -103,7 +77,9 @@ Item {
   }
 
   GaugeLabel {
-    visible: root.present
-    text: (root.charging ? "↑ " : "↓ ") + root.watts.toFixed(1) + " W"
+    anchors.horizontalCenter: parent.horizontalCenter
+    y: Theme.islandGaugeLabelY
+    visible: Battery.present
+    text: (Battery.charging ? "↑ " : "↓ ") + Battery.watts.toFixed(1) + " W"
   }
 }

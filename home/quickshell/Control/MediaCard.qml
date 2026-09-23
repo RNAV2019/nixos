@@ -100,7 +100,7 @@ Item {
 
     x: 16
     y: 13
-    text: root.sink && root.sink.audio && root.sink.audio.muted ? Icons.volumeMuted : Icons.step(Icons.volume, root.sink && root.sink.audio ? root.sink.audio.volume * 100 : 0)
+    text: Volume.glyph(root.sink)
     color: Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlMediaCaptionSize
@@ -143,110 +143,74 @@ Item {
     elide: Text.ElideRight
   }
 
-  Rectangle {
+  IconButton {
     id: play
 
     x: root.width - width - 16
     y: 32
     width: Theme.controlMediaPlaySize
     height: Theme.controlMediaPlaySize
-    radius: height / 2
-    Accessible.role: Accessible.Button
-    Accessible.name: Media.playing ? "Pause" : "Play"
-    Accessible.focusable: true
-    Accessible.focused: playHover.activeFocus
-    Accessible.onPressAction: if (Media.active)
-      Media.toggle()
-    color: Theme.withAlpha(Theme.text, playHover.containsMouse ? 1 : 0.94)
-    scale: playHover.pressed ? 0.97 : 1
-
-    Behavior on color {
-      Tint {}
-    }
-
-    Behavior on scale {
-      Morph { duration: Theme.morphState }
-    }
-
-    Text {
-      anchors.centerIn: parent
-      text: Media.playing ? Icons.pause : Icons.play
-      color: Theme.inkOnAccent
-      font.family: Theme.iconFont
-      font.pixelSize: 20
-    }
-
-    MouseArea {
-      id: playHover
-
-      anchors.fill: parent
-      hoverEnabled: true
-      enabled: Media.active
-      activeFocusOnTab: true
-      cursorShape: Qt.PointingHandCursor
-      onPressed: playHover.forceActiveFocus()
-      onClicked: Media.toggle()
-    }
-  }
-
-  component Skip: Text {
-    property alias hovered: skipHover.containsMouse
-    property string accessibleName: ""
-
-    signal activated
-
-    y: 104
-    width: Theme.controlMediaSkipSize
-    height: Theme.controlMediaSkipSize
-    color: hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.75)
-    scale: skipHover.pressed ? 0.95 : 1
+    filled: true
+    fillSize: Theme.controlMediaPlaySize
+    fillHoverColor: Theme.text
+    fillColor: Theme.withAlpha(Theme.text, 0.94)
+    hitSlop: 0
+    text: Media.playing ? Icons.pause : Icons.play
     font.family: Theme.iconFont
-    font.pixelSize: Theme.controlMediaSkipSize
-    Accessible.role: Accessible.Button
-    Accessible.name: accessibleName
-    Accessible.focusable: true
-    Accessible.focused: skipHover.activeFocus
-
-    Behavior on color {
-      Tint {}
-    }
-
-    Behavior on scale {
-      Morph { duration: Theme.morphState }
-    }
+    font.pixelSize: 20
+    baseColor: Theme.inkOnAccent
+    hoverColor: Theme.inkOnAccent
     verticalAlignment: Text.AlignVCenter
     horizontalAlignment: Text.AlignHCenter
+    activeFocusOnTab: true
+    enabled: Media.active
+    accessibleName: Media.playing ? "Pause" : "Play"
 
-    MouseArea {
-      id: skipHover
-
-      anchors.fill: parent
-      anchors.margins: -6
-      hoverEnabled: true
-      enabled: Media.active
-      activeFocusOnTab: true
-      cursorShape: Qt.PointingHandCursor
-      onPressed: skipHover.forceActiveFocus()
-      onClicked: parent.activated()
-    }
+    onClicked: Media.toggle()
   }
 
-  Skip {
+  IconButton {
     id: previous
 
     x: 16
+    y: 104
+    width: Theme.controlMediaSkipSize
+    height: Theme.controlMediaSkipSize
+    hitSlop: 6
     text: Icons.previous
+    font.family: Theme.iconFont
+    font.pixelSize: Theme.controlMediaSkipSize
+    baseColor: Theme.withAlpha(Theme.text, 0.75)
+    hoverColor: Theme.text
+    verticalAlignment: Text.AlignVCenter
+    horizontalAlignment: Text.AlignHCenter
+    activeFocusOnTab: true
+    enabled: Media.active
     accessibleName: "Previous track"
-    onActivated: Media.previous()
+
+    onClicked: Media.previous()
   }
 
-  Skip {
+  IconButton {
     id: next
 
     x: root.width - width - 16
+    y: 104
+    width: Theme.controlMediaSkipSize
+    height: Theme.controlMediaSkipSize
+    hitSlop: 6
     text: Icons.next
+    font.family: Theme.iconFont
+    font.pixelSize: Theme.controlMediaSkipSize
+    baseColor: Theme.withAlpha(Theme.text, 0.75)
+    hoverColor: Theme.text
+    verticalAlignment: Text.AlignVCenter
+    horizontalAlignment: Text.AlignHCenter
+    activeFocusOnTab: true
+    enabled: Media.active
     accessibleName: "Next track"
-    onActivated: Media.next()
+
+    onClicked: Media.next()
   }
 
   // The bar is also a seek target, so its hit area is taller than the 3 px drawn.

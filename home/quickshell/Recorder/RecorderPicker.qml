@@ -100,37 +100,35 @@ Variants {
           win.show();
       }
     }
+
     onKeyPressed: function (event) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-            win.hide();
-            break;
-          case Qt.Key_Left:
-          case Qt.Key_H:
-          case Qt.Key_Backtab:
-            win.step(-1);
-            break;
-          case Qt.Key_Right:
-          case Qt.Key_L:
-          case Qt.Key_Tab:
-            win.step(1);
-            break;
-          case Qt.Key_C:
-            Recorder.cursor = !Recorder.cursor;
-            break;
-          case Qt.Key_A:
-            Recorder.desktopAudio = !Recorder.desktopAudio;
-            break;
-          case Qt.Key_M:
-            Recorder.microphone = !Recorder.microphone;
-            break;
-          case Qt.Key_Return:
-          case Qt.Key_Enter:
-            win.activate();
-            break;
-          default:
-            return;
-          }
+      switch (event.key) {
+      case Qt.Key_Left:
+      case Qt.Key_H:
+      case Qt.Key_Backtab:
+        win.step(-1);
+        break;
+      case Qt.Key_Right:
+      case Qt.Key_L:
+      case Qt.Key_Tab:
+        win.step(1);
+        break;
+      case Qt.Key_C:
+        Recorder.cursor = !Recorder.cursor;
+        break;
+      case Qt.Key_A:
+        Recorder.desktopAudio = !Recorder.desktopAudio;
+        break;
+      case Qt.Key_M:
+        Recorder.microphone = !Recorder.microphone;
+        break;
+      case Qt.Key_Return:
+      case Qt.Key_Enter:
+        win.activate();
+        break;
+      default:
+        return;
+      }
       event.accepted = true;
     }
 
@@ -138,79 +136,69 @@ Variants {
       id: body
 
       anchors.fill: parent
-      opacity: win.open || win.origin.held ? 1 : 0
-      visible: opacity > 0
 
-      Behavior on opacity {
-        enabled: !win.origin.held
-
-        Morph {
-          duration: Theme.morphContent
+      ChoiceTiles {
+        inset: Theme.recorderInset
+        model: win.targets
+        currentIndex: win.selected
+        activeIndex: win.selected
+        onEntered: win.selected = index
+        onActivated: {
+          win.selected = index;
+          win.activate();
         }
       }
 
-        ChoiceTiles {
-          inset: Theme.recorderInset
-          model: win.targets
-          currentIndex: win.selected
-          activeIndex: win.selected
-          onEntered: win.selected = index
-          onActivated: {
-            win.selected = index;
-            win.activate();
+      Repeater {
+        model: win.rows
+
+        Item {
+          id: row
+
+          required property int index
+          required property var modelData
+
+          readonly property bool value: win.rowValue(modelData.key)
+
+          x: Theme.recorderInset
+          y: Theme.recorderRowsTop + index * (Theme.recorderRowHeight + Theme.recorderRowGap)
+          width: Theme.recorderWidth - Theme.recorderInset * 2
+          height: Theme.recorderRowHeight
+
+          Rectangle {
+            anchors.fill: parent
+            radius: Theme.recorderRowRadius
+            color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
           }
-        }
 
-        Repeater {
-          model: win.rows
+          Text {
+            x: Theme.recorderRowTextLeft
+            y: (parent.height - height) / 2
+            text: row.modelData.label
+            color: row.value ? Theme.text : Theme.muted
+            font.family: Theme.uiFont
+            font.pixelSize: Theme.recorderRowLabelSize
+            font.weight: Font.Medium
+          }
 
-          Item {
-            id: row
-
-            required property int index
-            required property var modelData
-
-            readonly property bool value: win.rowValue(modelData.key)
-
-            x: Theme.recorderInset
-            y: Theme.recorderRowsTop + index * (Theme.recorderRowHeight + Theme.recorderRowGap)
-            width: Theme.recorderWidth - Theme.recorderInset * 2
-            height: Theme.recorderRowHeight
-
-            Rectangle {
-              anchors.fill: parent
-              radius: Theme.recorderRowRadius
-              color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
+          Switch {
+            x: parent.width - width - Theme.recorderRowTextLeft
+            y: (parent.height - height) / 2
+            checked: row.value
+            onToggled: function (value) {
+              win.setRow(row.modelData.key, value);
             }
+          }
 
-            Text {
-              x: Theme.recorderRowTextLeft
-              y: (parent.height - height) / 2
-              text: row.modelData.label
-              color: row.value ? Theme.text : Theme.muted
-              font.family: Theme.uiFont
-              font.pixelSize: Theme.recorderRowLabelSize
-              font.weight: Font.Medium
-            }
-
-            Switch {
-              x: parent.width - width - Theme.recorderRowTextLeft
-              y: (parent.height - height) / 2
-              checked: row.value
-              onToggled: function (value) {
-                win.setRow(row.modelData.key, value);
-              }
-            }
-
-            MouseArea {
-              anchors.fill: parent
-              acceptedButtons: Qt.LeftButton
-              cursorShape: Qt.PointingHandCursor
-              onClicked: win.setRow(row.modelData.key, !row.value)
-              z: -1
-            }
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            cursorShape: Qt.PointingHandCursor
+            onClicked: win.setRow(row.modelData.key, !row.value)
+            z: -1
           }
         }
       }
+    }
   }
 }

@@ -51,7 +51,7 @@ Rectangle {
     return Theme.withAlpha(destructive ? Theme.dangerFill : Theme.accentFill, hover.containsMouse ? 0.2 : 0);
   }
 
-  scale: hover.pressed ? 0.97 : 1
+  scale: hover.pressed ? Theme.pressScale : 1
 
   Behavior on color {
     Tint {}

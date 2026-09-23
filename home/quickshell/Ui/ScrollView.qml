@@ -60,5 +60,19 @@ Item {
     visible: view.interactive
     y: view.visibleArea.yPosition * root.height
     height: Math.max(20, view.visibleArea.heightRatio * root.height)
+
+    Behavior on y {
+      NumberAnimation {
+        duration: Theme.duration(Theme.morphState)
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on height {
+      NumberAnimation {
+        duration: Theme.duration(Theme.morphState)
+        easing.type: Easing.OutCubic
+      }
+    }
   }
 }

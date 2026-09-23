@@ -1,31 +1,17 @@
 import QtQuick
 import Quickshell.Bluetooth
 import qs.Commons
+import qs.Control
 import qs.Ui
 
 // Discovery runs only while this view is on screen; it costs battery on both ends.
-Item {
+ControlSubView {
   id: root
 
-  property bool active: false
-
-  enabled: active
-  focus: active
-  activeFocusOnTab: true
-
-  Accessible.role: Accessible.Pane
-  Accessible.name: "Bluetooth settings"
-  Accessible.focusable: true
-  Accessible.focused: root.activeFocus
-
-  signal backed
-
-  readonly property int inset: Theme.controlInset
-  readonly property int span: width - inset * 2
+  title: "Bluetooth"
+  accessibleName: "Bluetooth settings"
 
   readonly property var adapter: Bluetooth.defaultAdapter
-
-  readonly property int contentHeight: Math.min(Theme.controlViewMaxHeight, Theme.controlHeaderHeight + Math.ceil(body.implicitHeight) + Theme.controlPadBottom)
 
   // BlueZ falls back to the MAC address when a device advertises no name.
   function isMacName(name) {
@@ -35,36 +21,25 @@ Item {
   readonly property var connected: {
     if (!active || !adapter)
       return [];
-    var out = [];
-    for (var i = 0; i < adapter.devices.values.length; i++) {
-      if (adapter.devices.values[i].connected)
-        out.push(adapter.devices.values[i]);
-    }
-    return out;
+    return Util.filterDevices(adapter.devices.values, function (d) {
+      return d.connected;
+    });
   }
 
   readonly property var paired: {
     if (!active || !adapter)
       return [];
-    var out = [];
-    for (var i = 0; i < adapter.devices.values.length; i++) {
-      var d = adapter.devices.values[i];
-      if (d.paired && !d.connected)
-        out.push(d);
-    }
-    return out;
+    return Util.filterDevices(adapter.devices.values, function (d) {
+      return d.paired && !d.connected;
+    });
   }
 
   readonly property var discovered: {
     if (!active || !adapter)
       return [];
-    var out = [];
-    for (var i = 0; i < adapter.devices.values.length; i++) {
-      var d = adapter.devices.values[i];
-      if (!d.paired && d.name && !isMacName(d.name))
-        out.push(d);
-    }
-    return out;
+    return Util.filterDevices(adapter.devices.values, function (d) {
+      return !d.paired && d.name && !root.isMacName(d.name);
+    });
   }
 
   onActiveChanged: {
@@ -75,23 +50,16 @@ Item {
   onAdapterChanged: if (adapter)
     adapter.discovering = active && adapter.enabled;
 
-  Keys.onPressed: function (event) {
-    if (event.key !== Qt.Key_Escape && event.key !== Qt.Key_Backspace)
-      return;
-    root.backed();
-    event.accepted = true;
-  }
-
   function glyphFor(device) {
     var icon = (device.icon || "").toLowerCase();
     if (icon.indexOf("headset") !== -1 || icon.indexOf("headphone") !== -1 || icon.indexOf("audio") !== -1)
       return Icons.headphone;
     if (icon.indexOf("phone") !== -1)
-      return "󰄜";
+      return Icons.phone;
     if (icon.indexOf("keyboard") !== -1)
-      return "󰌌";
+      return Icons.keyboard;
     if (icon.indexOf("mouse") !== -1)
-      return "󰦋";
+      return Icons.mouse;
     return Icons.bluetoothOn;
   }
 
@@ -107,11 +75,7 @@ Item {
     return "";
   }
 
-  ViewHeader {
-    width: parent.width
-    title: "Bluetooth"
-    onBacked: root.backed()
-
+  headerTrailing: [
     Switch {
       checked: root.adapter !== null && root.adapter.enabled
       interactive: root.adapter !== null
@@ -128,167 +92,137 @@ Item {
         root.adapter.enabled = v;
         root.adapter.discovering = v && root.active;
       }
-    }
-
-    Text {
-      anchors.verticalCenter: parent.verticalCenter
+    },
+    IconButton {
       text: Icons.refresh
-      color: rescan.containsMouse ? Theme.text : Theme.subtle
-      scale: rescan.pressed ? 0.95 : 1
-
-      Behavior on color {
-        Tint {}
-      }
-
-      Behavior on scale {
-        Morph { duration: Theme.morphState }
-      }
+      baseColor: Theme.subtle
+      hoverColor: Theme.text
       font.family: Theme.iconFont
       font.pixelSize: 16
+      hitSlop: 8
+      enabled: root.active
+      accessibleName: "Rescan"
 
-      MouseArea {
-        id: rescan
+      onClicked: if (root.adapter && root.adapter.enabled)
+        root.adapter.discovering = true
+    }
+  ]
 
-        anchors.fill: parent
-        anchors.margins: -8
-        enabled: root.active
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: if (root.adapter && root.adapter.enabled)
-          root.adapter.discovering = true
+  Text {
+    width: parent.width
+    visible: root.adapter === null
+    text: "No Bluetooth controller"
+    color: Theme.muted
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.controlTileLabelSize
+    topPadding: 10
+  }
+
+  Text {
+    width: parent.width
+    visible: root.adapter !== null && !root.adapter.enabled
+    text: "Bluetooth is off"
+    color: Theme.muted
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.controlTileLabelSize
+    topPadding: 10
+  }
+
+  SectionLabel {
+    width: parent.width
+    visible: root.connected.length > 0
+    title: "Connected"
+  }
+
+  Repeater {
+    model: root.connected
+
+    DeviceRow {
+      id: connectedRow
+
+      required property var modelData
+
+      width: parent.width
+      glyph: root.glyphFor(modelData)
+      label: modelData.name
+      sublabel: root.stateOf(modelData)
+      selected: true
+      onClicked: modelData.disconnect()
+
+      PillButton {
+        label: "Disconnect"
+        onAccent: true
+        onClicked: connectedRow.modelData.disconnect()
+      }
+
+      PillButton {
+        label: "Forget"
+        onAccent: true
+        onClicked: connectedRow.modelData.forget()
       }
     }
   }
 
-  ScrollView {
-    x: root.inset
-    y: Theme.controlHeaderHeight
-    width: root.span
-    height: Math.max(0, root.contentHeight - Theme.controlHeaderHeight - Theme.controlPadBottom)
+  SectionLabel {
+    width: parent.width
+    visible: root.paired.length > 0
+    title: "Paired"
+  }
 
-    Column {
-      id: body
+  Repeater {
+    model: root.paired
 
-      width: root.span
-      spacing: Theme.controlRowGap
+    DeviceRow {
+      id: pairedRow
 
-      Text {
-        width: parent.width
-        visible: root.adapter === null
-        text: "No Bluetooth controller"
-        color: Theme.muted
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.controlTileLabelSize
-        topPadding: 10
+      required property var modelData
+
+      width: parent.width
+      glyph: root.glyphFor(modelData)
+      label: modelData.name
+      sublabel: root.stateOf(modelData)
+      onClicked: modelData.connect()
+
+      PillButton {
+        label: "Connect"
+        onClicked: pairedRow.modelData.connect()
       }
 
-      Text {
-        width: parent.width
-        visible: root.adapter !== null && !root.adapter.enabled
-        text: "Bluetooth is off"
-        color: Theme.muted
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.controlTileLabelSize
-        topPadding: 10
+      PillButton {
+        id: forget
+
+        label: "Forget"
+        destructive: true
+        // Revealed by the row, then held by itself; see PillButton.revealed.
+        revealed: pairedRow.hovered || forget.hovered
+        onClicked: pairedRow.modelData.forget()
       }
+    }
+  }
 
-      SectionLabel {
-        width: parent.width
-        visible: root.connected.length > 0
-        title: "Connected"
-      }
+  SectionLabel {
+    width: parent.width
+    visible: root.adapter !== null && root.adapter.enabled
+    title: "Available"
+    note: root.discovered.length === 0 ? "Scanning…" : ""
+  }
 
-      Repeater {
-        model: root.connected
+  Repeater {
+    model: root.discovered
 
-        DeviceRow {
-          id: connectedRow
+    DeviceRow {
+      id: newRow
 
-          required property var modelData
+      required property var modelData
 
-          width: body.width
-          glyph: root.glyphFor(modelData)
-          label: modelData.name
-          sublabel: root.stateOf(modelData)
-          selected: true
-          onClicked: modelData.disconnect()
+      width: parent.width
+      glyph: root.glyphFor(modelData)
+      label: modelData.name
+      onClicked: modelData.pairing ? modelData.cancelPair() : modelData.pair()
 
-          PillButton {
-            label: "Disconnect"
-            onAccent: true
-            onClicked: connectedRow.modelData.disconnect()
-          }
-
-          PillButton {
-            label: "Forget"
-            onAccent: true
-            onClicked: connectedRow.modelData.forget()
-          }
-        }
-      }
-
-      SectionLabel {
-        width: parent.width
-        visible: root.paired.length > 0
-        title: "Paired"
-      }
-
-      Repeater {
-        model: root.paired
-
-        DeviceRow {
-          id: pairedRow
-
-          required property var modelData
-
-          width: body.width
-          glyph: root.glyphFor(modelData)
-          label: modelData.name
-          sublabel: root.stateOf(modelData)
-          onClicked: modelData.connect()
-
-          PillButton {
-            label: "Connect"
-            onClicked: pairedRow.modelData.connect()
-          }
-
-          PillButton {
-            id: forget
-
-            label: "Forget"
-            destructive: true
-            // Revealed by the row, then held by itself; see PillButton.revealed.
-            revealed: pairedRow.hovered || forget.hovered
-            onClicked: pairedRow.modelData.forget()
-          }
-        }
-      }
-
-      SectionLabel {
-        width: parent.width
-        visible: root.adapter !== null && root.adapter.enabled
-        title: "Available"
-        note: root.discovered.length === 0 ? "Scanning…" : ""
-      }
-
-      Repeater {
-        model: root.discovered
-
-        DeviceRow {
-          id: newRow
-
-          required property var modelData
-
-          width: body.width
-          glyph: root.glyphFor(modelData)
-          label: modelData.name
-          onClicked: modelData.pairing ? modelData.cancelPair() : modelData.pair()
-
-          PillButton {
-            label: newRow.modelData.pairing ? "Cancel" : "Pair"
-            onClicked: newRow.modelData.pairing ? newRow.modelData.cancelPair() : newRow.modelData.pair()
-          }
-        }
+      PillButton {
+        label: newRow.modelData.pairing ? "Cancel" : "Pair"
+        onClicked: newRow.modelData.pairing ? newRow.modelData.cancelPair() : newRow.modelData.pair()
       }
     }
   }

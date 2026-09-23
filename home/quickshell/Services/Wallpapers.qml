@@ -10,12 +10,12 @@ import qs.Commons
 Singleton {
   id: root
 
-  readonly property string home: Quickshell.env("HOME")
+  readonly property string home: Paths.home
 
-  readonly property string directory: home + "/Pictures/backgrounds/" + Theme.name
-  readonly property string link: home + "/.local/share/wallpaper/current"
+  readonly property string directory: Paths.backgroundsDir + "/" + Theme.name
+  readonly property string link: Paths.wallpaperDir + "/current"
   // The theme's own record of its last wallpaper, next to `current`.
-  readonly property string themeLink: home + "/.local/share/wallpaper/" + Theme.name
+  readonly property string themeLink: Paths.wallpaperDir + "/" + Theme.name
 
   // Every wallpaper found, name-sorted, as { path, real, name }.
   property var entries: []
@@ -40,19 +40,9 @@ Singleton {
   // Home is written back as a tilde, as a path in a shell surface should be.
   readonly property string directoryLabel: "~" + directory.substring(home.length) + "/"
 
-  // Refreshes during a run are queued: after a switch the one in flight reads the old folder.
-  property bool scanQueued: false
-  property bool resolveQueued: false
-
   function refresh() {
-    if (scan.running)
-      scanQueued = true;
-    else
-      scan.running = true;
-    if (resolve.running)
-      resolveQueued = true;
-    else
-      resolve.running = true;
+    scan.run();
+    resolve.run();
   }
 
   // theme-switch has already pointed `current` at the new wallpaper, so both halves are read again.
@@ -103,19 +93,10 @@ Singleton {
     id: paint
   }
 
-  Process {
+  QueuedProcess {
     id: resolve
 
     command: ["readlink", "-f", root.link]
-
-    onExited: {
-      if (root.resolveQueued) {
-        root.resolveQueued = false;
-        Qt.callLater(function () {
-          resolve.running = true;
-        });
-      }
-    }
 
     stdout: StdioCollector {
       onStreamFinished: {
@@ -128,19 +109,10 @@ Singleton {
 
   // A glob in one shell rather than find: both the path and its resolved file are wanted
   // per line, and find can only print one.
-  Process {
+  QueuedProcess {
     id: scan
 
     command: ["sh", "-c", 'for f in "$1"/*; do [ -f "$f" ] || continue; printf "%s\t%s\n" "$f" "$(readlink -f "$f")"; done', "sh", root.directory]
-
-    onExited: {
-      if (root.scanQueued) {
-        root.scanQueued = false;
-        Qt.callLater(function () {
-          scan.running = true;
-        });
-      }
-    }
 
     stdout: StdioCollector {
       onStreamFinished: {

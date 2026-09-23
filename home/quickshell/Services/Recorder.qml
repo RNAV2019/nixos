@@ -10,7 +10,7 @@ import qs.Commons
 Singleton {
   id: root
 
-  readonly property string home: Quickshell.env("HOME")
+  readonly property string home: Paths.home
   readonly property string directory: home + "/Videos/recordings"
 
   // "idle" -> "picking" -> "recording" -> "saving" -> "idle".
@@ -184,7 +184,11 @@ Singleton {
   Process {
     id: capture
 
-    stderr: StdioCollector {}
+    property string errorText: ""
+
+    stderr: StdioCollector {
+      onStreamFinished: capture.errorText = text
+    }
 
     // A failure before the first frame leaves nothing, so the file is stat'ed, not assumed.
     onExited: function (code) {
@@ -211,7 +215,9 @@ Singleton {
       onStreamFinished: {
         var size = text.trim();
         if (size === "") {
-          root.failed("Nothing was recorded");
+          // wl-screenrec says why it gave up, and it says it better than a bare "nothing" would.
+          var said = capture.errorText.trim().split("\n")[0];
+          root.failed(said !== "" ? said : "Nothing was recorded");
           return;
         }
         root.saved(confirm.target);

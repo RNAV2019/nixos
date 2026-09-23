@@ -10,6 +10,11 @@ import qs.Ui
 FrostedSurface {
   id: root
 
+  // The three cross-fades between shut pill and open card share one duration.
+  component Fade: Morph {
+    duration: Theme.morphContent
+  }
+
   // A pin holds the card open after the pointer leaves; clicking again drops it.
   property bool pinned: false
 
@@ -84,7 +89,7 @@ FrostedSurface {
   readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
   implicitWidth: expanded ? Theme.islandExpandedWidth : collapsedWidth
-  implicitHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
+  implicitHeight: targetHeight
 
   // Corner read off height, not animated: a per-frame fit gives radius = min(height / 2,
   // surface radius) to 1.25 px rms vs 5.32 px interpolated, keeping a true stadium longer.
@@ -118,7 +123,7 @@ FrostedSurface {
   // Progress 0 shut, 1 open, for things that travel between two fixed states rather than scale.
   readonly property real openness: {
     var span = Theme.islandExpandedHeight - Theme.barHeight;
-    return span <= 0 ? 1 : Math.max(0, Math.min(1, (height - Theme.barHeight) / span));
+    return span <= 0 ? 1 : Theme.clamp01((height - Theme.barHeight) / span);
   }
 
   readonly property real midline: height / 2
@@ -199,9 +204,7 @@ FrostedSurface {
     opacity: root.expanded ? 0 : 1
 
     Behavior on opacity {
-      Morph {
-        duration: Theme.morphContent
-      }
+      Fade {}
     }
   }
 
@@ -216,9 +219,7 @@ FrostedSurface {
     opacity: root.expanded ? 0 : 1
 
     Behavior on opacity {
-      Morph {
-        duration: Theme.morphContent
-      }
+      Fade {}
     }
   }
 
@@ -231,78 +232,98 @@ FrostedSurface {
     visible: opacity > 0
 
     Behavior on opacity {
-      Morph {
-        duration: Theme.morphContent
-      }
+      Fade {}
     }
 
-    // Track block drawn once at open metrics and scaled, clipped rather than elided; animating
-    // font size re-fits glyphs every frame and the trailing letters flicker against the ellipsis.
+    // One scaled frame carries every block drawn at open metrics: placing the children here
+    // keeps one transform instead of four, and their x/y are the open-card coordinates (the
+    // composite TopLeft scaling lands each block exactly where its hand-placed form sat).
     Item {
-      id: media
+      id: scaledCard
 
-      x: 16 * root.scaleFactor
-      y: root.midline - height * root.scaleFactor / 2
-      width: root.scaleFactor > 0 ? Math.max(0, (root.centreLeft - 28 * root.scaleFactor) / root.scaleFactor) : 0
+      x: 0
+      y: 0
+      width: root.scaleFactor > 0 ? root.width / root.scaleFactor : 0
       height: Theme.islandExpandedHeight
       transformOrigin: Item.TopLeft
       scale: root.scaleFactor
-      clip: true
-      visible: Media.active
 
-      AlbumArt {
-        id: cover
+      // Track block drawn once at open metrics and scaled, clipped rather than elided; animating
+      // font size re-fits glyphs every frame and the trailing letters flicker against the ellipsis.
+      Item {
+        id: media
 
-        x: 0
+        x: 16
+        y: 0
+        width: root.scaleFactor > 0 ? Math.max(0, (root.centreLeft - 28 * root.scaleFactor) / root.scaleFactor) : 0
+        height: Theme.islandExpandedHeight
+        clip: true
+        visible: Media.active
+
+        AlbumArt {
+          id: cover
+
+          x: 0
+          y: (parent.height - height) / 2
+          width: Theme.islandArtSize
+          height: width
+        }
+
+        Equaliser {
+          id: cardEq
+
+          x: 60
+          y: (parent.height - height) / 2
+          playing: Media.playing
+        }
+
+        Text {
+          id: title
+
+          x: 84
+          y: parent.height / 2 - 8 - height / 2
+          width: Math.max(0, parent.width - x)
+          // Only once the morph stops, so the ellipsis never appears mid-motion.
+          elide: root.settled ? Text.ElideRight : Text.ElideNone
+          text: Media.title
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.islandTitleSize
+          font.weight: Font.DemiBold
+        }
+
+        Text {
+          x: title.x
+          y: parent.height / 2 + 9.5 - height / 2
+          width: title.width
+          elide: root.settled ? Text.ElideRight : Text.ElideNone
+          text: Media.artist
+          color: Theme.subtle
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.islandCaptionSize
+        }
+      }
+
+      // With nothing playing the track block's room carries the week instead, drawn from the
+      // card's left inset and scaled like the block it replaces, so the strip grows with the pill.
+      MiniCalendar {
+        x: 16
         y: (parent.height - height) / 2
-        width: Theme.islandArtSize
-        height: width
+        today: clock.date
+        visible: !Media.active
       }
 
-      Equaliser {
-        id: cardEq
-
-        x: 60
+      // Board 02's gauges: the battery 16 px in from the right like the album art, system load
+      // beside it. Their x rides the pill's live width, so the right inset is scaled off.
+      SystemGauge {
+        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - 12 - 2 * implicitWidth : 0
         y: (parent.height - height) / 2
-        playing: Media.playing
       }
 
-      Text {
-        id: title
-
-        x: 84
-        y: parent.height / 2 - 8 - height / 2
-        width: Math.max(0, parent.width - x)
-        // Only once the morph stops, so the ellipsis never appears mid-motion.
-        elide: root.settled ? Text.ElideRight : Text.ElideNone
-        text: Media.title
-        color: Theme.text
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandTitleSize
-        font.weight: Font.DemiBold
+      StatusGauge {
+        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - implicitWidth : 0
+        y: (parent.height - height) / 2
       }
-
-      Text {
-        x: title.x
-        y: parent.height / 2 + 9.5 - height / 2
-        width: title.width
-        elide: root.settled ? Text.ElideRight : Text.ElideNone
-        text: Media.artist
-        color: Theme.subtle
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.islandCaptionSize
-      }
-    }
-
-    // With nothing playing the track block's room carries the week instead, drawn from the
-    // card's left inset and scaled like the block it replaces, so the strip grows with the pill.
-    MiniCalendar {
-      x: 16 * root.scaleFactor
-      y: root.midline - height * root.scaleFactor / 2
-      transformOrigin: Item.TopLeft
-      scale: root.scaleFactor
-      today: clock.date
-      visible: !Media.active
     }
 
     // Left/right buttons skip, so the card is a transport as well as a readout; kept outside
@@ -336,22 +357,6 @@ FrostedSurface {
       color: Theme.subtle
       font.family: Theme.uiFont
       font.pixelSize: Theme.islandCaptionSize
-    }
-
-    // Board 02's gauges: the battery 16 px in from the right like the album art, system load
-    // beside it.
-    SystemGauge {
-      x: root.width - (16 + 12 + 2 * implicitWidth) * root.scaleFactor
-      y: root.midline - implicitHeight * root.scaleFactor / 2
-      transformOrigin: Item.TopLeft
-      scale: root.scaleFactor
-    }
-
-    StatusGauge {
-      x: root.width - (16 + implicitWidth) * root.scaleFactor
-      y: root.midline - implicitHeight * root.scaleFactor / 2
-      transformOrigin: Item.TopLeft
-      scale: root.scaleFactor
     }
   }
 

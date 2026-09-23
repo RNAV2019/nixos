@@ -70,6 +70,10 @@ PanelWindow {
   readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
+  // Shared gate for the shape springs: no motion when asked, no travel when the surface was
+  // snapped onto a shape, and no travelling while a still is being cut away from.
+  readonly property bool geometryAnimEnabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
+
   function show() {
     win.opening();
     handover = false;
@@ -252,7 +256,7 @@ PanelWindow {
     surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
 
     Behavior on implicitWidth {
-      enabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
+      enabled: win.geometryAnimEnabled
 
       SurfaceSpring {
         id: widthSpring
@@ -260,7 +264,7 @@ PanelWindow {
     }
 
     Behavior on implicitHeight {
-      enabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
+      enabled: win.geometryAnimEnabled
 
       SurfaceSpring {
         id: heightSpring

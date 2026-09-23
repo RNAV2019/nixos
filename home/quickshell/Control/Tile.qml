@@ -47,7 +47,7 @@ Rectangle {
 
   border.width: on ? 0 : 1
   border.color: root.keyFocused ? Theme.focusRing : Theme.withAlpha(Theme.separator, 0.7)
-  scale: pressed ? 0.97 : 1
+  scale: pressed ? Theme.pressScale : 1
 
   Behavior on color {
     Tint {}

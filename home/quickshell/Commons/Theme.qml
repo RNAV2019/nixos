@@ -130,8 +130,28 @@ Singleton {
   readonly property real borderNormal: 0.4
   readonly property real borderSelected: 1.0
 
+  // Press feedback and slider stepping, shared by the interactive controls.
+  readonly property real pressScale: 0.97
+  readonly property real sliderStep: 0.05
+
   function withAlpha(c, a) {
     return Qt.rgba(c.r, c.g, c.b, a);
+  }
+
+  function clamp01(x) {
+    return Math.max(0, Math.min(1, x));
+  }
+
+  // A stable colour per name, for the services that pick one per calendar or app: hash the
+  // characters, then index the five accent roles, so the order events arrive never matters.
+  function stableAccent(name) {
+    var palette = [foam, iris, gold, rose, pine];
+    if (!name)
+      return palette[0];
+    var h = 0;
+    for (var i = 0; i < name.length; i++)
+      h = (h * 31 + name.charCodeAt(i)) % 997;
+    return palette[h % palette.length];
   }
 
   // The Nerd Font carries icons and holds digits on a fixed advance, so it stays for icons,
@@ -198,14 +218,20 @@ Singleton {
   readonly property real microMass: 0.8
   readonly property real microEpsilon: 0.005
 
+  // Every panel grows from the same column width and corner radius; the per-surface tokens
+  // below alias these so each keeps its own name. (The `panelWidth(screen, desired)` clamp
+  // above takes the width token as its `desired`.)
+  readonly property int panelColumnWidth: 520
+  readonly property int panelRadius: 26
+
   // The island: one pill carrying the clock, growing an equaliser while playing and
   // expanding into a media and status card on hover.
   readonly property int islandRadius: 18
   readonly property int islandIdleWidth: 118
   readonly property int islandPlayingWidth: 140
-  readonly property int islandExpandedWidth: 520
+  readonly property int islandExpandedWidth: panelColumnWidth
   readonly property int islandExpandedHeight: 84
-  readonly property int islandExpandedRadius: 26
+  readonly property int islandExpandedRadius: panelRadius
   readonly property int islandClockSize: 17
   readonly property int islandDisplaySize: 22
   readonly property int islandTitleSize: 13
@@ -234,8 +260,8 @@ Singleton {
 
   // The app launcher, which the island pill grows into, sharing a top edge and centre line.
   // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap.
-  readonly property int launcherWidth: 520
-  readonly property int launcherRadius: 26
+  readonly property int launcherWidth: panelColumnWidth
+  readonly property int launcherRadius: panelRadius
   readonly property int launcherInset: 14
   readonly property int launcherSearchHeight: 68
   readonly property int launcherGlyphLeft: 31
@@ -318,8 +344,8 @@ Singleton {
 
   // The control centre: the same 520 px column the launcher grows into, carrying a tile grid,
   // two sliders, the media card and notifications. Source frames: 520 x 716 at 1920 px.
-  readonly property int controlWidth: 520
-  readonly property int controlRadius: 26
+  readonly property int controlWidth: panelColumnWidth
+  readonly property int controlRadius: panelRadius
   readonly property int controlInset: 13
   readonly property int controlHeaderHeight: 70
   readonly property int controlTitleSize: 18
@@ -378,7 +404,7 @@ Singleton {
   // The column is 800, not the source's 1008, fitting four wallpapers exactly.
   readonly property int wallpaperWidth: 800
   readonly property int wallpaperHeight: 232
-  readonly property int wallpaperRadius: 26
+  readonly property int wallpaperRadius: panelRadius
   readonly property int wallpaperInset: 24
   readonly property int wallpaperTitleSize: 18
   readonly property int wallpaperMetaSize: 12
@@ -421,21 +447,21 @@ Singleton {
   readonly property int themeSwatchPad: 7
   readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
-  // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel;
-  // the toggle rows below are this card's own.
+  // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel,
+  // so its tile constants alias the power ones; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
   readonly property int recorderHeight: 228
-  readonly property int recorderRadius: 26
+  readonly property int recorderRadius: panelRadius
   readonly property int recorderInset: 11
-  readonly property int recorderTileTop: 16
-  readonly property int recorderTileWidth: 90
-  readonly property int recorderTileHeight: 80
-  readonly property int recorderTileGap: 12
-  readonly property int recorderTileRadius: 16
-  readonly property int recorderGlyphSize: 22
-  readonly property int recorderGlyphTop: 38
-  readonly property int recorderTileLabelTop: 68
-  readonly property int recorderTileLabelSize: 12
+  readonly property int recorderTileTop: powerTileTop
+  readonly property int recorderTileWidth: powerTileWidth
+  readonly property int recorderTileHeight: powerTileHeight
+  readonly property int recorderTileGap: powerTileGap
+  readonly property int recorderTileRadius: powerTileRadius
+  readonly property int recorderGlyphSize: powerGlyphSize
+  readonly property int recorderGlyphTop: powerGlyphTop
+  readonly property int recorderTileLabelTop: powerLabelTop
+  readonly property int recorderTileLabelSize: powerLabelSize
 
   readonly property int recorderRowsTop: 108
   readonly property int recorderRowHeight: 32
@@ -450,9 +476,9 @@ Singleton {
   readonly property int recorderDotGap: 10
 
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
-  readonly property int calWidth: 520
+  readonly property int calWidth: panelColumnWidth
   readonly property int calHeight: 600
-  readonly property int calRadius: 26
+  readonly property int calRadius: panelRadius
   readonly property int calInset: 24
   readonly property int calTitleSize: 18
   readonly property int calNavSize: 30
@@ -520,6 +546,8 @@ Singleton {
   readonly property int lockDotSize: 8
   readonly property int lockDotGap: 4
   readonly property int lockDotPop: 80
+  // The caret blink on the field, at the standard text-caret period.
+  readonly property int lockCaretBlinkMs: 530
 
   // The veil comes from the captured desktop, not the compositor backdrop, and tints the
   // blurred capture rather than covering it; at 1.0 the background reads as one flat fill.
@@ -565,9 +593,6 @@ Singleton {
   // change over ~five frames, so fading on the geometry's clock would read as a dissolve.
   readonly property int morphContent: reduceMotion ? 1 : 50
 
-  // The handover's content pass, for a surface growing out of another surface, not the island.
-  // Panel to panel there is nothing to uncover; chosen rather than fitted, with no recording.
-
   // The outgoing contents dissolve inside the still, short so it finishes before the taker lands.
   readonly property int morphFarewell: reduceMotion ? 1 : 70
 
@@ -591,6 +616,28 @@ Singleton {
   // How long a surface that just handed the island over keeps riding the taker's morph: the
   // taker's first frame lands 147-216 ms later, and 260 covers the bare pill showing through.
   readonly property int morphHold: 240
+
+  // Motion and interaction tokens for things wired across surfaces; each stays literal so
+  // callers can wrap it in `duration()` themselves.
+  // The buffer after the hold still, used by IslandOrigin's holdTimer.
+  readonly property int morphHoldBuffer: 260
+  // Short value-fill tween, e.g. the OSD bar filling to the new level.
+  readonly property int morphFill: 80
+  // A small pause beat in sequences, e.g. LockReveal.
+  readonly property int morphBeat: 50
+
+  // The island's equaliser: each bar rises on its own tween, then falls, staggered across
+  // the row so the set waves rather than jumps.
+  readonly property int eqRiseBase: 320
+  readonly property int eqRiseStagger: 60
+  readonly property int eqFallBase: 400
+  readonly property int eqFallStagger: 50
+
+  // The island's small round gauge (a reading like battery or volume) and where its label sits.
+  readonly property int islandGaugeSize: 48
+  readonly property int islandGaugeHeight: 52
+  readonly property int islandGaugeRadius: 21
+  readonly property int islandGaugeLabelY: 38
 
   // The lock screen's two cross-fades, fitted frame by frame at 60 fps; neither is a morph.
   // One progress drives blur and veil (tracking within 0.02); content lags in and leads out.

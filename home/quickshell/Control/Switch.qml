@@ -20,7 +20,6 @@ Rectangle {
   activeFocusOnTab: true
   Accessible.role: Accessible.CheckBox
   Accessible.name: root.accessibleName !== "" ? root.accessibleName : "Switch"
-  Accessible.checked: root.checked
   Accessible.focusable: true
   Accessible.focused: root.activeFocus
   Accessible.onToggleAction: if (root.interactive)
@@ -28,7 +27,7 @@ Rectangle {
 
   opacity: interactive ? 1 : 0.4
   color: checked ? Theme.accentFill : Theme.withAlpha(Theme.separator, 0.9)
-  scale: pressed ? 0.97 : 1
+  scale: pressed ? Theme.pressScale : 1
 
   Behavior on color {
     Tint {}

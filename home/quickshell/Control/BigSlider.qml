@@ -10,6 +10,8 @@ Item {
   property string accessibleName: ""
   // Muted or otherwise inert: the fill holds its position and loses its colour.
   property bool dimmed: false
+  // A thin bar instead of a pill, for the per-application stream rows.
+  property bool compact: false
 
   signal moved(real value)
 
@@ -21,9 +23,11 @@ Item {
   property bool _hasPendingValue: false
   property bool _interactionActive: false
 
-  readonly property real minFill: height
+  // The compact bar's fill runs from the edge, so it has no pill to lead with.
+  readonly property real minFill: compact ? 0 : height
   readonly property real displayValue: _previewing ? _previewValue : value
   readonly property real fillWidth: minFill + Math.max(0, Math.min(1, displayValue)) * Math.max(0, width - minFill)
+  readonly property real trackHeight: compact ? 4 : height
 
   implicitHeight: Theme.controlSliderHeight
 
@@ -34,8 +38,8 @@ Item {
   Accessible.description: Math.round(Math.max(0, Math.min(1, root.displayValue)) * 100) + "%"
   Accessible.focusable: true
   Accessible.focused: root.activeFocus
-  Accessible.onIncreaseAction: root.queueValue(root.displayValue + 0.05)
-  Accessible.onDecreaseAction: root.queueValue(root.displayValue - 0.05)
+  Accessible.onIncreaseAction: root.queueValue(root.displayValue + Theme.sliderStep)
+  Accessible.onDecreaseAction: root.queueValue(root.displayValue - Theme.sliderStep)
 
   function clamp(v) {
     return Math.max(0, Math.min(1, v));
@@ -102,27 +106,30 @@ Item {
   }
 
   Rectangle {
-    anchors.fill: parent
+    y: (parent.height - height) / 2
+    width: parent.width
+    height: root.trackHeight
     radius: height / 2
-    color: Theme.withAlpha(Theme.highlightLow, 0.9)
+    color: root.compact ? Theme.withAlpha(Theme.text, 0.18) : Theme.withAlpha(Theme.highlightLow, 0.9)
   }
 
   Rectangle {
     id: fill
 
+    y: (parent.height - height) / 2
     width: root.fillWidth
-    height: parent.height
+    height: root.trackHeight
     radius: height / 2
-    color: root.dimmed ? Theme.withAlpha(Theme.subtle, 0.35) : Theme.accent
-    scale: drag.pressed ? 0.98 : 1
+    color: root.dimmed ? Theme.withAlpha(Theme.subtle, root.compact ? 0.5 : 0.35) : Theme.accent
+    scale: !root.compact && drag.pressed ? Theme.pressScale : 1
 
     // Smooths a keyboard step or an external change; a drag writes every frame anyway.
     Behavior on width {
       enabled: !drag.pressed
 
       NumberAnimation {
-         duration: Theme.duration(Theme.morphState)
-         easing.type: Easing.OutCubic
+        duration: Theme.duration(Theme.morphState)
+        easing.type: Easing.OutCubic
       }
     }
 
@@ -162,7 +169,7 @@ Item {
     onCanceled: root.finishInteraction()
     onWheel: function (event) {
       root.forceActiveFocus();
-      root.queueValue(root.displayValue + (event.angleDelta.y > 0 ? 0.05 : -0.05));
+      root.queueValue(root.displayValue + (event.angleDelta.y > 0 ? Theme.sliderStep : -Theme.sliderStep));
       previewExpiry.restart();
       event.accepted = true;
     }
@@ -174,11 +181,11 @@ Item {
     switch (event.key) {
     case Qt.Key_Left:
     case Qt.Key_Down:
-      next -= 0.05;
+      next -= Theme.sliderStep;
       break;
     case Qt.Key_Right:
     case Qt.Key_Up:
-      next += 0.05;
+      next += Theme.sliderStep;
       break;
     case Qt.Key_PageDown:
       next -= 0.1;
