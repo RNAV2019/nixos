@@ -174,7 +174,6 @@ in {
   zramSwap.enable = true;
 
   services.thermald.enable = true;
-  services.thermald.ignoreCpuidCheck = true;
 
   services.power-profiles-daemon.enable = true;
 
