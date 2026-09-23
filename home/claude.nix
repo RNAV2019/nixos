@@ -52,7 +52,7 @@
       esac
 
       jq -ce '
-          # Epoch seconds, since Qt can't parse the API's microseconds.
+          # Epoch seconds, since Qt cannot parse the microseconds from the API.
           def epoch: if . == null then 0 else sub("\\.[0-9]+";"") | sub("\\+00:00$";"Z") | fromdateiso8601 end;
           {
             status: "ok",
