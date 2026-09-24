@@ -68,4 +68,57 @@
       "#ffffff"
     ];
   };
+
+  # "Ariadne": mint from the teal-sky balloon wallpaper (backgrounds/ariadne), black panels,
+  # with the balloon for love. Board 24 of the Ariadne Penpot page is the spec.
+  ariadne = {
+    label = "Ariadne";
+    paletteName = "ariadne";
+
+    base = "#002018";
+    surface = "#0a0a0a";
+    overlay = "#1e1c1a";
+    # muted and highlightMed are lifted into the sage family: the warm greys the design
+    # started with measured 1.5:1 and 1.03:1 on the translucent terminal ground.
+    muted = "#707e78";
+    subtle = "#8a8a86";
+    text = "#e6e4de";
+    love = "#e0563b";
+    gold = "#d99f66";
+    rose = "#d8a8bc";
+    pine = "#8c94a9";
+    foam = "#7cc4c0";
+    iris = "#3eddb8";
+    highlightLow = "#141311";
+    highlightMed = "#2e4c45";
+    highlightHigh = "#3a5a50";
+
+    accent = "#3eddb8";
+
+    # Helium's tab strip, a shade of its black chrome rather than the teal ground.
+    browserFrame = "#141311";
+
+    # The terminal reads softer than the shell: sage text and a cream cursor.
+    terminalText = "#90a8a0";
+    cursor = "#fff7eb";
+
+    ansi = [
+      "#1e1c1a"
+      "#e0563b"
+      "#8ce8ac"
+      "#c0b468"
+      "#8c94a9"
+      "#d8a8bc"
+      "#7cc4c0"
+      "#90a8a0"
+      "#3a5a50"
+      "#ea7a62"
+      "#3eddb8"
+      "#d99f66"
+      "#a8b0c4"
+      "#e6c2d1"
+      "#a0dcd8"
+      "#f2e8d8"
+    ];
+  };
 }

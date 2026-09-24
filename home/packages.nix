@@ -155,7 +155,7 @@
     meta.description = "Rosé Pine theme for GTK";
   });
 in {
-  # Rose Pine is the default; the dark theme swaps the GTK and icon theme at runtime.
+  # Rose Pine is the default; the other themes swap the GTK and icon theme at runtime.
   gtk = {
     enable = true;
     theme = {

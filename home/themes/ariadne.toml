@@ -1,0 +1,119 @@
+# Ariadne: sage text on the terminal's teal-black, mint for the accent and a slate NORMAL
+# badge. Board 24 of the Ariadne Penpot page. Background and statusline are left to the
+# terminal so Ghostty's translucency shows through.
+
+"ui.background" = {}
+"ui.background.separator" = {}
+"ui.text" = { fg = "fg" }
+"ui.text.focus" = { fg = "text", bg = "overlay" }
+"ui.text.inactive" = { fg = "muted" }
+"ui.text.info" = { fg = "subtle" }
+"ui.text.directory" = { fg = "foam", modifiers = ["bold"] }
+
+"ui.cursor" = { fg = "base", bg = "subtle" }
+"ui.cursor.primary" = { fg = "base", bg = "cream" }
+"ui.cursor.match" = { fg = "text", bg = "hl_high" }
+"ui.cursor.insert" = { fg = "base", bg = "cream" }
+"ui.cursor.select" = { fg = "base", bg = "rose" }
+"ui.cursorline.primary" = { bg = "hl_low" }
+"ui.selection" = { bg = "hl_med" }
+"ui.selection.primary" = { bg = "hl_high" }
+
+"ui.linenr" = { fg = "hl_high" }
+"ui.linenr.selected" = { fg = "text" }
+"ui.gutter" = {}
+"ui.virtual.ruler" = {}
+"ui.virtual.whitespace" = { fg = "hl_high" }
+"ui.virtual.indent-guide" = { fg = "hl_med" }
+"ui.virtual.inlay-hint" = { fg = "muted" }
+"ui.virtual.jump-label" = { fg = "love", modifiers = ["bold"] }
+
+"ui.statusline" = { fg = "subtle" }
+"ui.statusline.inactive" = { fg = "muted" }
+"ui.statusline.normal" = { fg = "base", bg = "pine", modifiers = ["bold"] }
+"ui.statusline.insert" = { fg = "base", bg = "iris", modifiers = ["bold"] }
+"ui.statusline.select" = { fg = "base", bg = "rose", modifiers = ["bold"] }
+
+"ui.bufferline" = { fg = "muted" }
+"ui.bufferline.active" = { fg = "iris", modifiers = ["bold"] }
+"ui.bufferline.background" = {}
+
+"ui.popup" = { bg = "surface" }
+"ui.popup.info" = { bg = "surface" }
+"ui.window" = { fg = "hl_high" }
+"ui.help" = { fg = "subtle", bg = "surface" }
+"ui.menu" = { fg = "subtle", bg = "surface" }
+"ui.menu.selected" = { fg = "text", bg = "overlay" }
+"ui.menu.scroll" = { fg = "muted", bg = "hl_med" }
+"ui.highlight" = { bg = "hl_med" }
+
+"diagnostic.error" = { underline = { color = "love", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "gold", style = "curl" } }
+"diagnostic.info" = { underline = { color = "foam", style = "curl" } }
+"diagnostic.hint" = { underline = { color = "subtle", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["crossed_out"] }
+error = { fg = "love" }
+warning = { fg = "gold" }
+info = { fg = "foam" }
+hint = { fg = "subtle" }
+
+"diff.plus" = { fg = "iris" }
+"diff.minus" = { fg = "love" }
+"diff.delta" = { fg = "gold" }
+
+attribute = { fg = "foam" }
+comment = { fg = "muted", modifiers = ["italic"] }
+constant = { fg = "gold" }
+"constant.numeric" = { fg = "gold" }
+"constant.character.escape" = { fg = "pine" }
+constructor = { fg = "foam" }
+function = { fg = "rose" }
+"function.builtin" = { fg = "rose" }
+"function.macro" = { fg = "iris" }
+keyword = { fg = "pine" }
+"keyword.control" = { fg = "pine" }
+label = { fg = "foam" }
+namespace = { fg = "subtle", modifiers = ["italic"] }
+operator = { fg = "subtle" }
+punctuation = { fg = "subtle" }
+special = { fg = "foam" }
+string = { fg = "gold" }
+"string.regexp" = { fg = "rose" }
+"string.special" = { fg = "foam", modifiers = ["underlined"] }
+tag = { fg = "foam" }
+type = { fg = "foam" }
+"type.builtin" = { fg = "foam" }
+variable = { fg = "fg" }
+"variable.builtin" = { fg = "love" }
+"variable.parameter" = { fg = "iris" }
+"variable.other.member" = { fg = "foam" }
+
+"markup.heading" = { fg = "iris", modifiers = ["bold"] }
+"markup.list" = { fg = "subtle" }
+"markup.bold" = { modifiers = ["bold"] }
+"markup.italic" = { modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
+"markup.link.url" = { fg = "foam", modifiers = ["underlined"] }
+"markup.link.text" = { fg = "rose" }
+"markup.quote" = { fg = "subtle", modifiers = ["italic"] }
+"markup.raw" = { fg = "gold" }
+
+[palette]
+base = "#002018"
+surface = "#0a0a0a"
+overlay = "#1e1c1a"
+hl_low = "#141311"
+hl_med = "#2e4c45"
+hl_high = "#3a5a50"
+muted = "#707e78"
+subtle = "#8a8a86"
+fg = "#90a8a0"
+text = "#e6e4de"
+cream = "#fff7eb"
+love = "#e0563b"
+gold = "#d99f66"
+rose = "#d8a8bc"
+pine = "#8c94a9"
+foam = "#7cc4c0"
+iris = "#3eddb8"

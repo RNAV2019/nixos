@@ -24,7 +24,7 @@ Variants {
     onOpening: {
       // Open on the theme that is up, with fresh previews.
       Themes.refresh();
-      carousel.selected = Math.max(0, Themes.index);
+      carousel.jump(Math.max(0, Themes.index));
     }
 
     function activate() {
@@ -107,6 +107,7 @@ Variants {
             source: Themes.preview(modelData.id)
             label: modelData.label
             colors: modelData.palette
+            glide: carousel.glide
             selected: index === carousel.selected
             active: index === Themes.index
             onActivated: {

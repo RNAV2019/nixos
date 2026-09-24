@@ -29,7 +29,7 @@ Variants {
       initializingSelection = true;
       Wallpapers.refresh();
       if (Wallpapers.index >= 0) {
-        carousel.selected = Wallpapers.index;
+        carousel.jump(Wallpapers.index);
         initializingSelection = false;
       }
     }
@@ -40,7 +40,7 @@ Variants {
       function syncSelection() {
         if (!win.initializingSelection || Wallpapers.index < 0)
           return;
-        carousel.selected = Wallpapers.index;
+        carousel.jump(Wallpapers.index);
         win.initializingSelection = false;
       }
 
@@ -141,6 +141,7 @@ Variants {
             width: carousel.tileWidth(index)
             height: carousel.tileHeight(index)
             source: "file://" + modelData.real
+            glide: carousel.glide
             selected: index === carousel.selected
             active: index === Wallpapers.index
             onActivated: {

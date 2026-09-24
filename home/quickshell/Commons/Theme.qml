@@ -7,8 +7,8 @@ import Quickshell.Io
 Singleton {
   id: root
 
-  // The two palettes, keyed by the theme id `theme-switch` takes; they mirror
-  // home/themes/palettes.nix. The dark theme reuses the Rose Pine role names.
+  // The palettes, keyed by the theme id `theme-switch` takes; they mirror
+  // home/themes/palettes.nix. The other themes reuse the Rose Pine role names.
   readonly property var palettes: ({
       "rose-pine": {
         label: "Rosé Pine",
@@ -51,11 +51,31 @@ Singleton {
         highlightMed: "#303030",
         highlightHigh: "#3f3f3f",
         accent: "#ffffff"
+      },
+      "ariadne": {
+        label: "Ariadne",
+        paletteName: "ariadne",
+        base: "#002018",
+        surface: "#0a0a0a",
+        overlay: "#1e1c1a",
+        muted: "#707e78",
+        subtle: "#8a8a86",
+        text: "#e6e4de",
+        love: "#e0563b",
+        gold: "#d99f66",
+        rose: "#d8a8bc",
+        pine: "#8c94a9",
+        foam: "#7cc4c0",
+        iris: "#3eddb8",
+        highlightLow: "#141311",
+        highlightMed: "#2e4c45",
+        highlightHigh: "#3a5a50",
+        accent: "#3eddb8"
       }
     })
 
   // In the order the theme picker shows them.
-  readonly property var themeIds: ["rose-pine", "dark"]
+  readonly property var themeIds: ["rose-pine", "dark", "ariadne"]
 
   // Which theme is up. `theme-switch` writes the id into this watched file, so a switch
   // recolours in place: Tint colours cross-fade, the rest change on the next frame.

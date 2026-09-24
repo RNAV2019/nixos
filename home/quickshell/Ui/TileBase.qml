@@ -25,6 +25,34 @@ Item {
   property bool active: false
   signal activated
 
+  // Set from the row's `glide`: position and size then spring to each new selection instead
+  // of jumping, on the rail's own spring so the two never drift apart.
+  property bool glide: false
+
+  Behavior on x {
+    enabled: root.glide
+
+    SurfaceSpring {}
+  }
+
+  Behavior on y {
+    enabled: root.glide
+
+    SurfaceSpring {}
+  }
+
+  Behavior on width {
+    enabled: root.glide
+
+    SurfaceSpring {}
+  }
+
+  Behavior on height {
+    enabled: root.glide
+
+    SurfaceSpring {}
+  }
+
   activeFocusOnTab: true
   Accessible.role: Accessible.Button
   Accessible.name: root.title
@@ -88,6 +116,15 @@ Item {
 
     Behavior on border.color {
       Tint {}
+    }
+
+    Behavior on border.width {
+      enabled: root.glide
+
+      NumberAnimation {
+        duration: Theme.duration(Theme.morphState)
+        easing.type: Easing.OutQuad
+      }
     }
   }
 

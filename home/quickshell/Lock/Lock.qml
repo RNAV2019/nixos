@@ -70,7 +70,8 @@ Scope {
   function requestManualLock() {
     if (Bus.locking || lockContext.locked || snapshotCapture.running || snapshotPending)
       return;
-    // Remove shell layers before the capture so the lock background never contains its own UI.
+    // Close the shell's panels before the capture so the lock background never contains its
+    // own UI. The bar stays, so it blurs with the desktop behind the lock.
     Bus.prepareForLock();
     root.snapshotPath = Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png";
     snapshotPending = true;
@@ -142,7 +143,7 @@ Scope {
   Timer {
     id: snapshotDelay
 
-    // Two frames at 60Hz is enough for the compositor to commit a bar-less output;
+    // Two frames at 60Hz is enough for the compositor to commit a panel-less output;
     // the layer has no_anim, so there is no fade to wait out.
     interval: 32
     onTriggered: {

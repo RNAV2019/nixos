@@ -118,7 +118,7 @@
 
       git_branch = {
         symbol = "";
-        style = "bold magenta";
+        style = "bold purple";
         format = "[ in ](bold white)[$branch]($style)";
       };
 
@@ -165,7 +165,7 @@
 
       haskell = {
         symbol = "λ ";
-        style = "bold magenta";
+        style = "bold purple";
         format = "[$symbol($version )]($style)";
       };
 

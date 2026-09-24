@@ -19,6 +19,12 @@ Item {
 
   readonly property int count: model.length
 
+  // Whether the rail and tiles glide to a new selection. Every piece rides the same spring
+  // from the same instant, so a tile's size and the rail's slide stay in step and the
+  // selection holds the centre line all the way over. Tiles bind their own `glide` to this.
+  property bool snapping: false
+  readonly property bool glide: !Theme.reduceMotion && !root.snapping
+
   // The room the row has.
   readonly property real inner: Theme.wallpaperWidth - 2 * Theme.wallpaperInset
 
@@ -63,6 +69,14 @@ Item {
     root.selected = ((root.selected + delta) % count + count) % count;
   }
 
+  // Selects without the glide, for seeding the row as the panel opens: the panel is already
+  // morphing, and a row sliding under it would be a second motion with nothing to say.
+  function jump(i) {
+    root.snapping = true;
+    root.selected = i;
+    root.snapping = false;
+  }
+
   Item {
     id: strip
 
@@ -78,7 +92,7 @@ Item {
       height: parent.height
 
       Behavior on x {
-        enabled: !Theme.reduceMotion
+        enabled: root.glide
 
         SurfaceSpring {}
       }

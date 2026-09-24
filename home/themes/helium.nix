@@ -19,6 +19,10 @@
       id = "bfcdjeihplkejjdcflicedhgmigmfocc";
       key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxUsUkNVuwClmpg1RIXp6DJ6ZOXzjwKVSXj22TTxbCwfRCkOrkdViDGn8GeOOCkCR6th+UaU75TRoNUl3Piw6PS0c6U67SmsuDG3/+PJBEwkkHc3IJQt6Cu8GT1Nt8e8Rp8VBEUn9AEnIWH7XFTe+e32UGf5x7g21NBaDZoNfqkjbJ3/wq7i5oI96L3ch/Pi04kZ1u5lC9eBWkE1wm1A5tsHXGnW/m2QRi9O27jbjllXfa93YBIy5mLiU6zgLbwNGh+AgtN6IgdI/JjK6izQZV5R4hCz1p+499zOGNa8DaPRr2IHtrtGG11asY+34N1dqU7gGDriJN712s70p2ChwqQIDAQAB";
     };
+    ariadne = {
+      id = "anngmmnkbbfbelfkhegfmpmgmojdcmep";
+      key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0gCTXpJSOACiwGbpAZixjgtab7gHJTWWp8lTmC499f9juF74pBCgChsplgAWWRYRnanCqabA2jAZhYTlxUmZpUFjmqrnfD5wdc2/whkD9xmXLxbw81CEcD6NnfPuW8c8qGLoK2m6tXGaNmF1/bSCBRQxygfUXOI1NRWeVk5PF2GaOpD477b5KFVLvwTgVaZnt1vMgkwhIK73B7cv8lZ7KUwqXfCZ1xALx/WyGs8D4DS3Xm/Hq0Jj08IWG142r/6qgPZ13B4vpbQr8SitTbtr580GsW39LInmZ9TpWDR2L7vdjsqrQEi9//daTa0JsYoJHX2cA18UjihE8yidETGS0wIDAQAB";
+    };
   };
 
   rgb = hex: let
@@ -34,7 +38,7 @@
     inherit (keys.${id}) key;
     theme = {
       images = {
-        theme_frame = "swatches/base.png";
+        theme_frame = "swatches/frame.png";
         theme_toolbar = "swatches/surface.png";
         theme_frame_incognito = "swatches/med.png";
       };
@@ -70,7 +74,8 @@
   themeExtension = id: let
     p = palettes.${id};
     swatches = {
-      base = p.base;
+      # The tab strip; base unless the palette gives the browser its own.
+      frame = p.browserFrame or p.base;
       surface = p.surface;
       med = p.highlightMed;
     };

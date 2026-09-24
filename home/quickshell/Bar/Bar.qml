@@ -16,7 +16,9 @@ Variants {
     required property var modelData
 
     screen: modelData
-    visible: Bus.sessionReady && !Bus.locking
+    // Stays up through a lock, so the snapshot carries the bar and it blurs away with the
+    // desktop under the lock screen instead of blinking out first.
+    visible: Bus.sessionReady || Bus.locking
     color: "transparent"
 
     WlrLayershell.layer: WlrLayer.Top

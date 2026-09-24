@@ -85,6 +85,41 @@
     theme[process_end]="#eb6f92"
   '';
 
+  # Terminal ground, ink and cursor; a palette may give the terminal its own text and cursor.
+  termText = p: p.terminalText or p.text;
+  termCursor = p: p.cursor or (termText p);
+
+  # Ghostty colours spelled out, for palettes without a built-in Ghostty theme.
+  explicitGhostty = p:
+    ''
+      background = ${p.base}
+      foreground = ${termText p}
+      cursor-color = ${termCursor p}
+      cursor-text = ${p.base}
+      selection-background = ${p.highlightMed}
+      selection-foreground = ${p.text}
+    ''
+    + lib.concatStrings (lib.imap0 (i: c: "palette = ${toString i}=${c}\n") p.ansi);
+
+  # Also clears the flavour's opaque ground, as Helix does, and colours folder icons, which
+  # yazi's preset otherwise paints #03a9f4 whatever the flavour says.
+  recolourYazi = name: p: let
+    flavor =
+      builtins.replaceStrings [''overall = { bg = "${p.base}" }''] [''overall = { bg = "reset" }'']
+      (recolour p (builtins.readFile "${yaziRosePine}/flavor.toml"))
+      + ''
+
+        [icon]
+        prepend_conds = [
+          { if = "dir", text = "\ue5ff", fg = "${p.pine}" },
+        ]
+      '';
+  in
+    pkgs.linkFarm "${name}.yazi" {
+      "flavor.toml" = pkgs.writeText "${name}-flavor.toml" flavor;
+      "tmtheme.xml" = pkgs.writeText "${name}-tmtheme.xml" (recolour p (builtins.readFile "${yaziRosePine}/tmtheme.xml"));
+    };
+
   # Non-colour per-theme settings. `colorScheme` is broadcast by the settings portal.
   extras = {
     rose-pine = {
@@ -102,16 +137,7 @@
     dark = let
       p = palettes.dark;
     in {
-      ghostty =
-        ''
-          background = ${p.base}
-          foreground = ${p.text}
-          cursor-color = ${p.text}
-          cursor-text = ${p.base}
-          selection-background = ${p.highlightMed}
-          selection-foreground = ${p.text}
-        ''
-        + lib.concatStrings (lib.imap0 (i: c: "palette = ${toString i}=${c}\n") p.ansi);
+      ghostty = explicitGhostty p;
       helix = ./themes/ascii_world.toml;
       # Built-in themes that use the terminal's own colours.
       bat = "ansi";
@@ -120,9 +146,28 @@
       iconTheme = "Adwaita";
       colorScheme = "prefer-dark";
       kvantum = "KvGnomeDark";
-      yazi =
-        pkgs.linkFarm "ascii-world.yazi" (lib.genAttrs ["flavor.toml" "tmtheme.xml"] (file:
-            pkgs.writeText "ascii-world-${file}" (recolour p (builtins.readFile "${yaziRosePine}/${file}"))));
+      yazi = recolourYazi "ascii-world" p;
+    };
+
+    ariadne = let
+      p = palettes.ariadne;
+    in {
+      ghostty = explicitGhostty p;
+      helix = ./themes/ariadne.toml;
+      bat = "ansi";
+      herdr = "terminal";
+      # `terminal` fills the active tab with ANSI blue (slate) and draws its label in the
+      # reset background, which reads muddy through the translucency; panel_bg is that label.
+      herdrCustom = {
+        accent = p.accent;
+        panel_bg = p.base;
+        text = p.text;
+      };
+      gtkTheme = "Adwaita-dark";
+      iconTheme = "Adwaita";
+      colorScheme = "prefer-dark";
+      kvantum = "KvGnomeDark";
+      yazi = recolourYazi "ariadne" p;
     };
   };
 
@@ -164,7 +209,7 @@
   # bg, fg, cursor, selection bg/fg for shell.nix's OSC handler, which repaints
   # already-open Ghostty windows that a config reload doesn't.
   oscFragment = p: ''
-    set -U theme_osc "${bare p.base} ${bare p.text} ${bare p.text} ${bare p.highlightMed} ${bare p.text}"
+    set -U theme_osc "${bare p.base} ${bare (termText p)} ${bare (termCursor p)} ${bare p.highlightMed} ${bare p.text}"
   '';
 
   starshipFragment = p:
@@ -274,7 +319,7 @@
       "yazi.yazi" = x.yazi;
       "zathurarc" = text "zathurarc" (zathuraFragment p);
       "fuzzel.ini" = text "fuzzel.ini" (fuzzelFragment p);
-      "herdr.toml" = toml.generate "${id}-herdr.toml" (config.programs.herdr.settings // {theme.name = x.herdr;});
+      "herdr.toml" = toml.generate "${id}-herdr.toml" (lib.recursiveUpdate config.programs.herdr.settings {theme = {name = x.herdr;} // lib.optionalAttrs (x ? herdrCustom) {custom = x.herdrCustom;};});
       "colors.sh" = text "colors.sh" (colorsFragment p);
     };
 
@@ -370,7 +415,7 @@
 in {
   home.packages = [
     theme-switch
-    # The dark theme's GTK theme and icons.
+    # The dark and Ariadne themes' GTK theme and icons.
     pkgs.gnome-themes-extra
     pkgs.adwaita-icon-theme
   ];
@@ -430,7 +475,12 @@ in {
   # btop finds themes by name in its themes folder, not by path.
   programs.btop.settings.color_theme = "current";
   xdg.configFile."btop/themes/current.theme".source = link "${current}/btop.theme";
-  programs.yazi.theme.flavor.dark = "current";
+  # yazi picks a slot by probing the terminal background and takes Ghostty as light, so
+  # with only `dark` set it fell back to its preset. Both slots point at the theme.
+  programs.yazi.theme.flavor = {
+    dark = "current";
+    light = "current";
+  };
   programs.zathura.extraConfig = "include ${current}/zathurarc";
   programs.fuzzel.settings.main.include = "${current}/fuzzel.ini";
 }
