@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
+import Quickshell.Io
 import Quickshell.Networking
 import Quickshell.Services.Pipewire
 import qs.Commons
@@ -71,6 +72,33 @@ Item {
 
   PwObjectTracker {
     objects: root.sink ? [root.sink] : []
+  }
+
+  // Peace survives a reboot: every change to the flag is saved, and the saved one is
+  // applied once the file is read at startup, unless a toggle has already landed.
+  property bool _peaceTouched: false
+
+  Connections {
+    target: NotificationStore
+
+    function onPeaceChanged() {
+      root._peaceTouched = true;
+      peaceState.setText(NotificationStore.peace ? "1" : "0");
+    }
+  }
+
+  FileView {
+    id: peaceState
+
+    path: Paths.stateDir + "/peace"
+    printErrors: false
+
+    onLoaded: {
+      if (root._peaceTouched)
+        return;
+      if (peaceState.text().trim() === "1")
+        NotificationStore.peace = true;
+    }
   }
 
   // Each block sits a fixed gap below the previous, so a missing card leaves no hole.

@@ -24,6 +24,11 @@ Singleton {
   property bool cursor: true
   property bool desktopAudio: true
   property bool microphone: false
+  property int fps: 60
+
+  // The focused output's refresh rate, asked of hyprctl since Quickshell's monitor type
+  // carries none; 60 until told otherwise, so 120 stays greyed rather than promised.
+  property int monitorRefresh: 60
 
   property string file: ""
   property int elapsed: 0
@@ -84,6 +89,13 @@ Singleton {
     if (!root.cursor)
       args.push("--no-cursor");
 
+    // A remembered rate the focused panel cannot carry falls back to 60 here rather than
+    // in the picker, so the choice survives a monitor switch between open and start.
+    var fps = root.fps;
+    if (fps > root.monitorRefresh)
+      fps = 60;
+    args.push("--max-fps", fps);
+
     // wl-screenrec takes a single --audio-device and mixes nothing, so one device only;
     // with both asked for the desktop wins. The name is resolved in the shell below.
     var device = "";
@@ -130,6 +142,25 @@ Singleton {
     // group because the capture command is wrapped in a shell.
     interrupt.command = ["sh", "-c", 'kill -INT -"$1" 2>/dev/null || kill -INT "$1"', "sh", String(capture.processId)];
     interrupt.running = true;
+  }
+
+  function refreshMonitor() {
+    monitorProbe.running = true;
+  }
+
+  Process {
+    id: monitorProbe
+
+    command: ["sh", "-c", 'hyprctl -j monitors | jq -r \'first(.[] | select(.focused) | .refreshRate) // empty\'']
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var rate = text.trim();
+        // An empty answer is no Hyprland to ask; the last reading, or the 60 default, stands.
+        if (rate !== "")
+          root.monitorRefresh = Math.round(Number(rate));
+      }
+    }
   }
 
   Process {
@@ -251,4 +282,6 @@ Singleton {
   Process {
     id: open
   }
+
+  Component.onCompleted: root.refreshMonitor()
 }

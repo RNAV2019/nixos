@@ -137,6 +137,7 @@ Variants {
             required property var modelData
 
             x: carousel.tileX(index)
+            y: Theme.wallpaperRowMid - carousel.tileHeight(index) / 2
             width: carousel.tileWidth(index)
             height: carousel.tileHeight(index)
             source: "file://" + modelData.real

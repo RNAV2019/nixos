@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Night light via hyprsunset, which owns the colour ramp; this only picks the state.
 // Nothing notifies external changes, so the daemon is queried after every write.
@@ -30,9 +31,14 @@ Singleton {
   // and its late answer must not clobber the optimistic state or the restore above.
   property int _writes: 0
 
+  // Whether a state change has landed since startup, so the saved one does not
+  // overwrite a toggle made while the file was still loading.
+  property bool _touched: false
+
   readonly property bool enabled: available && active
 
   function set(on) {
+    _touched = true;
     _restore = active;
     active = on;
     root._writes++;
@@ -46,6 +52,25 @@ Singleton {
 
   function refresh() {
     probe.refresh();
+  }
+
+  // Off and on round-trip a reboot: every change to `active` - a toggle, a refused write
+  // reverting, or the probe catching a restarted daemon - is saved, and the saved one is
+  // applied once at startup.
+  onActiveChanged: savedState.setText(root.active ? "1" : "0")
+
+  FileView {
+    id: savedState
+
+    path: Paths.stateDir + "/nightlight"
+    printErrors: false
+
+    onLoaded: {
+      if (root._touched)
+        return;
+      if (savedState.text().trim() === "1")
+        root.set(true);
+    }
   }
 
   Process {

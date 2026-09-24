@@ -45,8 +45,14 @@ Item {
     return Math.max(0, Math.min(1, v));
   }
 
+  // Every applied value sits on the key-step ladder, so drags, the wheel and the keys
+  // all land on the same multiples of 5 and the backing service never sees between them.
+  function quantize(v) {
+    return Math.round(root.clamp(v) / Theme.sliderStep) * Theme.sliderStep;
+  }
+
   function queueValue(v) {
-    var next = root.clamp(v);
+    var next = root.quantize(v);
     root._previewValue = next;
     root._previewing = true;
     if (root._hasPendingValue && Math.abs(root._pendingValue - next) < 0.0005)

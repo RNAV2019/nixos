@@ -74,21 +74,47 @@ Variants {
         Recorder.microphone = value;
     }
 
+    // 120 is only live on an output that can carry it; a 120 remembered from a faster
+    // panel reads as the 60 it would have recorded at there.
+    readonly property bool fps120Live: Recorder.monitorRefresh >= 120
+    readonly property int effectiveFps: Recorder.fps === 120 && !win.fps120Live ? 60 : Recorder.fps
+
+    function chooseFps(value) {
+      if (value === 120 && !win.fps120Live)
+        return;
+      Recorder.fps = value;
+    }
+
+    function cycleFps() {
+      var rates = win.fps120Live ? [30, 60, 120] : [30, 60];
+      win.chooseFps(rates[(rates.indexOf(win.effectiveFps) + 1) % rates.length]);
+    }
+
     onOpening: {
       selected = Math.max(0, ["screen", "window", "region"].indexOf(Recorder.target));
+      // Re-ask Hyprland, so a mode change since last open is what gates 120.
+      Recorder.refreshMonitor();
     }
 
     function step(delta) {
       selected = ((selected + delta) % 3 + 3) % 3;
     }
 
-    // Closing first, because slurp cannot draw over a surface that still holds the keyboard.
+    // Closing first, because slurp cannot draw over a surface that still holds the keyboard;
+    // the wait then lets the pill back to its resting shape before the capture spawns.
     function activate() {
       Recorder.target = win.targets[win.selected].key;
       win.hide();
-      Qt.callLater(function () {
-        Recorder.start();
-      });
+      settle.restart();
+    }
+
+    // The launch waits out the close (~190 ms) rather than jumping in on the next frame,
+    // so the pill is itself again by the time wl-screenrec or slurp is asked for.
+    Timer {
+      id: settle
+
+      interval: Theme.actionSettleDelay
+      onTriggered: Recorder.start()
     }
 
     Connections {
@@ -121,6 +147,9 @@ Variants {
         break;
       case Qt.Key_M:
         Recorder.microphone = !Recorder.microphone;
+        break;
+      case Qt.Key_F:
+        win.cycleFps();
         break;
       case Qt.Key_Return:
       case Qt.Key_Enter:
@@ -197,6 +226,93 @@ Variants {
             onClicked: win.setRow(row.modelData.key, !row.value)
             z: -1
           }
+        }
+      }
+
+      // The frame-rate row: the toggles' shape with three pills where a switch would sit.
+      // A muted 120 takes no clicks, and the row cycles through what is live here.
+      Item {
+        id: fpsRow
+
+        x: Theme.recorderInset
+        y: Theme.recorderRowsTop + 3 * (Theme.recorderRowHeight + Theme.recorderRowGap)
+        width: Theme.recorderWidth - Theme.recorderInset * 2
+        height: Theme.recorderRowHeight
+
+        Rectangle {
+          anchors.fill: parent
+          radius: Theme.recorderRowRadius
+          color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
+        }
+
+        Text {
+          x: Theme.recorderRowTextLeft
+          y: (parent.height - height) / 2
+          text: "Frame rate"
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.recorderRowLabelSize
+          font.weight: Font.Medium
+        }
+
+        Row {
+          x: parent.width - width - Theme.recorderRowTextLeft
+          y: (parent.height - height) / 2
+          spacing: Theme.recorderFpsSegmentGap
+
+          Repeater {
+            model: [30, 60, 120]
+
+            Rectangle {
+              id: segment
+
+              required property int modelData
+
+              readonly property bool active: win.effectiveFps === segment.modelData
+              readonly property bool live: segment.modelData !== 120 || win.fps120Live
+
+              width: Theme.recorderFpsSegmentWidth
+              height: Theme.recorderFpsSegmentHeight
+              radius: height / 2
+              opacity: segment.live ? 1 : 0.4
+              color: segment.active ? Theme.accentFill : hover.containsMouse ? Theme.withAlpha(Theme.highlightMed, Theme.powerTileFillAlpha) : "transparent"
+
+              Behavior on color {
+                Tint {}
+              }
+
+              Text {
+                anchors.centerIn: parent
+                text: segment.modelData
+                color: segment.active ? Theme.inkOnAccent : Theme.muted
+                font.family: Theme.uiFont
+                font.pixelSize: Theme.recorderRowLabelSize
+                font.weight: segment.active ? Font.Bold : Font.Medium
+
+                Behavior on color {
+                  Tint {}
+                }
+              }
+
+              MouseArea {
+                id: hover
+
+                anchors.fill: parent
+                enabled: segment.live
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: win.chooseFps(segment.modelData)
+              }
+            }
+          }
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton
+          cursorShape: Qt.PointingHandCursor
+          onClicked: win.cycleFps()
+          z: -1
         }
       }
     }

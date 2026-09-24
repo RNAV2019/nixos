@@ -7,7 +7,8 @@ import qs.Services
 import qs.Ui
 
 // The power menu: the island grown into a card of tiles. Lock acts on the first press;
-// the two that end the session arm first and commit only on a second press.
+// the two that end the session arm first and commit only on a second press. A commit
+// closes at once; its action waits out the pill's settle-back.
 Variants {
   id: root
 
@@ -26,6 +27,10 @@ Variants {
 
     // Which tile is armed, or -1.
     property int armed: -1
+
+    // Which tile's action is queued behind the pill's settle-back, or -1. One slot, so a
+    // second commit cannot queue a second shutdown.
+    property int pending: -1
 
     // Lock is done the moment it is pressed; the other two take the session with them.
     readonly property var tiles: [
@@ -49,6 +54,7 @@ Variants {
     onOpening: {
       current = 0;
       armed = -1;
+      cancel();
     }
 
     // Moving disarms, so an armed tile is never left waiting for a later Return.
@@ -65,8 +71,23 @@ Variants {
         return;
       }
 
-      win.hide();
+      // A commit for a tile already queued is a no-op, not a second shutdown.
+      if (pending === i)
+        return;
+      pending = i;
 
+      win.hide();
+      settle.restart();
+    }
+
+    // The card is back, so the user is choosing again.
+    function cancel() {
+      pending = -1;
+      settle.stop();
+    }
+
+    function commit(i) {
+      pending = -1;
       switch (i) {
       case 0:
         Bus.lockRequested();
@@ -79,6 +100,23 @@ Variants {
         systemctl.command = ["systemctl", "poweroff"];
         systemctl.running = true;
         break;
+      }
+    }
+
+    Timer {
+      id: settle
+
+      interval: Theme.actionSettleDelay
+      onTriggered: win.commit(win.pending)
+    }
+
+    Connections {
+      target: Bus
+
+      // Another surface taking the island means the user moved on; nothing fires under it.
+      function onIslandClaimed(screen) {
+        if (win.pending >= 0 && win.screen && screen === win.screen.name)
+          win.cancel();
       }
     }
 

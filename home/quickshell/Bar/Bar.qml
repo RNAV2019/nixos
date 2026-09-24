@@ -51,7 +51,8 @@ Variants {
       id: workspaces
 
       anchors.left: parent.left
-      anchors.leftMargin: Theme.barMarginLeft
+      // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
+      anchors.leftMargin: 10
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
     }

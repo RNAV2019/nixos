@@ -301,7 +301,7 @@ Singleton {
   readonly property real notifBodySize: 12.5
   readonly property int notifBodyLeading: 18
   readonly property int notifBodyLines: 2
-  readonly property int notifActionGapAbove: 3
+  readonly property int notifActionGapAbove: 10
   readonly property int notifActionHeight: 30
   readonly property int notifActionRadius: 15
   readonly property int notifActionGap: 10
@@ -450,7 +450,8 @@ Singleton {
   // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel,
   // so its tile constants alias the power ones; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
-  readonly property int recorderHeight: 228
+  // Four rows under the capture tiles: three toggles plus the frame-rate row.
+  readonly property int recorderHeight: 264
   readonly property int recorderRadius: panelRadius
   readonly property int recorderInset: 11
   readonly property int recorderTileTop: powerTileTop
@@ -469,6 +470,12 @@ Singleton {
   readonly property int recorderRowRadius: 16
   readonly property int recorderRowTextLeft: 12
   readonly property int recorderRowLabelSize: 12
+
+  // The frame-rate row is the toggle rows' shape with three small pills at the right where
+  // a switch would sit; 120 is only live on an output that can carry it.
+  readonly property int recorderFpsSegmentWidth: 46
+  readonly property int recorderFpsSegmentHeight: 22
+  readonly property int recorderFpsSegmentGap: 4
 
   // The recording mark the pill carries: love rather than the accent, so it does not read as
   // one more thing merely on.
@@ -625,6 +632,9 @@ Singleton {
   readonly property int morphFill: 80
   // A small pause beat in sequences, e.g. LockReveal.
   readonly property int morphBeat: 50
+  // The wait after a panel closes and before its chosen action runs, so the pill is back
+  // to its resting shape first (session, profiles, recorder launches).
+  readonly property int actionSettleDelay: reduceMotion ? 0 : 500
 
   // The island's equaliser: each bar rises on its own tween, then falls, staggered across
   // the row so the set waves rather than jumps.

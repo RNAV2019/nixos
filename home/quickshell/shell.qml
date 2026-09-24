@@ -32,10 +32,10 @@ ShellRoot {
   }
   LockPreview {}
 
-  // The six island surfaces with the same toggle/close pair; the still and session targets
-  // stay handwritten below, since they differ.
+  // The five island surfaces with the same toggle/close pair; the recorder, theme and
+  // session targets stay handwritten below, since they differ.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder")
 
     IpcHandler {
       required property string modelData
@@ -74,6 +74,23 @@ ShellRoot {
 
     function toggle(): void {
       Bus.toggleSurface("session");
+    }
+  }
+
+  // The recorder's key is busy-aware: while a recording runs, the same key stops it and
+  // only an idle recorder opens the picker. See Recorder.toggle() and the pill's tile.
+  IpcHandler {
+    target: "recorder"
+
+    function toggle(): void {
+      if (Recorder.busy)
+        Recorder.stop();
+      else
+        Bus.toggleSurface("recorder");
+    }
+
+    function close(): void {
+      Bus.closeSurface("recorder");
     }
   }
 
