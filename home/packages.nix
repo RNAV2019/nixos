@@ -113,9 +113,7 @@
   helium = (helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default).overrideAttrs (old: {
     postFixup = (old.postFixup or "") + ''
       sed -i 's/ --disable-background-networking//' $out/bin/helium
-      # Helium's Accept-Language reduction trips Akamai bot checks on hm.com,
-      # next.co.uk, etc. (imputnet/helium#1917); disable it.
-      sed -i 's| "$@"| --disable-features=ReduceAcceptLanguage${helium-extension-flags} "$@"|' $out/bin/helium
+      sed -i 's| "$@"|${helium-extension-flags} "$@"|' $out/bin/helium
     '';
   });
 

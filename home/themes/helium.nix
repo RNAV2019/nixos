@@ -122,8 +122,10 @@
       exec 5<>"$fifos/in" 6<>"$fifos/out"
       rm -rf "$fifos"
 
-      # If Helium is already running, this hands off its arguments and both exit.
-      "$browser" --remote-debugging-pipe --enable-unsafe-extension-debugging "$@" 3<&5 4<&6 5<&- 6<&- &
+      # If Helium is already running, this hands off its arguments and both exit. The pipe
+      # makes navigator.webdriver true, which Akamai (hm.com, next.co.uk) blocks on; turn it off.
+      "$browser" --remote-debugging-pipe --enable-unsafe-extension-debugging \
+        --disable-blink-features=AutomationControlled "$@" 3<&5 4<&6 5<&- 6<&- &
       pid=$!
       trap 'kill -TERM "$pid" 2>/dev/null || true' TERM INT HUP
 

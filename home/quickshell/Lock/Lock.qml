@@ -19,6 +19,7 @@ Scope {
   // False until the first keystroke; the field itself is present from the first frame.
   property bool inputStarted: false
   property int attempts: 0
+  readonly property string snapshotFile: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png"
   property string snapshotPath: ""
   property string snapshotCleanupPath: ""
   property bool snapshotPending: false
@@ -47,6 +48,10 @@ Scope {
   function lock() {
     if (lockContext.locked)
       return;
+    // The boot lock can overtake a manual one still waiting on its capture; that snapshot
+    // never lands, so this lock shows the wallpaper instead of a missing file.
+    if (snapshotPending || snapshotCapture.running)
+      root.snapshotPath = "";
     snapshotDelay.stop();
     snapshotPending = false;
     Bus.prepareForLock();
@@ -73,7 +78,7 @@ Scope {
     // Close the shell's panels before the capture so the lock background never contains its
     // own UI. The bar stays, so it blurs with the desktop behind the lock.
     Bus.prepareForLock();
-    root.snapshotPath = Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png";
+    root.snapshotPath = root.snapshotFile;
     snapshotPending = true;
     snapshotDelay.restart();
   }
@@ -160,6 +165,12 @@ Scope {
     command: ["grim", "-l", "0", root.snapshotPath]
 
     onExited: function (exitCode) {
+      // Overtaken by the boot lock: the frame is not used, so it goes straight away.
+      if (lockContext.locked) {
+        root.snapshotCleanupPath = root.snapshotFile;
+        snapshotCleanup.running = true;
+        return;
+      }
       if (exitCode !== 0)
         root.snapshotPath = "";
       root.lock();
