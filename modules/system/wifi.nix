@@ -15,11 +15,6 @@
       uuid = "e586f906-da0b-4dc1-88fa-540c7f8bd4ba";
       pskVar = "SKYMRFDT_PSK";
     };
-    skyp1cf7 = {
-      ssid = "SKYP1CF7";
-      uuid = "322cf862-d45d-4a91-bdaa-aa2f28878e12";
-      pskVar = "SKYP1CF7_PSK";
-    };
     ryans-s24-ultra = {
       ssid = "Ryans S24 Ultra";
       uuid = "8f34c490-ead7-4412-a726-13ec69a4b3e5";
@@ -48,6 +43,34 @@
       addr-gen-mode = "default";
     };
   };
+
+  # Warwick's settings; see their eduroam "other devices" page. The bundle holds
+  # their root, so the domain match is what stops any public CA's cert passing.
+  eduroam = {
+    connection = {
+      id = "eduroam";
+      uuid = "729969dc-ea03-4dc8-a823-e0f2c8b66a72";
+      type = "wifi";
+    };
+    wifi = {
+      mode = "infrastructure";
+      ssid = "eduroam";
+    };
+    wifi-security.key-mgmt = "wpa-eap";
+    "802-1x" = {
+      eap = "peap";
+      phase2-auth = "mschapv2";
+      identity = "$EDUROAM_IDENTITY";
+      password = "$EDUROAM_PASSWORD";
+      ca-cert = "/etc/ssl/certs/ca-certificates.crt";
+      domain-suffix-match = "warwick.ac.uk";
+    };
+    ipv4.method = "auto";
+    ipv6 = {
+      method = "auto";
+      addr-gen-mode = "default";
+    };
+  };
 in
   lib.mkIf (builtins.pathExists sopsFile) {
     # Root-only: only the ensure-profiles unit reads it.
@@ -55,6 +78,6 @@ in
 
     networking.networkmanager.ensureProfiles = {
       environmentFiles = [config.sops.secrets.wifi-env.path];
-      profiles = lib.mapAttrs wpaProfile networks;
+      profiles = lib.mapAttrs wpaProfile networks // {inherit eduroam;};
     };
   }
