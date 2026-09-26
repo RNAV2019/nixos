@@ -380,6 +380,9 @@ Singleton {
   readonly property int controlTileBadge: 34
   readonly property int controlTileBadgeLeft: 10
   readonly property int controlTileGlyphSize: 18
+  // Unlit parts of a drawn glyph (a Wi-Fi bar below the signal): half ink, which still reads
+  // against a tile badge's tint where a third of it faded into the circle.
+  readonly property real controlGlyphDimAlpha: 0.5
   readonly property int controlTileTextLeft: 54
   readonly property int controlTileLabelSize: 13
   readonly property int controlTileSubSize: 11
@@ -410,8 +413,9 @@ Singleton {
   readonly property int controlNotifTitleSize: 14
   readonly property int controlNotifBodySize: 12
   readonly property int controlPadBottom: 10
-  // Past this the list scrolls rather than the panel growing further.
-  readonly property int controlNotifMaxHeight: 320
+  // Past this the list scrolls rather than the panel growing further: about two cards, so the
+  // panel tops out near 58% of a 1350 px screen rather than two-thirds.
+  readonly property int controlNotifMaxHeight: 180
 
   // Sub-views. A 46 px pill on a 52 px pitch, under an 11 px section label.
   readonly property int controlRowHeight: 46
@@ -639,6 +643,11 @@ Singleton {
   // The clock's digit roll, measured at 60 fps: each digit travels about half a glyph's height
   // and cross-fades; a fraction of font size, so it reads the same at pill and card size.
   readonly property real clockRollTravel: 0.45
+
+  // Its own clock rather than a content swap's five frames, so the roll reads as travel; the
+  // arriving digit's fade trails the move, dipping the pair's ink mid-roll.
+  readonly property int clockRoll: reduceMotion ? 1 : 110
+  readonly property int clockRollFade: reduceMotion ? 1 : 170
 
   // How long a surface that just handed the island over keeps riding the taker's morph: the
   // taker's first frame lands 147-216 ms later, and 260 covers the bare pill showing through.

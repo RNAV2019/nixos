@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -7.65 32 32">
+  <!-- A glyph: only alpha is used, inked in the notification's theme accent. Ui/WifiGlyph.qml
+       fully lit: quarter-arcs of radius 14.5, 10 and 5.5 over a dot at (12, 16.5). The 32-unit
+       box gives it the tile's glyph-to-circle ratio, and drops it 1.2 as the glyph's box does. -->
+  <g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round">
+    <path d="M1.747 6.247A14.5 14.5 0 0 1 22.253 6.247"/>
+    <path d="M4.929 9.429A10 10 0 0 1 19.071 9.429"/>
+    <path d="M8.111 12.611A5.5 5.5 0 0 1 15.889 12.611"/>
+  </g>
+  <circle cx="12" cy="16.5" r="1.8" fill="#fff"/>
+</svg>

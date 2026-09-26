@@ -10,6 +10,12 @@ Item {
   property font font
   property color color
 
+  // Inter's default figures are proportional; tabular ones keep every digit slot the same
+  // width, so a narrow 1 rolling to a 2 does not shove the digits after it.
+  font.features: ({
+      "tnum": 1
+    })
+
   // About half a glyph's height of travel.
   readonly property real rollTravel: font.pixelSize * Theme.clockRollTravel
 
@@ -78,7 +84,7 @@ Item {
           font: root.font
         }
 
-        // Travel and outgoing ink ride the content clock; incoming trails on the fast one,
+        // Travel and outgoing ink ride the roll clock; incoming ink trails on the slower fade,
         // dipping the pair's total ink mid-roll.
         ParallelAnimation {
           id: roll
@@ -86,7 +92,7 @@ Item {
           NumberAnimation {
             target: incoming
 
-             duration: Theme.duration(Theme.morphContent)
+             duration: Theme.duration(Theme.clockRoll)
              easing.type: Easing.OutCubic
             from: root.rollTravel
             property: "y"
@@ -96,7 +102,7 @@ Item {
           NumberAnimation {
             target: outgoing
 
-             duration: Theme.duration(Theme.morphContent)
+             duration: Theme.duration(Theme.clockRoll)
              easing.type: Easing.OutCubic
             from: 0
             property: "y"
@@ -106,7 +112,7 @@ Item {
           NumberAnimation {
             target: outgoing
 
-             duration: Theme.duration(Theme.morphContent)
+             duration: Theme.duration(Theme.clockRoll)
              easing.type: Easing.OutCubic
             from: 1
             property: "opacity"
@@ -116,7 +122,7 @@ Item {
           NumberAnimation {
             target: incoming
 
-             duration: Theme.duration(Theme.morphState)
+             duration: Theme.duration(Theme.clockRollFade)
              easing.type: Easing.OutCubic
             from: 0
             property: "opacity"

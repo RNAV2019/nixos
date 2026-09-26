@@ -8,6 +8,8 @@ Rectangle {
   property string label: ""
   property string sublabel: ""
   property string glyph: ""
+  // Drawn in the badge instead of the glyph when set; it inks itself in glyphColor.
+  property Component icon: null
   property bool on: false
   property bool opensView: false
   property bool keyFocused: false
@@ -18,6 +20,7 @@ Rectangle {
 
   readonly property bool hovered: badgeHover.containsMouse || bodyHover.containsMouse
   readonly property bool pressed: badgeHover.pressed || bodyHover.pressed
+  readonly property color glyphColor: on ? Theme.inkOnAccent : Theme.inkSecondary
 
   height: Theme.controlTileHeight
   radius: Theme.controlTileRadius
@@ -71,12 +74,31 @@ Rectangle {
       Tint {}
     }
 
-    Text {
-      anchors.centerIn: parent
+    // Centred across on the glyph's ink, not its advance: the volume ladder pads two steps with
+    // a trailing space, and wide glyphs overhang their cells. Down, the line box already centres
+    // every tile glyph to a third of a pixel, closer than the ink bounds place them.
+    TextMetrics {
+      id: glyphInk
+
+      font: glyphText.font
       text: root.glyph
-      color: root.on ? Theme.inkOnAccent : Theme.inkSecondary
+    }
+
+    Text {
+      id: glyphText
+
+      x: (parent.width - glyphInk.tightBoundingRect.width) / 2 - glyphInk.tightBoundingRect.x
+      y: (parent.height - height) / 2
+      visible: root.icon === null
+      text: root.glyph
+      color: root.glyphColor
       font.family: Theme.iconFont
       font.pixelSize: Theme.controlTileGlyphSize
+    }
+
+    Loader {
+      anchors.centerIn: parent
+      sourceComponent: root.icon
     }
   }
 

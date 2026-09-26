@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -12,11 +11,13 @@ Rectangle {
   property string body: ""
   property string image: ""
   property string appIcon: ""
+  property string desktopEntry: ""
   property bool urgent: false
 
   signal dismissed
 
-  readonly property string iconSource: NotificationStore.iconFor(image, appIcon)
+  readonly property string iconSource: NotificationStore.iconFor(image, appIcon, desktopEntry, appName)
+  readonly property bool iconTinted: NotificationStore.iconTinted(desktopEntry, appName)
 
   implicitHeight: body !== "" ? 48 + Math.ceil(bodyText.implicitHeight) + 14 : 62
 
@@ -25,7 +26,7 @@ Rectangle {
   border.width: 1
   border.color: urgent ? Theme.withAlpha(Theme.dangerFill, 0.7) : Theme.withAlpha(Theme.separator, 0.8)
 
-  readonly property color accentColour: urgent ? Theme.urgent : NotificationStore.avatarColour(appName)
+  readonly property color accentColour: urgent ? Theme.urgent : NotificationStore.avatarColour(appName, iconTinted)
 
   Rectangle {
     id: avatar
@@ -39,7 +40,7 @@ Rectangle {
 
     Text {
       anchors.centerIn: parent
-      visible: !icon.visible
+      visible: !icon.shown
       text: NotificationStore.initial(root.appName)
       color: root.accentColour
       font.family: Theme.uiFont
@@ -47,14 +48,15 @@ Rectangle {
       font.weight: Theme.weightBold
     }
 
-    IconImage {
+    // An unresolved icon falls back to the letter, not a hole in the avatar.
+    NotificationIcon {
       id: icon
 
       anchors.fill: parent
       anchors.margins: 3
       source: root.iconSource
-      // An unresolved icon falls back to the letter, not a hole in the avatar.
-      visible: root.iconSource !== "" && status !== Image.Error && status !== Image.Null
+      tinted: root.iconTinted
+      tint: root.accentColour
     }
   }
 

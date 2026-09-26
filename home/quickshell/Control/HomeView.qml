@@ -130,13 +130,9 @@ Item {
     // The same third the second row divides the span into; the remainder lands on Audio.
     width: root.thirdWidth
     label: "Wi-Fi"
-    glyph: {
-      if (NetworkInfo.onEthernet)
-        return Icons.ethernet;
-      if (!Networking.wifiEnabled)
-        return Icons.networkOff;
-      return NetworkInfo.activeNetwork ? Icons.step(Icons.wifi, NetworkInfo.activeNetwork.signalStrength * 100) : Icons.wifi[0];
-    }
+    // Ethernet keeps its font glyph; every Wi-Fi state draws the island's arcs.
+    glyph: NetworkInfo.onEthernet ? Icons.ethernet : ""
+    icon: NetworkInfo.onEthernet ? null : wifiGlyph
     sublabel: {
       if (NetworkInfo.onEthernet)
         return "Ethernet";
@@ -149,6 +145,17 @@ Item {
     opensView: true
     onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
     onOpened: root.opened("wifi")
+  }
+
+  // The island's Wi-Fi mark at the tile's glyph size, inked like the glyph it replaces.
+  Component {
+    id: wifiGlyph
+
+    WifiMark {
+      strength: NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.signalStrength : 0
+      connected: Networking.wifiEnabled && NetworkInfo.activeNetwork !== null
+      color: wifi.glyphColor
+    }
   }
 
   Tile {
@@ -180,13 +187,7 @@ Item {
     y: root.tilesTop + Theme.controlTileHeight + Theme.controlTileGap
     width: root.thirdWidth
     label: "Bluetooth"
-    glyph: {
-      if (!root.adapter)
-        return Icons.bluetoothNoAdapter;
-      if (!root.adapter.enabled)
-        return Icons.bluetoothOff;
-      return root.connectedDevice ? Icons.bluetoothConnected : Icons.bluetoothOn;
-    }
+    icon: bluetoothGlyph
     sublabel: {
       if (!root.adapter)
         return "No adapter";
@@ -200,6 +201,18 @@ Item {
     onToggled: if (root.adapter)
       root.adapter.enabled = !root.adapter.enabled
     onOpened: root.opened("bluetooth")
+  }
+
+  // Drawn on the Wi-Fi mark's grid and scale, so the tiles' two radios match.
+  Component {
+    id: bluetoothGlyph
+
+    BluetoothGlyph {
+      scale: Theme.controlTileGlyphSize / implicitWidth
+      color: bluetooth.glyphColor
+      off: !root.adapter || !root.adapter.enabled
+      connected: root.connectedDevice !== null
+    }
   }
 
   Tile {
@@ -354,6 +367,7 @@ Item {
           body: row ? row.body : ""
           image: row ? row.image : ""
           appIcon: row ? row.appIcon : ""
+          desktopEntry: row ? row.desktopEntry : ""
           urgent: row ? row.urgent : false
           onDismissed: NotificationStore.dismiss(card.index)
         }

@@ -111,9 +111,17 @@ ControlSubView {
   }
 
   DeviceRow {
+    id: activeRow
+
     width: parent.width
     visible: root.activeNetwork !== null
-    glyph: root.activeNetwork ? Icons.step(Icons.wifi, root.activeNetwork.signalStrength * 100) : ""
+    icon: Component {
+      WifiMark {
+        strength: root.activeNetwork ? root.activeNetwork.signalStrength : 0
+        connected: true
+        color: activeRow.glyphColor
+      }
+    }
     label: root.activeNetwork ? root.activeNetwork.name : ""
     sublabel: {
       if (!root.activeNetwork)
@@ -171,8 +179,17 @@ ControlSubView {
       spacing: Theme.controlRowGap
 
       DeviceRow {
+        id: row
+
         width: parent.width
-        glyph: Icons.step(Icons.wifi, entry.modelData.signalStrength * 100)
+        // Any network in range lights the dot and inner bar, as the island does for a link.
+        icon: Component {
+          WifiMark {
+            strength: entry.modelData.signalStrength
+            connected: true
+            color: row.glyphColor
+          }
+        }
         label: entry.modelData.name
         onClicked: {
           if (entry.needsPassword)

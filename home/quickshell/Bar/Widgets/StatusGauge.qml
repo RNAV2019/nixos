@@ -9,8 +9,8 @@ import qs.Services
 Gauge {
   id: root
 
-  readonly property bool plugged: Battery.charging || (Battery.present && (Battery.battery.state === UPowerDeviceState.FullyCharged || Battery.battery.state === UPowerDeviceState.PendingCharge))
-  readonly property bool low: Battery.present && !plugged && Battery.level <= 0.2
+  readonly property bool plugged: Battery.plugged
+  readonly property bool low: Battery.present && !plugged && Battery.level <= Battery.lowLevel
 
   readonly property color tint: plugged ? Theme.foam : low ? Theme.love : Theme.accent
 
@@ -30,54 +30,14 @@ Gauge {
     return NetworkInfo.activeNetwork.signalStrength;
   }
 
-  component WifiBar: ShapePath {
-    id: bar
-
-    property real radius: 0
-    property bool lit: false
-
-    strokeColor: root.barColor(lit)
-    strokeWidth: 2.4
-    capStyle: ShapePath.RoundCap
-    fillColor: "transparent"
-
-    PathAngleArc {
-      centerX: 24
-      centerY: 31
-      radiusX: bar.radius
-      radiusY: bar.radius
-      startAngle: 225
-      sweepAngle: 90
-    }
-  }
-
-  function barColor(lit) {
-    return lit ? Theme.text : Theme.highlightHigh;
-  }
-
-  // Three bars about the dot, lit by signal strength.
-  WifiBar {
-    radius: 14.5
-    lit: root.strength >= 0.66
-  }
-
-  WifiBar {
-    radius: 10
-    lit: root.strength >= 0.33
-  }
-
-  WifiBar {
-    radius: 5.5
-    lit: root.connected
-  }
-
-  Rectangle {
-    x: 24 - 1.8
-    y: 31 - 1.8
-    width: 3.6
-    height: 3.6
-    radius: 1.8
-    color: root.barColor(root.connected)
+  // Three bars about the dot, lit by signal strength; the dot sits at (24, 31) in the ring.
+  WifiGlyph {
+    x: 24 - centreX
+    y: 31 - centreY
+    strength: root.strength
+    connected: root.connected
+    litColor: Theme.text
+    dimColor: Theme.highlightHigh
   }
 
   // The charge, led by a bolt while on the charger.

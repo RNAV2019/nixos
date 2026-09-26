@@ -6,6 +6,8 @@ Rectangle {
   id: root
 
   property string glyph: ""
+  // Drawn instead of the glyph when set; it inks itself in glyphColor.
+  property Component icon: null
   property string label: ""
   property string sublabel: ""
   property bool selected: false
@@ -20,6 +22,7 @@ Rectangle {
   readonly property bool pressed: hover.pressed
 
   readonly property color ink: selected ? Theme.inkOnAccent : Theme.inkPrimary
+  readonly property color glyphColor: selected ? Theme.inkOnAccent : Theme.inkSecondary
 
   implicitHeight: Theme.controlRowHeight
   radius: Theme.controlRowRadius
@@ -66,21 +69,28 @@ Rectangle {
   }
 
   Text {
-    id: icon
+    id: glyphText
 
     x: Theme.controlRowInset
     y: (parent.height - height) / 2
-    visible: root.glyph !== ""
+    visible: root.glyph !== "" && root.icon === null
     text: root.glyph
-    color: root.selected ? Theme.inkOnAccent : Theme.inkSecondary
+    color: root.glyphColor
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlTileGlyphSize
+  }
+
+  // A glyph-sized box where the font glyph would sit, so the label lines up either way.
+  Loader {
+    x: Theme.controlRowInset + (Theme.controlTileGlyphSize - width) / 2
+    y: (parent.height - height) / 2
+    sourceComponent: root.icon
   }
 
   Text {
     id: name
 
-    x: icon.visible ? icon.x + 30 : Theme.controlRowInset + 6
+    x: glyphText.visible || root.icon !== null ? Theme.controlRowInset + 30 : Theme.controlRowInset + 6
     y: root.sublabel !== "" ? parent.height / 2 - 17 : (parent.height - height) / 2
     width: Math.max(0, slot.x - x - 12)
     text: root.label

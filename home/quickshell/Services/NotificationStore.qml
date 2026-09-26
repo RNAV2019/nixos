@@ -14,7 +14,7 @@ Singleton {
   readonly property int maxPopups: 3
   readonly property int maxHistory: 50
 
-  // Peace mode. Toasts are suppressed, but notifications still land in the list.
+  // Peace mode. Toasts other than critical ones are suppressed, but everything still lands in the list.
   property bool peace: false
 
   property var popups: []
@@ -35,6 +35,7 @@ Singleton {
       body: n.body ? String(n.body) : "",
       image: n.image ? String(n.image) : "",
       appIcon: n.appIcon ? String(n.appIcon) : "",
+      desktopEntry: n.desktopEntry ? String(n.desktopEntry) : "",
       urgent: n.urgency === NotificationUrgency.Critical
     };
   }
@@ -55,8 +56,33 @@ Singleton {
     return Quickshell.iconPath(s, true);
   }
 
-  function iconFor(image, appIcon) {
-    return root._resolve(image) || root._resolve(appIcon);
+  // Per-app icon overrides, keyed by desktop entry or, failing that, app name. A value is
+  // anything _resolve takes: a theme icon name, an absolute path, or a URL. An override beats
+  // both fields the sender filled, so it also covers apps that ship raw image data. Overrides
+  // are glyphs: only their alpha is kept, inked in the avatar's accent (see Ui/NotificationIcon).
+  readonly property var appIcons: ({
+      "Battery": Qt.resolvedUrl("../Assets/notification-icons/battery.svg"),
+      "Screen Recorder": Qt.resolvedUrl("../Assets/notification-icons/recorder.svg"),
+      // nm-applet notifies through GNotification: this desktop entry, and the app name it sets.
+      "org.freedesktop.network-manager-applet": Qt.resolvedUrl("../Assets/notification-icons/wifi.svg"),
+      "NetworkManager Applet": Qt.resolvedUrl("../Assets/notification-icons/wifi.svg")
+    })
+
+  function _override(key) {
+    return key && Object.prototype.hasOwnProperty.call(root.appIcons, key) ? root.appIcons[key] : "";
+  }
+
+  function _custom(desktopEntry, appName) {
+    return root._resolve(root._override(desktopEntry) || root._override(appName));
+  }
+
+  function iconFor(image, appIcon, desktopEntry, appName) {
+    return root._custom(desktopEntry, appName) || root._resolve(image) || root._resolve(appIcon);
+  }
+
+  // True when iconFor's answer is an override, which is drawn in the theme's accent.
+  function iconTinted(desktopEntry, appName) {
+    return root._custom(desktopEntry, appName) !== "";
   }
 
   // The letter avatar the card draws when an application ships no icon.
@@ -64,9 +90,11 @@ Singleton {
     return name && name.length > 0 ? name.charAt(0).toUpperCase() : "?";
   }
 
-  // A stable colour per application, independent of arrival order.
-  function avatarColour(name) {
-    return Theme.stableAccent(name);
+  // A custom icon is one of the shell's own marks, so it wears the theme's accent as the control
+  // centre's tiles do. Other senders get a stable colour per application, independent of
+  // arrival order, so their letter avatars stay apart.
+  function avatarColour(name, tinted) {
+    return tinted ? Theme.accent : Theme.stableAccent(name);
   }
 
   function forgetPopup(notification) {
@@ -101,7 +129,8 @@ Singleton {
       while (historyModel.count > root.maxHistory)
         historyModel.remove(historyModel.count - 1);
 
-      if (root.peace)
+      // Critical ones, like the battery's last warning, still break through peace.
+      if (root.peace && notification.urgency !== NotificationUrgency.Critical)
         return;
 
       notification.tracked = true;

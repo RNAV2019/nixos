@@ -313,6 +313,12 @@ in {
           (bind "${mod} + CTRL + ${key}" (exec "grimblast --notify copysave screen"))
         ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
         ++ [
+          # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
+          # With Super already held its press is too early to join, so SUPER + PrtSc
+          # arrives as SUPER + SHIFT + S instead.
+          (bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))
+
+
           (bind "${mod} + L" (exec "lock-session"))
 
           (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))

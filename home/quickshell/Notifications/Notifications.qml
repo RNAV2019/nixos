@@ -62,9 +62,10 @@ Variants {
     readonly property string summary: current && current.summary ? String(current.summary) : ""
     readonly property string bodyText: current && current.body ? String(current.body) : ""
 
-    readonly property color tint: urgent ? Theme.love : NotificationStore.avatarColour(appName)
+    readonly property color tint: urgent ? Theme.love : NotificationStore.avatarColour(appName, iconTinted)
 
-    readonly property string iconSource: current ? NotificationStore.iconFor(current.image, current.appIcon) : ""
+    readonly property string iconSource: current ? NotificationStore.iconFor(current.image, current.appIcon, current.desktopEntry, current.appName) : ""
+    readonly property bool iconTinted: current ? NotificationStore.iconTinted(current.desktopEntry, current.appName) : false
 
     // "default" is the whole-card click, so never drawn; two is the row's limit.
     readonly property var buttons: {
@@ -297,24 +298,21 @@ Variants {
             anchors.centerIn: parent
             text: NotificationStore.initial(win.appName)
             color: win.tint
-            visible: !appIcon.visible
+            visible: !appIcon.shown
             font.family: Theme.uiFont
             font.pixelSize: Theme.notifAvatarLetterSize
             font.weight: Font.Bold
           }
 
-          Image {
+          NotificationIcon {
             id: appIcon
 
             anchors.centerIn: parent
             width: parent.width - 12
             height: width
             source: win.iconSource
-            sourceSize.width: Theme.notifAvatarSize * 3
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
-            visible: source !== "" && status === Image.Ready
+            tinted: win.iconTinted
+            tint: win.tint
           }
         }
 
