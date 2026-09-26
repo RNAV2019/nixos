@@ -20,6 +20,11 @@
       uuid = "8f34c490-ead7-4412-a726-13ec69a4b3e5";
       pskVar = "RYANS_S24_ULTRA_PSK";
     };
+    charter-avenue = {
+      ssid = "vodafone6EE270";
+      uuid = "5480e3c6-1089-4b52-bd41-91c07fa2e719";
+      pskVar = "CHARTER_AVENUE_PSK";
+    };
   };
 
   # envsubst fills the PSK in from the decrypted environment file.
