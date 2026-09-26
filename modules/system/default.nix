@@ -182,6 +182,11 @@ in {
 
   # Helium extensions load from pinned CRXes in home/packages.nix rather than
   # enterprise policy, which is broken upstream (imputnet/helium#1737).
+  # Other policies do work; Helium reads Chromium's path. This one hides the "unsupported
+  # command-line flag" infobar for the launcher's --disable-blink-features (home/themes/helium.nix).
+  environment.etc."chromium/policies/managed/helium.json".text = builtins.toJSON {
+    CommandLineFlagSecurityWarningsEnabled = false;
+  };
 
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
