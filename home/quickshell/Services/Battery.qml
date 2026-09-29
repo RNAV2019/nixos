@@ -53,8 +53,7 @@ Singleton {
     var mins = Math.round(battery.timeToEmpty / 60);
     if (mins > 0)
       body += ", about " + (mins >= 60 ? Math.floor(mins / 60) + " h " : "") + (mins % 60) + " min left";
-    warning.command = ["notify-send", "-a", "Battery", "-u", critical ? "critical" : "normal", "-i", critical ? "battery-caution" : "battery-low", critical ? "Battery critically low" : "Battery low", body];
-    warning.running = true;
+    warning.exec(["notify-send", "-a", "Battery", "-u", critical ? "critical" : "normal", "-i", critical ? "battery-caution" : "battery-low", critical ? "Battery critically low" : "Battery low", body]);
   }
 
   // The stage already warned for survives a config reload, so editing the shell does not re-warn.
