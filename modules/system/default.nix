@@ -173,8 +173,9 @@ in {
   # Compressed swap in RAM; there is no swap partition.
   zramSwap.enable = true;
 
-  services.thermald.enable = true;
-
+  # thermald --adaptive applies the firmware's DPTF tables and pins MMIO PL1 to
+  # 10 W, holding all-core clocks under 1 GHz. The kernel's int340x driver and
+  # hardware TCC still handle thermal protection.
   services.power-profiles-daemon.enable = true;
 
   # D-Bus power state for the shell and upower CLI.
