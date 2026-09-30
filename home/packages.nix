@@ -111,10 +111,12 @@
   # Drop the wrapper's --disable-background-networking (auto-update stays off via
   # its own flags) and add the extensions.
   helium = (helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default).overrideAttrs (old: {
-    postFixup = (old.postFixup or "") + ''
-      sed -i 's/ --disable-background-networking//' $out/bin/helium
-      sed -i 's| "$@"|${helium-extension-flags} "$@"|' $out/bin/helium
-    '';
+    postFixup =
+      (old.postFixup or "")
+      + ''
+        sed -i 's/ --disable-background-networking//' $out/bin/helium
+        sed -i 's| "$@"|${helium-extension-flags} "$@"|' $out/bin/helium
+      '';
   });
 
   # The same Helium, launched so that it follows the desktop theme live; see themes/helium.nix.
@@ -228,6 +230,7 @@ in {
     localsend
 
     awww
+    anki
 
     blanket
 
