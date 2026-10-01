@@ -28,9 +28,11 @@ Singleton {
   readonly property real criticalLevel: 0.1
   property bool _ready: false
 
-  onLevelChanged: _checkLevel()
-  onDischargingChanged: _checkLevel()
-  onPluggedChanged: _checkLevel()
+  // Deferred: when the battery first turns present, discharging can flip before level has
+  // re-evaluated, and a synchronous check reads the stale 0 and warns "critically low".
+  onLevelChanged: Qt.callLater(_checkLevel)
+  onDischargingChanged: Qt.callLater(_checkLevel)
+  onPluggedChanged: Qt.callLater(_checkLevel)
 
   function _checkLevel() {
     if (!_ready)
