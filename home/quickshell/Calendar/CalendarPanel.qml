@@ -33,6 +33,9 @@ Variants {
 
     readonly property var agenda: Calendar.eventsOn(Calendar.selected)
 
+    // Each day opens at its first event, not wherever the last day was scrolled to.
+    onAgendaChanged: agendaView.scrollToTop()
+
     onOpening: {
       Calendar.today();
     }
@@ -325,72 +328,85 @@ Variants {
           font.pixelSize: Theme.calSectionSize
         }
 
-        // Room for three rows; a fuller day says how many more rather than scrolling.
-        Repeater {
-          model: Math.min(win.agenda.length, Theme.calAgendaMax)
+        // Room for three rows; a fuller day scrolls one row per wheel notch, keeping rows aligned.
+        ScrollView {
+          id: agendaView
 
-          Rectangle {
-            id: row
+          x: Theme.calInset
+          y: Theme.calAgendaTop
+          width: Theme.calWidth - Theme.calInset * 2
+          height: Theme.calAgendaBlock
+          wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
 
-            required property int index
+          Column {
+            width: agendaView.width
+            spacing: Theme.calAgendaGap
 
-            readonly property var event: win.agenda[index]
+            Repeater {
+              model: win.agenda.length
 
-            x: Theme.calInset
-            y: Theme.calAgendaTop + index * (Theme.calAgendaHeight + Theme.calAgendaGap)
-            width: Theme.calWidth - Theme.calInset * 2
-            height: Theme.calAgendaHeight
-            radius: Theme.calAgendaRadius
-            color: Theme.withAlpha(Theme.highlightLow, 0.9)
+              Rectangle {
+                id: row
 
-            Rectangle {
-              x: Theme.calSpineLeft
-              y: (parent.height - height) / 2
-              width: Theme.calSpineWidth
-              height: Theme.calSpineHeight
-              radius: width / 2
-              color: Calendar.colourFor(row.event.calendar)
-            }
+                required property int index
 
-            Text {
-              x: Theme.calTimeLeft
-              y: (parent.height - height) / 2
-              text: row.event.allDay ? "all day" : Qt.formatDateTime(row.event.start, "HH:mm")
-              color: Theme.subtle
-              font.family: Theme.monoFont
-              font.pixelSize: Theme.calTimeSize
-            }
+                readonly property var event: win.agenda[index]
 
-            Text {
-              x: Theme.calTitleLeft
-              y: (parent.height - height) / 2
-              width: Math.max(0, meta.x - x - 12)
-              text: row.event.title
-              color: Theme.text
-              font.family: Theme.uiFont
-              font.pixelSize: Theme.calEventTitleSize
-              elide: Text.ElideRight
-            }
+                width: agendaView.width
+                height: Theme.calAgendaHeight
+                radius: Theme.calAgendaRadius
+                color: Theme.withAlpha(Theme.highlightLow, 0.9)
 
-            Text {
-              id: meta
+                Rectangle {
+                  x: Theme.calSpineLeft
+                  y: (parent.height - height) / 2
+                  width: Theme.calSpineWidth
+                  height: Theme.calSpineHeight
+                  radius: width / 2
+                  color: Calendar.colourFor(row.event.calendar)
+                }
 
-              x: parent.width - width - Theme.calSpineLeft
-              y: (parent.height - height) / 2
-              text: {
-                if (row.event.location !== "")
-                  return row.event.location;
-                if (row.event.allDay)
-                  return "";
-                var mins = Math.round((row.event.end - row.event.start) / 60000);
-                if (mins <= 0)
-                  return "";
-                return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
+                Text {
+                  x: Theme.calTimeLeft
+                  y: (parent.height - height) / 2
+                  text: row.event.allDay ? "all day" : Qt.formatDateTime(row.event.start, "HH:mm")
+                  color: Theme.subtle
+                  font.family: Theme.monoFont
+                  font.pixelSize: Theme.calTimeSize
+                }
+
+                Text {
+                  x: Theme.calTitleLeft
+                  y: (parent.height - height) / 2
+                  width: Math.max(0, meta.x - x - 12)
+                  text: row.event.title
+                  color: Theme.text
+                  font.family: Theme.uiFont
+                  font.pixelSize: Theme.calEventTitleSize
+                  elide: Text.ElideRight
+                }
+
+                Text {
+                  id: meta
+
+                  x: parent.width - width - Theme.calSpineLeft
+                  y: (parent.height - height) / 2
+                  text: {
+                    if (row.event.location !== "")
+                      return row.event.location;
+                    if (row.event.allDay)
+                      return "";
+                    var mins = Math.round((row.event.end - row.event.start) / 60000);
+                    if (mins <= 0)
+                      return "";
+                    return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
+                  }
+                  color: Theme.muted
+                  font.family: Theme.uiFont
+                  font.pixelSize: Theme.calMetaSize
+                  elide: Text.ElideRight
+                }
               }
-              color: Theme.muted
-              font.family: Theme.uiFont
-              font.pixelSize: Theme.calMetaSize
-              elide: Text.ElideRight
             }
           }
         }
@@ -412,7 +428,9 @@ Variants {
               return "Loading…";
             if (win.agenda.length === 0)
               return "Nothing on";
-            var more = win.agenda.length - Theme.calAgendaMax;
+            // Only rows still below the view count, so it clears once scrolled to the end.
+            var scrolled = Math.floor(agendaView.contentY / (Theme.calAgendaHeight + Theme.calAgendaGap));
+            var more = win.agenda.length - Theme.calAgendaMax - scrolled;
             return more > 0 ? "+ " + more + " more" : "";
           }
           color: Calendar.error !== "" ? Theme.urgent : Theme.muted

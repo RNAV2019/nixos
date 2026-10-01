@@ -9,8 +9,17 @@ Item {
   // Disable only the Flickable; disabling this Item would kill nested input.
   property bool scrollable: true
 
+  // How far one wheel notch moves the content.
+  property real wheelStep: Theme.panelRowHeight * 3
+
   readonly property alias contentHeight: body.implicitHeight
+  readonly property alias contentY: view.contentY
   readonly property alias scrolling: view.interactive
+
+  function scrollToTop() {
+    scrollTo.stop();
+    view.contentY = 0;
+  }
 
   Flickable {
     id: view
@@ -27,8 +36,7 @@ Item {
       enabled: view.interactive
       acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
       onWheel: function (event) {
-        var step = Theme.panelRowHeight * 3;
-        var target = view.contentY - (event.angleDelta.y / 120) * step;
+        var target = view.contentY - (event.angleDelta.y / 120) * root.wheelStep;
         scrollTo.to = Math.max(0, Math.min(view.contentHeight - view.height, target));
         scrollTo.restart();
       }
