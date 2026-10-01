@@ -620,11 +620,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789759481,
-        "narHash": "sha256-wltt3e3psIe2n3wNoLPSD8viZ10TYfWB+hZPl+vKSY0=",
+        "lastModified": 1790857614,
+        "narHash": "sha256-P0cV8mBjmWG5ObkVOUXVWnNUgg/Y7KCy9ZB/dWm+jQA=",
         "owner": "RNAV2019",
         "repo": "note-tui",
-        "rev": "eeb961202862e3331db2d564d76ae60a5ce9aca1",
+        "rev": "abd7519a17773c930bb45c783e3c793e37500d1a",
         "type": "github"
       },
       "original": {
