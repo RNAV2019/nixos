@@ -366,6 +366,14 @@ in {
           no_initial_focus = true;
         }
 
+        # note's live preview opens beside the editor without taking focus.
+        # Chromium names --app windows after their URL, so this is the page
+        # note serves at /note-preview.
+        {
+          match.class = "chrome-127.0.0.1__note-preview-.*";
+          no_initial_focus = true;
+        }
+
         {
           match.class = "mpv";
           float = true;
