@@ -46,6 +46,11 @@
       cd = "z";
     };
 
+    functions = {
+      # Serve typdraw from anywhere without changing the shell's cwd.
+      typdraw = "env -C ~/Projects/typdraw aube serve $argv";
+    };
+
     plugins = [
       {
         name = "done";
