@@ -26,7 +26,7 @@
 "ui.virtual.whitespace" = { fg = "hl_high" }
 "ui.virtual.indent-guide" = { fg = "hl_med" }
 "ui.virtual.inlay-hint" = { fg = "muted" }
-"ui.virtual.jump-label" = { fg = "love", modifiers = ["bold"] }
+"ui.virtual.jump-label" = { fg = "base", bg = "iris", modifiers = ["bold"] }
 
 "ui.statusline" = { fg = "subtle" }
 "ui.statusline.inactive" = { fg = "muted" }
