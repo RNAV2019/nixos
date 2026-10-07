@@ -311,6 +311,7 @@ in {
     jdk21
     ghc
     gcc
+    godot
     cabal-install
     stack
     haskellPackages.haskell-language-server
