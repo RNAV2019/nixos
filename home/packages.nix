@@ -270,6 +270,7 @@ in {
     glow
     just
     hyperfine
+    unzip
 
     nitch
     fetch
