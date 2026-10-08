@@ -326,6 +326,7 @@ in {
     texlab
     tectonic
     typst
+    tigervnc
     tinymist
     # Typst notes TUI; previews via tinymist and Helium (see editors.nix).
     note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
