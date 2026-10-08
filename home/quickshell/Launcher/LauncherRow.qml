@@ -7,6 +7,12 @@ Item {
   property string name: ""
   property string description: ""
   property string iconSource: ""
+  // A computed answer draws a glyph or a colour swatch in place of an app icon.
+  property string glyph: ""
+  property string swatch: ""
+  // What Return does, hinted at the right edge of the selected row only.
+  property string action: ""
+  property bool current: false
 
   signal activated
 
@@ -38,14 +44,18 @@ Item {
     width: Theme.launcherIconSize
     height: width
     radius: Theme.launcherIconRadius
-    color: Theme.withAlpha(root.tint, 0.22)
+    color: root.swatch ? root.swatch : root.glyph ? Theme.withAlpha(Theme.accent, 0.18) : Theme.withAlpha(root.tint, 0.22)
+    // A hairline keeps a swatch near the surface colour from vanishing into it.
+    border.width: root.swatch ? 1 : 0
+    border.color: Theme.withAlpha(Theme.text, 0.18)
     visible: !icon.visible
 
     Text {
       anchors.centerIn: parent
-      text: root.name.length > 0 ? root.name.charAt(0).toUpperCase() : "?"
-      color: root.tint
-      font.family: Theme.uiFont
+      visible: !root.swatch
+      text: root.glyph ? root.glyph : root.name.length > 0 ? root.name.charAt(0).toUpperCase() : "?"
+      color: root.glyph ? Theme.accent : root.tint
+      font.family: root.glyph ? Theme.iconFont : Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
       font.weight: Font.Bold
     }
@@ -74,7 +84,7 @@ Item {
 
     x: Theme.launcherTextLeft - Theme.launcherInset
     y: root.twoLine ? 5 : (parent.height - height) / 2
-    width: parent.width - x - Theme.launcherInset
+    width: (hint.visible ? hint.x - Theme.launcherInset : parent.width) - x - Theme.launcherInset
     text: root.name
     color: Theme.inkPrimary
     elide: Text.ElideRight
@@ -91,6 +101,18 @@ Item {
     color: Theme.inkTertiary
     elide: Text.ElideRight
     visible: root.twoLine
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.launcherDescSize
+  }
+
+  Text {
+    id: hint
+
+    x: parent.width - width - Theme.launcherInset
+    y: (parent.height - height) / 2
+    text: "↵ " + root.action
+    color: Theme.inkTertiary
+    visible: root.current && root.action.length > 0
     font.family: Theme.uiFont
     font.pixelSize: Theme.launcherDescSize
   }

@@ -228,8 +228,7 @@ in {
     nautilus
 
     localsend
-    # Wayland-native VNC/RDP viewer.
-    gnome-connections
+    tigervnc
 
     awww
     anki
@@ -250,6 +249,9 @@ in {
 
     wl-clipboard
     cliphist
+
+    # The launcher's '=' mode: maths, units and currency.
+    libqalculate
 
     # GTK portal for libadwaita dark mode.
     xdg-desktop-portal-gtk

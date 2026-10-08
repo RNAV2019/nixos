@@ -6,6 +6,13 @@ import Quickshell
 // Keep these Nerd Font glyphs in a UTF-8 source file; some are non-BMP.
 Singleton {
   readonly property string search: "󰍉"
+
+  // The launcher's '=' mode: one per kind of answer.
+  readonly property string calculator: "󰃬"
+  readonly property string clock: "󰅐"
+  readonly property string calendar: "󰃭"
+  readonly property string numberBase: "󰐣"
+
   readonly property string chevronLeft: "󰅁"
   readonly property string chevronRight: "󰅂"
 

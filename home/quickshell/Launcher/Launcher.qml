@@ -21,8 +21,12 @@ Variants {
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
 
+    // A leading '=' turns the query into a calculation; the apps step aside for its answers.
+    readonly property bool computing: query.text.startsWith("=")
+    readonly property var results: computing ? Calculator.results : AppSearch.results
+
     // An empty result set still owns a row's worth of height, so the panel can say so.
-    readonly property int rowCount: Math.max(1, Math.min(AppSearch.results.length, Theme.launcherMaxRows))
+    readonly property int rowCount: Math.max(1, Math.min(win.results.length, Theme.launcherMaxRows))
     readonly property int listHeight: rowCount * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap
     readonly property int contentHeight: Theme.launcherListTop + listHeight + Theme.launcherPadBottom
 
@@ -34,14 +38,19 @@ Variants {
     function activate() {
       if (list.currentIndex < 0 || list.currentIndex >= rows.count)
         return;
-      AppSearch.launch(rows.get(list.currentIndex).entryId);
+      var row = rows.get(list.currentIndex);
+      // A computed row is copied, not launched; cliphist records it like any other copy.
+      if (row.rowCopy)
+        Quickshell.execDetached(["wl-copy", "--", row.rowCopy]);
+      else
+        AppSearch.launch(row.entryId);
       hide();
     }
 
     // Rebuilt in place, not replaced, so delegates survive a query change and can
     // animate; a reset would read as a cut.
     function syncRows() {
-      var want = AppSearch.results;
+      var want = win.results;
       var i, j;
 
       // An unfiltered query is the whole list, so the sweep uses a lookup, not a scan.
@@ -64,17 +73,42 @@ Variants {
             break;
           }
         }
-        if (at < 0)
-          rows.insert(i, {
-            entryId: want[i].id,
-            rowName: String(want[i].name),
-            rowDesc: AppSearch.describe(want[i]),
-            rowIcon: AppSearch.iconFor(want[i])
-          });
-        else if (at !== i)
+        if (at < 0) {
+          rows.insert(i, win.rowFor(want[i]));
+          continue;
+        }
+        if (at !== i)
           rows.move(at, i, 1);
+        // A computed row keeps its id as its answer changes, so it is updated in place.
+        if (want[i].copy !== undefined)
+          rows.set(i, win.rowFor(want[i]));
       }
     }
+
+    // Every row carries every role, so apps and computed answers share one model.
+    function rowFor(item) {
+      if (item.copy !== undefined)
+        return {
+          entryId: item.id,
+          rowName: item.name,
+          rowDesc: item.desc,
+          rowIcon: "",
+          rowGlyph: item.glyph,
+          rowSwatch: item.swatch,
+          rowCopy: item.copy
+        };
+      return {
+        entryId: item.id,
+        rowName: String(item.name),
+        rowDesc: AppSearch.describe(item),
+        rowIcon: AppSearch.iconFor(item),
+        rowGlyph: "",
+        rowSwatch: "",
+        rowCopy: ""
+      };
+    }
+
+    onResultsChanged: win.syncRows()
 
     // Hyprland skips focus when a mapped OnDemand surface goes None -> OnDemand, so
     // Exclusive covers the close animation (permanent would swallow all pointer events).
@@ -89,14 +123,6 @@ Variants {
       }
     }
 
-    Connections {
-      target: AppSearch
-
-      function onResultsChanged() {
-        win.syncRows();
-      }
-    }
-
     ListModel {
       id: rows
     }
@@ -106,8 +132,8 @@ Variants {
         Text {
           x: Theme.launcherGlyphLeft
           y: Theme.launcherSearchHeight / 2 - height / 2
-          text: Icons.search
-          color: Theme.muted
+          text: win.computing ? Icons.calculator : Icons.search
+          color: win.computing ? Theme.accent : Theme.muted
           font.family: Theme.iconFont
           font.pixelSize: Theme.launcherGlyphSize
         }
@@ -126,7 +152,8 @@ Variants {
           clip: true
 
           onTextChanged: {
-            AppSearch.query = text;
+            AppSearch.query = win.computing ? "" : text;
+            Calculator.query = win.computing ? text.substr(1) : "";
             list.currentIndex = 0;
           }
 
@@ -180,7 +207,7 @@ Variants {
         Text {
           x: Theme.launcherTextLeft
           y: Theme.launcherListTop + (Theme.launcherRowHeight - height) / 2
-          text: "No matches"
+          text: !win.computing ? "No matches" : Calculator.expr.length > 0 ? "No result" : "Maths, units, currency, colours, times and dates"
           color: Theme.muted
           visible: rows.count === 0
           font.family: Theme.uiFont
@@ -230,12 +257,19 @@ Variants {
             required property string rowName
             required property string rowDesc
             required property string rowIcon
+            required property string rowGlyph
+            required property string rowSwatch
+            required property string rowCopy
 
             width: list.width
             height: Theme.launcherRowHeight
             name: rowName
             description: rowDesc
             iconSource: rowIcon
+            glyph: rowGlyph
+            swatch: rowSwatch
+            action: rowCopy ? "Copy" : ""
+            current: ListView.isCurrentItem
 
             onActivated: {
               list.currentIndex = index;
