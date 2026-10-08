@@ -228,6 +228,8 @@ in {
     nautilus
 
     localsend
+    # Wayland-native VNC/RDP viewer.
+    gnome-connections
 
     awww
     anki
@@ -326,7 +328,6 @@ in {
     texlab
     tectonic
     typst
-    tigervnc
     tinymist
     # Typst notes TUI; previews via tinymist and Helium (see editors.nix).
     note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
