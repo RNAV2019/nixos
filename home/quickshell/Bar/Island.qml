@@ -316,12 +316,12 @@ FrostedSurface {
       // Board 02's gauges: the battery 16 px in from the right like the album art, system load
       // beside it. Their x rides the pill's live width, so the right inset is scaled off.
       SystemGauge {
-        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - 12 - 2 * implicitWidth : 0
+        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - 12 - 2 * width : 0
         y: (parent.height - height) / 2
       }
 
       StatusGauge {
-        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - implicitWidth : 0
+        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - width : 0
         y: (parent.height - height) / 2
       }
     }

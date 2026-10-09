@@ -374,6 +374,12 @@ in {
           no_initial_focus = true;
         }
 
+        # Helix's :preview window, opened on tinymist's page at "/".
+        {
+          match.class = "chrome-127.0.0.1__-.*";
+          no_initial_focus = true;
+        }
+
         {
           match.class = "mpv";
           float = true;

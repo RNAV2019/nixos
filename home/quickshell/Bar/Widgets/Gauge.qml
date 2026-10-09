@@ -13,8 +13,10 @@ Shape {
   property real value: 0
   property color strokeColor: Theme.accent
 
-  implicitWidth: Theme.islandGaugeSize
-  implicitHeight: Theme.islandGaugeSize
+  // Fixed rather than implicit: Shape rewrites its implicit size to the paths' bounds, which
+  // for the open ring is ~37 px tall and would throw the centring off.
+  width: Theme.islandGaugeSize
+  height: Theme.islandGaugeSize
 
   preferredRendererType: Shape.CurveRenderer
 

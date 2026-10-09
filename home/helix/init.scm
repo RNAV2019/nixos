@@ -3,6 +3,8 @@
 
 (require "helix/keymaps.scm")
 (require "forest/forest.scm")
+;; :preview opens tinymist's live preview in the browser.
+(require "typst-preview/typst-preview.scm")
 
 ;; Sidebar side, plus entries the tree never shows.
 (forest-configure! 'left
