@@ -20,6 +20,7 @@
     ./theme.nix
     ./claude.nix
     ./opencode.nix
+    ./sonora.nix
   ];
 
   home.username = "ryan";

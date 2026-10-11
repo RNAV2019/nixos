@@ -104,10 +104,10 @@
   # and the hash via `nix store prefetch-file` on the AppImage URL.
   t3code-nightly = let
     pname = "t3code-nightly";
-    version = "0.0.43-nightly.20260929.2428";
+    version = "0.0.46-nightly.20261009.2886";
     src = pkgs.fetchurl {
       url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-      hash = "sha256-RbeRHm5IIkjUzhCrF0WgrxJ7gHG0vaHJ+3YovZqj5N8=";
+      hash = "sha256-+16wagGkXaruDi8Ko+FOzsF3McK3Qp2MkjLwEsNRalI=";
     };
     appimageContents = pkgs.appimageTools.extract {inherit pname version src;};
   in
@@ -122,7 +122,7 @@
           $out/share/icons/hicolor/512x512/apps/t3code.png
 
         substituteInPlace $out/share/applications/${pname}.desktop \
-          --replace-fail 'Exec=AppRun --no-sandbox %U' 'Exec=${pname} --no-sandbox %U'
+          --replace-fail 'Exec=AppRun %U' 'Exec=${pname} --no-sandbox %U'
       '';
     };
 

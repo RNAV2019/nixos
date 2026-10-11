@@ -18,6 +18,12 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    # Sonora music client (sonorahq.org); prebuilt release binary on x86_64-linux.
+    sonora = {
+      url = "github:sonorahq/sonora";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Helix fork carrying the Steel plugin runtime; same 25.07.1 base as nixpkgs.
     helix-steel = {
       url = "github:mattwparas/helix/steel-event-system";
@@ -49,6 +55,7 @@
     hyprland,
     helium-browser,
     llm-agents,
+    sonora,
     helix-steel,
     note-tui,
     fenix,
@@ -108,10 +115,10 @@
               # Preserve unmanaged files during activation.
               home-manager.backupFileExtension = "hm-backup";
               home-manager.users.ryan = import ./home/default.nix;
-              home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
+              home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents sonora helix-steel note-tui fenix;};
             }
           ];
-          specialArgs = {inherit hyprland helium-browser llm-agents helix-steel note-tui fenix;};
+          specialArgs = {inherit hyprland helium-browser llm-agents sonora helix-steel note-tui fenix;};
         };
     in {
       ryans-nixos = mkHost "ryans-nixos";

@@ -231,7 +231,6 @@ in {
     tigervnc
 
     awww
-    affine
     anki
 
     blanket
