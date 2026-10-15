@@ -104,10 +104,10 @@
   # and the hash via `nix store prefetch-file` on the AppImage URL.
   t3code-nightly = let
     pname = "t3code-nightly";
-    version = "0.0.46-nightly.20261009.2886";
+    version = "0.0.46-nightly.20261015.3158";
     src = pkgs.fetchurl {
       url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-      hash = "sha256-+16wagGkXaruDi8Ko+FOzsF3McK3Qp2MkjLwEsNRalI=";
+      hash = "sha256-pC090tH1awNsbl0v+mzZ6o2wwINRy8W4Z5DzSdT3Wb4=";
     };
     appimageContents = pkgs.appimageTools.extract {inherit pname version src;};
   in

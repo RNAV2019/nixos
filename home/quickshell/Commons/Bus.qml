@@ -55,6 +55,8 @@ Singleton {
   // Raised when something asks to record but nothing has been chosen yet.
   signal recorderRequested
 
+  signal clockRefreshed
+
   // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
   // "theme", "recorder", "calendar", "session", "profiles", "osd", "notify".
   signal surfaceToggled(string key)

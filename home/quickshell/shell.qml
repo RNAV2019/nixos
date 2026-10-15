@@ -130,4 +130,12 @@ ShellRoot {
       return lockScreen.secure;
     }
   }
+
+  IpcHandler {
+    target: "clock"
+
+    function refresh(): void {
+      Bus.clockRefreshed();
+    }
+  }
 }

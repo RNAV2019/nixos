@@ -142,6 +142,15 @@ Variants {
       precision: SystemClock.Minutes
     }
 
+    Connections {
+      target: Bus
+
+      function onClockRefreshed() {
+        clock.enabled = false;
+        clock.enabled = true;
+      }
+    }
+
     property date arrived: new Date()
 
     // One handler, because QML takes only one per signal.

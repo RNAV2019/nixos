@@ -158,6 +158,15 @@ FrostedSurface {
     precision: SystemClock.Minutes
   }
 
+  Connections {
+    target: Bus
+
+    function onClockRefreshed() {
+      clock.enabled = false;
+      clock.enabled = true;
+    }
+  }
+
   // Clicking empty island space pins the card open; controls on top act without disturbing it.
   MouseArea {
     id: hover

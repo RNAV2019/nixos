@@ -330,4 +330,13 @@ Item {
     id: clock
     precision: SystemClock.Minutes
   }
+
+  Connections {
+    target: Bus
+
+    function onClockRefreshed() {
+      clock.enabled = false;
+      clock.enabled = true;
+    }
+  }
 }

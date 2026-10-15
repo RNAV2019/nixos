@@ -98,7 +98,7 @@ in {
         };
 
         decoration = {
-          rounding = 8;
+          rounding = 12;
           blur = {
             enabled = true;
             size = 16;
@@ -318,7 +318,6 @@ in {
           # arrives as SUPER + SHIFT + S instead.
           (bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))
 
-
           (bind "${mod} + L" (exec "lock-session"))
 
           (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
@@ -442,7 +441,7 @@ in {
         # before_sleep_cmd raises the event that runs lock_cmd.
         lock_cmd = "lock-session";
         before_sleep_cmd = "loginctl lock-session";
-        after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'";
+        after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' && qs ipc call clock refresh";
       };
     };
   };
