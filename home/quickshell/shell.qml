@@ -1,3 +1,4 @@
+import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Bar
@@ -16,6 +17,10 @@ import qs.Theme
 import qs.Wallpaper
 
 ShellRoot {
+  // Singletons start on first use; this one has to be running before the panel opens, to
+  // put a remembered monitor back where it was.
+  Component.onCompleted: Displays.restoreAll()
+
   Bar {}
   CalendarPanel {}
   ControlCenter {}

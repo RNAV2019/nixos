@@ -399,9 +399,23 @@ Singleton {
   readonly property int controlMediaTitleSize: 19
   readonly property int controlMediaArtistSize: 12
   readonly property int controlMediaCaptionSize: 11
-  readonly property int controlMediaPlaySize: 52
-  readonly property int controlMediaSkipSize: 16
-  readonly property real controlMediaProgressHeight: 3
+  // Transport: three equal discs to the right of the title, after One UI 9's player.
+  readonly property int controlMediaButtonSize: 40
+  readonly property int controlMediaButtonGap: 8
+  readonly property real controlMediaButtonAlpha: 0.1
+  readonly property real controlMediaButtonHoverAlpha: 0.18
+  // The scrub bar, also after One UI 9: a thick track, a solid thumb, and translucent hills
+  // that ride the played part while music plays.
+  readonly property int controlMediaTrackY: 98
+  readonly property int controlMediaTrackHeight: 6
+  readonly property real controlMediaTrackAlpha: 0.2
+  readonly property int controlMediaThumbSize: 18
+  readonly property real controlMediaThumbShade: 1.3
+  // Drawn only as the keyboard focus ring.
+  readonly property real controlMediaThumbRing: 2.5
+  readonly property real controlMediaThumbPressScale: 1.2
+  readonly property int controlMediaHillHeight: 14
+  readonly property int controlMediaTimeY: 111
 
   readonly property int controlSectionGap: 23
   readonly property int controlSectionHeight: 22
@@ -421,8 +435,35 @@ Singleton {
   readonly property int controlRowHeight: 46
   readonly property int controlRowGap: 6
   readonly property int controlRowRadius: 23
+  // The outer corners of rows stacked as one group, and the seam between them.
+  readonly property int controlRowGroupRadius: 14
+  readonly property int controlRowGroupGap: 2
   readonly property int controlRowInset: 16
   readonly property int controlViewMaxHeight: 620
+
+  // The Displays sub-view's arrangement canvas: monitors drawn to scale, fitted inside the
+  // padding. Thumbnails take the wallpaper tile's radius, the canvas the media card's.
+  readonly property int displaysCanvasHeight: 188
+  readonly property int displaysCanvasPadX: 32
+  readonly property int displaysCanvasPadY: 28
+  readonly property int displaysCanvasRadius: controlMediaRadius
+  readonly property real displaysCanvasAlpha: 0.85
+  readonly property real displaysCanvasBorderAlpha: 0.55
+  readonly property int displaysTileRadius: wallpaperTileRadius
+  readonly property real displaysTileVeil: 0.3
+  readonly property int displaysPlateHeight: 22
+  readonly property int displaysPlateInset: 8
+  readonly property real displaysPlateAlpha: 0.85
+  // Within this many canvas pixels of a top, centre or bottom alignment, the drop lands on it.
+  readonly property int displaysSnapDistance: 10
+  // A dropped monitor keeps at least this share of its shorter edge against the panel.
+  readonly property real displaysMinOverlap: 0.15
+  // The alignment controls under the canvas: two segmented pills, each a third per button.
+  readonly property int displaysAlignHeight: 36
+  readonly property int displaysAlignInset: 3
+  readonly property int displaysAlignGlyphSize: 16
+  // Marks the row of the screen the panel is open on.
+  readonly property int displaysHereDot: 8
 
   // The wallpaper picker: the pill grows into a wide, short card with one row of previews.
   // The column is 800, not the source's 1008, fitting four wallpapers exactly.
@@ -585,7 +626,6 @@ Singleton {
   readonly property color lockVeilColor: surface
   readonly property real lockVeilOpacity: 0.55
   readonly property color lockTextPrimary: inkPrimary
-  readonly property color lockTextSecondary: inkSecondary
   readonly property color lockFieldState: inkPrimary
   readonly property color lockFieldHint: inkTertiary
   readonly property color lockCaretColor: focusRing

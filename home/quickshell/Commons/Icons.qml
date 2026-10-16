@@ -58,6 +58,18 @@ Singleton {
   readonly property string captureWindow: "󰖯"
   readonly property string captureRegion: "󰆞"
 
+  readonly property string monitor: "󰍹"
+  readonly property string laptop: "󰌢"
+  readonly property string restore: "󰦛"
+
+  // Edges or centres lined up along one axis; Material Design's align-horizontal-* and align-vertical-*.
+  readonly property string alignLeft: "󱇂"
+  readonly property string alignCentre: "󱇃"
+  readonly property string alignRight: "󱇄"
+  readonly property string alignTop: "󱇇"
+  readonly property string alignMiddle: "󱇆"
+  readonly property string alignBottom: "󱇅"
+
   readonly property string brightness: "󰃟"
   readonly property string keyboardBacklight: "󰌌"
 

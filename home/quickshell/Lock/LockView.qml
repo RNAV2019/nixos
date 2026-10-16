@@ -119,9 +119,9 @@ Item {
 
       // Keep the board's weekday-first date order independent of locale.
       text: Qt.formatDate(clock.date, "dddd, MMMM d")
-      color: Theme.lockTextSecondary
+      color: Theme.lockTextPrimary
       font.family: Theme.uiFont
-      font.weight: Theme.weightRegular
+      font.weight: Theme.weightMedium
       font.pixelSize: canvas.u(Theme.lockDateSize)
       // Avoid RGB subpixel fringes from native text rendering.
       renderType: Text.QtRendering

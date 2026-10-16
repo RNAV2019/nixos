@@ -9,6 +9,13 @@
   # Here rather than in hardware-configuration.nix, which gets regenerated.
   hardware.cpu.intel.npu.enable = true;
 
+  # Quick Share and AirDrop (`nearby`). The Intel BE211 runs AWDL only in
+  # omdrop-owl's exclusive mode: Wi-Fi drops while an AirDrop window is open.
+  services.nearby = {
+    enable = true;
+    user = "ryan";
+  };
+
   home-manager.users.ryan = {
     desktop.monitors = [
       {

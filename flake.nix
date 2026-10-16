@@ -42,6 +42,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Quick Share + AirDrop daemon (nearbyd) and the omdrop-owl AWDL backend.
+    nearby = {
+      url = "path:/home/ryan/Projects/nearby";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Decryption key lives at /etc/nixos-secrets/age.key, never in this repo.
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -60,6 +66,7 @@
     note-tui,
     fenix,
     sops-nix,
+    nearby,
     ...
   }: let
     system = "x86_64-linux";
@@ -107,6 +114,7 @@
             {networking.hostName = hostName;}
 
             sops-nix.nixosModules.sops
+            nearby.nixosModules.default
 
             home-manager.nixosModules.home-manager
             {

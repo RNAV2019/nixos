@@ -187,6 +187,8 @@ Variants {
             return audioView;
           case "bluetooth":
             return bluetoothView;
+          case "displays":
+            return displaysView;
           }
           return null;
         }
@@ -215,6 +217,16 @@ Variants {
 
         BluetoothView {
           active: win.open && win.view === "bluetooth"
+          onBacked: win.view = ""
+        }
+      }
+
+      Component {
+        id: displaysView
+
+        DisplaysView {
+          active: win.open && win.view === "displays"
+          hostScreen: modelData.name
           onBacked: win.view = ""
         }
       }

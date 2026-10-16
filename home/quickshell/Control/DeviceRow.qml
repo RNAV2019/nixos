@@ -11,6 +11,11 @@ Rectangle {
   property string label: ""
   property string sublabel: ""
   property bool selected: false
+  // Rows stacked as one group round only the group's outer corners: "first", "middle",
+  // "last", "only" for a group of one, or "single" for a row on its own (the default, a full pill).
+  property string groupPosition: "single"
+  // False for a row that only reports: no hover tint, press or pointer, and no tab stop.
+  property bool interactive: true
   property bool showCheck: false
   property string accessibleName: ""
 
@@ -26,8 +31,13 @@ Rectangle {
 
   implicitHeight: Theme.controlRowHeight
   radius: Theme.controlRowRadius
+  readonly property real groupRadius: Theme.controlRowGroupRadius
+  topLeftRadius: groupPosition === "single" ? radius : groupPosition === "first" || groupPosition === "only" ? groupRadius : 0
+  topRightRadius: topLeftRadius
+  bottomLeftRadius: groupPosition === "single" ? radius : groupPosition === "last" || groupPosition === "only" ? groupRadius : 0
+  bottomRightRadius: bottomLeftRadius
 
-  activeFocusOnTab: true
+  activeFocusOnTab: interactive
   Accessible.role: Accessible.Button
   Accessible.name: root.accessibleName !== "" ? root.accessibleName : root.label
   Accessible.description: root.sublabel
@@ -55,8 +65,10 @@ Rectangle {
     id: hover
 
     anchors.fill: parent
+    enabled: root.interactive
     hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
+    // Qt's cursor lookup does not skip disabled areas, so a reporting row has to say arrow.
+    cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
     onPressed: root.forceActiveFocus()
     onClicked: root.clicked()
   }

@@ -197,6 +197,14 @@ PanelWindow {
     onClicked: win.hide()
   }
 
+  // The surface draws no input of its own, so a click inside it that misses every control
+  // would fall through to the dismiss area above. This takes those clicks and does nothing.
+  MouseArea {
+    anchors.fill: surface
+    enabled: win.open
+    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+  }
+
   // Gated on visibility, not `enabled`: Qt Quick's cursor lookup skips hidden items but not
   // disabled ones, so a merely disabled guard blanked the pointer on every surface.
   MouseArea {

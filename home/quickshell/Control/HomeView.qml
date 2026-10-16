@@ -21,7 +21,7 @@ Item {
   property int keyboardIndex: 0
 
   function keyboardMove(delta) {
-    keyboardIndex = (keyboardIndex + delta + 8) % 8;
+    keyboardIndex = (keyboardIndex + delta + 9) % 9;
   }
 
   function keyboardActivate() {
@@ -43,13 +43,16 @@ Item {
         NightLight.toggle();
       break;
     case 5:
-      root.recorderRequested();
+      root.opened("displays");
       break;
     case 6:
+      root.recorderRequested();
+      break;
+    case 7:
       if (root.sink && root.sink.audio)
         root.sink.audio.muted = !root.sink.audio.muted;
       break;
-    case 7:
+    case 8:
       Brightness.step(true);
       break;
     }
@@ -252,20 +255,36 @@ Item {
   Tile {
     id: recorder
 
-    x: root.inset
-    y: bluetooth.y + Theme.controlTileHeight + Theme.controlTileGap
-    width: root.span
+    x: displays.x + displays.width + Theme.controlTileGap
+    y: displays.y
+    width: root.inset + root.span - x
     label: Recorder.recording ? "Recording" : "Record"
     glyph: Recorder.recording ? Icons.stop : Icons.record
     sublabel: Recorder.status
     on: Recorder.busy
-    keyFocused: root.keyboardIndex === 5
+    keyFocused: root.keyboardIndex === 6
     onToggled: {
       if (Recorder.busy)
         Recorder.stop();
       else
         root.recorderRequested();
     }
+  }
+
+  // Opens the arrangement either way: there is nothing for its badge to switch.
+  Tile {
+    id: displays
+
+    x: root.inset
+    y: bluetooth.y + Theme.controlTileHeight + Theme.controlTileGap
+    width: root.span - root.thirdWidth - Theme.controlTileGap
+    label: "Displays"
+    glyph: Icons.monitor
+    sublabel: Displays.external ? "Built-in + " + Displays.modelOf(Displays.external) : "Built-in only"
+    keyFocused: root.keyboardIndex === 5
+    opensView: true
+    onToggled: root.opened("displays")
+    onOpened: root.opened("displays")
   }
 
   VolumeRow {
