@@ -34,6 +34,20 @@
 
   workspaces = lib.range 1 9;
 
+  # With an external monitor connected, workspace 5 lives only there and the
+  # rest only on the laptop panel. Rules fix where a workspace is created, so
+  # focusing a missing one never opens it on the wrong output.
+  pinWorkspaces = ''
+    local internal, external
+    for _, m in ipairs(hl.get_monitors()) do
+      if m.name:match("^eDP") then internal = m.name else external = m.name end
+    end
+    if internal and external then
+      for ws = 1, 9 do
+        hl.workspace_rule({ workspace = tostring(ws), monitor = ws == 5 and external or internal })
+      end
+    end'';
+
   floatingOverlay = class: {
     match.class = class;
     float = true;
@@ -395,16 +409,42 @@ in {
       ];
 
       # Block bindings and helpers until Quickshell secures every output.
-      on = {
-        _args = [
-          "hyprland.start"
-          (mkLuaInline ''
-            function()
-              hl.dispatch(hl.dsp.submap("lockdown"))
-              hl.exec_cmd("start-desktop")
-            end'')
-        ];
-      };
+      on = [
+        {
+          _args = [
+            "hyprland.start"
+            (mkLuaInline ''
+              function()
+                hl.dispatch(hl.dsp.submap("lockdown"))
+                hl.exec_cmd("start-desktop")
+              end'')
+          ];
+        }
+
+        # awww-daemon paints a new output black, and learns of it a moment after
+        # Hyprland does, so retry until it accepts the output.
+        {
+          _args = [
+            "monitor.added"
+            (mkLuaInline ''
+              function(mon)
+                ${pinWorkspaces}
+                hl.exec_cmd("for _ in $(seq 1 50); do ${pkgs.awww}/bin/awww img -o " .. mon.name
+                  .. [[ "$HOME/.local/share/wallpaper/current" && break; sleep 0.1; done]])
+
+                if not mon.name:match("^eDP") then mon:set_workspace(5) end
+              end'')
+          ];
+        }
+
+        # A reload drops rules added at runtime.
+        {
+          _args = [
+            "config.reloaded"
+            (mkLuaInline "function() ${pinWorkspaces} end")
+          ];
+        }
+      ];
     };
 
     # The catchall registers lockdown and blocks normal startup bindings.

@@ -19,7 +19,9 @@ Scope {
   // False until the first keystroke; the field itself is present from the first frame.
   property bool inputStarted: false
   property int attempts: 0
-  readonly property string snapshotFile: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot.png"
+  // A prefix: each output is captured to <prefix>-<output>.png, so every lock surface shows
+  // its own screen rather than the whole layout squeezed onto it.
+  readonly property string snapshotFile: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot"
   property string snapshotPath: ""
   property string snapshotCleanupPath: ""
   property bool snapshotPending: false
@@ -162,7 +164,12 @@ Scope {
 
     // grim, not grimblast, and stored, not deflated: read once off tmpfs then deleted, so
     // compression is pure latency. Level 0 costs 30ms vs grimblast's 680ms.
-    command: ["grim", "-l", "0", root.snapshotPath]
+    command: {
+      var outputs = [];
+      for (var i = 0; i < Quickshell.screens.length; i++)
+        outputs.push(Quickshell.screens[i].name);
+      return ["sh", "-c", "for o; do grim -l 0 -o \"$o\" \"$0-$o.png\" & done; for p in $(jobs -p); do wait \"$p\" || exit 1; done", root.snapshotPath].concat(outputs);
+    }
 
     onExited: function (exitCode) {
       // Overtaken by the boot lock: the frame is not used, so it goes straight away.
@@ -180,7 +187,7 @@ Scope {
   Process {
     id: snapshotCleanup
 
-    command: ["rm", "-f", root.snapshotCleanupPath]
+    command: ["sh", "-c", "rm -f \"$0\"-*.png", root.snapshotCleanupPath]
   }
 
   // Lock until this compositor instance completes its first secure lock.
@@ -319,7 +326,7 @@ Scope {
 
         anchors.fill: parent
         outputScreen: surface.screen
-        backgroundSource: root.snapshotPath.length > 0 ? "file://" + root.snapshotPath : Wallpapers.url
+        backgroundSource: root.snapshotPath.length > 0 && surface.screen ? "file://" + root.snapshotPath + "-" + surface.screen.name + ".png" : Wallpapers.url
         password: root.password
         status: root.status
         statusIsError: root.statusIsError
