@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import qs.Commons
 import qs.Ui
 
@@ -103,6 +104,27 @@ Rectangle {
         source: thumb.fileKind === "image" ? "file://" + thumb.path : ""
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
+        // Masked to the tile's rounded corner, or a photo's square corner would poke past
+        // the disc-shaped frame the card draws around it.
+        layer.enabled: thumb.fileKind === "image"
+        layer.effect: MultiEffect {
+          maskEnabled: true
+          maskSource: picMask
+        }
+      }
+
+      Item {
+        id: picMask
+
+        anchors.fill: parent
+        visible: false
+        layer.enabled: true
+
+        Rectangle {
+          anchors.fill: parent
+          radius: Theme.nearbyThumbRadius
+          color: "black"
+        }
       }
 
       Rectangle {

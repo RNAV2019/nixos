@@ -169,11 +169,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792056293,
-        "narHash": "sha256-H2wGrjy3/l8hHZjpTabPSkM6EocN7v8pn/F4MR7cJmE=",
+        "lastModified": 1792269116,
+        "narHash": "sha256-DM/oq4QdW3Go+YYWkMYUFH0eBmg0DYdYkwQZVizwD4Q=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "4e80fdc9b04f4531a78c89f6dff66e0a4d920b3f",
+        "rev": "7d7c95da89c6cf3550358286aea333f0b90a93fc",
         "type": "github"
       },
       "original": {
@@ -191,8 +191,8 @@
         "omdrop-plugin": "omdrop-plugin"
       },
       "locked": {
-        "lastModified": 1792192048,
-        "narHash": "sha256-cYi0EJcxa5Gl4JKPbYJeKn9kzTcj8RjyRabQ24b+vAo=",
+        "lastModified": 1792263439,
+        "narHash": "sha256-Gm94POx9lNkEiR3DLRjpS82zO4RQUFRnHsckdekHpwI=",
         "path": "/home/ryan/Projects/nearby",
         "type": "path"
       },

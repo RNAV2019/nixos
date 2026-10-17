@@ -226,6 +226,9 @@ in {
     kitty
 
     nautilus
+    # The Nearby panel's "Choose files" chooser: a separate toplevel, since an in-process
+    # dialog would sit under the panel's full-screen layer surface.
+    zenity
 
     localsend
     tigervnc

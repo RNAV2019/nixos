@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Dialogs
 import Quickshell
 import Quickshell.Io
 import qs.Commons
@@ -23,6 +22,11 @@ Variants {
     openHeight: (direction === "send" ? sendView : receiveView).contentHeight
     openRadius: Theme.nearbyRadius
 
+    // While the chooser runs it is a free-standing toplevel, so the window must stop
+    // swallowing the clicks that land on it and keep only its own card as a target. The rest
+    // of the time the whole window stays a dismiss target, as every other surface's does.
+    passThrough: filePicker.running
+
     // "send" | "receive". A drop on the island always lands in Send.
     property string direction: "send"
 
@@ -30,11 +34,35 @@ Variants {
     property var files: []
     property int filesBytes: 0
 
-    // The drop well arms while files hover over it (board 16f), or when the island opened
-    // this panel for a drag that has not landed yet.
-    property bool dropArmed: false
+    // The hover preview over an image row: what to show and where the cursor is, in the
+    // window's coordinates. Drawn through IslandSurface.overlay so the card never trims it.
+    property bool previewActive: false
+    property string previewSource: ""
+    property real previewX: 0
+    property real previewY: 0
 
     readonly property bool hasFiles: files.length > 0
+
+    // A sibling of the card, so the preview can spill past the panel without being clipped.
+    overlay: [
+      HoverPreview {
+        active: win.previewActive
+        source: win.previewSource
+        anchorX: win.previewX
+        anchorY: win.previewY
+      }
+    ]
+
+    // Spawns zenity as a separate window rather than an in-process dialog, which the panel's
+    // full-screen layer surface would otherwise cover. Paths arrive one per line on stdout.
+    function chooseFiles() {
+      filePicker.running = false;
+      filePicker.running = true;
+    }
+
+    // Outbound sends that predate the current staging. A finished send from an earlier round
+    // must not put a check on a tile the moment files are staged again.
+    property var preStageIds: []
 
     function addFiles(paths) {
       var next = files.slice();
@@ -43,6 +71,7 @@ Variants {
           next.push(paths[i]);
       }
       files = next;
+      preStageIds = Nearby.terminalOutboundIds();
       probeSizes();
     }
 
@@ -63,11 +92,10 @@ Variants {
     Connections {
       target: Nearby
 
-      function onSendRequested(paths, armed) {
+      function onSendRequested(paths) {
         win.direction = "send";
         if (paths && paths.length > 0)
           win.addFiles(paths);
-        win.dropArmed = armed;
       }
 
       function onReceiveRequested() {
@@ -77,11 +105,14 @@ Variants {
 
     onOpenChanged: {
       if (open) {
+        // A panel opened straight into a direction (a drop, the receive IPC) has to arm
+        // the stack itself; onDirectionChanged only fires on a change while open.
         if (direction === "send")
-          Nearby.scanOn(25);
+          Nearby.scanOn(0);
+        else
+          Nearby.turnOnForever();
       } else {
         Nearby.scanOff();
-        dropArmed = false;
       }
     }
 
@@ -89,21 +120,36 @@ Variants {
       if (!open)
         return;
       if (direction === "send") {
-        Nearby.scanOn(25);
+        // One scan for as long as Send is up; the daemon keeps its peer table across a
+        // scan, so there is nothing to re-arm and no churn to slow discovery down.
+        Nearby.scanOn(0);
       } else {
         // Receiving means the window is open: the radar and the timer chip only make
-        // sense while devices can see us.
+        // sense while devices can see us. The window stays open until it is turned off,
+        // since the phone's own "Everyone" reverts after 10 minutes regardless.
         Nearby.scanOff();
-        Nearby.turnOn();
+        Nearby.turnOnForever();
       }
     }
 
-    // Peer ids live for one scan only, so the send view keeps re-arming one.
-    Timer {
-      interval: 20000
-      running: win.open && win.direction === "send"
-      repeat: true
-      onTriggered: Nearby.scanOn(25)
+    // The external chooser: its own process, so it is not caught by the layer surface.
+    Process {
+      id: filePicker
+
+      command: ["zenity", "--file-selection", "--multiple", "--separator=\n", "--title", "Choose files to send"]
+
+      stdout: StdioCollector {
+        onStreamFinished: {
+          var out = text.trim();
+          if (out !== "")
+            win.addFiles(out.split("\n"));
+        }
+      }
+
+      onExited: function (code) {
+        if (code !== 0 && code !== 1)
+          Nearby.showNotice("error", "File chooser failed (" + code + ")");
+      }
     }
 
     Process {
@@ -123,46 +169,10 @@ Variants {
       }
     }
 
-    FileDialog {
-      id: picker
-
-      fileMode: FileDialog.OpenFiles
-      onAccepted: win.addFiles(selectedFiles.map(function (u) {
-        return Nearby.pathFromUrl(u);
-      }))
-    }
-
     onKeyPressed: function (event) {
       if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
         direction = direction === "send" ? "receive" : "send";
         event.accepted = true;
-      }
-    }
-
-    // The whole body is a drop target in Send mode; entering arms the well.
-    DropArea {
-      id: dropArea
-
-      x: Theme.nearbyInset
-      y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap
-      width: Theme.nearbyWidth - Theme.nearbyInset * 2
-      height: direction === "send" ? (win.hasFiles ? Theme.nearbyFilesHeight : Theme.nearbyDropHeight) : 0
-      enabled: win.open && direction === "send"
-
-      onEntered: function (drag) {
-        win.dropArmed = true;
-      }
-
-      onExited: {
-        win.dropArmed = false;
-      }
-
-      onDropped: function (drop) {
-        if (drop.hasUrls) {
-          win.addFiles(Nearby.pathsFromUrls(drop.urls));
-          win.dropArmed = false;
-          drop.acceptProposedAction();
-        }
       }
     }
 
@@ -232,7 +242,8 @@ Variants {
           height: Theme.nearbyBodyGap
         }
 
-        // The drop well (board 16a idle, 16f armed) or the files card (board 16b).
+        // The files card (board 16b), or the chooser well when nothing is staged yet. The
+        // well is not a drop target any more: drops land on the collapsed pill.
         Item {
           width: Theme.nearbyWidth
           height: win.hasFiles ? Theme.nearbyFilesHeight : Theme.nearbyDropHeight
@@ -245,22 +256,14 @@ Variants {
             width: Theme.nearbyWidth - Theme.nearbyInset * 2
             height: Theme.nearbyDropHeight
             radius: Theme.nearbyDropRadius
-            color: win.dropArmed ? Theme.withAlpha(Theme.accentFill, 0.08) : Theme.withAlpha(Theme.surfaceSubtle, 0.85)
-
-            Behavior on color {
-              Tint {}
-            }
+            color: Theme.withAlpha(Theme.surfaceSubtle, 0.85)
 
             DashedOutline {
               anchors.fill: parent
               anchors.margins: 1
               cornerRadius: Theme.nearbyDropRadius
               strokeWidth: Theme.nearbyDropStroke
-              strokeColor: win.dropArmed ? Theme.withAlpha(Theme.accentFill, 0.85) : Theme.withAlpha(Theme.separator, 0.9)
-
-              Behavior on strokeColor {
-                Tint {}
-              }
+              strokeColor: Theme.withAlpha(Theme.separator, 0.9)
             }
 
             Column {
@@ -269,19 +272,13 @@ Variants {
 
               StrokeIcon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                size: win.dropArmed ? Theme.nearbyDropGlyphArmed : Theme.nearbyDropGlyph
+                size: Theme.nearbyDropGlyph
                 strokeWidth: 1.6
-                path: win.dropArmed ? IconPaths.download : IconPaths.upload
-                color: win.dropArmed ? Theme.accentFill : Theme.inkSecondary
-
-                Behavior on color {
-                  Tint {}
-                }
+                path: IconPaths.upload
+                color: Theme.inkSecondary
               }
 
-              // Armed, the well is pure target: the button steps aside.
               Rectangle {
-                visible: !win.dropArmed
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: chooseLabel.implicitWidth + Theme.nearbyDeviceGlyph + 24
                 height: 36
@@ -325,12 +322,12 @@ Variants {
                   anchors.fill: parent
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: picker.open()
+                  onClicked: win.chooseFiles()
                 }
 
                 Accessible.role: Accessible.Button
                 Accessible.name: "Choose files"
-                Accessible.onPressAction: picker.open()
+                Accessible.onPressAction: win.chooseFiles()
               }
             }
           }
@@ -341,7 +338,7 @@ Variants {
             y: 0
             files: win.files
             totalBytes: win.filesBytes
-            onAddClicked: picker.open()
+            onAddClicked: win.chooseFiles()
             onClearClicked: win.clearFiles()
           }
         }
@@ -367,12 +364,15 @@ Variants {
           }
 
           Row {
-            x: Theme.nearbyWidth - Theme.nearbySectionSide - width
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.nearbySectionSide
             height: 14
             spacing: 5
 
+            readonly property bool notice: Nearby.noticeText !== ""
+
             StrokeIcon {
-              visible: Nearby.wifiPaused
+              visible: Nearby.wifiPaused && !parent.notice
               anchors.verticalCenter: parent.verticalCenter
               size: 14
               strokeWidth: 1.8
@@ -380,10 +380,14 @@ Variants {
               color: Theme.gold
             }
 
+            // A daemon notice ("AirDrop did not start: …") takes the slot; otherwise the
+            // gold Wi-Fi note, then Scanning.
             Text {
               anchors.verticalCenter: parent.verticalCenter
-              text: Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
-              color: Nearby.wifiPaused ? Theme.gold : Theme.accentFill
+              width: Math.min(implicitWidth, Theme.nearbyWidth - Theme.nearbySectionSide * 2 - 20)
+              elide: Text.ElideRight
+              text: parent.notice ? Nearby.noticeText : Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
+              color: parent.notice && Nearby.noticeLevel === "error" ? Theme.love : Nearby.wifiPaused ? Theme.gold : Theme.accentFill
               font.family: Theme.uiFont
               font.pixelSize: Theme.nearbySectionSize
               font.weight: Theme.weightMedium
@@ -417,7 +421,7 @@ Variants {
 
                 peer: modelData
                 filesReady: win.hasFiles
-                transfer: Nearby.outgoingFor(modelData)
+                transfer: Nearby.outgoingFor(modelData, win.preStageIds)
                 onTapped: Nearby.send(win.files, modelData.id)
                 onCancelTapped: {
                   if (transfer && transfer.id)
@@ -439,7 +443,7 @@ Variants {
       visible: opacity > 0
 
       readonly property int incomingCount: Math.min(3, Nearby.pendingInbound.length)
-      readonly property int rowCount: Math.min(3, Nearby.received.length)
+      readonly property int rowCount: Math.min(4, Nearby.receivedList.length)
       readonly property real contentHeight: receiveCol.implicitHeight + Theme.nearbyPadTop + 18
 
       Behavior on opacity {
@@ -498,6 +502,28 @@ Variants {
           height: Theme.nearbyBodyGap
         }
 
+        // A daemon notice, so a failed mode switch or window says why instead of looking
+        // like nothing happened.
+        Item {
+          width: Theme.nearbyWidth
+          height: Nearby.noticeText !== "" ? 22 : 0
+          visible: height > 0
+          clip: true
+
+          Text {
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.nearbySectionSide
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(implicitWidth, Theme.nearbyWidth - Theme.nearbySectionSide * 2)
+            elide: Text.ElideRight
+            text: Nearby.noticeText
+            color: Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary
+            font.family: Theme.uiFont
+            font.pixelSize: Theme.nearbySectionSize
+            font.weight: Theme.weightMedium
+          }
+        }
+
         RadarView {
           width: Theme.nearbyWidth
           deviceName: Nearby.deviceName
@@ -533,7 +559,8 @@ Variants {
           height: receiveView.incomingCount > 0 ? Theme.nearbyReceivedGap : Theme.nearbyReceivedGap + 2
         }
 
-        // "Received" and the Downloads link, which opens the folder the daemon saved to.
+        // "Received", a Clear that empties the list, and the Downloads link that opens the
+        // folder the daemon saved to.
         Item {
           width: Theme.nearbyWidth
           height: 14
@@ -573,6 +600,8 @@ Variants {
           }
 
           MouseArea {
+            id: downloadsArea
+
             x: downloadsLink.x - 6
             y: -4
             width: downloadsLink.width + 12
@@ -580,11 +609,55 @@ Variants {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: Nearby.openDownloads()
+
+            Accessible.role: Accessible.Button
+            Accessible.name: "Open Downloads"
+            Accessible.onPressAction: Nearby.openDownloads()
           }
 
-          Accessible.role: Accessible.Button
-          Accessible.name: "Open Downloads"
-          Accessible.onPressAction: Nearby.openDownloads()
+          // Clear sits to the left of Downloads and only appears once there is a history.
+          Row {
+            id: clearLink
+
+            x: downloadsLink.x - width - 16
+            height: 14
+            spacing: 5
+            visible: Nearby.receivedList.length > 0
+
+            StrokeIcon {
+              anchors.verticalCenter: parent.verticalCenter
+              size: 14
+              strokeWidth: 1.8
+              path: IconPaths.x
+              color: clearArea.containsMouse ? Theme.inkPrimary : Theme.inkSecondary
+            }
+
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Clear"
+              color: clearArea.containsMouse ? Theme.inkPrimary : Theme.inkSecondary
+              font.family: Theme.uiFont
+              font.pixelSize: Theme.nearbySectionSize
+              font.weight: Theme.weightMedium
+            }
+          }
+
+          MouseArea {
+            id: clearArea
+
+            visible: clearLink.visible
+            x: clearLink.x - 6
+            y: -4
+            width: clearLink.width + 12
+            height: clearLink.height + 8
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: Nearby.clearReceived()
+
+            Accessible.role: Accessible.Button
+            Accessible.name: "Clear received"
+            Accessible.onPressAction: Nearby.clearReceived()
+          }
         }
 
         Item {
@@ -593,23 +666,49 @@ Variants {
         }
 
         Repeater {
-          model: Nearby.received.slice(0, 3)
+          model: Nearby.receivedList.slice(0, 4)
 
           Item {
             required property var modelData
             required property int index
 
             width: Theme.nearbyWidth
-            height: Theme.nearbyRowHeight + (index > 0 ? Theme.nearbyRowGap : 0)
+            height: Theme.nearbyRowHeight
 
             ReceivedRow {
               id: receivedRow
 
               x: Theme.nearbyInset
-              y: index > 0 ? Theme.nearbyRowGap : 0
+              y: 0
               transfer: modelData
               fresh: Nearby.lastArrival === modelData.id
+              progress: Nearby.progressOf(modelData)
+              groupPosition: {
+                var n = Nearby.receivedList.length;
+                if (n <= 1)
+                  return "only";
+                if (index === 0)
+                  return "first";
+                if (index === n - 1)
+                  return "last";
+                return "middle";
+              }
               onClicked: Nearby.openFile(receivedRow.path)
+              onHoverMoved: function (lx, ly) {
+                if (!receivedRow.isImage) {
+                  win.previewActive = false;
+                  return;
+                }
+                // Map to the card, not the window: a Quickshell PanelWindow is not a
+                // QQuickItem, so mapToItem(win, …) throws. The overlay shares the window's
+                // origin, so the card's own offset puts the cursor back in window space.
+                var p = receivedRow.mapToItem(win.surface, lx, ly);
+                win.previewX = win.surface.x + p.x;
+                win.previewY = win.surface.y + p.y;
+                win.previewSource = "file://" + receivedRow.path;
+                win.previewActive = true;
+              }
+              onHoverExited: win.previewActive = false
             }
           }
         }

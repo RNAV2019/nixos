@@ -115,7 +115,7 @@ ShellRoot {
     }
 
     function send(path: string): void {
-      Nearby.requestSend([path], false);
+      Nearby.requestSend([path]);
     }
 
     // Jump straight to the receive view: `qs ipc call nearby receive`.

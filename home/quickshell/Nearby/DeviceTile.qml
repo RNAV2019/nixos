@@ -25,7 +25,9 @@ Item {
   implicitHeight: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap + nameLine + (hasSub ? Theme.nearbyDeviceSubGap + Theme.nearbyDeviceSubHeight : 0)
 
   readonly property bool dimmed: !filesReady
-  readonly property string state: transfer && transfer.state ? transfer.state : ""
+  // Once the staged files are cleared the tile drops back to its device glyph: a finished
+  // check belongs to the send that is still staged, not to the device forever.
+  readonly property string state: filesReady && transfer && transfer.state ? transfer.state : ""
   readonly property bool sending: state === "connecting" || state === "waiting_consent" || state === "in_progress"
   readonly property bool sent: state === "finished"
   readonly property bool failed: state === "failed" || state === "rejected" || state === "cancelled"

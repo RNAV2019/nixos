@@ -61,20 +61,66 @@ Singleton {
     return (b.started || 0) - (a.started || 0);
   })
 
+  // The panel's arrival list: anything inbound that has passed consent, receiving or done,
+  // newest first, so an in-flight transfer shows its progress bar in place.
+  readonly property var receivedList: root.transfers.filter(function (t) {
+    return t.direction === "in" && (t.state === "in_progress" || t.state === "finished");
+  }).slice().sort(function (a, b) {
+    return (b.started || 0) - (a.started || 0);
+  })
+
+  // 0..1 for a row's background bar; a finished transfer is full.
+  function progressOf(t) {
+    if (!t)
+      return 0;
+    if (t.state === "finished")
+      return 1;
+    if (!t.total_bytes || t.total_bytes <= 0)
+      return 0;
+    return Theme.clamp01((t.bytes || 0) / t.total_bytes);
+  }
+
+  function isTerminalState(s) {
+    return s === "finished" || s === "rejected" || s === "cancelled" || s === "failed";
+  }
+
   // The newest row to arrive while the panel has been up, for its 4 s accent edge.
   property string lastArrival: ""
 
+  // The latest daemon notice, shown in the panel so a failure is not silent.
+  property string noticeText: ""
+  property string noticeLevel: ""
+
   signal notice(string level, string message)
 
+  Timer {
+    id: noticeClear
+
+    interval: 6000
+    onTriggered: {
+      root.noticeText = "";
+      root.noticeLevel = "";
+    }
+  }
+
+  function showNotice(level, message) {
+    if (!message)
+      return;
+    root.noticeLevel = level;
+    root.noticeText = message;
+    noticeClear.restart();
+    root.notice(level, message);
+  }
+
   // Raised when something asks the panel to open in Send mode with a set of files - a drop
-  // on the island adds them at once, a rest over the island arms the drop zone instead.
-  signal sendRequested(var files, bool armed)
+  // on the island adds them at once.
+  signal sendRequested(var files)
 
   // Raised to open the panel on the receive view.
   signal receiveRequested
 
-  function requestSend(files, armed) {
-    sendRequested(files, armed);
+  function requestSend(files) {
+    sendRequested(files);
     // The island asks while no panel is up; a second ask with one already open just
     // updates its staged files.
     if (Bus.ownerOf("nearby") === "")
@@ -121,7 +167,14 @@ Singleton {
       upsertTransfer(ev.transfer);
       break;
     case "notice":
-      root.notice(ev.level !== undefined ? ev.level : "info", ev.message !== undefined ? ev.message : "");
+      root.showNotice(ev.level !== undefined ? ev.level : "info", ev.message !== undefined ? ev.message : "");
+      break;
+    case "transfers_cleared":
+      // The daemon keeps anything still running; drop the same set here so a reconnect
+      // does not resurrect what the panel just cleared.
+      root.transfers = root.transfers.filter(function (t) {
+        return !root.isTerminalState(t.state);
+      });
       break;
     }
   }
@@ -180,14 +233,31 @@ Singleton {
     transfers = next.slice(-50);
   }
 
-  // The live outbound row for a device tile, matched on the name the daemon recorded.
-  function outgoingFor(peer) {
+  // Finished/failed sends known right now; a panel snapshots these when it stages files so a
+  // completed send from an earlier round cannot light a tile before this round is sent. Sends
+  // still in flight are deliberately left out, so their progress keeps showing if more files
+  // are added mid-send.
+  function terminalOutboundIds() {
+    var out = [];
+    for (var i = 0; i < transfers.length; i++) {
+      var t = transfers[i];
+      if (t.direction === "out" && root.isTerminalState(t.state))
+        out.push(t.id);
+    }
+    return out;
+  }
+
+  // The live outbound row for a device tile, matched on the name the daemon recorded. Ids in
+  // `ignoreIds` belong to a previous staging and are skipped.
+  function outgoingFor(peer, ignoreIds) {
     if (!peer)
       return null;
     var found = null;
     for (var i = 0; i < transfers.length; i++) {
       var t = transfers[i];
       if (t.direction !== "out")
+        continue;
+      if (ignoreIds && ignoreIds.indexOf(t.id) !== -1)
         continue;
       if (t.peer !== peer.name && t.peer !== peer.id && t.id !== peer.id)
         continue;
@@ -207,6 +277,14 @@ Singleton {
 
   function turnOn() {
     windowCall.command = ["nearby", "on"];
+    windowCall.errText = "";
+    windowCall.running = true;
+  }
+
+  // Visible until turned off (the daemon's `on 0`): receive mode should not expire out from
+  // under a phone whose own "Everyone" window has already reverted to Contacts.
+  function turnOnForever() {
+    windowCall.command = ["nearby", "on", "forever"];
     windowCall.errText = "";
     windowCall.running = true;
   }
@@ -236,6 +314,13 @@ Singleton {
     sendCall.command = ["nearby", "send", "--detach"].concat(files).concat(["--to", peerRef]);
     sendCall.errText = "";
     sendCall.running = true;
+  }
+
+  // Forget the finished/declined/cancelled rows so the received list does not grow forever.
+  function clearReceived() {
+    clearCall.command = ["nearby", "clear"];
+    clearCall.errText = "";
+    clearCall.running = true;
   }
 
   function accept(id) {
@@ -275,7 +360,7 @@ Singleton {
     if (code === 0)
       return;
     var text = proc.errText !== undefined ? proc.errText : "";
-    root.notice("error", what + (text !== "" ? ": " + text : ""));
+    root.showNotice("error", what + (text !== "" ? ": " + text : ""));
   }
 
   Process {
@@ -358,6 +443,14 @@ Singleton {
 
     onExited: function (code) {
       root.fail(answerCall, "Answer", code);
+    }
+  }
+
+  Call {
+    id: clearCall
+
+    onExited: function (code) {
+      root.fail(clearCall, "Clear", code);
     }
   }
 }

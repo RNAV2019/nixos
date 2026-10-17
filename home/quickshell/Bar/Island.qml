@@ -86,9 +86,9 @@ FrostedSurface {
 
   clipContent: true
 
-  // Board 16e: a file drag turns the pill into a 248 x 52 drop well. The well arms after
-  // a 50 ms hover and unwinds after a 40 ms grace; resting 300 ms opens the Nearby panel
-  // with its drop zone armed, and a drop on the pill adds the files straight away.
+  // Board 16e: a file drag turns the pill into a 248 x 52 drop well. The well arms after a
+  // 50 ms hover and unwinds after a 40 ms grace; a drop on the pill opens the Nearby panel in
+  // Send mode with the files already staged.
   property bool dropArmed: false
 
   Timer {
@@ -105,14 +105,6 @@ FrostedSurface {
     onTriggered: root.dropArmed = false
   }
 
-  Timer {
-    id: dragDwell
-
-    interval: 300
-    onTriggered: if (root.dropArmed)
-      Nearby.requestSend([], true)
-  }
-
   DropArea {
     id: fileDrop
 
@@ -120,29 +112,24 @@ FrostedSurface {
     anchors.fill: parent
     enabled: !root.suppressed && !root.expanded
 
-    onEntered: function (drag) {
+    onEntered: {
       dragArm.restart();
       dragGrace.stop();
-      dragDwell.restart();
     }
 
     onExited: {
       dragArm.stop();
-      dragDwell.stop();
       if (root.dropArmed)
         dragGrace.restart();
-      else
-        dragArm.stop();
     }
 
     onDropped: function (drop) {
       if (!drop.hasUrls)
         return;
       dragArm.stop();
-      dragDwell.stop();
       dragGrace.stop();
       root.dropArmed = false;
-      Nearby.requestSend(Nearby.pathsFromUrls(drop.urls), false);
+      Nearby.requestSend(Nearby.pathsFromUrls(drop.urls));
       drop.acceptProposedAction();
     }
   }

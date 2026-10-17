@@ -24,6 +24,10 @@ PanelWindow {
   // Some keyboard-first surfaces hide the pointer for their whole mapped window, not just the
   // card. The guard below accepts no buttons and only owns the cursor.
   property bool hideCursor: false
+  // A surface that spawns its own toplevel (the Nearby panel's file chooser) must not have
+  // the full-screen window swallow input aimed at it. When set, only the card is a target;
+  // clicks outside fall through to whatever is below.
+  property bool passThrough: false
   property alias origin: origin
   property alias surface: surface
 
@@ -118,6 +122,16 @@ PanelWindow {
   }
 
   exclusionMode: ExclusionMode.Ignore
+
+  // Unset, the whole window is the surface's input region, and a click off the card hits the
+  // dismiss MouseArea below. passThrough narrows it to the card so a spawned picker stays live.
+  mask: win.passThrough ? cardMask : null
+
+  Region {
+    id: cardMask
+
+    item: surface
+  }
 
   // Hyprland focuses an OnDemand surface when it first maps but not on None -> OnDemand, and
   // this one stays mapped through its close. Exclusive covers it, but would eat all pointers.
@@ -333,5 +347,16 @@ PanelWindow {
         }
       }
     }
+  }
+
+  // Content that must draw past the card, as a sibling of the surface: the card's clip is a
+  // mask on the surface, not the window, so a child here is never trimmed. The window is
+  // full-screen, so it can sit anywhere on the output. It carries no input of its own.
+  property alias overlay: overlayHolder.data
+
+  Item {
+    id: overlayHolder
+
+    anchors.fill: parent
   }
 }

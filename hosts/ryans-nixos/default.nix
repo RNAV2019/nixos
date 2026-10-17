@@ -11,11 +11,16 @@
 
   # Quick Share and AirDrop (`nearby`). The Intel BE211 runs AWDL only in
   # omdrop-owl's exclusive mode: Wi-Fi drops while an AirDrop window is open.
-  # Notifications are off: the Nearby panel shows consent prompts and arrivals.
+  # Quick Share is visible from boot (android_visible_on_start), so the laptop
+  # is discoverable without opening the quickshell panel. Notifications stay on:
+  # nearbyd sends the consent prompt as a persistent, actionable notification,
+  # which the shell's island toast renders with Accept/Decline so a transfer can
+  # be answered without opening the panel.
   services.nearby = {
     enable = true;
     user = "ryan";
-    settings.notifications = false;
+    settings.notifications = true;
+    settings.android_visible_on_start = true;
   };
 
   home-manager.users.ryan = {
