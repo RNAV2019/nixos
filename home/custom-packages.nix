@@ -126,15 +126,8 @@
       '';
     };
 
-  ani-cli = pkgs.ani-cli.overrideAttrs {
-    version = "5.1";
-    src = pkgs.fetchFromGitHub {
-      owner = "pystardust";
-      repo = "ani-cli";
-      tag = "v5.1";
-      hash = "sha256-lPQA3iO3F/9NS2IziQccsJ3aai6WMQy6YObdB3mDCZA=";
-    };
-  };
+  # nixpkgs is at 5.1 now; the old pin was dropped for binary-cache hits.
+  ani-cli = pkgs.ani-cli;
 in {
   home.packages = [
     ani-cli

@@ -25,6 +25,28 @@
     runtimeInputs = [pkgs.coreutils pkgs.util-linux];
     text = builtins.readFile ./helix/typst-preview/preview-window.sh;
   };
+
+  # The Steel fork pins grammar revisions that predate two upstream compiler
+  # fixes, so patch them the same way nixpkgs patches its own Helix grammars.
+  grammarFixes = [
+    (final: prev: {
+      # glibc 2.44 defines bsearch as a macro, colliding with the pinned grammar's
+      # own bsearch.c. Drop it; tree-sitter-perl#220 does the same upstream.
+      perl = prev.perl.overrideAttrs {
+        postPatch = ''
+          rm src/bsearch.c
+          substituteInPlace src/tsp_unicode.h \
+            --replace-fail '#include "bsearch.c"' ""
+        '';
+      };
+
+      # GCC 16 miscompiles the pinned Haskell scanner without this; see
+      # NixOS/nixpkgs#569011.
+      haskell = prev.haskell.overrideAttrs (old: {
+        NIX_CFLAGS_COMPILE = (old.NIX_CFLAGS_COMPILE or "") + " -fno-strict-aliasing";
+      });
+    })
+  ];
 in {
   home.packages = [typst-preview-window];
 
@@ -44,7 +66,9 @@ in {
 
   programs.helix = {
     enable = true;
-    package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+      grammarOverlays = grammarFixes;
+    };
 
     settings = {
       # themes/current.toml links to the active theme's file; see theme.nix.

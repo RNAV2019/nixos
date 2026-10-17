@@ -2,7 +2,6 @@
   config,
   lib,
   pkgs,
-  hyprland,
   ...
 }: let
   inherit (lib.generators) mkLuaInline;
@@ -61,7 +60,6 @@ in {
 
   wayland.windowManager.hyprland = {
     enable = true;
-    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     configType = "lua";
 
     # UWSM owns the user systemd session.
@@ -351,6 +349,8 @@ in {
 
           (bind "ALT + P" (exec "qs ipc call profiles toggle"))
 
+          (bind "ALT + N" (exec "qs ipc call nearby toggle"))
+
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
           (bind "XF86AudioNext" (exec "playerctl next"))
@@ -403,7 +403,7 @@ in {
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|notifications|osd|panel)";
           no_anim = true;
         }
       ];

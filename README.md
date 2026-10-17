@@ -111,11 +111,9 @@ keeping only what is true of the new hardware: the hardware import, both
 # and without it nothing below decrypts.
 sudo install -Dm600 /path/to/age.key /etc/nixos-secrets/age.key
 
-# The first build has to enable flakes and the Hyprland cache itself, because
-# the config that sets them is not active yet.
-sudo NIX_CONFIG='experimental-features = nix-command flakes
-extra-substituters = https://hyprland.cachix.org
-extra-trusted-public-keys = hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc=' \
+# The first build has to enable flakes itself, because the config that sets
+# them is not active yet.
+sudo NIX_CONFIG='experimental-features = nix-command flakes' \
   nixos-rebuild switch --flake ~/nixos#$host
 
 # Put the data back. Everything this needs was decrypted by the rebuild above,

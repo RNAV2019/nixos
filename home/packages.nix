@@ -12,17 +12,17 @@
     bitwarden = {
       id = "nngceckbapebfimnlniiiahkandclblb";
       version = "2026.8.0";
-      hash = "sha256-0aWULZwjTQM4LamSeZMgVQZMquejLMmxV5QMhjFl1Z8=";
+      hash = "sha256-8v63/EbSVQvvm2mvHMNYrqJrkKlHZF+d4W7BTZKW72k=";
     };
     better-lyrics = {
       id = "effdbpeggelllpfkjppbokhmmiinhlmg";
       version = "2.3.3";
-      hash = "sha256-ozei1UtnBBP2v49I8DTmrACnNvlj7ay0N4P0ycfOwyM=";
+      hash = "sha256-hPeaaZ4l5oTahB5Ad2eMI+9DXNqcCRI+ocW5pYk1hk4=";
     };
     better-lyrics-shaders = {
       id = "mffpncjphfmkppebdoaehdlnagnlpfai";
       version = "1.2.0";
-      hash = "sha256-h6zGfE7b1d+SInTZU9gLomS0c3uMepufh67F9sjRG4w=";
+      hash = "sha256-WES3hJ0iXlYTkf3uzWIhtBwZaVJh5PX6xgTGmPbK4Ko=";
     };
     pdf-viewer = {
       id = "oemmndcbldboiebfnladdacbdfmadadm";
@@ -286,31 +286,8 @@ in {
     # Defined in modules/system/default.nix.
     rustToolchain
     nodejs_latest
-    # Pinned newer than nixpkgs (1.32.0)
-    (aube.overrideAttrs (finalAttrs: prev: {
-      version = "1.41.0";
-      src = pkgs.fetchFromGitHub {
-        owner = "endevco";
-        repo = "aube";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-CtqKNNKj4QUz6nZU/PVL/b8nnmBh6Lahj+ngUl34iVg=";
-      };
-      # cargoHash is baked in before overrideAttrs, so replace cargoDeps directly.
-      cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-        inherit (finalAttrs) src;
-        hash = "sha256-Pj7TBxzaCJMP3AcDWMlG1iE+nlSzx0NjU6aFVV5kGrc=";
-      };
-      # Lifecycle-script tests run `node`.
-      nativeCheckInputs = prev.nativeCheckInputs ++ [pkgs.nodejs];
-      checkFlags = [
-        # Upstream's .cargo/config.toml serialises tests, but the cargo hook replaces it.
-        "--test-threads=1"
-        # Needs a release-only corpus missing from the source tarball.
-        "--skip=commands::add_supply_chain::tests::bundled_corpus_detects_common_package_typo"
-        # Execs /bin/echo, absent in the sandbox.
-        "--skip=commands::exec::tests::bin_command_executes_native_target_behind_generated_shim"
-      ];
-    }))
+    # Stock nixpkgs build (v1.32.0) for binary-cache hits; no source rebuild.
+    aube
     jq
     openssl
     jdk21
@@ -333,18 +310,8 @@ in {
     tinymist
     # Typst notes TUI; previews via tinymist and Helium (see editors.nix).
     note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
-    # Pinned newer than nixpkgs (1.43.2)
-    (stripe-cli.overrideAttrs (finalAttrs: _prev: {
-      version = "1.50.4";
-      src = pkgs.fetchFromGitHub {
-        owner = "stripe";
-        repo = "stripe-cli";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-PEhVz8vKhnaCAfFeDovp3pTV50UzPzDLygZtUUeaStA=";
-      };
-      vendorHash = "sha256-ab3um1ewUzTUGUlIsm8ed8xtDKulmXiRN+HJK2wP2h8=";
-      doCheck = false;
-    }))
+    # Stock nixpkgs build for binary-cache hits; no Go compile.
+    stripe-cli
     nixd
     alejandra
     gnumake

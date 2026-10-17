@@ -171,7 +171,11 @@ Item {
         color: Theme.withAlpha(Theme.text, hovered && enabled ? Theme.controlMediaButtonHoverAlpha : Theme.controlMediaButtonAlpha)
         scale: buttonArea.pressed ? Theme.pressScale : 1
         enabled: Media.active
+        // Dimmed with a layer, not bare opacity: the glyphs are filled and stroked in one
+        // colour, and at half opacity that overlap composites twice into a bright ring
+        // around each glyph. Rasterising first makes the dim even.
         opacity: enabled ? 1 : 0.5
+        layer.enabled: opacity < 1
 
         activeFocusOnTab: true
         Accessible.role: Accessible.Button

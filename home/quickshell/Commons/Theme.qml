@@ -639,6 +639,123 @@ Singleton {
   readonly property int lockIn: 350
   readonly property int lockOut: 350
 
+  // The Nearby panel (boards 16a-16g). The 520 column carries two segmented tracks over
+  // a send body (a drop well or a files card) or a receive body (radar, consent card and
+  // arrivals); heights are the boards' measured stacks, not a fixed panel height.
+  readonly property int nearbyWidth: panelColumnWidth
+  readonly property int nearbyRadius: panelRadius
+  readonly property int nearbyInset: 13
+  readonly property int nearbyPadTop: 22
+  readonly property int nearbyPadBottom: 20
+
+  // The header: two 212 px segmented tracks, 20 px from either edge, each half carrying a
+  // glyph and a label. The chosen plate slides on the workspace-slot spring.
+  readonly property int nearbyHeaderHeight: 36
+  readonly property int nearbyHeaderSide: 20
+  readonly property int nearbyTrackWidth: 212
+  readonly property int nearbyTrackHeight: 36
+  readonly property int nearbyTrackRadius: 18
+  readonly property int nearbyChosenInset: 3
+  readonly property int nearbyChosenHeight: 30
+  readonly property int nearbyChosenRadius: 15
+  readonly property int nearbySegmentGlyph: 16
+  readonly property int nearbySegmentSize: 12
+  readonly property int nearbySegmentGap: 8
+
+  // The send body. The drop well and the files card take the same slot, so adding files
+  // collapses one into the other and the panel springs shorter.
+  readonly property int nearbyBodyGap: 20
+  readonly property int nearbyDropHeight: 184
+  readonly property int nearbyDropRadius: 20
+  readonly property real nearbyDropStroke: 1.5
+  readonly property int nearbyDropGlyph: 28
+  readonly property int nearbyDropGlyphArmed: 36
+  readonly property int nearbyFilesHeight: 88
+  readonly property int nearbyFilesRadius: 20
+  readonly property int nearbyThumbSize: 48
+  readonly property int nearbyThumbRadius: 10
+  readonly property int nearbyThumbGlyph: 22
+  readonly property int nearbyThumbGap: 6
+  readonly property int nearbyFilesTextGap: 16
+  readonly property int nearbyFilesTitleSize: 13
+  readonly property int nearbyFilesMetaSize: 11
+  readonly property int nearbyIconBtnSize: 32
+  readonly property int nearbyIconBtnGlyph: 16
+  readonly property int nearbyIconBtnGap: 8
+
+  // The "Nearby" section row and the device tiles under it. A tile is a 56 px disc on a
+  // 100 px pitch, ringed by a progress arc while sending and filled with a check when sent.
+  readonly property int nearbySectionSize: 11
+  readonly property int nearbySectionSide: 16
+  readonly property int nearbySectionGap: 8
+  readonly property int nearbyDeviceSlot: 100
+  readonly property int nearbyDeviceSize: 56
+  readonly property int nearbyDeviceGlyph: 22
+  readonly property int nearbyDeviceNameGap: 10
+  readonly property real nearbyDeviceNameSize: 11.5
+  readonly property real nearbyDeviceSubSize: 10.5
+  readonly property real nearbyDeviceSubGap: 2
+  readonly property int nearbyDeviceSubHeight: 13
+  readonly property real nearbyDeviceDim: 0.35
+  readonly property int nearbyRingSize: 64
+  readonly property real nearbyRingWidth: 2.5
+  readonly property int nearbyCancelSize: 20
+  readonly property int nearbyCancelGlyph: 12
+  readonly property int nearbyCancelStroke: 2
+  readonly property int nearbyCheckSize: 24
+
+  // The receive body: three breathing rings over a filled core, the name and the timer
+  // chip; an inbound consent card and the arrivals list below.
+  readonly property int nearbyRadarOuter: 156
+  readonly property int nearbyRadarMid: 120
+  readonly property int nearbyRadarInner: 86
+  readonly property int nearbyRadarCore: 56
+  readonly property int nearbyRadarGlyph: 24
+  readonly property int nearbyRadarNameGap: 4
+  readonly property int nearbyNameSize: 14
+  readonly property int nearbyChipGap: 7
+  readonly property int nearbyChipHeight: 26
+  readonly property int nearbyChipRadius: 13
+  readonly property real nearbyChipSize: 11.5
+  readonly property int nearbyChipGlyph: 14
+  readonly property int nearbyChipInnerGap: 6
+  readonly property int nearbyChipPairGap: 8
+  readonly property real nearbyRadarFill: 0.05
+  readonly property real nearbyRadarStroke: 0.15
+  // One outward breath, three rings staggered across it; off under REDUCE_MOTION.
+  readonly property int nearbyRadarLoop: 2400
+
+  readonly property int nearbyIncomingHeight: 64
+  readonly property int nearbyIncomingRadius: 16
+  readonly property int nearbyIncomingGlyph: 20
+  readonly property real nearbyIncomingSenderSize: 12.5
+  readonly property real nearbyIncomingMetaSize: 10.5
+  readonly property int nearbyPinSize: 12
+  readonly property int nearbyAnswerHeight: 26
+  readonly property int nearbyAnswerRadius: 13
+
+  readonly property int nearbyReceivedGap: 22
+  readonly property int nearbyRowHeight: 44
+  readonly property int nearbyRowRadius: 14
+  readonly property real nearbyRowNameSize: 12.5
+  readonly property int nearbyRowMetaSize: 12
+  readonly property int nearbyRowGlyph: 18
+  readonly property int nearbyRowTextLeft: 48
+  readonly property int nearbyRowInset: 16
+  readonly property int nearbyRowGap: 2
+  readonly property int nearbyRowsTop: 6
+  // The newest arrival wears an accent edge that fades away after this.
+  readonly property int nearbyArrivalGlow: 4000
+
+  // Board 16e: a file drag over the island turns the pill into a 248 x 52 drop well.
+  readonly property int nearbyDropTargetWidth: 248
+  readonly property int nearbyDropTargetHeight: 52
+  readonly property int nearbyDropWellInset: 6
+  readonly property int nearbyDropWellHeight: 40
+  readonly property int nearbyDropWellRadius: 20
+  readonly property real nearbyDropWellStroke: 1.25
+  readonly property int nearbyDropWellGlyph: 24
+
   // The pill's shut width, one per combination: it grows for a player and again for a
   // recording, but neither moves the clock, which stays centred in the current width.
   function islandCollapsedWidth(media, recording) {

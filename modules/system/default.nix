@@ -1,7 +1,7 @@
 {
   config,
+  lib,
   pkgs,
-  hyprland,
   fenix,
   ...
 }: let
@@ -38,13 +38,6 @@ in {
   nix.settings = {
     experimental-features = ["nix-command" "flakes"];
     auto-optimise-store = true;
-
-    # Without this a fresh machine compiles Hyprland from source, because the
-    # flake input tracks git rather than nixpkgs.
-    extra-substituters = ["https://hyprland.cachix.org"];
-    extra-trusted-public-keys = [
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
-    ];
   };
 
   nix.gc = {
@@ -105,18 +98,20 @@ in {
   };
   services.pulseaudio.enable = false;
 
+  # Stock nixpkgs package: Hydra-built (cache.nixos.org) and built against the
+  # same glibc as the system mesa, so /run/opengl-driver always loads.
   programs.hyprland = {
     enable = true;
     withUWSM = true;
-    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
-    portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
-  nixpkgs.overlays = [
-    (final: prev: {
-      xdg-desktop-portal-hyprland = hyprland.packages.${prev.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-    })
+  # Modern Hyprland packages wrap bin/Hyprland in a shell script, which the
+  # capability wrapper's ELF check rejects (NixOS/nixpkgs#573049). Point the
+  # wrapper at the real binary inside the wrapper instead.
+  security.wrappers.Hyprland.source =
+    lib.mkForce "${config.programs.hyprland.package}/bin/.Hyprland-wrapped";
 
+  nixpkgs.overlays = [
     fenix.overlays.default
 
     # Whole Rust toolchain from one stable manifest, so rust-analyzer never drifts

@@ -9,14 +9,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    hyprland.url = "github:hyprwm/Hyprland";
-
     helium-browser = {
       url = "github:schembriaiden/helium-browser-nix-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    llm-agents.url = "github:numtide/llm-agents.nix";
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Sonora music client (sonorahq.org); prebuilt release binary on x86_64-linux.
     sonora = {
@@ -58,7 +59,6 @@
   outputs = inputs @ {
     nixpkgs,
     home-manager,
-    hyprland,
     helium-browser,
     llm-agents,
     sonora,
@@ -96,7 +96,7 @@
         cp -R ${./home/quickshell} quickshell
         chmod -R u+w quickshell
         find quickshell -type f -name '*.qml' -print0 | while IFS= read -r -d "" file; do
-          qmlformat --force --inplace "$file"
+          qmlformat --inplace "$file"
         done
         touch "$out"
       '';
@@ -123,10 +123,10 @@
               # Preserve unmanaged files during activation.
               home-manager.backupFileExtension = "hm-backup";
               home-manager.users.ryan = import ./home/default.nix;
-              home-manager.extraSpecialArgs = {inherit hyprland helium-browser llm-agents sonora helix-steel note-tui fenix;};
+              home-manager.extraSpecialArgs = {inherit helium-browser llm-agents sonora helix-steel note-tui fenix;};
             }
           ];
-          specialArgs = {inherit hyprland helium-browser llm-agents sonora helix-steel note-tui fenix;};
+          specialArgs = {inherit helium-browser llm-agents sonora helix-steel note-tui fenix;};
         };
     in {
       ryans-nixos = mkHost "ryans-nixos";

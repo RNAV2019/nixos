@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  hyprland,
   helium-browser,
   llm-agents,
   ...

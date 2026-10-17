@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Control
 import qs.Launcher
 import qs.Lock
+import qs.Nearby
 import qs.Notifications
 import qs.Osd
 import qs.Power
@@ -25,6 +26,7 @@ ShellRoot {
   CalendarPanel {}
   ControlCenter {}
   Launcher {}
+  NearbyPanel {}
   Notifications {}
   Osd {}
   Profiles {}
@@ -37,10 +39,10 @@ ShellRoot {
   }
   LockPreview {}
 
-  // The five island surfaces with the same toggle/close pair; the recorder, theme and
-  // session targets stay handwritten below, since they differ.
+  // The island surfaces with the same toggle/close pair; the recorder, theme, session
+  // and nearby targets stay handwritten below, since they differ.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby")
 
     IpcHandler {
       required property string modelData
@@ -96,6 +98,29 @@ ShellRoot {
 
     function close(): void {
       Bus.closeSurface("recorder");
+    }
+  }
+
+  // Nearby also takes files, the same path a drop on the island does: `qs ipc call
+  // nearby send <path>` opens the panel in Send mode with the file staged.
+  IpcHandler {
+    target: "nearby"
+
+    function toggle(): void {
+      Bus.toggleSurface("nearby");
+    }
+
+    function close(): void {
+      Bus.closeSurface("nearby");
+    }
+
+    function send(path: string): void {
+      Nearby.requestSend([path], false);
+    }
+
+    // Jump straight to the receive view: `qs ipc call nearby receive`.
+    function receive(): void {
+      Nearby.requestReceive();
     }
   }
 

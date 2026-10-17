@@ -11,9 +11,11 @@
 
   # Quick Share and AirDrop (`nearby`). The Intel BE211 runs AWDL only in
   # omdrop-owl's exclusive mode: Wi-Fi drops while an AirDrop window is open.
+  # Notifications are off: the Nearby panel shows consent prompts and arrivals.
   services.nearby = {
     enable = true;
     user = "ryan";
+    settings.notifications = false;
   };
 
   home-manager.users.ryan = {

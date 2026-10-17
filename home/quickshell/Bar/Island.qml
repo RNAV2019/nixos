@@ -44,7 +44,7 @@ FrostedSurface {
   }
 
   property bool hoverOpen: false
-  readonly property bool expanded: !suppressed && (pinned || hoverOpen)
+  readonly property bool expanded: !suppressed && !dropArmed && (pinned || hoverOpen)
 
   // Opening is quick; closing has hysteresis so a pointer crossing the pill's edge does not
   // flicker the card shut.
@@ -86,9 +86,70 @@ FrostedSurface {
 
   clipContent: true
 
+  // Board 16e: a file drag turns the pill into a 248 x 52 drop well. The well arms after
+  // a 50 ms hover and unwinds after a 40 ms grace; resting 300 ms opens the Nearby panel
+  // with its drop zone armed, and a drop on the pill adds the files straight away.
+  property bool dropArmed: false
+
+  Timer {
+    id: dragArm
+
+    interval: 50
+    onTriggered: root.dropArmed = true
+  }
+
+  Timer {
+    id: dragGrace
+
+    interval: 40
+    onTriggered: root.dropArmed = false
+  }
+
+  Timer {
+    id: dragDwell
+
+    interval: 300
+    onTriggered: if (root.dropArmed)
+      Nearby.requestSend([], true)
+  }
+
+  DropArea {
+    id: fileDrop
+
+    z: 100
+    anchors.fill: parent
+    enabled: !root.suppressed && !root.expanded
+
+    onEntered: function (drag) {
+      dragArm.restart();
+      dragGrace.stop();
+      dragDwell.restart();
+    }
+
+    onExited: {
+      dragArm.stop();
+      dragDwell.stop();
+      if (root.dropArmed)
+        dragGrace.restart();
+      else
+        dragArm.stop();
+    }
+
+    onDropped: function (drop) {
+      if (!drop.hasUrls)
+        return;
+      dragArm.stop();
+      dragDwell.stop();
+      dragGrace.stop();
+      root.dropArmed = false;
+      Nearby.requestSend(Nearby.pathsFromUrls(drop.urls), false);
+      drop.acceptProposedAction();
+    }
+  }
+
   readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
-  implicitWidth: expanded ? Theme.islandExpandedWidth : collapsedWidth
+  implicitWidth: dropArmed ? Theme.nearbyDropTargetWidth : expanded ? Theme.islandExpandedWidth : collapsedWidth
   implicitHeight: targetHeight
 
   // Corner read off height, not animated: a per-frame fit gives radius = min(height / 2,
@@ -113,7 +174,7 @@ FrostedSurface {
     }
   }
 
-  readonly property real targetHeight: expanded ? Theme.islandExpandedHeight : Theme.barHeight
+  readonly property real targetHeight: dropArmed ? Theme.nearbyDropTargetHeight : expanded ? Theme.islandExpandedHeight : Theme.barHeight
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
   // The card is sized against the pill's height, so one animated property carries the layout
@@ -172,7 +233,7 @@ FrostedSurface {
     id: hover
 
     anchors.fill: parent
-    enabled: !root.suppressed
+    enabled: !root.suppressed && !root.dropArmed
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onContainsMouseChanged: {
@@ -210,7 +271,7 @@ FrostedSurface {
     radius: width / 2
     color: Theme.urgent
     visible: Recorder.recording && opacity > 0
-    opacity: root.expanded ? 0 : 1
+    opacity: root.expanded || root.dropArmed ? 0 : 1
 
     Behavior on opacity {
       Fade {}
@@ -225,7 +286,7 @@ FrostedSurface {
     y: root.midline - implicitHeight / 2
     playing: Media.playing
     visible: Media.active && opacity > 0
-    opacity: root.expanded ? 0 : 1
+    opacity: root.expanded || root.dropArmed ? 0 : 1
 
     Behavior on opacity {
       Fade {}
@@ -238,7 +299,7 @@ FrostedSurface {
 
     anchors.fill: parent
     opacity: root.expanded ? 1 : 0
-    visible: opacity > 0
+    visible: opacity > 0 && !root.dropArmed
 
     Behavior on opacity {
       Fade {}
@@ -374,6 +435,8 @@ FrostedSurface {
   RollingClock {
     id: clockLabel
 
+    visible: !root.dropArmed
+
     // Set at the open size and scaled down rather than animating pixel size, so the digits are
     // laid out once and the advance between them never shifts.
     readonly property real shownSize: Theme.islandClockSize + root.openness * (Theme.islandDisplaySize - Theme.islandClockSize)
@@ -393,5 +456,49 @@ FrostedSurface {
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandDisplaySize
     font.weight: Font.DemiBold
+  }
+
+  // The drop well (board 16e): a dashed well on the pill's surface, ringed in accent.
+  Item {
+    anchors.fill: parent
+    visible: root.dropArmed
+    opacity: visible ? 1 : 0
+
+    Behavior on opacity {
+      Fade {}
+    }
+
+    Rectangle {
+      x: Theme.nearbyDropWellInset
+      y: Theme.nearbyDropWellInset
+      width: root.width - Theme.nearbyDropWellInset * 2
+      height: Theme.nearbyDropWellHeight
+      radius: Theme.nearbyDropWellRadius
+      color: Theme.withAlpha(Theme.accentFill, 0.12)
+
+      DashedOutline {
+        anchors.fill: parent
+        anchors.margins: 1
+        cornerRadius: Theme.nearbyDropWellRadius
+        strokeWidth: Theme.nearbyDropWellStroke
+        strokeColor: Theme.withAlpha(Theme.accentFill, 0.7)
+      }
+    }
+
+    StrokeIcon {
+      anchors.centerIn: parent
+      size: Theme.nearbyDropWellGlyph
+      strokeWidth: 1.8
+      path: IconPaths.download
+      color: Theme.accentFill
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      radius: root.surfaceRadius
+      color: "transparent"
+      border.width: Theme.nearbyDropStroke
+      border.color: Theme.withAlpha(Theme.accentFill, 0.55)
+    }
   }
 }
