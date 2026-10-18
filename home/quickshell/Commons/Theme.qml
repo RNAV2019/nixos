@@ -227,10 +227,17 @@ Singleton {
     return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
   }
 
-  // SpringAnimation's damping is a Qt friction value, not a normalized ratio. Kept in one
-  // place and tuned against a 60 fps surface trace.
-  readonly property real surfaceSpring: 5.0
-  readonly property real surfaceDamping: 0.65
+  // The island morph's spring (Ui/MorphSpring.qml), a true damping ratio and natural
+  // frequency: quartiles 43/72/108/142 ms, +1.5% overshoot, within 1% by 300 ms, matching
+  // the survey under morphSurface. Every shape that grows out of the island rides this.
+  readonly property real morphZeta: 0.8
+  readonly property real morphOmega: 21
+
+  // SpringAnimation's damping is a Qt friction value, not a normalized ratio, applied in fixed
+  // 16 ms steps. Fitted to the same curve in those steps: quartiles 48/64/112/144 ms, +1.5%.
+  // (5 / 0.65 was overdamped: no overshoot, 90% at ~265 ms and settled only after ~800 ms.)
+  readonly property real surfaceSpring: 5.5
+  readonly property real surfaceDamping: 0.42
   readonly property real surfaceMass: 1.0
   readonly property real surfaceEpsilon: 0.5
   readonly property real microSpring: 5.0
@@ -832,8 +839,10 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  // Every morph rides one curve for one duration, settled by a survey of ten 1440p60
-  // recordings: 186 found, 176 fitted; measured quartiles 36/68/104/148 ms, fit 33/64/103/143.
+  // Every morph rides one curve, settled by a survey of ten 1440p60 recordings: 186 found, 176
+  // fitted; measured quartiles 36/68/104/148 ms, +1.5% overshoot, within 1% by 283 ms. The
+  // shapes ride it as a spring (morphZeta/morphOmega above), so this is no animation's length:
+  // it is what a claim reports as its morph, and the nominal length of the Morph easing.
   readonly property int morphSurface: reduceMotion ? 1 : 190
 
   // A control changing state rather than shape: a toggle, a slider, a hover or a press.
@@ -846,10 +855,23 @@ Singleton {
   // The outgoing contents dissolve inside the still, short so it finishes before the taker lands.
   readonly property int morphFarewell: reduceMotion ? 1 : 70
 
-  // The still's ground outlives its contents, covering the gap before the taker presents.
-  // The taker may land in 147-216 ms, so the fade spans that window; no stacked tint or blink.
-  readonly property int morphGround: reduceMotion ? 1 : 70
+  // The still's ground outlives its contents, and only starts to go once the taker reports a
+  // frame on screen (Ui/IslandOrigin.qml), so it covers however long that takes.
   readonly property int morphGroundFade: reduceMotion ? 1 : 60
+
+  // The longest anything waits on a surface's first frame before going ahead without it. A
+  // mapped surface lands in a frame or two; this only catches a compositor that never answers.
+  readonly property int morphPresentFallback: 250
+
+  // How long a still stays once its taker is on screen: its ground fade and two frames over.
+  readonly property int morphHoldLinger: 100
+
+  // How long a closed surface keeps its window full size before parking it, so the bar's pill
+  // has a frame on screen under the surface's last one.
+  readonly property int surfacePark: 80
+
+  // How long a parked surface keeps its window before letting it go (Ui/IslandSurface.qml).
+  readonly property int surfaceRetain: 300000
 
   // The incoming contents wait, then fade, landing just before the shape settles.
   readonly property int morphEnterDelay: reduceMotion ? 0 : 45
@@ -868,20 +890,21 @@ Singleton {
   readonly property int clockRoll: reduceMotion ? 1 : 110
   readonly property int clockRollFade: reduceMotion ? 1 : 170
 
-  // How long a surface that just handed the island over keeps riding the taker's morph: the
-  // taker's first frame lands 147-216 ms later, and 260 covers the bare pill showing through.
+  // How long a still holds when nothing claimed the island from it: a deliberate beat.
   readonly property int morphHold: 240
 
   // Motion and interaction tokens for things wired across surfaces; each stays literal so
   // callers can wrap it in `duration()` themselves.
-  // The buffer after the hold still, used by IslandOrigin's holdTimer.
+  // The hard stop on a still whose taker never reports a frame, past the claim's duration.
+  // Normally a still goes morphHoldLinger after its taker's first frame, long before this.
   readonly property int morphHoldBuffer: 260
   // Short value-fill tween, e.g. the OSD bar filling to the new level.
   readonly property int morphFill: 80
   // A small pause beat in sequences, e.g. LockReveal.
   readonly property int morphBeat: 50
   // The wait after a panel closes and before its chosen action runs, so the pill is back
-  // to its resting shape first (session, profiles, recorder launches).
+  // to its resting shape first (session, profiles, recorder launches). A close on the morph
+  // spring is within half a pixel of the pill by about 450 ms.
   readonly property int actionSettleDelay: reduceMotion ? 0 : 500
 
   // The island's equaliser: each bar rises on its own tween, then falls, staggered across

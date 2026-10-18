@@ -69,7 +69,9 @@ Variants {
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
-       suppressed: bar.screen !== null && (Bus.islandTaken(bar.screen.name) || Bus.transientOnScreen(bar.screen.name))
+      // Off covers, not owners: a surface covers the pill from its first frame on screen, so
+      // the pill is never taken away before something is drawn in its place.
+      suppressed: bar.screen !== null && (Bus.islandCovered(bar.screen.name) || Bus.transientOnScreen(bar.screen.name))
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
     }
   }

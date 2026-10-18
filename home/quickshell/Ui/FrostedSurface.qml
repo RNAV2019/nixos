@@ -26,7 +26,22 @@ Item {
   // At a fractional scale most logical coordinates fall between device pixels, and the
   // clipContent layer is then resampled, softening every glyph in it. Size lands on the
   // pixel grid here; callers place the surface with snap().
-  readonly property real pixelRatio: QsWindow.window && QsWindow.window.devicePixelRatio > 0 ? QsWindow.window.devicePixelRatio : 1
+  //
+  // The ratio is held, not read live: an unmapped window reports none, and falling back to 1
+  // re-rounded every size on the way out, which flipped a surface's showing test, re-mapped it
+  // and looped the width binding through the window it lives in.
+  readonly property real liveRatio: QsWindow.window && QsWindow.window.devicePixelRatio > 0 ? QsWindow.window.devicePixelRatio : 0
+  property real pixelRatio: 1
+
+  // Taken after the binding pass that changed it, never inside one: a window made by a size
+  // test (showing -> visible) must not re-round the size that test is reading.
+  function adoptRatio() {
+    if (liveRatio > 0 && liveRatio !== pixelRatio)
+      pixelRatio = liveRatio;
+  }
+
+  onLiveRatioChanged: Qt.callLater(root.adoptRatio)
+  Component.onCompleted: adoptRatio()
 
   function snap(v) {
     return Math.round(v * pixelRatio) / pixelRatio;

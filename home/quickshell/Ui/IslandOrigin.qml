@@ -18,6 +18,10 @@ QtObject {
 
   readonly property bool fromCard: fromHeight > 0
 
+  // Whether the shape grown out of had its clock up. The drop well hides the island's clock,
+  // so a surface growing out of it must not bring one back for its first frames.
+  property bool fromClock: true
+
   // Raised for the one assignment that puts the surface on the card's shape, so it arrives
   // there rather than travelling there.
   property bool snapping: false
@@ -39,10 +43,95 @@ QtObject {
 
   // True when the shape came from another surface rather than from the island. The surface
   // it replaced had no clock showing, so whatever rides on this cuts instead of crossfading.
+  // Belongs to one open: a close goes back to the pill whatever the open grew out of.
   property bool handedOver: false
 
-  // The still a dismissing surface leaves on screen. The taker's first frame lands 150-216 ms
-  // after the open though the window maps in five, so cutting at the claim would bare the pill.
+  // ---- presentation ----
+  //
+  // Nothing that hides what was on screen before may run on an assumed latency: the island
+  // stays up, and a still keeps its ground, until the taker's own frame is on screen. A frame
+  // is counted once the window has animated after becoming presentable, then swapped.
+
+  // An item inside the owning window. Its window's frames are what `presented` waits on; a
+  // surface that sets none is never reported, and whoever waits on it falls back to a timer.
+  property Item frameItem: null
+
+  // Set by the owner: the window is mapped at a size that shows the surface. Down while a
+  // parked window is still the sliver it idles at.
+  property bool presentable: false
+
+  // A frame showing this surface has reached the screen since it last became presentable.
+  property bool presented: false
+
+  // The serial of the claim this surface last made, reported with its first frame so a
+  // still knows the frame is from its own taker.
+  property int ownSerial: 0
+
+  readonly property var frameWindow: origin.frameItem && origin.frameItem.Window ? origin.frameItem.Window.window : null
+
+  property bool presentArmed: false
+  property bool presentSynced: false
+
+  onPresentableChanged: {
+    if (presentable)
+      origin.armPresent();
+    else {
+      presentArmed = false;
+      presentSynced = false;
+      presentFallback.stop();
+      presented = false;
+    }
+  }
+
+  function armPresent() {
+    if (presented || !frameItem)
+      return;
+    presentArmed = true;
+    presentSynced = false;
+    presentFallback.restart();
+    // Nothing guarantees the window has anything new to draw; ask for a frame regardless.
+    if (frameWindow)
+      frameWindow.update();
+  }
+
+  function markPresented() {
+    presentArmed = false;
+    presentSynced = false;
+    presentFallback.stop();
+    if (presented)
+      return;
+    presented = true;
+    Bus.reportPresented(screenName, ownSerial);
+  }
+
+  property Connections frames: Connections {
+    target: origin.frameWindow
+    ignoreUnknownSignals: true
+
+    // Emitted on the GUI thread before the frame's sync, so this frame carries the state
+    // that made the surface presentable; the swap after it is the first one that does.
+    function onAfterAnimating() {
+      if (origin.presentArmed)
+        origin.presentSynced = true;
+    }
+
+    function onFrameSwapped() {
+      if (origin.presentArmed && origin.presentSynced)
+        origin.markPresented();
+    }
+  }
+
+  // A compositor that never answers must not keep the island hidden behind nothing.
+  property Timer presentFallback: Timer {
+    interval: Theme.morphPresentFallback
+    onTriggered: if (origin.presentArmed)
+      origin.markPresented()
+  }
+
+  // ---- the still ----
+
+  // The still a dismissing surface leaves on screen. It stands in for the island until the
+  // taker reports its first frame, then lingers while its ground fades over it.
   property bool held: false
   property real heldWidth: 0
   property real heldHeight: 0
@@ -53,22 +142,67 @@ QtObject {
   // claim makes it stale, and stale stills stack up beside the surface actually growing.
   property int heldSerial: 0
 
+  // The taker this still waits on has put a frame on screen (or the wait ran out). The
+  // still's ground fades from here.
+  property bool takerPresented: false
+
+  // The taker's shape, which the still rides to once the taker is on screen.
+  property real heldTargetWidth: 0
+  property real heldTargetHeight: 0
+
+  // Seats the still at rest on the shape it was wearing, where it waits for the taker's first
+  // frame and then rides the taker's own spring to the taker's shape. The taker waits on that
+  // same frame and grows out of that same shape, so the two run one curve from one start; a
+  // surface caught mid-morph would otherwise carry its old velocity and part from the taker.
+  // Owners bind held ahead of open, so the seat lands while open is still up.
   function hold(width, height, radius) {
     var claim = Bus.claimFor(screenName);
-    heldWidth = claim ? claim.width : width;
-    heldHeight = claim ? claim.height : height;
+    snapping = true;
+    heldWidth = width;
+    heldHeight = height;
     heldRadius = claim ? claim.radius : radius;
+    held = true;
+    snapping = false;
+    heldTargetWidth = claim ? claim.width : width;
+    heldTargetHeight = claim ? claim.height : height;
     // The claim carries the taker's own morph duration; with no taker the still is a
     // deliberate beat, so it stays short under reduce motion like the morphs do.
     heldDuration = claim ? claim.duration : Theme.duration(Theme.morphHold);
-    held = true;
     heldSerial = claim ? claim.serial : Bus.claimSerial;
-    holdTimer.interval = heldDuration + Theme.morphHoldBuffer;
+    takerPresented = false;
+    if (claim) {
+      // Waits for the taker's frame; the fallback covers a taker that reports none.
+      takerWait.interval = Theme.morphPresentFallback;
+      takerWait.restart();
+      holdTimer.interval = Theme.morphPresentFallback + heldDuration + Theme.morphHoldBuffer;
+    } else {
+      takerPresented = true;
+      holdTimer.interval = heldDuration;
+    }
     holdTimer.restart();
   }
 
+  function takerArrived() {
+    if (!held || takerPresented)
+      return;
+    takerWait.stop();
+    heldWidth = heldTargetWidth;
+    heldHeight = heldTargetHeight;
+    takerPresented = true;
+    holdTimer.interval = Theme.duration(Theme.morphHoldLinger);
+    holdTimer.restart();
+  }
+
+  property Timer takerWait: Timer {
+    onTriggered: origin.takerArrived()
+  }
+
+  // The hard stop on a still; once the taker is up, re-armed to the short linger.
   property Timer holdTimer: Timer {
-    onTriggered: origin.held = false
+    onTriggered: {
+      origin.takerWait.stop();
+      origin.held = false;
+    }
   }
 
   // Drop a still that a later claim has made stale. Keyed on the serial rather than on
@@ -87,6 +221,11 @@ QtObject {
       if (origin.held && screen === origin.screenName)
         origin.release();
     }
+
+    function onIslandPresented(screen, serial) {
+      if (origin.held && screen === origin.screenName && serial === origin.heldSerial)
+        origin.takerArrived();
+    }
   }
 
   readonly property string screenName: origin.window && origin.window.screen ? origin.window.screen.name : ""
@@ -104,6 +243,7 @@ QtObject {
     snapping = true;
     fromWidth = w;
     fromHeight = h;
+    fromClock = card.clockShown !== false;
     snapping = false;
   }
 
@@ -125,8 +265,12 @@ QtObject {
   // while holding one for a taker that never arrived owes nobody that wait any more.
   function release() {
     held = false;
+    takerWait.stop();
+    holdTimer.stop();
+    handedOver = false;
     fromWidth = 0;
     fromHeight = 0;
+    fromClock = true;
     Bus.islandDropped(screenName);
   }
 
@@ -135,12 +279,19 @@ QtObject {
   function claim(width, height, radius, duration) {
     handedOver = false;
     held = false;
+    fromClock = true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
     var serial = Bus.claimSerial;
+    ownSerial = serial;
     adoptHandoff();
     // The holder consumed the transaction synchronously; drop it so a later open cannot reuse it.
     Bus.clearClaim(screenName, serial);
+    // Already on screen (claimed again mid-close): this frame is as good as the next.
+    if (presented)
+      Bus.reportPresented(screenName, serial);
+    else if (presentable)
+      armPresent();
   }
 
   // Give the island up to the surface that claimed it. There is no shrink back to the pill:

@@ -75,10 +75,17 @@ FrostedSurface {
     }
   }
 
-  // Offer the card to whatever might grow out of it; only one island is under the pointer,
-  // so only one is ever on offer.
-  onExpandedChanged: {
-    if (expanded)
+  // Whenever the island is anything but the resting pill - open, on its way open or shut, or
+  // the drop well - a surface taking its place grows out of the shape it is actually wearing,
+  // not the pill it may be headed for. One output, one island, so only one is ever on offer.
+  readonly property bool resting: Math.abs(heightSpring.value - Theme.barHeight) < 0.5 && Math.abs(widthSpring.value - collapsedWidth) < 0.5
+  readonly property bool onOffer: !suppressed && (expanded || dropArmed || !resting)
+
+  // Read by the surface growing out of this shape: the drop well has no clock up.
+  readonly property bool clockShown: !dropArmed
+
+  onOnOfferChanged: {
+    if (onOffer)
       Bus.setIslandCard(root.screenName, root);
     else if (Bus.islandCardFor(root.screenName) === root)
       Bus.setIslandCard(root.screenName, null);
@@ -123,43 +130,40 @@ FrostedSurface {
         dragGrace.restart();
     }
 
+    // The panel is asked for while the well is still up, so it grows out of the well's own
+    // shape; the island only unwinds after, under the panel.
     onDropped: function (drop) {
       if (!drop.hasUrls)
         return;
       dragArm.stop();
       dragGrace.stop();
-      root.dropArmed = false;
       Nearby.requestSend(Nearby.pathsFromUrls(drop.urls));
+      root.dropArmed = false;
       drop.acceptProposedAction();
     }
   }
 
   readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
 
-  implicitWidth: dropArmed ? Theme.nearbyDropTargetWidth : expanded ? Theme.islandExpandedWidth : collapsedWidth
-  implicitHeight: targetHeight
+  // On the same spring as every surface that grows out of it; see Ui/MorphSpring.qml.
+  MorphSpring {
+    id: widthSpring
+
+    target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.collapsedWidth
+  }
+
+  MorphSpring {
+    id: heightSpring
+
+    target: root.targetHeight
+  }
+
+  implicitWidth: widthSpring.value
+  implicitHeight: heightSpring.value
 
   // Corner read off height, not animated: a per-frame fit gives radius = min(height / 2,
   // surface radius) to 1.25 px rms vs 5.32 px interpolated, keeping a true stadium longer.
   surfaceRadius: Math.min(height / 2, Theme.islandExpandedRadius)
-
-  Behavior on implicitWidth {
-    id: widthBehavior
-    enabled: !Theme.reduceMotion
-
-    SurfaceSpring {
-      id: widthSpring
-    }
-  }
-
-  Behavior on implicitHeight {
-    id: heightBehavior
-    enabled: !Theme.reduceMotion
-
-    SurfaceSpring {
-      id: heightSpring
-    }
-  }
 
   readonly property real targetHeight: dropArmed ? Theme.nearbyDropTargetHeight : expanded ? Theme.islandExpandedHeight : Theme.barHeight
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
@@ -286,7 +290,7 @@ FrostedSurface {
 
     anchors.fill: parent
     opacity: root.expanded ? 1 : 0
-    visible: opacity > 0 && !root.dropArmed
+    visible: opacity > 0
 
     Behavior on opacity {
       Fade {}
@@ -422,7 +426,13 @@ FrostedSurface {
   RollingClock {
     id: clockLabel
 
-    visible: !root.dropArmed
+    // Gives way to the drop well on the same cross-fade as the rest of the pill.
+    opacity: root.dropArmed ? 0 : 1
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Fade {}
+    }
 
     // Set at the open size and scaled down rather than animating pixel size, so the digits are
     // laid out once and the advance between them never shifts.
@@ -445,11 +455,12 @@ FrostedSurface {
     font.weight: Font.DemiBold
   }
 
-  // The drop well (board 16e): a dashed well on the pill's surface, ringed in accent.
+  // The drop well (board 16e): a dashed well on the pill's surface, ringed in accent. Fades
+  // both ways; tied to its own opacity, not the arm, so the way out is not a cut.
   Item {
     anchors.fill: parent
-    visible: root.dropArmed
-    opacity: visible ? 1 : 0
+    opacity: root.dropArmed ? 1 : 0
+    visible: opacity > 0
 
     Behavior on opacity {
       Fade {}

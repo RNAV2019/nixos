@@ -39,6 +39,7 @@ Singleton {
       surfaceClosed(islandKeys[i]);
     surfacesClosingForLock();
     owners = {};
+    covers = {};
     transientScreens = {};
     islandCards = {};
     islandClaims = {};
@@ -98,6 +99,26 @@ Singleton {
 
   function setOwner(key, screenName) {
     owners = writeMap(owners, key, screenName);
+  }
+
+  // Which output each island surface is drawn over the pill on, from its first frame on
+  // screen until it is back to pill size. Owners are taken at once (other surfaces and
+  // services key off them); the bar hides its pill off this instead, so it never goes before
+  // something is drawn in its place.
+  property var covers: ({})
+
+  function setCover(key, screenName) {
+    covers = writeMap(covers, key, screenName);
+  }
+
+  function islandCovered(name) {
+    if (name === "")
+      return false;
+    for (var k in covers) {
+      if (covers[k] === name)
+        return true;
+    }
+    return false;
   }
 
   function ownerOf(key) {
@@ -211,8 +232,18 @@ Singleton {
   // tell that handover from a later one; see Ui/IslandOrigin.qml.
   property int claimSerial: 0
 
-  // The open island card, or null while every island is a pill. A surface taking its place
-  // starts at the island's actual shape, so the card is published rather than measurements.
+  // Raised by a surface the first time a frame of it reaches the screen after a claim, with
+  // that claim's serial. A still keeps its ground until its own taker reports in.
+  signal islandPresented(string screen, int serial)
+
+  function reportPresented(screen, serial) {
+    if (screen !== "")
+      islandPresented(screen, serial);
+  }
+
+  // The island whenever it is anything but the resting pill (open, opening, closing, or the
+  // drop well), or null. A surface taking its place starts at the island's actual shape, so
+  // the island itself is published rather than measurements.
   property var islandCards: ({})
 
   function setIslandCard(screen, card) {

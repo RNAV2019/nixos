@@ -49,6 +49,8 @@ PanelWindow {
     id: origin
 
     window: win
+    frameItem: surface
+    presentable: !Bus.locking && win.tall
   }
 
   // Raised while the island is being handed to another surface. The still held for it rides
@@ -69,22 +71,41 @@ PanelWindow {
 
   readonly property bool focused: Monitors.isFocused(win.screen)
 
-  // True from the moment the shape starts growing until it is back to pill size, or until a
-  // frozen still is taken down: the whole time the bar must keep its island hidden.
-  readonly property bool showing: open || origin.held || surface.width > origin.collapsedWidth + 0.5
+  // True from the moment the shape starts growing until it is at rest on the pill, or until a
+  // frozen still is taken down. At rest, not merely back: the spring dips under the pill and
+  // returns, and the bar's own pill must not appear in the middle of that.
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
+  // Read off the spring, never the snapped size: snapping depends on the window it would flip.
+  readonly property bool showing: open || origin.held || morphRunning || Math.abs(widthSpring.value - origin.collapsedWidth) > 0.5 || Math.abs(heightSpring.value - Theme.barHeight) > 0.5
+
+  // The whole time the bar must keep its island hidden: from this surface's first frame on
+  // screen, never before it, so the pill is never taken away with nothing drawn in its place.
+  readonly property bool covering: showing && (origin.presented || !open)
 
   // Shared gate for the shape springs: no motion when asked, no travel when the surface was
   // snapped onto a shape, and no travelling while a still is being cut away from.
-  readonly property bool geometryAnimEnabled: !Theme.reduceMotion && !origin.snapping && (!win.handover || origin.held)
+  // Parked, a change of pill (media starting, a recording) is taken at once: a parked surface
+  // must not wake to travel between two pills nobody can see.
+  readonly property bool geometryAnimEnabled: !Theme.reduceMotion && !origin.snapping && !win.parked && (!win.handover || origin.held)
+
+  // Raised inside show() around the claim, so this surface's own claim is not taken for
+  // another surface's.
+  property bool claiming: false
+
+  // Whether the still left by a dismiss carries the contents it was showing. A surface already
+  // on its way down had faded them, and must not bring them back to fade them again.
+  property bool stillCarriesBody: false
 
   function show() {
     win.opening();
     handover = false;
     farewell = false;
+    stillCarriesBody = false;
     // Take the island. The ordering, the card and the handover mailbox live in
     // Ui/IslandOrigin.qml; the arguments are the morph the holder rides with this surface.
+    claiming = true;
     origin.claim(win.openWidth, win.openHeight, win.openRadius, Theme.morphSurface);
+    claiming = false;
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     open = true;
@@ -97,18 +118,89 @@ PanelWindow {
     open = false;
   }
 
-  // Giving the island up to the surface that claimed it. The still is what the eye sees
-  // until the taker's first frame lands.
+  // Giving the island up to the surface that claimed it, open or still on its way down. The
+  // still is what the eye sees until the taker's first frame lands.
   function dismiss() {
+    var w = surface.implicitWidth;
+    var h = surface.implicitHeight;
     origin.publish(surface.width, surface.height, surface.surfaceRadius);
-    origin.hold(surface.width, surface.height, surface.surfaceRadius);
+    stillCarriesBody = win.open;
     handover = true;
     farewell = true;
+    origin.hold(w, h, surface.surfaceRadius);
     open = false;
   }
 
+  // The shape. The still first: hold() seats it on the shape it was wearing before the surface
+  // lets go of its open one, which is what starts it from rest; see Ui/IslandOrigin.qml. An
+  // open waits for its first frame on screen, so that frame is the shape it grows out of, and
+  // the still riding along starts on the same frame, waiting on the same report.
+  MorphSpring {
+    id: widthSpring
+
+    animate: win.geometryAnimEnabled
+    target: origin.held ? origin.heldWidth : win.open && origin.presented ? win.openWidth : origin.originWidth
+  }
+
+  MorphSpring {
+    id: heightSpring
+
+    animate: win.geometryAnimEnabled
+    target: origin.held ? origin.heldHeight : win.open && origin.presented ? win.openHeight : origin.originHeight
+  }
+
+  // ---- the window ----
+  //
+  // Quickshell destroys a layer surface's window when it is hidden and builds a new one on
+  // show, and that new window's first frame was 35-216 ms late, which every open paid. So the
+  // window outlives the close: parked, a 1 px sliver drawing nothing and taking no input, it
+  // costs a strip of buffer, and the next open is a resize, a frame or two.
+
+  readonly property real fullHeight: win.screen ? win.screen.height : 0
+
+  // Down from the moment the surface starts showing; raised a beat after it stops, once the
+  // bar's pill has had a frame to land under it.
+  property bool parked: true
+
+  // Unparked and the compositor has made the window full height. Nothing is drawn before:
+  // a frame committed at the sliver while the resize is pending gets no frame callback from
+  // Hyprland, and Qt then holds the first full-size frame for its 100 ms callback timeout.
+  readonly property bool tall: !parked && fullHeight > 0 && win.height >= fullHeight - 1
+
+  Timer {
+    id: parkDelay
+
+    interval: Theme.surfacePark
+    onTriggered: {
+      if (win.showing)
+        return;
+      win.parked = true;
+      // The close is off screen; the shape Behaviors are live again for the next open. A held
+      // still parks with handover still raised, which keeps its cut to the pill instant.
+      win.handover = false;
+      win.farewell = false;
+      win.stillCarriesBody = false;
+      retainTimer.restart();
+    }
+  }
+
+  // A parked window still holds a render context (~8 MiB of GPU memory each, nine surfaces
+  // an output), so one left unused for a while is let go. The next open makes a new window and
+  // waits out its first frame with the pill still up, which is slower but never bare.
+  property bool retained: false
+
+  Timer {
+    id: retainTimer
+
+    interval: Theme.surfaceRetain
+    onTriggered: if (win.parked)
+      win.retained = false
+  }
+
   screen: modelData
-  visible: !Bus.locking && showing
+  // Mapped while in use and for a while after, parked; unmapped for the lock, so its snapshot
+  // never holds shell UI.
+  visible: !Bus.locking && (win.showing || win.retained)
   color: "transparent"
 
   WlrLayershell.layer: WlrLayer.Overlay
@@ -116,16 +208,23 @@ PanelWindow {
 
   anchors {
     top: true
-    bottom: true
     left: true
     right: true
   }
 
+  implicitHeight: win.parked ? 1 : win.fullHeight
+
   exclusionMode: ExclusionMode.Ignore
 
-  // Unset, the whole window is the surface's input region, and a click off the card hits the
-  // dismiss MouseArea below. passThrough narrows it to the card so a spawned picker stays live.
-  mask: win.passThrough ? cardMask : null
+  // Open, the whole window is the surface's input region, and a click off the card hits the
+  // dismiss MouseArea below; passThrough narrows it to the card so a spawned picker stays
+  // live. Not open (closing, a still, parked), nothing: the shape on its way out must not
+  // swallow the clicks of whoever is below.
+  mask: !win.open ? emptyMask : win.passThrough ? cardMask : null
+
+  Region {
+    id: emptyMask
+  }
 
   Region {
     id: cardMask
@@ -163,15 +262,23 @@ PanelWindow {
 
   onShowingChanged: {
     if (showing) {
+      parkDelay.stop();
+      retainTimer.stop();
+      retained = true;
+      parked = false;
       Bus.setOwner(win.key, win.screen ? win.screen.name : "");
     } else {
-      // The close is off screen; the shape Behaviors are live again for the next open. A held
-      // still unmaps with handover still raised, which keeps its cut to the pill instant.
-      win.handover = false;
-      win.farewell = false;
+      parkDelay.restart();
       if (win.screen && Bus.ownerOf(win.key) === win.screen.name)
         Bus.setOwner(win.key, "");
     }
+  }
+
+  onCoveringChanged: {
+    if (covering)
+      Bus.setCover(win.key, win.screen ? win.screen.name : "");
+    else if (win.screen && Bus.covers[win.key] === win.screen.name)
+      Bus.setCover(win.key, "");
   }
 
   Connections {
@@ -192,13 +299,16 @@ PanelWindow {
     }
 
     // Another surface taking the island takes it from here. On this output it is growing in
-    // this surface's place, so this one cuts; on any other it takes its own close.
+    // this surface's place, so this one cuts, even on its way down: left to finish its close,
+    // it would shrink beside the taker growing out of the pill. On any other output an open
+    // one takes its own close and one already closing carries on.
     function onIslandClaimed(screen) {
-      if (!win.open)
+      if (win.claiming || origin.held)
         return;
-      if (win.screen && screen === win.screen.name)
+      var here = win.screen && screen === win.screen.name;
+      if (here && win.showing && !win.parked)
         win.dismiss();
-      else
+      else if (win.open)
         win.hide();
     }
   }
@@ -235,10 +345,14 @@ PanelWindow {
   FrostedSurface {
     id: surface
 
-    // The still bridges the mapping gap: the taker's window maps in single-digit ms but
-    // presents no frame for 147-216 ms, so it fades in two parts - contents fast, ground held.
+    // Parked, nothing is drawn, including on the frames before the window is down to its
+    // sliver; a still that has finished is already transparent, a close is on the bar's pill.
+    visible: win.tall
+
+    // The still fades in two parts: its contents at once, its ground only once the taker has
+    // a frame on screen to show through it, so the island's spot is never left bare.
     contentOpacity: win.farewell ? 0 : 1
-    backdropOpacity: win.farewell ? 0 : 1
+    backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
 
     // Only the fade out is animated; the reset lands off screen in one frame. Guarded on
     // `handover`, not `farewell`: a Behavior's enabled binding is evaluated before farewell changes.
@@ -253,15 +367,9 @@ PanelWindow {
     Behavior on backdropOpacity {
       enabled: win.handover
 
-      SequentialAnimation {
-        PauseAnimation {
-          duration: Theme.morphGround
-        }
-
-        NumberAnimation {
-          duration: Theme.duration(Theme.morphGroundFade)
-          easing.type: Easing.OutCubic
-        }
+      NumberAnimation {
+        duration: Theme.duration(Theme.morphGroundFade)
+        easing.type: Easing.OutCubic
       }
     }
 
@@ -270,28 +378,12 @@ PanelWindow {
 
     clipContent: true
 
-    implicitWidth: win.open ? win.openWidth : origin.held ? origin.heldWidth : origin.originWidth
-    implicitHeight: win.open ? win.openHeight : origin.held ? origin.heldHeight : origin.originHeight
+    implicitWidth: widthSpring.value
+    implicitHeight: heightSpring.value
 
     // Read off the height rather than travelling; see Bar/Island.qml. A still riding a taker's
     // morph asks for the taker's radius, as it does for target shape and duration.
     surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
-
-    Behavior on implicitWidth {
-      enabled: win.geometryAnimEnabled
-
-      SurfaceSpring {
-        id: widthSpring
-      }
-    }
-
-    Behavior on implicitHeight {
-      enabled: win.geometryAnimEnabled
-
-      SurfaceSpring {
-        id: heightSpring
-      }
-    }
 
     Item {
       id: keys
@@ -310,20 +402,23 @@ PanelWindow {
       }
     }
 
-    // The complete collapsed pill carried over from the shape this surface grew out of.
+    // The complete collapsed pill carried over from the shape this surface grew out of. Up on
+    // the first frame of an open out of the island, so that frame matches the pill it covers;
+    // a shape from another surface or the drop well had no clock, so none is brought.
     CollapsedPill {
       anchors.fill: parent
       origin: origin
-      shown: !win.open && !origin.held
+      shown: !origin.held && !(win.open && (origin.presented || origin.handedOver || !origin.fromClock))
     }
 
     // Everything the surface draws, cross-faded against that clock; nothing inside fades on
     // its own. Out of another panel there is no clip, so contents arrive late and settle a few px.
+    // Both wait for the first frame, so a slow one cannot eat the choreography.
     Item {
       id: bodyHolder
 
       anchors.fill: parent
-      opacity: win.open || origin.held ? 1 : 0
+      opacity: (win.open && origin.presented) || (origin.held && win.stillCarriesBody) ? 1 : 0
       visible: opacity > 0
 
       // Taken off the fade rather than run beside it, so the two cannot fall out of step and

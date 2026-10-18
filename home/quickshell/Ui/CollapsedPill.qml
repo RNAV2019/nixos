@@ -18,6 +18,10 @@ Item {
   Accessible.ignored: true
 
   readonly property real collapsedGap: 7.5
+
+  // Cut rather than faded, as the clock is: a shape from another surface had no pill showing,
+  // a still is going, and the drop well had hidden all three.
+  readonly property bool cut: root.origin !== null && (root.origin.handedOver || root.origin.held || !root.origin.fromClock)
   readonly property real resolvedClockShift: root.clockShift !== 0 ? root.clockShift : mediaActive ? (equaliser.implicitWidth + collapsedGap) / 2 : 0
 
   IslandClock {
@@ -39,6 +43,8 @@ Item {
     opacity: root.shown ? 1 : 0
 
     Behavior on opacity {
+      enabled: !root.cut
+
       Morph { duration: Theme.morphContent }
     }
   }
@@ -59,6 +65,8 @@ Item {
     }
 
     Behavior on opacity {
+      enabled: !root.cut
+
       Morph { duration: Theme.morphContent }
     }
   }

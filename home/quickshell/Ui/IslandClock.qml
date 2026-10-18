@@ -46,7 +46,7 @@ Item {
     visible: opacity > 0
 
     Behavior on opacity {
-      enabled: !clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held)
+      enabled: !clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held && clockRoot.origin.fromClock)
 
       Morph {
         duration: Theme.morphContent
