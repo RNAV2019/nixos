@@ -227,17 +227,18 @@ Singleton {
     return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
   }
 
-  // The island morph's spring (Ui/MorphSpring.qml), a true damping ratio and natural
-  // frequency: quartiles 43/72/108/142 ms, +1.5% overshoot, within 1% by 300 ms, matching
-  // the survey under morphSurface. Every shape that grows out of the island rides this.
-  readonly property real morphZeta: 0.8
+  // The island morph's spring (Ui/MorphSpring.qml), critically damped at this natural
+  // frequency: quartiles 45/79/128/185 ms, within 1% by 320 ms, and no overshoot - Ryan
+  // compared the survey's +1.5% overshoot against none and kept none. Every shape that grows
+  // out of the island rides this.
   readonly property real morphOmega: 21
 
   // SpringAnimation's damping is a Qt friction value, not a normalized ratio, applied in fixed
-  // 16 ms steps. Fitted to the same curve in those steps: quartiles 48/64/112/144 ms, +1.5%.
-  // (5 / 0.65 was overdamped: no overshoot, 90% at ~265 ms and settled only after ~800 ms.)
+  // 16 ms steps. 0.5 is the least damping that does not overshoot in those steps at this
+  // stiffness: quartiles 48/80/128/176 ms, in step with the morph spring above.
+  // (5 / 0.65 was overdamped: 90% at ~265 ms and settled only after ~800 ms.)
   readonly property real surfaceSpring: 5.5
-  readonly property real surfaceDamping: 0.42
+  readonly property real surfaceDamping: 0.5
   readonly property real surfaceMass: 1.0
   readonly property real surfaceEpsilon: 0.5
   readonly property real microSpring: 5.0
@@ -839,9 +840,9 @@ Singleton {
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
 
-  // Every morph rides one curve, settled by a survey of ten 1440p60 recordings: 186 found, 176
-  // fitted; measured quartiles 36/68/104/148 ms, +1.5% overshoot, within 1% by 283 ms. The
-  // shapes ride it as a spring (morphZeta/morphOmega above), so this is no animation's length:
+  // Every morph rides one curve, its pace from a survey of ten 1440p60 recordings: 186 found,
+  // 176 fitted; measured quartiles 36/68/104/148 ms. The survey's +1.5% overshoot was left out.
+  // The shapes ride it as a spring (morphOmega above), so this is no animation's length:
   // it is what a claim reports as its morph, and the nominal length of the Morph easing.
   readonly property int morphSurface: reduceMotion ? 1 : 190
 

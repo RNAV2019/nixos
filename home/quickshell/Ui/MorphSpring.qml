@@ -1,7 +1,8 @@
 import QtQuick
 import qs.Commons
 
-// The island's shape spring: one damped spring, solved exactly for each frame's own time step.
+// The island's shape spring: one critically damped spring, so it never overshoots, solved
+// exactly for each frame's own time step.
 // SpringAnimation steps in fixed 16 ms quanta, so on a 120 Hz output a morph only moved on
 // every other frame; this moves on every one, and lands on the same curve at any frame rate.
 //
@@ -17,7 +18,6 @@ QtObject {
   property real velocity: 0
   property bool animate: true
 
-  property real zeta: Theme.morphZeta
   property real omega: Theme.morphOmega
 
   // At rest once within a tenth of a pixel and all but still.
@@ -62,27 +62,11 @@ QtObject {
       value = target;
       return;
     }
-    var z = zeta;
     var w = omega;
-    var nx;
-    var nv;
-    if (z < 1) {
-      var wd = w * Math.sqrt(1 - z * z);
-      var e = Math.exp(-z * w * dt);
-      var c = Math.cos(wd * dt);
-      var s = Math.sin(wd * dt);
-      var b = (v + z * w * x) / wd;
-      nx = e * (x * c + b * s);
-      nv = e * ((b * wd - z * w * x) * c - (x * wd + z * w * b) * s);
-    } else {
-      // Critically damped (and the overdamped case, treated as critical).
-      var ec = Math.exp(-w * dt);
-      var k = v + w * x;
-      nx = (x + k * dt) * ec;
-      nv = (k - w * (x + k * dt)) * ec;
-    }
-    velocity = nv;
-    value = target + nx;
+    var e = Math.exp(-w * dt);
+    var k = v + w * x;
+    velocity = (k - w * (x + k * dt)) * e;
+    value = target + (x + k * dt) * e;
   }
 
   property FrameAnimation driver: FrameAnimation {
