@@ -57,6 +57,7 @@
   };
 
   outputs = inputs @ {
+    self,
     nixpkgs,
     home-manager,
     helium-browser,
@@ -70,27 +71,32 @@
     ...
   }: let
     system = "x86_64-linux";
-    pkgs = import nixpkgs {inherit system;};
-    gen-commit = import ./home/gen-commit.nix {inherit pkgs;};
-    ical-agenda = import ./home/ical-agenda.nix {inherit pkgs;};
-    # Hyprland plugin: the drag-and-drop card pile (pkgs/dragpile).
-    dragpile = pkgs.callPackage ./pkgs/dragpile {};
-  in {
-    packages.${system} = {
-      inherit gen-commit ical-agenda dragpile;
-      default = gen-commit;
+    inherit (nixpkgs) lib;
+    pkgs = import nixpkgs {
+      inherit system;
+      overlays = [self.overlays.default];
     };
+    # Every derivation in ./pkgs, as built by the overlay.
+    ownPackages = lib.filterAttrs (_: lib.isDerivation) (lib.intersectAttrs (import ./pkgs pkgs pkgs) pkgs);
+  in {
+    # ./pkgs, plus my own projects that live in their own flakes.
+    overlays.default = lib.composeManyExtensions [
+      (import ./pkgs)
+      (final: _prev: {
+        note-tui = note-tui.packages.${final.stdenv.hostPlatform.system}.default;
+      })
+    ];
+
+    packages.${system} =
+      ownPackages
+      // {
+        inherit (pkgs) note-tui;
+        default = pkgs.gen-commit;
+      };
 
     checks.${system} = {
-      gen-commit = import ./tests/gen-commit.nix {
-        inherit pkgs;
-        genCommit = gen-commit;
-      };
-
-      ical-agenda = import ./tests/ical-agenda.nix {
-        inherit pkgs;
-        icalAgenda = ical-agenda;
-      };
+      gen-commit = pkgs.callPackage ./pkgs/gen-commit/tests {};
+      ical-agenda = pkgs.callPackage ./pkgs/ical-agenda/tests {};
 
       quickshell-qmlformat = pkgs.runCommand "quickshell-qmlformat" {
         nativeBuildInputs = [pkgs.qt6Packages.qtdeclarative];
@@ -115,6 +121,8 @@
             ./modules/system
             {networking.hostName = hostName;}
 
+            {nixpkgs.overlays = [self.overlays.default];}
+
             sops-nix.nixosModules.sops
             nearby.nixosModules.default
 
@@ -125,10 +133,10 @@
               # Preserve unmanaged files during activation.
               home-manager.backupFileExtension = "hm-backup";
               home-manager.users.ryan = import ./home/default.nix;
-              home-manager.extraSpecialArgs = {inherit helium-browser llm-agents sonora helix-steel note-tui fenix;};
+              home-manager.extraSpecialArgs = {inherit helium-browser llm-agents sonora helix-steel fenix;};
             }
           ];
-          specialArgs = {inherit helium-browser llm-agents sonora helix-steel note-tui fenix;};
+          specialArgs = {inherit helium-browser llm-agents sonora helix-steel fenix;};
         };
     in {
       ryans-nixos = mkHost "ryans-nixos";

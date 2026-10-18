@@ -66,7 +66,7 @@ in {
     systemd.enable = false;
 
     # Loaded ahead of the settings, so plugin options below resolve.
-    plugins = [(pkgs.callPackage ../pkgs/dragpile {})];
+    plugins = [pkgs.dragpile];
 
     settings = {
       env = [

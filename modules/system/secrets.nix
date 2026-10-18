@@ -52,7 +52,7 @@ in {
     gnupg.sshKeyPaths = [];
 
     secrets = {
-      # gen-commit reads this exact path; see home/gen-commit.sh.
+      # gen-commit reads this exact path; see pkgs/gen-commit/gen-commit.sh.
       "openrouter/gen-commit-key" = ownedAt "${home}/.config/gen-commit/api-key";
       "cloudflared/cert" = ownedAt "${home}/.cloudflared/cert.pem";
       # cloudflared names this file after the tunnel UUID.
@@ -65,7 +65,7 @@ in {
       # Merged into ~/.claude.json by home/claude.nix; the URL carries the Penpot token.
       "penpot/mcp-url" = ownedAt "${home}/.config/claude/penpot-mcp-url";
 
-      # Secret Google Calendar iCal URLs, one per line; see home/ical-agenda.nix.
+      # Secret Google Calendar iCal URLs, one per line; see pkgs/ical-agenda.
       "calendar/ical-urls" = ownedAt "${home}/.config/quickshell-calendar/ical-urls";
 
       # Consumed by the templates below rather than by a program directly.

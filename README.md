@@ -50,7 +50,7 @@
 
 ```
 .
-├── flake.nix                      # hosts via mkHost; also exports gen-commit/ical-agenda and checks
+├── flake.nix                      # hosts via mkHost; exports the pkgs/ overlay, packages and checks
 ├── hosts/
 │   └── ryans-nixos/               # one directory per machine, named after its hostname
 │       ├── default.nix            # stateVersions, NPU, monitor rule
@@ -62,7 +62,7 @@
 │   ├── secrets.nix, wifi.nix      # sops-nix secrets and templates; Wi-Fi profiles
 │   └── backups.nix, backup.sh     # borg job and the `backup` CLI
 ├── secrets/                       # age-encrypted; see Secrets
-├── tests/                         # bats tests run by `nix flake check`
+├── pkgs/                          # my own tools as an overlay (pkgs.gen-commit, …); tests sit beside each
 ├── backgrounds/                   # wallpapers
 └── home/
     ├── default.nix                # entry point, XDG, session vars
@@ -73,9 +73,8 @@
     ├── programs.nix               # yazi, zathura, lazygit, btop, …
     ├── packages.nix               # user packages, GTK/Qt theming, helium
     ├── dev.nix                    # direnv, gh, ssh, toolchain env
-    ├── custom-packages.nix        # t3code, lock-session, start-desktop, …
+    ├── custom-packages.nix        # installs the pkgs/ tools
     ├── claude.nix, opencode.nix   # agent settings and MCP servers
-    ├── gen-commit.*, ical-agenda.nix
     ├── quickshell/                # QML shell, symlinked live from ~/nixos
     ├── themes/                    # Rose Pine Moon colour files
     └── backgrounds.nix            # wallpaper install + default symlink

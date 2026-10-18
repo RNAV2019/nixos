@@ -3,7 +3,6 @@
   pkgs,
   helium-browser,
   llm-agents,
-  note-tui,
   ...
 }: let
   # Pinned Web Store CRXes via --load-extension, since policy installs are broken
@@ -26,86 +25,10 @@
     };
   };
 
-  # Finds the DER key in the CRX3 header whose SHA-256 (hex mapped to a-p) matches
-  # the extension ID, and writes it into manifest.json.
-  crx-key-inject = pkgs.writers.writePython3Bin "crx-key-inject" {} ''
-    import base64
-    import hashlib
-    import json
-    import struct
-    import sys
-
-    crx_path, expected_id, out_dir = sys.argv[1:4]
-
-
-    def to_id(der):
-        digest = hashlib.sha256(der).hexdigest()[:32]
-        table = "abcdefghijklmnopabcdefghijklmnop"
-        return "".join(table[int(c, 16)] for c in digest)
-
-
-    buf = open(crx_path, "rb").read()
-    assert buf[:4] == b"Cr24", "not a CRX"
-    assert struct.unpack("<I", buf[4:8])[0] == 3, "not a CRX3"
-    hlen = struct.unpack("<I", buf[8:12])[0]
-    header = buf[12:12 + hlen]
-
-    key = None
-    for i in range(len(header)):
-        if header[i] != 0x30:  # DER SEQUENCE
-            continue
-        b = header[i + 1]
-        if b < 0x80:
-            length = 2 + b
-        elif b & 0x7F in (1, 2):
-            n = b & 0x7F
-            length = 2 + n + int.from_bytes(header[i + 2:i + 2 + n], "big")
-        else:
-            continue
-        if length < 32 or i + length > len(header):
-            continue
-        candidate = header[i:i + length]
-        if to_id(candidate) == expected_id:
-            key = candidate
-            break
-    if key is None:
-        sys.exit(f"no signing key producing ID {expected_id} found in {crx_path}")
-
-    manifest_path = out_dir + "/manifest.json"
-    manifest = json.load(open(manifest_path))
-    manifest["key"] = base64.b64encode(key).decode()
-    assert to_id(base64.b64decode(manifest["key"])) == expected_id
-    with open(manifest_path, "w") as f:
-        json.dump(manifest, f, indent=2)
-  '';
-
-  # A CRX is a protobuf header followed by a zip. The fetchurl name keeps the
-  # URL's "?" and "&" out of the store path.
-  unpack-helium-extension = name: ext:
-    pkgs.runCommand "helium-extension-${name}" {} ''
-      mkdir -p $out
-      crx="${
-        pkgs.fetchurl {
-          name = "${name}-${ext.version}.crx";
-          url = "https://clients2.google.com/service/update2/crx?response=redirect&os=linux&arch=x64&os_arch=x86-64&nacl_arch=x86-64&prod=chromiumcrx&prodchannel=unknown&prodversion=152.0.0.0&acceptformat=crx2,crx3&x=id%3D${ext.id}%26uc";
-          hash = ext.hash;
-        }
-      }"
-      header_len=$(od -A n -t u4 -j 8 -N 4 "$crx" | tr -d ' ')
-      dd if="$crx" of=payload.zip bs=1 skip=$((12 + header_len)) status=none
-      ${pkgs.unzip}/bin/unzip -q payload.zip -d $out
-      ${crx-key-inject}/bin/crx-key-inject "$crx" ${ext.id} $out
-    '';
-
   # PDFs open in bionic-reading's bundled PDF.js, so it replaces the PDF Viewer extension.
   helium-extension-dirs =
-    pkgs.lib.mapAttrsToList unpack-helium-extension helium-extensions
-    ++ [
-      (import ./bionic-reading {
-        inherit pkgs;
-        inherit (pkgs) lib;
-      })
-    ];
+    pkgs.lib.mapAttrsToList (name: ext: pkgs.fetchCrx (ext // {inherit name;})) helium-extensions
+    ++ [pkgs.helium-bionic-reading];
   # One flag with a comma-separated list: Chromium keeps only the last
   # --load-extension when the switch is repeated.
   helium-extension-flags =
@@ -128,42 +51,13 @@
     inherit (pkgs) lib;
     stateDir = "${config.home.homeDirectory}/.local/state/theme";
   };
-
-  # Dropped from nixpkgs in 2026-08; vendored with only the GTK3/GTK4 assets.
-  rose-pine-gtk-theme = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
-    pname = "rose-pine-gtk-theme";
-    version = "2.2.0";
-
-    src = pkgs.fetchFromGitHub {
-      owner = "rose-pine";
-      repo = "gtk";
-      tag = "v${finalAttrs.version}";
-      hash = "sha256-vCWs+TOVURl18EdbJr5QAHfB+JX9lYJ3TPO6IklKeFE=";
-    };
-
-    dontBuild = true;
-
-    installPhase = ''
-      runHook preInstall
-
-      for n in rose-pine rose-pine-dawn rose-pine-moon; do
-        mkdir -p "$out/share/themes/$n/gtk-4.0"
-        cp -r "$src/gtk3/$n-gtk"/* "$out/share/themes/$n"
-        cp -r "$src/gtk4/$n.css" "$out/share/themes/$n/gtk-4.0/gtk.css"
-      done
-
-      runHook postInstall
-    '';
-
-    meta.description = "Rosé Pine theme for GTK";
-  });
 in {
   # Rose Pine is the default; the other themes swap the GTK and icon theme at runtime.
   gtk = {
     enable = true;
     theme = {
       name = "rose-pine";
-      package = rose-pine-gtk-theme;
+      package = pkgs.rose-pine-gtk-theme;
     };
     iconTheme = {
       name = "rose-pine";
@@ -314,7 +208,7 @@ in {
     typst
     tinymist
     # Typst notes TUI; previews via tinymist and Helium (see editors.nix).
-    note-tui.packages.${pkgs.stdenv.hostPlatform.system}.default
+    note-tui
     # Stock nixpkgs build for binary-cache hits; no Go compile.
     stripe-cli
     nixd

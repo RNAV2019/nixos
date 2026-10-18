@@ -1,7 +1,16 @@
-{pkgs}: let
-  gen-commit-api = pkgs.writeShellApplication {
+{
+  writeShellApplication,
+  bash,
+  coreutils,
+  curl,
+  gawk,
+  git,
+  gum,
+  jq,
+}: let
+  gen-commit-api = writeShellApplication {
     name = "gen-commit-api";
-    runtimeInputs = [pkgs.coreutils pkgs.curl];
+    runtimeInputs = [coreutils curl];
     text = ''
       if [[ $# -ne 1 ]]; then
         printf 'usage: gen-commit-api REQUEST_FILE\n' >&2
@@ -28,15 +37,15 @@
     '';
   };
 in
-  pkgs.writeShellApplication {
+  writeShellApplication {
     name = "gen-commit";
     runtimeInputs = [
-      pkgs.bash
-      pkgs.coreutils
-      pkgs.gawk
-      pkgs.git
-      pkgs.gum
-      pkgs.jq
+      bash
+      coreutils
+      gawk
+      git
+      gum
+      jq
     ];
     text =
       ''

@@ -19,13 +19,6 @@
     hash = "sha256-TpYnGqROkKfoB9G+JTjADWvMtpRJbv4NVaTqiUfW1Eg=";
   };
 
-  # Helium window for the :preview Steel command; helium comes from PATH.
-  typst-preview-window = pkgs.writeShellApplication {
-    name = "typst-preview-window";
-    runtimeInputs = [pkgs.coreutils pkgs.util-linux];
-    text = builtins.readFile ./helix/typst-preview/preview-window.sh;
-  };
-
   # The Steel fork pins grammar revisions that predate two upstream compiler
   # fixes, so patch them the same way nixpkgs patches its own Helix grammars.
   grammarFixes = [
@@ -48,7 +41,7 @@
     })
   ];
 in {
-  home.packages = [typst-preview-window];
+  home.packages = [pkgs.typst-preview-window];
 
   # Steel creates an empty helix.scm if missing; manage it instead.
   xdg.configFile."helix/helix.scm".text = "";

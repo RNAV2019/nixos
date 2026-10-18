@@ -1,9 +1,13 @@
 # Bionic reading for Helium: bolds the first letters of every word on web pages, and opens
 # PDFs in a bundled PDF.js whose text rendering does the same. The toolbar button (Alt+B)
-# toggles it everywhere at once. Loaded through --load-extension in ../packages.nix.
+# toggles it everywhere at once. Loaded through --load-extension in home/packages.nix.
 {
-  pkgs,
   lib,
+  runCommand,
+  writeText,
+  imagemagick,
+  pdfjs,
+  dejavu_fonts,
 }: let
   # The public key fixes the extension ID, which keeps its settings across rebuilds and is
   # the origin the PDF.js viewer must accept. Checked at build time.
@@ -53,7 +57,7 @@
     content_security_policy.extension_pages = "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'";
   };
 
-  pdfjs = "${pkgs.pdfjs}/share/pdf.js";
+  pdfjsDir = "${pdfjs}/share/pdf.js";
 
   # Toolbar icon: a filled iris tile when on, an outline when off.
   icon = state: size: let
@@ -70,12 +74,12 @@
   in ''
     magick -size ${toString size}x${toString size} xc:none \
       ${tile} -draw "roundrectangle ${toString inset},${toString inset} ${toString (size - inset - 1)},${toString (size - inset - 1)} ${toString r},${toString r}" \
-      -font ${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans-Bold.ttf -fill '${text}' -stroke none \
+      -font ${dejavu_fonts}/share/fonts/truetype/DejaVuSans-Bold.ttf -fill '${text}' -stroke none \
       -pointsize ${toString (size * 0.72)} -gravity center -annotate +0+0 B \
       -define png:exclude-chunks=date,time $out/icons/${state}-${toString size}.png
   '';
 in
-  pkgs.runCommand "helium-bionic-reading" {nativeBuildInputs = [pkgs.imagemagick];} ''
+  runCommand "helium-bionic-reading" {nativeBuildInputs = [imagemagick];} ''
     derived="$(echo ${key} | base64 -d | sha256sum | cut -c1-32 | tr 0-9a-f a-p)"
     if [ "$derived" != ${id} ]; then
       echo "helium-bionic-reading: key gives ID $derived, not ${id}" >&2
@@ -83,14 +87,14 @@ in
     fi
 
     mkdir -p $out/icons
-    cp ${pkgs.writeText "manifest.json" (builtins.toJSON manifest)} $out/manifest.json
+    cp ${writeText "manifest.json" (builtins.toJSON manifest)} $out/manifest.json
     cp ${./background.js} $out/background.js
     cp ${./content.js} $out/content.js
     cp ${./fixation.js} $out/fixation.js
     cp ${./viewer-hook.js} $out/viewer-hook.js
     ${lib.concatMapStrings (state: lib.concatMapStrings (icon state) [16 32 128]) ["on" "off"]}
 
-    cp -r ${pdfjs} $out/pdfjs
+    cp -r ${pdfjsDir} $out/pdfjs
     chmod -R u+w $out/pdfjs
     find $out/pdfjs -name '*.map' -delete
     rm $out/pdfjs/web/compressed.tracemonkey-pldi-09.pdf
