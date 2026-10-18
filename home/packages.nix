@@ -24,11 +24,6 @@
       version = "1.2.0";
       hash = "sha256-WES3hJ0iXlYTkf3uzWIhtBwZaVJh5PX6xgTGmPbK4Ko=";
     };
-    pdf-viewer = {
-      id = "oemmndcbldboiebfnladdacbdfmadadm";
-      version = "4.6.129";
-      hash = "sha256-NVvF8Y/4b4qbinKU4cmxh6WE0CqMMxGjJp8Wi03hodA=";
-    };
   };
 
   # Finds the DER key in the CRX3 header whose SHA-256 (hex mapped to a-p) matches
@@ -102,7 +97,15 @@
       ${crx-key-inject}/bin/crx-key-inject "$crx" ${ext.id} $out
     '';
 
-  helium-extension-dirs = pkgs.lib.mapAttrsToList unpack-helium-extension helium-extensions;
+  # PDFs open in bionic-reading's bundled PDF.js, so it replaces the PDF Viewer extension.
+  helium-extension-dirs =
+    pkgs.lib.mapAttrsToList unpack-helium-extension helium-extensions
+    ++ [
+      (import ./bionic-reading {
+        inherit pkgs;
+        inherit (pkgs) lib;
+      })
+    ];
   # One flag with a comma-separated list: Chromium keeps only the last
   # --load-extension when the switch is repeated.
   helium-extension-flags =
