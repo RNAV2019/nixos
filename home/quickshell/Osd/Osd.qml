@@ -1,8 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Pipewire
-import Quickshell.Wayland
-import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -15,7 +13,6 @@ Scope {
   // "", "volume", "brightness", "kbd" or "mic".
   property string mode: ""
   property bool showing: false
-  signal flashRequested
 
   // Suppress startup signals without discarding the first later change.
   property bool ready: false
@@ -47,12 +44,12 @@ Scope {
   }
 
   // A user-opened panel owns the pill, so no OSD starts under one; a flash is cut short.
-  readonly property bool blocked: Bus.islandHeld
+  readonly property bool blocked: Bus.islandOpenAnywhere
 
   onBlockedChanged: {
     if (blocked) {
-    hideTimer.stop();
-    showing = false;
+      hideTimer.stop();
+      showing = false;
     }
   }
 
@@ -60,7 +57,6 @@ Scope {
     if (blocked)
       return;
     mode = which;
-    flashRequested();
     showing = true;
     hideTimer.restart();
   }
@@ -104,6 +100,15 @@ Scope {
     function onLevelChanged() {
       if (root.ready && KeyboardBacklight.available)
         root.flash("kbd");
+    }
+  }
+
+  Connections {
+    target: Bus
+
+    function onSurfacesClosingForLock() {
+      hideTimer.stop();
+      root.showing = false;
     }
   }
 
@@ -159,190 +164,93 @@ Scope {
   Variants {
     model: Quickshell.screens
 
-    PanelWindow {
+    // Outranks the other transients: a keypress wants its answer now. A toast or the sharing
+    // pill under it waits, and takes the island back from it once the flash is over.
+    TransientSurface {
       id: window
 
-      required property var modelData
+      key: "osd"
+      rank: 3
 
-      readonly property bool focused: Monitors.isFocused(window.screen)
+      readonly property bool outputBlocked: Bus.islandOpenFor(window.screenName)
 
-      readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
+      wanted: root.showing && window.focused && !window.outputBlocked
 
-      readonly property bool open: root.showing && focused && !outputBlocked
+      openWidth: Theme.osdWidth
+      openHeight: Theme.osdHeight
+      openRadius: Theme.osdRadius
 
-      // Drawn from the start of growth until back to pill size, keeping the island hidden.
-       readonly property bool visibleNow: open || origin.held || surface.width > collapsedWidth + 0.5
-       readonly property bool outputBlocked: Bus.islandHeldFor(window.screen ? window.screen.name : "")
+      // The whole window is click-through. The island underneath still wants its clicks.
+      cardInput: false
 
-        IslandOrigin {
-          id: origin
-
-          window: window
-        }
-
-        onOpenChanged: {
-          if (!open && !origin.held)
-            origin.release();
-        }
-
-       Connections {
-         target: root
-
-         function onFlashRequested() {
-           if (window.focused && !window.outputBlocked)
-             origin.claim(Theme.osdWidth, Theme.osdHeight, Theme.osdRadius, Theme.morphSurface);
-         }
-       }
-
-       Connections {
-         target: Bus
-
-         function onSurfacesClosingForLock() {
-           root.showing = false;
-         }
-
-         function onIslandClaimed(screen) {
-           if (!window.open || !window.screen || screen !== window.screen.name)
-             return;
-           origin.publish(surface.width, surface.height, surface.surfaceRadius);
-           origin.hold(surface.width, surface.height, surface.surfaceRadius);
-           root.showing = false;
-         }
-       }
-
-      screen: modelData
-       visible: !Bus.locking && visibleNow
-      color: "transparent"
-
-      WlrLayershell.layer: WlrLayer.Overlay
-      WlrLayershell.namespace: "quickshell-osd"
-      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-
-      anchors {
-        top: true
-        left: true
-        right: true
+      // A panel taking the island cuts the flash short.
+      onDismissed: {
+        hideTimer.stop();
+        root.showing = false;
       }
 
-      implicitHeight: Theme.barMarginTop + Theme.osdHeight + Theme.gapsOut
-      exclusionMode: ExclusionMode.Ignore
+      // Board 09's row, at the board's own positions; nothing here moves with the shape.
+      Item {
+        id: readout
 
-      // Empty: the whole window is click-through. The island underneath still wants its clicks.
-      mask: Region {}
+        anchors.fill: parent
 
-        onVisibleNowChanged: {
-         if (visibleNow)
-           Bus.setTransientScreen("osd", window.screen ? window.screen.name : "");
-         else if (window.screen && Bus.transientScreen("osd") === window.screen.name)
-           Bus.setTransientScreen("osd", "");
-       }
-
-      FrostedSurface {
-        id: surface
-
-        x: snap((window.width - width) / 2)
-        y: snap(Theme.barMarginTop)
-
-        clipContent: true
-
-       implicitWidth: window.open ? Theme.osdWidth : origin.held ? origin.heldWidth : origin.originWidth
-       implicitHeight: window.open ? Theme.osdHeight : origin.held ? origin.heldHeight : origin.originHeight
-
-        // Read off the height rather than travelling; see Bar/Island.qml.
-        surfaceRadius: Math.min(height / 2, Theme.osdRadius)
-
-        Behavior on implicitWidth {
-          enabled: !Theme.reduceMotion && !origin.snapping
-
-          SurfaceSpring {}
-        }
-
-        Behavior on implicitHeight {
-          enabled: !Theme.reduceMotion && !origin.snapping
-
-          SurfaceSpring {}
-        }
-
-        // Shared collapsed renderer, so handoff keeps the same clock, equaliser and recording mark.
-        CollapsedPill {
-          id: pill
-
-          anchors.fill: parent
-          origin: origin
-          shown: !window.open && !origin.held
-        }
-
-        // Board 09's row, at the board's own positions; nothing here moves with the shape.
-        Item {
-          id: readout
-
-          anchors.fill: parent
-          opacity: window.open ? 1 : 0
-          visible: opacity > 0
-
-          Behavior on opacity {
-            Morph {
-              duration: Theme.morphContent
-            }
-          }
-
-          Text {
-            x: Theme.osdGlyphLeft
-            y: (Theme.osdHeight - height) / 2
-            text: root.glyph
-            color: root.ink
-            font.family: Theme.iconFont
-            font.pixelSize: Theme.osdGlyphSize
-          }
-
-          Rectangle {
-            x: Theme.osdTrackLeft
-            y: (Theme.osdHeight - height) / 2
-            width: Theme.osdTrackWidth
-            height: Theme.osdTrackHeight
-            radius: height / 2
-            color: Theme.highlightLow
-
-            Rectangle {
-              width: parent.width * Math.max(0, Math.min(1, root.level))
-              height: parent.height
-              radius: parent.radius
-              color: Theme.accent
-              visible: !root.stateOnly
-
-              // Held keys repeat about every 40 ms, so a longer tween never finishes.
-              Behavior on width {
-                NumberAnimation {
-                  duration: Theme.morphFill
-                }
-              }
-            }
-          }
-
-          Text {
-            x: Theme.osdWidth - Theme.osdValueRight - width
-            y: (Theme.osdHeight - height) / 2
-            text: root.reading
-            color: root.ink
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.osdValueSize
-            font.weight: Theme.weightSemi
-          }
+        Text {
+          x: Theme.osdGlyphLeft
+          y: (Theme.osdHeight - height) / 2
+          text: root.glyph
+          color: root.ink
+          font.family: Theme.iconFont
+          font.pixelSize: Theme.osdGlyphSize
         }
 
         Rectangle {
-          anchors.fill: parent
-          radius: surface.surfaceRadius
-          color: "transparent"
-          border.width: 1.5
-          border.color: Theme.withAlpha(Theme.urgent, 0.7)
-          opacity: root.alarming && window.open ? 1 : 0
-          visible: opacity > 0
+          x: Theme.osdTrackLeft
+          y: (Theme.osdHeight - height) / 2
+          width: Theme.osdTrackWidth
+          height: Theme.osdTrackHeight
+          radius: height / 2
+          color: Theme.highlightLow
 
-          Behavior on opacity {
-            Morph {
-              duration: Theme.morphContent
+          Rectangle {
+            width: parent.width * Math.max(0, Math.min(1, root.level))
+            height: parent.height
+            radius: parent.radius
+            color: Theme.accent
+            visible: !root.stateOnly
+
+            // Held keys repeat about every 40 ms, so a longer tween never finishes.
+            Behavior on width {
+              NumberAnimation {
+                duration: Theme.morphFill
+              }
             }
+          }
+        }
+
+        Text {
+          x: Theme.osdWidth - Theme.osdValueRight - width
+          y: (Theme.osdHeight - height) / 2
+          text: root.reading
+          color: root.ink
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.osdValueSize
+          font.weight: Theme.weightSemi
+        }
+      }
+
+      Rectangle {
+        anchors.fill: parent
+        radius: window.surface.surfaceRadius
+        color: "transparent"
+        border.width: 1.5
+        border.color: Theme.withAlpha(Theme.urgent, 0.7)
+        opacity: root.alarming ? 1 : 0
+        visible: opacity > 0
+
+        Behavior on opacity {
+          Morph {
+            duration: Theme.morphContent
           }
         }
       }

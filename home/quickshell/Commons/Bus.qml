@@ -44,6 +44,7 @@ Singleton {
     islandCards = {};
     islandClaims = {};
     islandHandoffs = {};
+    islandHolders = {};
   }
 
   function finishUnlock() {
@@ -132,6 +133,87 @@ Singleton {
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;
+  }
+
+  // Which transients want the island, on which output, and how urgently. Only one can be the
+  // island at a time, so the highest rank wanting an output has it and the rest wait their
+  // turn rather than being knocked out: when it lets go, the next one takes over from it.
+  // Keyed by "key@screen" so a surface on one output never clears another's entry.
+  property var transientWants: ({})
+
+  // A negative rank, or no output, withdraws the want.
+  function setTransientWant(key, screenName, rank) {
+    var id = key + "@" + screenName;
+    if (rank < 0 || screenName === "") {
+      if (transientWants[id] !== undefined)
+        transientWants = writeMap(transientWants, id, "");
+      return;
+    }
+    var cur = transientWants[id];
+    if (cur && cur.rank === rank)
+      return;
+    transientWants = writeMap(transientWants, id, {
+        key: key,
+        screen: screenName,
+        rank: rank
+      });
+  }
+
+  // The IslandOrigin that last claimed the island on each output and has not let it go. Unlike
+  // owners, which last until the shape is back at the pill, a holder lets go the moment its
+  // surface closes, so a transient waiting behind a panel takes over from the panel's close as
+  // a handover, rather than waiting it out and growing back out of the pill.
+  property var islandHolders: ({})
+
+  function setIslandHolder(screen, origin) {
+    if (screen !== "")
+      islandHolders = writeMap(islandHolders, screen, origin);
+  }
+
+  function clearIslandHolder(screen, origin) {
+    if (screen !== "" && lookup(islandHolders, screen, null) === origin)
+      islandHolders = writeMap(islandHolders, screen, "");
+  }
+
+  function holderKey(origin) {
+    return origin && origin.window && origin.window.key !== undefined ? String(origin.window.key) : "";
+  }
+
+  // A user-opened surface is open on this output (not merely on its way down).
+  function islandOpenFor(name) {
+    var key = holderKey(lookup(islandHolders, name, null));
+    return key !== "" && !isTransient(key);
+  }
+
+  // The same, on any output.
+  readonly property bool islandOpenAnywhere: {
+    for (var s in islandHolders) {
+      var key = root.holderKey(islandHolders[s]);
+      if (key !== "" && !root.isTransient(key))
+        return true;
+    }
+    return false;
+  }
+
+  // Whether the surface with this key is open on any output.
+  function surfaceOpen(key) {
+    for (var s in islandHolders) {
+      if (root.holderKey(islandHolders[s]) === key)
+        return true;
+    }
+    return false;
+  }
+
+  // True while a higher-ranked transient wants this output.
+  function transientOutranked(key, screenName, rank) {
+    if (screenName === "")
+      return false;
+    for (var id in transientWants) {
+      var want = transientWants[id];
+      if (want.screen === screenName && want.key !== key && want.rank > rank)
+        return true;
+    }
+    return false;
   }
 
   // True while a user-dismissed surface holds the island. The unasked two wait on this

@@ -271,6 +271,7 @@ QtObject {
     fromWidth = 0;
     fromHeight = 0;
     fromClock = true;
+    Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
   }
 
@@ -282,6 +283,8 @@ QtObject {
     fromClock = true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
+    // After the claim, in which whoever held the island let it go.
+    Bus.setIslandHolder(screenName, origin);
     var serial = Bus.claimSerial;
     ownSerial = serial;
     adoptHandoff();

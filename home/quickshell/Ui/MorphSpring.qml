@@ -44,6 +44,16 @@ QtObject {
   }
 
   function step(dt) {
+    // The gate and the target often turn on one change (a still letting go drops `held`, which
+    // both read), in either order; a target taken while the gate was still up must not keep
+    // travelling once it is down. Checked per frame rather than on the gate's change, since
+    // `snapping` lowers and raises the gate inside one assignment, between frames.
+    if (!animate) {
+      driver.stop();
+      velocity = 0;
+      value = target;
+      return;
+    }
     var x = value - target;
     var v = velocity;
     if (Math.abs(x) < epsilon && Math.abs(v) < epsilon * 10) {
