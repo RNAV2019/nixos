@@ -253,6 +253,20 @@ api_call_count() {
   [ "$(jq -r '.messages[3].content' "$API_REQUEST_DIR/request-2.json")" = "Use the format type(scope): description with an allowed Conventional Commit type. Return the complete corrected JSON object." ]
 }
 
+@test "a long hard-wrapped body is trimmed instead of rejected" {
+  printf 'changed\n' > tracked.txt
+  git add tracked.txt
+  queue_choices "Commit"
+  queue_responses "$(candidate "fix(config): trim long body." $'- First point that the model\n  wrapped itself\n- Second\n- Third\n- Fourth\n- Fifth\n- Sixth\n- Seventh\n- Eighth\n- Ninth')"
+
+  run_gen_commit
+
+  [ "$status" -eq 0 ]
+  [ "$(api_call_count)" -eq 1 ]
+  [ "$(git log -1 --format=%s)" = "fix(config): trim long body" ]
+  [ "$(git log -1 --format=%b)" = $'- First point that the model wrapped itself\n- Second\n- Third\n- Fourth' ]
+}
+
 @test "a failed AI refinement keeps the previous candidate" {
   printf 'changed\n' > tracked.txt
   git add tracked.txt
