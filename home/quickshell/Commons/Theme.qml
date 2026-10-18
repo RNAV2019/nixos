@@ -362,6 +362,17 @@ Singleton {
   // "after about a second and a half, it just melts back into the clock".
   readonly property int osdDwell: 1500
 
+  // The sharing pill: a separate transient (not the notification pill) that owns
+  // Quick Share consent when the Nearby panel is shut. Offer is a small card with
+  // Accept/Decline; progress collapses to OSD size; confirm holds briefly.
+  readonly property int sharingOfferWidth: 420
+  readonly property int sharingOfferHeight: 64
+  readonly property int sharingOfferRadius: 22
+  readonly property int sharingProgressWidth: 278
+  readonly property int sharingProgressHeight: 48
+  readonly property int sharingProgressRadius: 24
+  readonly property int sharingConfirmDwell: 2500
+
   // The control centre: the same 520 px column the launcher grows into, carrying a tile grid,
   // two sliders, the media card and notifications. Source frames: 520 x 716 at 1920 px.
   readonly property int controlWidth: panelColumnWidth
@@ -639,9 +650,9 @@ Singleton {
   readonly property int lockIn: 350
   readonly property int lockOut: 350
 
-  // The Nearby panel (boards 16a-16g). The 520 column carries two segmented tracks over
-  // a send body (a drop well or a files card) or a receive body (radar, consent card and
-  // arrivals); heights are the boards' measured stacks, not a fixed panel height.
+  // The Nearby panel (boards 16a-16h). The 520 column carries two segmented tracks over
+  // a send body (the Choose files button or the staged rows, then the devices) or a receive
+  // body (radar, consent card and arrivals); heights are the boards' measured stacks.
   readonly property int nearbyWidth: panelColumnWidth
   readonly property int nearbyRadius: panelRadius
   readonly property int nearbyInset: 13
@@ -662,33 +673,37 @@ Singleton {
   readonly property int nearbySegmentSize: 12
   readonly property int nearbySegmentGap: 8
 
-  // The send body. The drop well and the files card take the same slot, so adding files
-  // collapses one into the other and the panel springs shorter.
-  readonly property int nearbyBodyGap: 20
-  readonly property int nearbyDropHeight: 184
-  readonly property int nearbyDropRadius: 20
-  readonly property real nearbyDropStroke: 1.5
-  readonly property int nearbyDropGlyph: 28
-  readonly property int nearbyDropGlyphArmed: 36
-  readonly property int nearbyFilesHeight: 88
-  readonly property int nearbyFilesRadius: 20
-  readonly property int nearbyThumbSize: 48
-  readonly property int nearbyThumbRadius: 10
-  readonly property int nearbyThumbGlyph: 22
-  readonly property int nearbyThumbGap: 6
-  readonly property int nearbyFilesTextGap: 16
-  readonly property int nearbyFilesTitleSize: 13
-  readonly property int nearbyFilesMetaSize: 11
-  readonly property int nearbyIconBtnSize: 32
-  readonly property int nearbyIconBtnGlyph: 16
-  readonly property int nearbyIconBtnGap: 8
+  // The send body (boards 16a, 16e, 16f). With nothing staged it is one full-width accent
+  // button; staged files list as 40 px rows under a "Files" section line, and the panel
+  // springs taller one row at a time.
+  readonly property int nearbyBodyGap: 16
+  readonly property int nearbyChooseHeight: 44
+  readonly property int nearbyChooseRadius: 22
+  readonly property int nearbyChooseGlyph: 16
+  readonly property real nearbyChooseSize: 13
+  readonly property int nearbySectionTop: 22
+  readonly property int nearbySectionToRows: 6
+  readonly property int nearbyFileHeight: 40
+  readonly property int nearbyFileRadius: 12
+  readonly property int nearbyFileGap: 6
+  readonly property int nearbyFileThumb: 28
+  readonly property int nearbyFileThumbRadius: 7
+  readonly property int nearbyFileThumbGlyph: 15
+  readonly property int nearbyFileTextLeft: 48
+  readonly property int nearbyFileRemove: 12
+  readonly property int nearbyFileRemoveRight: 16
+  readonly property int nearbyFileSizeRight: 40
+  // Staged rows past this many scroll inside the list rather than growing the panel.
+  readonly property int nearbyFilesMax: 4
+  readonly property int nearbyLinkGlyph: 12
 
-  // The "Nearby" section row and the device tiles under it. A tile is a 56 px disc on a
-  // 100 px pitch, ringed by a progress arc while sending and filled with a check when sent.
+  // The "Nearby" section row and the device tiles under it. A tile is a 56 px disc centred
+  // on a 120 px column (centres 140/260/380 for three), ringed by a progress arc while
+  // sending and filled with a check when sent.
   readonly property int nearbySectionSize: 11
   readonly property int nearbySectionSide: 16
   readonly property int nearbySectionGap: 8
-  readonly property int nearbyDeviceSlot: 100
+  readonly property int nearbyDeviceSlot: 120
   readonly property int nearbyDeviceSize: 56
   readonly property int nearbyDeviceGlyph: 22
   readonly property int nearbyDeviceNameGap: 10
@@ -703,9 +718,47 @@ Singleton {
   readonly property int nearbyCancelGlyph: 12
   readonly property int nearbyCancelStroke: 2
   readonly property int nearbyCheckSize: 24
+  // A delivered tile holds its check this long, then the tile and the staged files reset.
+  readonly property int nearbySentDwell: 1600
+  // A failed send says so on its tile this long before the tile is tappable again.
+  readonly property int nearbyFailDwell: 2600
 
-  // The receive body: three breathing rings over a filled core, the name and the timer
+  // The file picker (boards 16b, 16c): the panel grows to 960 x 412 around three columns -
+  // parent 200, current 320, preview 360 - on 30 px rows at a 32 px pitch.
+  readonly property int pickerWidth: 960
+  readonly property int pickerHeight: 412
+  readonly property int pickerHeaderHeight: 56
+  readonly property int pickerSide: 14
+  readonly property int pickerColumnsTop: 68
+  readonly property int pickerColumnsBottom: 12
+  readonly property int pickerParentX: 14
+  readonly property int pickerParentWidth: 200
+  readonly property int pickerCurrentX: 230
+  readonly property int pickerCurrentWidth: 320
+  readonly property int pickerPreviewX: 576
+  readonly property int pickerPreviewWidth: 360
+  readonly property int pickerRuleOneX: 222
+  readonly property int pickerRuleTwoX: 558
+  readonly property int pickerRowHeight: 30
+  readonly property int pickerRowPitch: 32
+  readonly property int pickerRowRadius: 8
+  readonly property int pickerGlyph: 15
+  readonly property int pickerGlyphLeft: 12
+  readonly property int pickerTextLeft: 36
+  readonly property int pickerMetaRight: 12
+  readonly property int pickerMarkSize: 13
+  readonly property real pickerNameSize: 12.5
+  readonly property int pickerMetaSize: 11
+  readonly property int pickerFocusMarkWidth: 3
+  readonly property int pickerFocusMarkHeight: 16
+  readonly property int pickerPreviewImageHeight: 270
+  readonly property int pickerPreviewRadius: 14
+  readonly property int pickerChipHeight: 26
+  readonly property int pickerChipGlyph: 14
+
+  // The receive body: three rings rippling out of a filled core, the name and the timer
   // chip; an inbound consent card and the arrivals list below.
+  readonly property int nearbyRadarTop: 20
   readonly property int nearbyRadarOuter: 156
   readonly property int nearbyRadarMid: 120
   readonly property int nearbyRadarInner: 86
@@ -720,11 +773,10 @@ Singleton {
   readonly property int nearbyChipGlyph: 14
   readonly property int nearbyChipInnerGap: 6
   readonly property int nearbyChipPairGap: 8
-  readonly property real nearbyRadarFill: 0.05
-  readonly property real nearbyRadarStroke: 0.15
-  // One outward breath, three rings staggered across it; off under REDUCE_MOTION.
-  readonly property int nearbyRadarLoop: 2400
+  // One ripple out of the core to past the outer ring; three ripples ride it a third apart.
+  readonly property int nearbyRadarLoop: 2700
 
+  readonly property int nearbyIncomingTop: 18
   readonly property int nearbyIncomingHeight: 64
   readonly property int nearbyIncomingRadius: 16
   readonly property int nearbyIncomingGlyph: 20
@@ -734,22 +786,32 @@ Singleton {
   readonly property int nearbyAnswerHeight: 26
   readonly property int nearbyAnswerRadius: 13
 
-  readonly property int nearbyReceivedGap: 22
+  readonly property int nearbyReceivedGap: 24
+  readonly property int nearbyReceivedAfterCard: 22
   readonly property int nearbyRowHeight: 44
   readonly property int nearbyRowRadius: 14
+  readonly property int nearbyRowGap: 8
   readonly property real nearbyRowNameSize: 12.5
   readonly property int nearbyRowMetaSize: 12
   readonly property int nearbyRowGlyph: 18
   readonly property int nearbyRowTextLeft: 48
   readonly property int nearbyRowInset: 16
-  readonly property int nearbyRowGap: 2
-  readonly property int nearbyRowsTop: 6
-  // The newest arrival wears an accent edge that fades away after this.
+  readonly property int nearbyRowsMax: 4
+  readonly property int nearbyReceiveBottom: 12
+  // The newest arrival wears the accent ground and edge (board 16h) this long.
   readonly property int nearbyArrivalGlow: 4000
+
+  // The hover preview that trails the cursor over a received image: its largest edge, its
+  // offset down and to the right of the pointer, and the spring that chases the pointer.
+  readonly property int nearbyPreviewMax: 220
+  readonly property int nearbyPreviewOffset: 18
+  readonly property real nearbyPreviewStiffness: 400
+  readonly property real nearbyPreviewDamping: 0.8
 
   // Board 16e: a file drag over the island turns the pill into a 248 x 52 drop well.
   readonly property int nearbyDropTargetWidth: 248
   readonly property int nearbyDropTargetHeight: 52
+  readonly property real nearbyDropStroke: 1.5
   readonly property int nearbyDropWellInset: 6
   readonly property int nearbyDropWellHeight: 40
   readonly property int nearbyDropWellRadius: 20

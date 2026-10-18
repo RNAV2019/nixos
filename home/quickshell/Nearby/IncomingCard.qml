@@ -1,8 +1,9 @@
 import QtQuick
 import qs.Commons
+import qs.Services
 import qs.Ui
 
-// An inbound Quick Share offer (board 16c): the accent card carrying the sender, what they
+// An inbound Quick Share offer (board 16g): the accent card carrying the sender, what they
 // are offering, the consent PIN, and Decline / Accept. AirDrop has no consent step - omdrop
 // accepts itself - so only Quick Share rows ever land here.
 Rectangle {
@@ -21,26 +22,7 @@ Rectangle {
 
   readonly property string sender: transfer && transfer.peer ? transfer.peer : "Unknown device"
 
-  readonly property string payload: {
-    if (!transfer)
-      return "";
-    if (transfer.text)
-      return transfer.text;
-    var files = transfer.files || [];
-    var first = files.length > 0 ? files[0].split("/").pop() : "files";
-    return files.length > 1 ? first + " +" + (files.length - 1) : first;
-  }
-
-  readonly property string sizeLabel: {
-    if (!transfer || !transfer.total_bytes)
-      return "";
-    var b = transfer.total_bytes;
-    if (b < 1024)
-      return b + " B";
-    if (b < 1024 * 1024)
-      return (b / 1024).toFixed(1) + " KB";
-    return (b / (1024 * 1024)).toFixed(1) + " MB";
-  }
+  readonly property string payload: Nearby.payloadLabel(transfer)
 
   StrokeIcon {
     x: 16
@@ -68,7 +50,7 @@ Rectangle {
     y: 33
     width: root.width - 48 - 220
     elide: Text.ElideRight
-    text: root.payload + (root.sizeLabel !== "" ? " · " + root.sizeLabel : "")
+    text: root.payload
     color: Theme.withAlpha(Theme.inkOnAccent, 0.72)
     font.family: Theme.uiFont
     font.pixelSize: Theme.nearbyIncomingMetaSize

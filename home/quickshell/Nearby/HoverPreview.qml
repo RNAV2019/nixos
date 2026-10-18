@@ -1,74 +1,120 @@
 import QtQuick
 import QtQuick.Effects
+import Quickshell.Io
 import qs.Commons
+import qs.Services
 import qs.Ui
 
-// A floating image preview that trails the cursor while an image row in the Nearby
-// "Received" list is hovered. It is meant to be a sibling of the panel card, not a child,
-// so the card's clip never trims it; the caller maps the cursor into the panel coordinates.
-// It never handles input, only draws.
+// A small preview that trails the cursor while a row under "Received" is hovered: the picture
+// for an image, the first lines for a text file, the file's glyph otherwise. It sits below and
+// to the right of the pointer and chases it on a slightly under-damped spring - it accelerates
+// after the cursor, overshoots a touch and settles - rather than being glued to it. It is a
+// sibling of the panel card (IslandSurface.overlay), so the card's clip never trims it, and its
+// target is kept on screen instead. It never takes input.
 Item {
   id: root
 
-  // While true the card fades in and chases the anchor; false fades it out and holds.
   property bool active: false
-  // A local absolute path or a file:// URL.
-  property string source: ""
-  // The cursor, already mapped into this item's parent coordinates by the caller.
+  // An absolute path.
+  property string path: ""
+  // The cursor, in this item's parent's coordinates.
   property real anchorX: 0
   property real anchorY: 0
-  property real maxWidth: 320
-  property real maxHeight: 320
-  // The offset from the cursor, so the card sits down and to the right of it.
-  property real marginX: 16
-  property real marginY: 16
 
-  // Above the panel card, which is a sibling.
   z: 1000
 
-  // The image's own size decides the card, capped but never upscaled. Until it loads we still
-  // show the rounded ground at a thumb's size, so a hover does not flash nothing.
-  readonly property bool ready: preview.status === Image.Ready && source !== ""
-  readonly property real naturalW: preview.implicitWidth
-  readonly property real naturalH: preview.implicitHeight
-  readonly property real fit: ready && naturalW > 0 && naturalH > 0 ? Math.min(1, maxWidth / naturalW, maxHeight / naturalH) : 1
-  readonly property real cardW: ready ? naturalW * fit : Theme.nearbyThumbSize
-  readonly property real cardH: ready ? naturalH * fit : Theme.nearbyThumbSize
+  readonly property string kind: Nearby.fileKind(path)
+  readonly property bool picture: Nearby.isPreviewableImage(path)
+  readonly property bool ready: picture ? pic.status === Image.Ready : true
+
+  // The card takes the picture's aspect, its long edge capped; anything else is a fixed card.
+  readonly property real maxEdge: Theme.nearbyPreviewMax
+  readonly property real naturalW: pic.implicitWidth
+  readonly property real naturalH: pic.implicitHeight
+  readonly property real cardW: picture && pic.status === Image.Ready && naturalW > 0 ? (naturalW >= naturalH ? maxEdge : maxEdge * naturalW / naturalH) : kind === "text" ? maxEdge : 132
+  readonly property real cardH: picture && pic.status === Image.Ready && naturalW > 0 ? (naturalW >= naturalH ? maxEdge * naturalH / naturalW : maxEdge) : kind === "text" ? 150 : 132
 
   width: cardW
   height: cardH
 
-  // A spring chase of the anchor rather than a direct bind: retargeting keeps velocity, so the
-  // card trails the cursor and overshoots slightly. Clamp the target, never x itself, or the
-  // Behavior would be fought every frame; the settled size is the clamp's own reference.
-  readonly property real targetX: parent ? Math.max(0, Math.min(parent.width - cardW, anchorX + marginX)) : anchorX + marginX
-  readonly property real targetY: parent ? Math.max(0, Math.min(parent.height - cardH, anchorY + marginY)) : anchorY + marginY
-
-  x: targetX
-  y: targetY
-
-  // Frozen while fading out, so a left row stops being hunted; SurfaceSpring already snaps
-  // rather than overshoots under Theme.reduceMotion.
-  Behavior on x {
-    enabled: root.active
-    SurfaceSpring {}
+  // Down and to the right of the pointer; flipped to the other side of it near an edge.
+  readonly property real offset: Theme.nearbyPreviewOffset
+  readonly property real targetX: {
+    var w = parent ? parent.width : 1e6;
+    var tx = anchorX + offset;
+    if (tx + cardW > w - 8)
+      tx = anchorX - offset - cardW;
+    return Math.max(8, tx);
+  }
+  readonly property real targetY: {
+    var h = parent ? parent.height : 1e6;
+    var ty = anchorY + offset;
+    if (ty + cardH > h - 8)
+      ty = anchorY - offset - cardH;
+    return Math.max(8, ty);
   }
 
-  Behavior on y {
-    enabled: root.active
-    SurfaceSpring {}
+  // The spring state. Position integrates velocity, velocity integrates a force pulling toward
+  // the target and a drag against motion - so the card speeds up after a moving cursor and
+  // slows into place once it stops, never jumping.
+  property real posX: 0
+  property real posY: 0
+  property real velX: 0
+  property real velY: 0
+
+  x: posX
+  y: posY
+
+  function snap() {
+    posX = targetX;
+    posY = targetY;
+    velX = 0;
+    velY = 0;
   }
 
-  // An empty source is simply invisible; Morph's duration collapses under reduceMotion.
+  function step(dt) {
+    var k = Theme.nearbyPreviewStiffness;
+    var c = 2 * Theme.nearbyPreviewDamping * Math.sqrt(k);
+    // Fixed 4 ms sub-steps keep the integration stable through a dropped frame.
+    var left = Math.min(dt, 0.1);
+    while (left > 0) {
+      var h = Math.min(0.004, left);
+      velX += (k * (targetX - posX) - c * velX) * h;
+      velY += (k * (targetY - posY) - c * velY) * h;
+      posX += velX * h;
+      posY += velY * h;
+      left -= h;
+    }
+  }
+
+  FrameAnimation {
+    running: root.visible && !Theme.reduceMotion
+    onTriggered: root.step(frameTime)
+  }
+
+  // Under reduced motion the card simply sits at its target.
+  Binding {
+    when: Theme.reduceMotion
+    root.posX: root.targetX
+    root.posY: root.targetY
+  }
+
+  // A card appearing from nothing starts where it belongs rather than flying in from 0,0.
+  onActiveChanged: if (active && opacity < 0.05)
+    snap()
+
   visible: opacity > 0
-  opacity: active && source !== "" ? 1 : 0
+  opacity: active && path !== "" && ready ? 1 : 0
+  scale: 0.94 + 0.06 * opacity
+  transformOrigin: Item.TopLeft
 
   Behavior on opacity {
-    Morph {}
+    NumberAnimation {
+      duration: Theme.duration(140)
+      easing.type: Easing.OutCubic
+    }
   }
 
-  // Ground and image share one rounded mask rather than a clip, so the fill, the image and the
-  // border all take the panel row's corner. MultiEffect is used the same way as Ui/AlbumArt.
   Item {
     id: content
 
@@ -81,20 +127,58 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.withAlpha(Theme.surfaceRaised, 0.98)
+      color: Theme.surfaceRaised
     }
 
-    // Crop: the card is already sized to the source's aspect, so crop and fit agree, and crop
-    // leaves no hairline of ground showing at an edge from rounding.
     Image {
-      id: preview
+      id: pic
 
       anchors.fill: parent
-      source: root.source
+      visible: root.picture
+      source: root.picture && root.path !== "" ? "file://" + root.path : ""
       asynchronous: true
       cache: true
+      sourceSize.width: Theme.nearbyPreviewMax * 2
       fillMode: Image.PreserveAspectCrop
-      visible: root.ready
+    }
+
+    Text {
+      visible: root.kind === "text"
+      x: 12
+      y: 10
+      width: parent.width - 24
+      height: parent.height - 20
+      clip: true
+      text: peek.text
+      color: Theme.inkSecondary
+      font.family: Theme.monoFont
+      font.pixelSize: 10
+      wrapMode: Text.NoWrap
+      elide: Text.ElideRight
+    }
+
+    StrokeIcon {
+      visible: !root.picture && root.kind !== "text"
+      anchors.centerIn: parent
+      anchors.verticalCenterOffset: -10
+      size: 40
+      strokeWidth: 1.8
+      path: Nearby.glyphFor(root.kind)
+      color: Nearby.inkFor(root.kind)
+    }
+
+    Text {
+      visible: !root.picture && root.kind !== "text"
+      anchors.horizontalCenter: parent.horizontalCenter
+      y: parent.height - 34
+      width: parent.width - 20
+      horizontalAlignment: Text.AlignHCenter
+      elide: Text.ElideMiddle
+      text: Nearby.extOf(root.path).toUpperCase()
+      color: Theme.inkTertiary
+      font.family: Theme.uiFont
+      font.pixelSize: 11
+      font.weight: Theme.weightSemi
     }
   }
 
@@ -112,13 +196,31 @@ Item {
     }
   }
 
-  // The edge rides on top of the masked content, like FrostedSurface's outline, so the mask
-  // never cuts it; a transparent fill keeps it from covering the image.
+  // The edge rides on top of the masked content, so the mask never cuts it.
   Rectangle {
     anchors.fill: parent
     radius: Theme.nearbyRowRadius
     color: "transparent"
     border.width: 1
-    border.color: Theme.withAlpha(Theme.separator, 0.6)
+    border.color: Theme.withAlpha(Theme.separator, 0.7)
+  }
+
+  Process {
+    id: peek
+
+    property string text: ""
+    readonly property string target: root.kind === "text" && root.path !== "" ? root.path : ""
+
+    command: ["head", "-n", "14", "-c", "2048", "--", target]
+    onTargetChanged: {
+      text = "";
+      running = false;
+      if (target !== "")
+        running = true;
+    }
+
+    stdout: StdioCollector {
+      onStreamFinished: peek.text = text.replace(/\t/g, "  ")
+    }
   }
 }

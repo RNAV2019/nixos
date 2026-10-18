@@ -191,8 +191,8 @@
         "omdrop-plugin": "omdrop-plugin"
       },
       "locked": {
-        "lastModified": 1792263439,
-        "narHash": "sha256-Gm94POx9lNkEiR3DLRjpS82zO4RQUFRnHsckdekHpwI=",
+        "lastModified": 1792287575,
+        "narHash": "sha256-XCq2Lr4JlR9HniQqvkF1T2ZFl/fXHQX9SxosTnTA19c=",
         "path": "/home/ryan/Projects/nearby",
         "type": "path"
       },

@@ -27,6 +27,7 @@ ShellRoot {
   ControlCenter {}
   Launcher {}
   NearbyPanel {}
+  SharingPill {}
   Notifications {}
   Osd {}
   Profiles {}

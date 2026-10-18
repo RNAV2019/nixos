@@ -50,8 +50,19 @@ Singleton {
   }
 
   // Inbound Quick Share offers waiting for an answer; AirDrop accepts itself in omdrop.
+  // Strict match on the daemon's exact states: anything else (e.g. a transient
+  // "connecting" that has not yet become consent) is exposed via inboundConnecting
+  // below so the panel can hint instead of silently hiding it.
   readonly property var pendingInbound: root.transfers.filter(function (t) {
     return t.direction === "in" && t.state === "waiting_consent";
+  })
+
+  // Inbound rows that exist but are not yet answerable (usually "connecting").
+  // Sorted newest first; the panel shows a "Connecting…" hint rather than nothing.
+  readonly property var inboundConnecting: root.transfers.filter(function (t) {
+    return t.direction === "in" && t.state === "connecting";
+  }).slice().sort(function (a, b) {
+    return (b.started || 0) - (a.started || 0);
   })
 
   // Finished arrivals, newest first. AirDrop inbounds are synthesised finished already.
@@ -69,6 +80,117 @@ Singleton {
     return (b.started || 0) - (a.started || 0);
   })
 
+  // ---- file kinds and sizes, shared by the staged rows, the picker and the arrivals ----
+
+  function baseName(path) {
+    var s = String(path);
+    while (s.length > 1 && s.charAt(s.length - 1) === "/")
+      s = s.substring(0, s.length - 1);
+    return s.split("/").pop();
+  }
+
+  function extOf(name) {
+    var n = baseName(name);
+    var dot = n.lastIndexOf(".");
+    return dot > 0 ? n.substring(dot + 1).toLowerCase() : "";
+  }
+
+  // "image" | "pdf" | "archive" | "text" | "file"; directories are the caller's to know.
+  function fileKind(name) {
+    var ext = extOf(name);
+    if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "avif", "heic", "heif", "svg", "tif", "tiff"].indexOf(ext) !== -1)
+      return "image";
+    if (ext === "pdf")
+      return "pdf";
+    if (["zip", "tar", "gz", "tgz", "xz", "7z", "rar", "bz2", "zst", "apk", "deb", "rpm"].indexOf(ext) !== -1)
+      return "archive";
+    if (["txt", "md", "nix", "rs", "qml", "js", "ts", "json", "toml", "yaml", "yml", "py", "sh", "fish", "c", "h", "cpp", "go", "lua", "css", "html", "csv", "log", "conf", "ini", "bib", "tex"].indexOf(ext) !== -1)
+      return "text";
+    return "file";
+  }
+
+  // Formats Qt's Image can draw, so a preview is only attempted where it can succeed.
+  function isPreviewableImage(name) {
+    return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif", "heic", "heif", "tif", "tiff"].indexOf(extOf(name)) !== -1;
+  }
+
+  function glyphFor(kind) {
+    switch (kind) {
+    case "dir":
+      return IconPaths.folder;
+    case "image":
+      return IconPaths.image;
+    case "pdf":
+    case "text":
+      return IconPaths.fileText;
+    case "archive":
+      return IconPaths.fileArchive;
+    }
+    return IconPaths.file;
+  }
+
+  // Boards 16b/16c/16e: folders in the accent, PDFs love, images foam, archives gold.
+  function inkFor(kind) {
+    switch (kind) {
+    case "dir":
+      return Theme.accentFill;
+    case "image":
+      return Theme.foam;
+    case "pdf":
+      return Theme.love;
+    case "archive":
+      return Theme.gold;
+    }
+    return Theme.inkSecondary;
+  }
+
+  // "214 KB", "2.4 MB", "96 MB": one decimal only where it carries information.
+  function sizeLabel(bytes) {
+    var b = Number(bytes);
+    if (!(b > 0))
+      return b === 0 ? "0 B" : "";
+    if (b < 1024)
+      return b + " B";
+    if (b < 1024 * 1024)
+      return Math.max(1, Math.round(b / 1024)) + " KB";
+    var units = ["MB", "GB", "TB"];
+    var v = b / (1024 * 1024);
+    var i = 0;
+    while (v >= 1024 && i < units.length - 1) {
+      v /= 1024;
+      i++;
+    }
+    var s = v >= 100 ? String(Math.round(v)) : v.toFixed(1);
+    if (s.indexOf(".") !== -1 && s.charAt(s.length - 1) === "0")
+      s = s.substring(0, s.length - 2);
+    return s + " " + units[i];
+  }
+
+  // The first file a transfer names, for rows and pills: where it was saved, else what was offered.
+  function transferName(t) {
+    if (!t)
+      return "";
+    var paths = t.saved_paths || [];
+    if (paths.length > 0)
+      return baseName(paths[0]);
+    var files = t.files || [];
+    if (files.length > 0)
+      return baseName(files[0]);
+    return t.text ? t.text : "file";
+  }
+
+  // "IMG_2041.jpg +2 · 6.1 MB", the payload line of a consent card or the pill's request.
+  function payloadLabel(t) {
+    if (!t)
+      return "";
+    var files = t.files || [];
+    var head = t.kind !== "files" && t.text ? t.text : (files.length > 0 ? baseName(files[0]) : "files");
+    if (files.length > 1)
+      head += " +" + (files.length - 1);
+    var size = t.total_bytes > 0 ? sizeLabel(t.total_bytes) : "";
+    return size !== "" ? head + " · " + size : head;
+  }
+
   // 0..1 for a row's background bar; a finished transfer is full.
   function progressOf(t) {
     if (!t)
@@ -84,8 +206,69 @@ Singleton {
     return s === "finished" || s === "rejected" || s === "cancelled" || s === "failed";
   }
 
-  // The newest row to arrive while the panel has been up, for its 4 s accent edge.
+  // The newest arrival, for the accent ground it wears for a few seconds (board 16h).
   property string lastArrival: ""
+  property string freshArrival: ""
+
+  onLastArrivalChanged: {
+    freshArrival = lastArrival;
+    if (lastArrival !== "")
+      arrivalGlow.restart();
+  }
+
+  Timer {
+    id: arrivalGlow
+
+    interval: Theme.nearbyArrivalGlow
+    onTriggered: root.freshArrival = ""
+  }
+
+  // Peers of the stack the panel is showing: Quick Share in Android mode, AirDrop in Apple.
+  readonly property var peersForMode: root.peers.filter(function (p) {
+    return p.protocol === (root.mode === "apple" ? "airdrop" : "quickshare");
+  })
+
+  // An AirDrop transfer still running, which holds the Apple window (and the Wi-Fi) open.
+  readonly property bool appleTransferActive: root.transfers.some(function (t) {
+    return t.protocol === "airdrop" && !root.isTerminalState(t.state);
+  })
+
+  function peerById(id) {
+    for (var i = 0; i < peers.length; i++) {
+      if (peers[i].id === id)
+        return peers[i];
+    }
+    return null;
+  }
+
+  function transferById(id) {
+    for (var i = 0; i < transfers.length; i++) {
+      if (transfers[i].id === id)
+        return transfers[i];
+    }
+    return null;
+  }
+
+  // Every outbound id known right now; a fresh staging ignores them all, so a finished send
+  // from an earlier round cannot light a tile.
+  function outboundIds() {
+    var out = [];
+    for (var i = 0; i < transfers.length; i++) {
+      if (transfers[i].direction === "out")
+        out.push(transfers[i].id);
+    }
+    return out;
+  }
+
+  // True while a send outside `ignoreIds` is still running.
+  function outboundInFlight(ignoreIds) {
+    for (var i = 0; i < transfers.length; i++) {
+      var t = transfers[i];
+      if (t.direction === "out" && !isTerminalState(t.state) && (!ignoreIds || ignoreIds.indexOf(t.id) === -1))
+        return true;
+    }
+    return false;
+  }
 
   // The latest daemon notice, shown in the panel so a failure is not silent.
   property string noticeText: ""
@@ -119,8 +302,14 @@ Singleton {
   // Raised to open the panel on the receive view.
   signal receiveRequested
 
+  // Direct open bypassing the Bus.focused gate: the panel listens and calls
+  // win.show() itself on its focused output. Bus.toggleSurface is still tried
+  // for handoff bookkeeping, but an IPC while unfocused no longer silent-drops.
+  signal forceOpen
+
   function requestSend(files) {
     sendRequested(files);
+    forceOpen();
     // The island asks while no panel is up; a second ask with one already open just
     // updates its staged files.
     if (Bus.ownerOf("nearby") === "")
@@ -129,6 +318,7 @@ Singleton {
 
   function requestReceive() {
     receiveRequested();
+    forceOpen();
     if (Bus.ownerOf("nearby") === "")
       Bus.toggleSurface("nearby");
   }
@@ -210,9 +400,23 @@ Singleton {
 
   // Transfer events repeat for one id as state and byte counts move; the newest replaces
   // the row. An inbound arriving finished wants its entrance glow.
+  // A consent becoming answerable surfaces itself: rows now exist from the
+  // handshake on ("connecting"), so this fires on the transition into
+  // waiting_consent, not just on brand-new ids. If the panel is already open
+  // but sitting in Send, flip it to Receive so the card is seen. When the
+  // panel is shut the SharingPill owns the prompt (it has shown a
+  // "Connecting…" hint since the handshake started).
   function upsertTransfer(t) {
     if (!t || !t.id)
       return;
+    var wasAnswerable = false;
+    for (var k = 0; k < transfers.length; k++) {
+      if (transfers[k].id === t.id) {
+        wasAnswerable = transfers[k].state === "waiting_consent";
+        break;
+      }
+    }
+    var isNewConsent = t.direction === "in" && t.state === "waiting_consent" && !wasAnswerable;
     var next = [];
     var seen = false;
     for (var i = 0; i < transfers.length; i++) {
@@ -231,20 +435,12 @@ Singleton {
         root.lastArrival = t.id;
     }
     transfers = next.slice(-50);
-  }
-
-  // Finished/failed sends known right now; a panel snapshots these when it stages files so a
-  // completed send from an earlier round cannot light a tile before this round is sent. Sends
-  // still in flight are deliberately left out, so their progress keeps showing if more files
-  // are added mid-send.
-  function terminalOutboundIds() {
-    var out = [];
-    for (var i = 0; i < transfers.length; i++) {
-      var t = transfers[i];
-      if (t.direction === "out" && root.isTerminalState(t.state))
-        out.push(t.id);
+    if (isNewConsent) {
+      // If the nearby panel is shut, the SharingPill owns the prompt. If it
+      // is already open but sitting in Send, flip it to Receive.
+      if (Bus.ownerOf("nearby") !== "")
+        receiveRequested();
     }
-    return out;
   }
 
   // The live outbound row for a device tile, matched on the name the daemon recorded. Ids in
@@ -324,21 +520,21 @@ Singleton {
   }
 
   function accept(id) {
-    answerCall.command = ["nearby", "accept", id];
-    answerCall.errText = "";
-    answerCall.running = true;
+    acceptCall.command = ["nearby", "accept", id];
+    acceptCall.errText = "";
+    acceptCall.running = true;
   }
 
   function decline(id) {
-    answerCall.command = ["nearby", "decline", id];
-    answerCall.errText = "";
-    answerCall.running = true;
+    declineCall.command = ["nearby", "decline", id];
+    declineCall.errText = "";
+    declineCall.running = true;
   }
 
   function cancel(id) {
-    answerCall.command = ["nearby", "cancel", id];
-    answerCall.errText = "";
-    answerCall.running = true;
+    cancelCall.command = ["nearby", "cancel", id];
+    cancelCall.errText = "";
+    cancelCall.running = true;
   }
 
   function openDownloads() {
@@ -377,15 +573,46 @@ Singleton {
         try {
           root.applyEvent(JSON.parse(text));
         } catch (e) {
-          // A partial line cannot happen over the pipe, but a stray write might.
+          console.warn("nearby events: dropping unparsable line: " + text);
         }
       }
     }
 
-    onRunningChanged: root.connected = events.running
+    onRunningChanged: {
+      root.connected = events.running;
+      // Fresh subscribe replays status+peers+transfers from the daemon, which
+      // heals any gap while the stream was down (restart, Lagged drop).
+      if (events.running)
+        resyncCall.running = true;
+    }
 
     // nearbyd restarted, or was not up yet: reconnect.
     onExited: restart.start()
+  }
+
+  // One-shot snapshot merge after (re)connect: the daemon's subscribe already
+  // replays, but an explicit transfers dump covers a Lagged Status-only repair.
+  Call {
+    id: resyncCall
+
+    command: ["nearby", "transfers", "--json"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var arr = JSON.parse(text);
+          if (Array.isArray(arr)) {
+            for (var i = 0; i < arr.length; i++)
+              root.upsertTransfer(arr[i]);
+          }
+        } catch (e) {
+          console.warn("nearby resync: dropping unparsable transfers dump");
+        }
+      }
+    }
+    onExited: function (code) {
+      if (code !== 0)
+        console.warn("nearby resync failed (" + code + "): " + resyncCall.errText);
+    }
   }
 
   Timer {
@@ -439,10 +666,26 @@ Singleton {
   }
 
   Call {
-    id: answerCall
+    id: acceptCall
 
     onExited: function (code) {
-      root.fail(answerCall, "Answer", code);
+      root.fail(acceptCall, "Accept", code);
+    }
+  }
+
+  Call {
+    id: declineCall
+
+    onExited: function (code) {
+      root.fail(declineCall, "Decline", code);
+    }
+  }
+
+  Call {
+    id: cancelCall
+
+    onExited: function (code) {
+      root.fail(cancelCall, "Cancel", code);
     }
   }
 

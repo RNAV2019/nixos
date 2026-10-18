@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
-// One device under "Nearby" (boards 16b, 16g): a 56 px disc with the device glyph. A tap
+// One device under "Nearby" (boards 16a, 16e, 16f): a 56 px disc with the device glyph. A tap
 // sends; while sending a progress ring grows around the disc with an × badge to cancel;
 // done fills the disc with accent and draws a check. Tiles sit dimmed until files are ready.
 Item {
@@ -56,15 +56,26 @@ Item {
     easing.type: Easing.OutCubic
   }
 
-  Component.onCompleted: shownProgress = progress
+  Component.onCompleted: {
+    shownProgress = progress;
+    appear = 1;
+  }
 
   readonly property string subLabel: {
     if (sent)
       return "Sent";
     if (state === "failed")
       return "Failed";
-    if (state === "cancelled" || state === "rejected")
+    if (state === "rejected")
+      return "Declined";
+    if (state === "cancelled")
       return "Cancelled";
+    // Quick Share shows the same PIN on both screens while the phone decides.
+    if ((state === "connecting" || state === "waiting_consent") && transfer && transfer.pin)
+      return "PIN " + transfer.pin;
+    // AirDrop: the other person is looking at Accept / Decline.
+    if (state === "waiting_consent")
+      return "Waiting…";
     if (state === "connecting")
       return "Connecting…";
     return Math.round(root.progress * 100) + "%";
@@ -81,7 +92,15 @@ Item {
 
   readonly property string name: peer && peer.name ? peer.name : "Unknown"
 
-  opacity: dimmed ? Theme.nearbyDeviceDim : 1
+  opacity: (dimmed ? Theme.nearbyDeviceDim : 1) * appear
+
+  // A device that turns up mid-scan fades and grows in rather than popping into the row.
+  property real appear: 0
+  scale: 0.9 + 0.1 * appear
+
+  Behavior on appear {
+    Morph {}
+  }
 
   Behavior on opacity {
     Morph {
@@ -192,7 +211,7 @@ Item {
 
     visible: root.sending
     x: discBlock.x + Theme.nearbyDeviceSize - Theme.nearbyCancelSize + 6
-    y: discBlock.y - 2
+    y: discBlock.y - 4
     width: Theme.nearbyCancelSize
     height: Theme.nearbyCancelSize
     radius: width / 2
