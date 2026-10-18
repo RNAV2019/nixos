@@ -1,9 +1,13 @@
 import QtQuick
 import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
+import Quickshell.Widgets
 import qs.Commons
 import qs.Services
+import qs.Ui
 
 // The lock screen's picture only: no session lock, no PAM, no watchdog. Hosted by
 // Lock.qml and the IPC preview in LockPreview.qml so visuals can be rehearsed live.
@@ -37,10 +41,95 @@ Item {
     return home.substring(home.lastIndexOf("/") + 1);
   }
 
+  readonly property string facePath: Quickshell.env("HOME") + "/.face"
+  property int faceRevision: 0
+
+  // Watched rather than read once: the preview's view outlives a picture swap.
+  FileView {
+    id: faceFile
+
+    path: view.facePath
+    watchChanges: true
+    printErrors: false
+
+    onFileChanged: {
+      faceFile.reload();
+      view.faceRevision += 1;
+    }
+  }
+
+  // GECOS full name (users.users.<name>.description), read once; the account name until then.
+  property string fullName: ""
+  readonly property string displayName: fullName.length > 0 ? fullName : userName
+
+  Process {
+    running: view.userName.length > 0
+    command: ["getent", "passwd", view.userName]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var gecos = (this.text.split(":")[4] || "").split(",")[0].trim();
+        view.fullName = gecos;
+      }
+    }
+  }
+
+  // Hyprland is the only source that tracks the keyd virtual keyboard's lock state. There is
+  // no event for it, so it is asked on every key in the field and on a slow beat besides.
+  property bool capsLock: false
+  // Lets the IPC preview rehearse the caption without a physical Caps Lock.
+  property bool forceCapsLock: false
+
+  function checkCapsLock() {
+    if (!capsQuery.running)
+      capsQuery.running = true;
+  }
+
+  Process {
+    id: capsQuery
+
+    command: ["hyprctl", "devices", "-j"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var keyboards = JSON.parse(this.text).keyboards || [];
+          var main = keyboards.find(k => k.main) || keyboards[0];
+          view.capsLock = !!(main && main.capsLock);
+        } catch (e) {
+          view.capsLock = false;
+        }
+      }
+    }
+  }
+
+  Timer {
+    interval: Theme.lockCapsPollMs
+    running: view.visible && view.loginAlpha > 0
+    repeat: true
+    triggeredOnStart: true
+    onTriggered: view.checkCapsLock()
+  }
+
+  // The lock hides the pointer; moving the mouse brings it back so the submit disc can be
+  // reached, and the next key hides it again. The first report is the surface entry, not a move.
+  property bool pointerShown: false
+  property point pointerOrigin: Qt.point(-1, -1)
+
   MouseArea {
     anchors.fill: parent
-    cursorShape: Qt.BlankCursor
+    cursorShape: view.pointerShown ? Qt.ArrowCursor : Qt.BlankCursor
     acceptedButtons: Qt.NoButton
+    hoverEnabled: true
+
+    onPositionChanged: function (mouse) {
+      if (view.pointerOrigin.x < 0) {
+        view.pointerOrigin = Qt.point(mouse.x, mouse.y);
+        return;
+      }
+      if (Math.abs(mouse.x - view.pointerOrigin.x) + Math.abs(mouse.y - view.pointerOrigin.y) > 4)
+        view.pointerShown = true;
+    }
   }
 
   // Board 13's layout is in board units; scale the canvas into Qt's.
@@ -142,62 +231,61 @@ Item {
       renderType: Text.QtRendering
     }
 
+    // Board 13: one pill carrying the avatar, the name, the password and the submit disc,
+    // with the Caps Lock caption hanging under it. States are board 13b's five.
     Item {
       id: login
 
+      readonly property bool hasText: input.text.length > 0
+      readonly property bool showError: view.statusIsError && !hasText && !view.busy
+
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockAvatarTop)
-      width: canvas.u(Theme.lockFieldWidth)
-      height: canvas.u(Theme.lockFieldTop + Theme.lockFieldHeight - Theme.lockAvatarTop)
+      y: canvas.u(Theme.lockPillTop)
+      width: canvas.u(Theme.lockPillWidth)
+      height: canvas.u(Theme.lockPillHeight + Theme.lockCaptionGap) + caption.height
       opacity: view.loginAlpha
 
-      Rectangle {
-        id: avatar
+      transform: Translate {
+        id: shake
+      }
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: canvas.u(Theme.lockAvatarSize)
-        height: width
-        radius: width / 2
+      SequentialAnimation {
+        id: shakeAnimation
 
-        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, Theme.lockAvatarFill)
-        border.width: Math.max(1, Theme.lockStrokeWidth * canvas.ui)
-        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.lockAvatarStroke)
+        readonly property real travel: canvas.u(Theme.lockShakeTravel)
+        readonly property int step: Theme.lockShake / 6
 
-        Text {
-          anchors.centerIn: parent
-          text: view.userName.length > 0 ? view.userName.charAt(0).toUpperCase() : "?"
-          color: Theme.accent
-          font.family: Theme.uiFont
-          font.weight: Theme.weightSemi
-          font.pixelSize: canvas.u(Theme.lockAvatarGlyphSize)
-          renderType: Text.QtRendering
+        NumberAnimation { target: shake; property: "x"; to: -shakeAnimation.travel; duration: shakeAnimation.step; easing.type: Easing.OutQuad }
+        NumberAnimation { target: shake; property: "x"; to: shakeAnimation.travel; duration: shakeAnimation.step * 2; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: shake; property: "x"; to: -shakeAnimation.travel; duration: shakeAnimation.step * 2; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: shake; property: "x"; to: 0; duration: shakeAnimation.step; easing.type: Easing.InQuad }
+      }
+
+      Connections {
+        target: view
+
+        function onStatusIsErrorChanged() {
+          if (view.statusIsError && !Theme.reduceMotion)
+            shakeAnimation.restart();
         }
       }
 
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: canvas.u(Theme.lockUserTop - Theme.lockAvatarTop)
-
-        text: view.userName
-        color: Theme.lockTextPrimary
-        font.family: Theme.uiFont
-        font.weight: Theme.weightMedium
-        font.pixelSize: canvas.u(Theme.lockUserSize)
-        renderType: Text.QtRendering
-      }
-
       Rectangle {
-        id: field
+        id: pill
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: canvas.u(Theme.lockFieldTop - Theme.lockAvatarTop)
-        width: canvas.u(Theme.lockFieldWidth)
-        height: canvas.u(Theme.lockFieldHeight)
-        radius: canvas.u(Theme.lockFieldRadius)
+        width: parent.width
+        height: canvas.u(Theme.lockPillHeight)
+        radius: height / 2
 
-        color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, Theme.lockFieldFill)
-        border.width: Math.max(1, Theme.lockStrokeWidth * canvas.ui)
-        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, Theme.lockFieldStroke)
+        color: Theme.surface
+        border.width: Math.max(1, Math.round(canvas.ui))
+        border.color: login.showError ? Qt.rgba(Theme.love.r, Theme.love.g, Theme.love.b, Theme.lockErrorOutline) : Theme.surfaceOutline
+
+        Behavior on border.color {
+          ColorAnimation {
+            duration: Theme.duration(Theme.lockStateFade)
+          }
+        }
 
         TextInput {
           id: input
@@ -215,114 +303,314 @@ Item {
           text: view.password
           onTextChanged: view.passwordEdited(text)
           onAccepted: view.accepted()
+
+          Keys.onPressed: function (event) {
+            view.pointerShown = false;
+            view.checkCapsLock();
+            event.accepted = false;
+          }
+          Keys.onReleased: function (event) {
+            // Caps Lock's own state lands after its press, so ask again on the release.
+            view.checkCapsLock();
+            event.accepted = false;
+          }
         }
 
-        // Keep the board's placeholder in the field from the first frame.
-        Text {
-          anchors.left: parent.left
-          anchors.leftMargin: canvas.u(Theme.lockTextInset)
-          anchors.right: parent.right
-          anchors.rightMargin: canvas.u(Theme.lockTextInset)
-          anchors.verticalCenter: parent.verticalCenter
-          visible: input.text.length === 0
+        Rectangle {
+          id: avatar
 
-          text: {
-            if (view.busy)
-              return "Authenticating....";
-            if (view.statusIsError)
-              return view.status;
-            return "Enter password";
+          x: canvas.u(Theme.lockPillInset)
+          anchors.verticalCenter: parent.verticalCenter
+          width: canvas.u(Theme.lockAvatarSize)
+          height: width
+          radius: width / 2
+          color: Theme.overlay
+
+          // ~/.face links out of the store to ~/nixos/profile.jpg. The query is bumped on every
+          // change so a replaced picture reloads under the same name; cache is off for the same reason.
+          ClippingRectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: "transparent"
+            visible: face.status === Image.Ready
+
+            Image {
+              id: face
+
+              anchors.fill: parent
+              source: "file://" + view.facePath + "?" + view.faceRevision
+              sourceSize.width: width
+              sourceSize.height: height
+              fillMode: Image.PreserveAspectCrop
+              cache: false
+              asynchronous: false
+              smooth: true
+              mipmap: true
+            }
           }
-          color: view.statusIsError ? Theme.love : view.busy ? Theme.lockFieldState : Theme.lockFieldHint
+
+          Text {
+            anchors.centerIn: parent
+            visible: face.status !== Image.Ready
+            text: view.displayName.length > 0 ? view.displayName.charAt(0).toUpperCase() : "?"
+            color: Theme.accent
+            font.family: Theme.uiFont
+            font.weight: Theme.weightSemi
+            font.pixelSize: canvas.u(Theme.lockAvatarGlyphSize)
+            renderType: Text.QtRendering
+          }
+        }
+
+        Text {
+          id: nameLabel
+
+          x: canvas.u(Theme.lockTextLeft)
+          y: canvas.u(Theme.lockNameTop)
+          width: submit.x - x - canvas.u(Theme.lockPillInset)
           elide: Text.ElideRight
+
+          text: view.displayName
+          color: Theme.lockTextPrimary
           font.family: Theme.uiFont
-          font.weight: Theme.weightRegular
-          font.pixelSize: canvas.u(Theme.lockFieldTextSize)
-          font.italic: view.statusIsError
+          font.weight: Theme.weightSemi
+          font.pixelSize: canvas.u(Theme.lockNameSize)
           renderType: Text.QtRendering
         }
 
-        Row {
-          anchors.left: parent.left
-          anchors.leftMargin: canvas.u(Theme.lockDotInset)
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 0
+        // Line two: the dots and caret while typing, otherwise the placeholder or the state.
+        Item {
+          id: lineTwo
 
-          Repeater {
-            model: 64
+          x: canvas.u(Theme.lockTextLeft)
+          y: canvas.u(Theme.lockLineTwoTop)
+          width: nameLabel.width
+          height: canvas.u(Theme.lockLineTwoHeight)
 
-            Item {
-              id: slot
+          Text {
+            anchors.left: parent.left
+            anchors.leftMargin: view.busy || login.showError ? 0 : canvas.u(Theme.lockPlaceholderInset)
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !login.hasText
 
-              readonly property bool filled: index < input.text.length
+            text: {
+              if (view.busy)
+                return "Checking…";
+              if (login.showError)
+                return view.status;
+              return "Password";
+            }
+            color: login.showError ? Theme.love : Theme.inkSecondary
+            elide: Text.ElideRight
+            font.family: Theme.uiFont
+            font.weight: login.showError ? Theme.weightMedium : Theme.weightRegular
+            font.pixelSize: canvas.u(Theme.lockLineTwoSize)
+            renderType: Text.QtRendering
+          }
 
-              width: filled ? canvas.u(Theme.lockDotSize + Theme.lockDotGap) : 0
-              // Every child is the caret's height, so the positioner lines them up
-              // without anchors, which it would ignore.
-              height: canvas.u(Theme.lockCaretHeight)
+          Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+            visible: !view.busy && !login.showError
 
-              Behavior on width {
-                NumberAnimation {
-                   duration: Theme.duration(Theme.lockDotPop)
-                  easing.type: Easing.OutQuad
+            Repeater {
+              model: 64
+
+              Item {
+                id: slot
+
+                readonly property bool filled: index < input.text.length
+
+                width: filled ? canvas.u(Theme.lockDotSize + Theme.lockDotGap) : 0
+                // Every child is the caret's height, so the positioner lines them up
+                // without anchors, which it would ignore.
+                height: canvas.u(Theme.lockCaretHeight)
+
+                Behavior on width {
+                  NumberAnimation {
+                    duration: Theme.duration(Theme.lockDotPop)
+                    easing.type: Easing.OutQuad
+                  }
+                }
+
+                Rectangle {
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: canvas.u(Theme.lockDotSize)
+                  height: width
+                  radius: width / 2
+                  color: Theme.lockTextPrimary
+
+                  scale: slot.filled ? 1 : 0
+                  opacity: slot.filled ? 1 : 0
+
+                  Behavior on scale {
+                    NumberAnimation {
+                      duration: Theme.duration(Theme.lockDotPop)
+                      easing.type: slot.filled ? Easing.OutQuad : Easing.InQuad
+                    }
+                  }
+
+                  Behavior on opacity {
+                    NumberAnimation {
+                      duration: Theme.duration(Theme.lockDotPop)
+                    }
+                  }
                 }
               }
+            }
 
-              Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: canvas.u(Theme.lockDotSize)
-                height: width
-                radius: width / 2
-                color: "white"
+            Rectangle {
+              id: caret
 
-                scale: slot.filled ? 1 : 0
-                opacity: slot.filled ? 1 : 0
+              width: Math.max(1, canvas.u(Theme.lockCaretWidth))
+              height: canvas.u(Theme.lockCaretHeight)
+              radius: width / 2
+              color: Theme.lockCaretColor
 
-                Behavior on scale {
-                  NumberAnimation {
-                     duration: Theme.duration(Theme.lockDotPop)
-                    easing.type: slot.filled ? Easing.OutQuad : Easing.InQuad
-                  }
+              SequentialAnimation on opacity {
+                loops: Animation.Infinite
+                running: !Theme.reduceMotion
+                PropertyAction {
+                  value: 1
                 }
-
-                Behavior on opacity {
-                  NumberAnimation {
-                     duration: Theme.duration(Theme.lockDotPop)
-                  }
+                PauseAnimation {
+                  duration: Theme.lockCaretBlinkMs
+                }
+                PropertyAction {
+                  value: 0
+                }
+                PauseAnimation {
+                  duration: Theme.lockCaretBlinkMs
                 }
               }
             }
           }
+        }
 
-          Rectangle {
-            id: caret
+        // The submit disc: a plate until there is something to send, then the accent.
+        Rectangle {
+          id: submit
 
-            width: Math.max(1, canvas.u(Theme.lockCaretWidth))
-            height: canvas.u(Theme.lockCaretHeight)
-            radius: width / 2
-            color: Theme.lockCaretColor
-            visible: true
+          readonly property bool live: login.hasText && !view.busy
 
-            SequentialAnimation on opacity {
-              loops: Animation.Infinite
-              running: !Theme.reduceMotion
-              PropertyAction {
-                value: 1
-              }
-              PauseAnimation {
-                duration: 530
-              }
-              PropertyAction {
-                value: 0
-              }
-              PauseAnimation {
-                duration: 530
+          anchors.right: parent.right
+          anchors.rightMargin: canvas.u(Theme.lockPillInset)
+          anchors.verticalCenter: parent.verticalCenter
+          width: canvas.u(Theme.lockSubmitSize)
+          height: width
+          radius: width / 2
+          color: live ? Theme.accent : Theme.overlay
+
+          Behavior on color {
+            ColorAnimation {
+              duration: Theme.duration(Theme.lockStateFade)
+            }
+          }
+
+          StrokeIcon {
+            anchors.centerIn: parent
+            visible: !view.busy
+            size: canvas.u(Theme.lockArrowSize)
+            strokeWidth: 2 * canvas.ui
+            color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
+            path: IconPaths.arrowRight
+          }
+
+          // Checking: a quarter arc turning over a faint track.
+          Shape {
+            id: spinner
+
+            anchors.centerIn: parent
+            width: canvas.u(Theme.lockSpinnerSize)
+            height: width
+            visible: view.busy
+            antialiasing: true
+            preferredRendererType: Shape.CurveRenderer
+
+            readonly property real stroke: 2 * canvas.ui
+            readonly property real r: (width - stroke) / 2
+
+            ShapePath {
+              fillColor: "transparent"
+              strokeColor: Qt.rgba(Theme.inkTertiary.r, Theme.inkTertiary.g, Theme.inkTertiary.b, 0.35)
+              strokeWidth: spinner.stroke
+
+              PathAngleArc {
+                centerX: spinner.width / 2
+                centerY: spinner.height / 2
+                radiusX: spinner.r
+                radiusY: spinner.r
+                startAngle: 0
+                sweepAngle: 360
               }
             }
+
+            ShapePath {
+              fillColor: "transparent"
+              strokeColor: Theme.accent
+              strokeWidth: spinner.stroke
+              capStyle: ShapePath.RoundCap
+
+              PathAngleArc {
+                centerX: spinner.width / 2
+                centerY: spinner.height / 2
+                radiusX: spinner.r
+                radiusY: spinner.r
+                startAngle: -90
+                sweepAngle: 90
+              }
+            }
+
+            RotationAnimator on rotation {
+              from: 0
+              to: 360
+              duration: Theme.lockSpinnerTurn
+              loops: Animation.Infinite
+              running: spinner.visible && !Theme.reduceMotion
+            }
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            enabled: submit.live
+            cursorShape: Qt.PointingHandCursor
+            onClicked: view.accepted()
           }
         }
       }
 
+      Row {
+        id: caption
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: pill.height + canvas.u(Theme.lockCaptionGap)
+        spacing: canvas.u(Theme.lockCaptionGlyphGap)
+        opacity: view.capsLock || view.forceCapsLock ? 1 : 0
+
+        Behavior on opacity {
+          NumberAnimation {
+            duration: Theme.duration(Theme.lockStateFade)
+          }
+        }
+
+        StrokeIcon {
+          anchors.verticalCenter: parent.verticalCenter
+          size: canvas.u(Theme.lockCaptionGlyph)
+          strokeWidth: 1.5 * canvas.ui
+          color: Theme.gold
+          path: IconPaths.capsLock
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: "Caps Lock is on"
+          color: Theme.gold
+          font.family: Theme.uiFont
+          font.weight: Theme.weightMedium
+          font.pixelSize: canvas.u(Theme.lockCaptionSize)
+          renderType: Text.QtRendering
+        }
+      }
     }
   }
 

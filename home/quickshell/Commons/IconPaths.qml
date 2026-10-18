@@ -12,6 +12,9 @@ Singleton {
   // Lucide (matches the boards 1:1).
   readonly property string arrowUp: "M5 12l7-7 7 7M12 19V5"
   readonly property string arrowDown: "M12 5v14M19 12l-7 7-7-7"
+  // Board 13's submit arrow and Caps Lock mark, drawn there on 18 and 14 grids.
+  readonly property string arrowRight: "M4.67 12h14.67M13.33 6l6 6-6 6"
+  readonly property string capsLock: "M12 3.09L3.77 12h4.8v5.14h6.86V12h4.8zM8.57 21.26h6.86"
   readonly property string upload: "M12 3v12M17 8l-5-5-5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
   readonly property string download: "M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
   readonly property string plus: "M5 12h14M12 5v14"

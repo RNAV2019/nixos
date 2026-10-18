@@ -14,6 +14,8 @@ Scope {
   property string status: ""
   property bool statusIsError: false
   property bool busy: false
+  // Caps Lock as the preview pretends it is; the real state still shows when it is on.
+  property bool capsLock: false
   // Sticky, like the real flow: the pill stays up until the preview is taken down.
   property bool inputStarted: false
 
@@ -52,6 +54,7 @@ Scope {
         status: root.status
         statusIsError: root.statusIsError
         busy: root.busy
+        forceCapsLock: root.capsLock
         inputStarted: root.inputStarted
         ground: reveal.ground
         clockAlpha: reveal.clockAlpha
@@ -71,6 +74,7 @@ Scope {
       status = "";
       statusIsError = false;
       busy = false;
+      capsLock = false;
       inputStarted = false;
     }
   }
@@ -120,6 +124,10 @@ Scope {
       root.busy = on;
       if (on)
         root.password = "";
+    }
+
+    function caps(on: bool): void {
+      root.capsLock = on;
     }
   }
 }

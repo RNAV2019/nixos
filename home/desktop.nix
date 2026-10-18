@@ -515,4 +515,11 @@ in {
 
   xdg.configFile."quickshell".source =
     config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/home/quickshell";
+
+  # The account picture, read by the lock screen. Out of store, so replacing
+  # ~/nixos/profile.jpg shows on the next lock without a rebuild.
+  home.file.".face" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/profile.jpg";
+    force = true;
+  };
 }

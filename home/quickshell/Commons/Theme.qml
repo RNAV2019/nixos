@@ -619,23 +619,42 @@ Singleton {
   readonly property int lockClockTop: 175
   readonly property int lockClockSize: 112
 
-  readonly property int lockAvatarTop: 824
-  readonly property int lockAvatarSize: 56
-  readonly property int lockAvatarGlyphSize: 22
-  readonly property int lockUserTop: 894
-  readonly property int lockUserSize: 14
+  // The login pill: avatar, name over the password line, submit disc. Offsets are from the
+  // pill's own top-left; the radius is height / 2.
+  readonly property int lockPillTop: 908
+  readonly property int lockPillWidth: 360
+  readonly property int lockPillHeight: 60
+  readonly property int lockPillInset: 8
+  readonly property int lockAvatarSize: 44
+  readonly property int lockAvatarGlyphSize: 17
+  readonly property int lockTextLeft: 64
+  readonly property int lockNameTop: 13
+  readonly property real lockNameSize: 12.5
+  readonly property int lockLineTwoTop: 34
+  readonly property int lockLineTwoHeight: 14
+  readonly property real lockLineTwoSize: 10.5
+  readonly property int lockPlaceholderInset: 5
+  readonly property int lockSubmitSize: 44
+  readonly property int lockArrowSize: 18
+  readonly property int lockSpinnerSize: 20
+  readonly property int lockSpinnerTurn: 900
+  readonly property int lockCaptionGap: 12
+  readonly property int lockCaptionGlyph: 14
+  readonly property int lockCaptionGlyphGap: 6
+  readonly property int lockCaptionSize: 11
+  readonly property real lockErrorOutline: 0.6
+  // A refusal shakes the pill three times across 6 units.
+  readonly property int lockShakeTravel: 6
+  readonly property int lockShake: 240
+  readonly property int lockStateFade: 120
+  // Caps Lock has no Hyprland event; keys in the field ask too, so this only catches a
+  // toggle from another keyboard.
+  readonly property int lockCapsPollMs: 1500
 
-  readonly property int lockFieldTop: 928
-  readonly property int lockFieldWidth: 280
-  readonly property int lockFieldHeight: 44
-  readonly property int lockFieldRadius: 22
-  readonly property int lockDotInset: 21
-  readonly property int lockCaretWidth: 2
-  readonly property int lockCaretHeight: 18
-  readonly property int lockTextInset: 25
-  readonly property int lockFieldTextSize: 13
-  readonly property int lockDotSize: 8
-  readonly property int lockDotGap: 4
+  readonly property real lockCaretWidth: 1.5
+  readonly property int lockCaretHeight: 12
+  readonly property int lockDotSize: 6
+  readonly property int lockDotGap: 5
   readonly property int lockDotPop: 80
   // The caret blink on the field, at the standard text-caret period.
   readonly property int lockCaretBlinkMs: 530
@@ -645,14 +664,7 @@ Singleton {
   readonly property color lockVeilColor: surface
   readonly property real lockVeilOpacity: 0.55
   readonly property color lockTextPrimary: inkPrimary
-  readonly property color lockFieldState: inkPrimary
-  readonly property color lockFieldHint: inkTertiary
   readonly property color lockCaretColor: focusRing
-  readonly property real lockFieldFill: 0.8
-  readonly property real lockFieldStroke: 0.55
-  readonly property real lockAvatarFill: 0.85
-  readonly property real lockAvatarStroke: 0.5
-  readonly property real lockStrokeWidth: 1.5
   readonly property int lockBlurMax: surfaceBlurMax
   readonly property real lockBlur: surfaceBlur
   readonly property int lockIn: 350

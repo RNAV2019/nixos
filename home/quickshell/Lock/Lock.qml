@@ -114,7 +114,7 @@ Scope {
     // submit already wiped the dots, so a refusal just relabels the empty field.
     root.attempts += 1;
     root.statusIsError = true;
-    root.status = reason + " (" + root.attempts + ")";
+    root.status = reason + " · try " + root.attempts;
     failTimeout.restart();
   }
 
@@ -240,7 +240,7 @@ Scope {
       }
       // A worker that died or never came up is not a refused password; onError named it.
       if (!root.pamErrored)
-        root.fail(result === PamResult.MaxTries ? "Too many attempts" : "Authentication failed");
+        root.fail(result === PamResult.MaxTries ? "Too many attempts" : "Wrong password");
       root.pamErrored = false;
       // Each failed attempt ends the PAM conversation.
       passwordPam.start();

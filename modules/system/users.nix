@@ -5,7 +5,8 @@
 }: {
   users.users.ryan = {
     isNormalUser = true;
-    description = "ryan";
+    # The full name; the lock screen reads it from GECOS.
+    description = "Ryan Navsaria";
     # kvm grants passwordless /dev/kvm access for Android emulation.
     extraGroups = ["networkmanager" "wheel" "video" "audio" "kvm"];
     shell = pkgs.fish;
