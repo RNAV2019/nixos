@@ -96,15 +96,14 @@ Variants {
       Recorder.refreshMonitor();
       launchPending = false;
       settleCap.stop();
+      returnTo = "";
     }
 
-    // Opened out of the control centre's Record tile: the control centre handed its live
-    // shape over and still holds the island's place, so backing out returns there, as one
-    // more handover, instead of shrinking to the pill. Starting or clicking away still closes.
+    // Opened from the control centre's Record tile (Bus.recorderFrom names this output for
+    // that request), so backing out returns there, as one more handover, instead of
+    // shrinking to the pill. A shortcut or IPC open, even one landing while the control centre
+    // is still closing, leaves it empty. Starting or clicking away still closes.
     property string returnTo: ""
-
-    onOpenChanged: if (open)
-      returnTo = origin.handedOver && win.screen && Bus.ownerOf("control") === win.screen.name ? "control" : ""
 
     function back() {
       if (win.returnTo === "control")
@@ -118,38 +117,38 @@ Variants {
     }
 
     // Closing first, because slurp cannot draw over a surface that still holds the keyboard;
-    // the launch then waits for the pill to be back at its resting shape, so neither the
-    // capture nor slurp's overlay catches the tail of the close.
+    // the launch then waits for the close to be over and the window parked, so neither the
+    // capture nor slurp's overlay catches its tail. Parked, the window also takes the pill's
+    // new width (a recording widens it) at once instead of springing back out to it.
     function activate() {
       Recorder.target = win.targets[win.selected].key;
       win.hide();
       launchPending = true;
       settleCap.restart();
-      launchIfSettled();
+      Qt.callLater(win.launchIfSettled);
     }
 
     property bool launchPending: false
 
-    // Within a pixel of the pill: the close is over for the eye, without waiting out the
-    // spring's last half-pixel of rest.
-    readonly property bool closeSettled: !win.open && surface.width <= origin.collapsedWidth + 1 && surface.height <= Theme.barHeight + 1
-
+    // Called off a change notification, never inside one: starting widens the pill, which
+    // the shape bindings read.
     function launchIfSettled() {
-      if (!launchPending || !(closeSettled || !showing))
+      if (!launchPending || win.open || win.showing || !win.parked)
         return;
       launchPending = false;
       settleCap.stop();
       Recorder.start();
     }
 
-    onCloseSettledChanged: launchIfSettled()
-    onShowingChanged: launchIfSettled()
+    onParkedChanged: if (parked)
+      Qt.callLater(win.launchIfSettled)
 
-    // A backstop only: if the shape never reports rest (a lock mid-close), launch anyway.
+    // A backstop only: if the window never parks (a lock mid-close), launch anyway. Not off
+    // actionSettleDelay, which is 0 under reduced motion and would beat the 80 ms park.
     Timer {
       id: settleCap
 
-      interval: Theme.actionSettleDelay * 4
+      interval: 2000
       onTriggered: {
         if (!win.launchPending)
           return;
@@ -163,8 +162,12 @@ Variants {
 
       // Asked for with nothing recording; while something is recording the same key stops it.
       function onRecorderRequested() {
-        if (win.focused && !win.open)
-          win.show();
+        if (!win.focused || win.open)
+          return;
+        var fromTile = win.screen !== null && Bus.recorderFrom === win.screen.name;
+        win.show();
+        // After show(): opening() clears it for every other way in.
+        win.returnTo = fromTile ? "control" : "";
       }
     }
 

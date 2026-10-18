@@ -41,6 +41,20 @@ Variants {
     // lands on the tile it left from rather than on the first one.
     property bool recorderOut: false
 
+    // Only the tile raises it, and only while this panel is open: the request that follows
+    // is marked as this output's for that turn of the event loop, so the picker can tell a
+    // tile press from a shortcut arriving while this panel is still on its way out.
+    onRecorderOutChanged: {
+      if (!recorderOut || !win.open || !win.screen)
+        return;
+      var name = win.screen.name;
+      Bus.recorderFrom = name;
+      Qt.callLater(function () {
+        if (Bus.recorderFrom === name)
+          Bus.recorderFrom = "";
+      });
+    }
+
     onOpening: {
       view = "";
       home.keyboardIndex = recorderOut && Bus.ownerOf("recorder") !== "" ? 6 : 0;

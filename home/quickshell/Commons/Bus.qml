@@ -57,6 +57,10 @@ Singleton {
   // Raised when something asks to record but nothing has been chosen yet.
   signal recorderRequested
 
+  // The output whose open control centre is asking, set across that one request; empty for
+  // a shortcut or IPC. The picker reads it to know whether backing out returns there.
+  property string recorderFrom: ""
+
   signal clockRefreshed
 
   // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
