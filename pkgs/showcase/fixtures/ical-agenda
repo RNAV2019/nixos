@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Stands in for ical-agenda: a plausible week of made-up events around today, so the
+# calendar has something to show without reading a real feed.
+# usage: ical-agenda [--refresh] FROM TO   (only the TSV shape matters to the shell)
+day() { date -d "monday this week + $1 days" +%F; }
+printf 'start_date\tstart_time\tend_date\tend_time\ttitle\tcalendar\tlocation\n'
+row() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@"; }
+row "$(day 0)" 09:30 "$(day 0)" 10:00 "Weekly planning" Work ""
+row "$(day 1)" 13:00 "$(day 1)" 14:00 "Lunch" Personal "Cafe"
+row "$(day 2)" 10:30 "$(day 2)" 11:00 "Stand-up" Work ""
+row "$(day 2)" 14:00 "$(day 2)" 15:30 "Design review" Work "Studio"
+row "$(day 2)" 18:30 "$(day 2)" 20:00 "Climbing" Personal "Climbing wall"
+row "$(day 3)" 11:00 "$(day 3)" 12:00 "NixOS meetup" Personal "Online"
+row "$(day 4)" "" "$(day 4)" "" "Release day" Work ""
+row "$(day 6)" 10:00 "$(day 6)" 12:00 "Long run" Personal "Park"
+row "$(day 9)" "" "$(day 11)" "" "Conference" Work ""

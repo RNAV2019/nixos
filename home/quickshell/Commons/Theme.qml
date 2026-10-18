@@ -79,8 +79,8 @@ Singleton {
 
   // Which theme is up. `theme-switch` writes the id into this watched file, so a switch
   // recolours in place: Tint colours cross-fade, the rest change on the next frame.
-  property string name: "rose-pine"
-  readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes["rose-pine"]
+  property string name: "ariadne"
+  readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes["ariadne"]
 
   FileView {
     id: nameFile
@@ -256,7 +256,12 @@ Singleton {
   // expanding into a media and status card on hover.
   readonly property int islandRadius: 18
   readonly property int islandIdleWidth: 118
-  readonly property int islandPlayingWidth: 140
+  // The equaliser's room beside the clock: 14.5 px of bars and a 7.5 px gap.
+  readonly property real islandEqualiserGap: 7.5
+  readonly property int islandEqualiserRoom: 22
+  // The idle pill's padding either side of the clock, and the least a mark keeps off the end.
+  readonly property int islandSideInset: 34
+  readonly property int islandMarkInset: 14
   readonly property int islandExpandedWidth: panelColumnWidth
   readonly property int islandExpandedHeight: 84
   readonly property int islandExpandedRadius: panelRadius
@@ -566,6 +571,15 @@ Singleton {
   readonly property int recorderDotSize: 8
   readonly property int recorderDotGap: 10
 
+  // The privacy marks: a camera in foam left of the clock, a microphone in gold right of it,
+  // after macOS's green and orange, so neither reads as the recording's love. 10 px off
+  // whatever they sit beside; see Ui/PillMarks.qml for the split.
+  readonly property int privacyGlyphSize: 14
+  readonly property real privacyGlyphStroke: 1.75
+  readonly property int privacyMarkGap: 10
+  readonly property color cameraMark: foam
+  readonly property color microphoneMark: gold
+
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: panelColumnWidth
   readonly property int calHeight: 600
@@ -838,10 +852,16 @@ Singleton {
   readonly property real nearbyDropWellStroke: 1.25
   readonly property int nearbyDropWellGlyph: 24
 
-  // The pill's shut width, one per combination: it grows for a player and again for a
-  // recording, but neither moves the clock, which stays centred in the current width.
-  function islandCollapsedWidth(media, recording) {
-    return (media ? islandPlayingWidth : islandIdleWidth) + (recording ? recorderDotSize + recorderDotGap : 0);
+  // The pill's shut width, one per combination. The clock stays centred: the equaliser and
+  // camera sit left of it, the recording dot and microphone right. Marks first fill the idle
+  // pill's own side padding, keeping islandMarkInset clear of the end, and the pill only
+  // widens, evenly, once the heavier side outgrows it.
+  function islandCollapsedWidth(media, recording, camera, microphone) {
+    var glyph = privacyMarkGap + privacyGlyphSize;
+    var left = (media ? islandEqualiserRoom : 0) + (camera ? glyph : 0);
+    var right = (recording ? recorderDotGap + recorderDotSize : 0) + (microphone ? glyph : 0);
+    var overflow = Math.max(0, Math.max(left, right) + islandMarkInset - islandSideInset);
+    return islandIdleWidth + 2 * overflow;
   }
 
   readonly property int workspacePadding: 14

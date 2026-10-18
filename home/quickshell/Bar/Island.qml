@@ -143,7 +143,7 @@ FrostedSurface {
     }
   }
 
-  readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
+  readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
   // On the same spring as every surface that grows out of it; see Ui/MorphSpring.qml.
   MorphSpring {
@@ -191,18 +191,9 @@ FrostedSurface {
   // Do not infer completion from clamped openness; a spring may cross the target before resting.
   readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
 
-  // The shut pill is one row on 34 px margins; every board width is that row plus 68. The
-  // equaliser shoulder and dot differ, so the clock shifts; see Theme.islandCollapsedWidth.
-  readonly property real collapsedGap: 7.5
-
-  // Where the shut row puts the clock's shown left edge, measured as clockLeft measures it.
-  readonly property real collapsedClockLeft: {
-    var shoulder = Media.active ? collapsedEq.implicitWidth + collapsedGap : 0;
-    var row = shoulder + clockLabel.width * clockLabel.scale;
-    if (Recorder.recording)
-      row += Theme.recorderDotGap + Theme.recorderDotSize;
-    return (root.width - row) / 2 + shoulder;
-  }
+  // Where the shut pill puts the clock's shown left edge, measured as clockLeft measures it:
+  // always centred, the marks being balanced either side; see Theme.islandCollapsedWidth.
+  readonly property real collapsedClockLeft: (root.width - clockLabel.width * clockLabel.scale) / 2
 
   SystemClock {
     id: clock
@@ -252,31 +243,17 @@ FrostedSurface {
     opacity: 0.9
   }
 
-  // The recording mark, trailing the clock so the equaliser keeps its place. Shown only while
-  // shut: a red dot in the open card would be a second subject.
-  Rectangle {
-    x: root.clockLeft + clockLabel.width * clockLabel.scale + Theme.recorderDotGap
+  // The equaliser, recording and privacy marks either side of the clock. Shown only while
+  // shut: the open card has its own equaliser, and the other marks there would be a second
+  // subject.
+  PillMarks {
+    x: 0
     y: root.midline - height / 2
-    width: Theme.recorderDotSize
-    height: width
-    radius: width / 2
-    color: Theme.urgent
-    visible: Recorder.recording && opacity > 0
-    opacity: root.expanded || root.dropArmed ? 0 : 1
-
-    Behavior on opacity {
-      Fade {}
-    }
-  }
-
-  // The shut pill's equaliser; the open card has its own, so this one hands over.
-  Equaliser {
-    id: collapsedEq
-
-    x: root.clockLeft - root.collapsedGap - implicitWidth
-    y: root.midline - implicitHeight / 2
-    playing: Media.playing
-    visible: Media.active && opacity > 0
+    width: root.width
+    height: Theme.barHeight
+    clockLeft: root.clockLeft
+    clockRight: root.clockLeft + clockLabel.width * clockLabel.scale
+    visible: leftExtent + rightExtent > 0 && opacity > 0
     opacity: root.expanded || root.dropArmed ? 0 : 1
 
     Behavior on opacity {

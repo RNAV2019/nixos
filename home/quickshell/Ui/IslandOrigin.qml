@@ -27,7 +27,7 @@ QtObject {
   property bool snapping: false
 
   // The pill the surface starts from and returns to, which is wider while something plays.
-  readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording)
+  readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
   readonly property real originWidth: fromCard ? fromWidth : collapsedWidth
   readonly property real originHeight: fromCard ? fromHeight : Theme.barHeight

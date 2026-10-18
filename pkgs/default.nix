@@ -12,6 +12,7 @@ final: _prev: {
   ical-agenda = final.callPackage ./ical-agenda {};
   forward-dev = final.callPackage ./forward-dev {};
   typst-preview-window = final.callPackage ./typst-preview-window {};
+  showcase = final.callPackage ./showcase {};
   claude-statusline = final.callPackage ./claude-statusline {};
   claude-usage = final.callPackage ./claude-usage {};
   t3code-nightly = final.callPackage ./t3code-nightly {};

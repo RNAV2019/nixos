@@ -1,0 +1,18 @@
+// Only what describes the setup: no IPs, serials, disks or user details.
+{
+  "logo": { "source": "nixos", "padding": { "top": 1, "right": 3 } },
+  "display": { "separator": "  ", "color": { "keys": "cyan" } },
+  "modules": [
+    "break",
+    { "type": "os", "key": "os    " },
+    { "type": "kernel", "key": "kernel" },
+    { "type": "wm", "key": "wm    " },
+    { "type": "shell", "key": "shell " },
+    { "type": "terminal", "key": "term  " },
+    { "type": "packages", "key": "pkgs  " },
+    { "type": "cpu", "key": "cpu   ", "showPeCoreCount": false, "format": "{name}" },
+    { "type": "terminalfont", "key": "font  " },
+    "break",
+    "colors"
+  ]
+}

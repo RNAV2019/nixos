@@ -1,5 +1,4 @@
 import QtQuick
-import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 
@@ -11,58 +10,39 @@ Item {
   property bool mediaActive: Media.active
   property bool playing: Media.playing
   property bool recording: Recorder.recording
+  property bool camera: Privacy.camera
+  property bool microphone: Privacy.microphone
   property bool shown: true
   property real clockShift: 0
   property var origin: null
 
   Accessible.ignored: true
 
-  readonly property real collapsedGap: 7.5
-
   // Cut rather than faded, as the clock is: a shape from another surface had no pill showing,
   // a still is going, and the drop well had hidden all three.
   readonly property bool cut: root.origin !== null && (root.origin.handedOver || root.origin.held || !root.origin.fromClock)
-  readonly property real resolvedClockShift: root.clockShift !== 0 ? root.clockShift : mediaActive ? (equaliser.implicitWidth + collapsedGap) / 2 : 0
 
+  // Centred, as the bar pill's clock is: the marks are balanced either side of it.
   IslandClock {
     id: clock
 
     anchors.fill: parent
     origin: root.origin
     shown: root.shown
-    clockShift: root.resolvedClockShift
+    clockShift: root.clockShift
   }
 
-  Equaliser {
-    id: equaliser
-
-    x: parent.width / 2 + root.resolvedClockShift - Theme.islandClockSize * 1.5 - root.collapsedGap - implicitWidth
-    y: (parent.height - implicitHeight) / 2
+  PillMarks {
+    anchors.fill: parent
+    clockLeft: parent.width / 2 + root.clockShift - clock.clockWidth / 2
+    clockRight: parent.width / 2 + root.clockShift + clock.clockWidth / 2
+    mediaActive: root.mediaActive
     playing: root.playing
-    visible: root.mediaActive && opacity > 0
+    recording: root.recording
+    camera: root.camera
+    microphone: root.microphone
+    visible: leftExtent + rightExtent > 0 && opacity > 0
     opacity: root.shown ? 1 : 0
-
-    Behavior on opacity {
-      enabled: !root.cut
-
-      Morph { duration: Theme.morphContent }
-    }
-  }
-
-  Rectangle {
-    x: parent.width / 2 + root.resolvedClockShift + clock.clockWidth / 2 + Theme.recorderDotGap
-    y: (parent.height - height) / 2
-    width: Theme.recorderDotSize
-    height: width
-    radius: width / 2
-    color: Theme.urgent
-    visible: root.recording && opacity > 0
-    opacity: root.shown ? 1 : 0
-
-    // The dot slides out of the clock rather than teleporting while its opacity fades.
-    Behavior on x {
-      MicroSpring {}
-    }
 
     Behavior on opacity {
       enabled: !root.cut

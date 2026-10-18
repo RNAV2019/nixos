@@ -441,7 +441,7 @@ in {
     pkgs.adwaita-icon-theme
   ];
 
-  # Keep the chosen theme (default Rose Pine) and re-point it at the rebuilt directory.
+  # Keep the chosen theme (default Ariadne) and re-point it at the rebuilt directory.
   # Runs after dconfSettings, which rewrites the Rose Pine GTK names.
   home.activation.themeState = lib.hm.dag.entryAfter ["linkGeneration" "dconfSettings"] ''
     if [ -z "''${DRY_RUN:-}" ]; then
@@ -450,8 +450,8 @@ in {
       id="$(cat "$state/name" 2>/dev/null || true)"
       case "$id" in
       ${caseArms}    *)
-          id=rose-pine
-          dir=${themes.rose-pine}
+          id=ariadne
+          dir=${themes.ariadne}
           ;;
       esac
       ln -sfn "$dir" "$state/current.new"

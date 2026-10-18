@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Stands in for the nearby daemon's CLI: `nearby events` streams a snapshot and then a few
+# made-up phones and laptops appearing, every other call just answers with the status.
+status='{"mode":"android","visible":true,"remaining":null,"scanning":true,"busy":false,"name":"nixos","download_dir":"/home/ryan/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}'
+peer() { printf '{"event":"peer","peer":{"id":"%s","name":"%s","protocol":"%s","kind":"%s","via":"lan","rssi":null}}\n' "$@"; }
+case "${1:-}" in
+events)
+  printf '{"event":"status","status":%s}\n' "$status"
+  sleep 0.6
+  peer qs:A1 "Pixel 9" quickshare phone
+  sleep 0.5
+  peer qs:B2 "Galaxy Tab S9" quickshare tablet
+  sleep 0.5
+  peer ad:C3 "MacBook Air" airdrop laptop
+  exec sleep infinity
+  ;;
+transfers | peers) echo '[]' ;;
+status) echo "$status" ;;
+esac
+exit 0

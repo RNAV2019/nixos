@@ -20,6 +20,9 @@ Singleton {
   readonly property string plus: "M5 12h14M12 5v14"
   readonly property string x: "M18 6L6 18M6 6l12 12"
   readonly property string check: "M20 6L9 17l-5-5"
+  // The island's privacy marks, Lucide video and mic.
+  readonly property string camera: "M16 13l5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+  readonly property string microphone: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3"
 
   // Lucide wifi-off - the board's arcs land on the same curve ends.
   readonly property string wifiOff: "M12 20h.01M8.5 16.429a5 5 0 0 1 7 0M5 12.859a10 10 0 0 1 5.17-2.69M19 12.859a10 10 0 0 0-2.007-1.523M2 8.82a15 15 0 0 1 4.177-2.643M22 8.82a15 15 0 0 0-11.288-3.764M2 2l20 20"

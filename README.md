@@ -1,234 +1,209 @@
+<div align="center">
+
 # nixos
 
-> A flake-based NixOS config — Hyprland on Wayland, Rose Pine everywhere.
+**A flake-based NixOS desktop: Hyprland, a hand-built Quickshell shell, and runtime-switchable themes.**
 
-<br>
+[![NixOS unstable](https://img.shields.io/badge/NixOS-unstable-5277C3?logo=nixos&logoColor=white)](https://nixos.org)
+[![Hyprland](https://img.shields.io/badge/Hyprland-0.56-3eddb8)](https://hypr.land)
+[![Quickshell](https://img.shields.io/badge/shell-Quickshell-3eddb8)](https://quickshell.org)
+[![Theme: Ariadne](https://img.shields.io/badge/theme-Ariadne-002018)](#themes)
 
-<img src="showcase.gif" alt="NixOS desktop showcase">
+<img src="showcase.webp" alt="A walkthrough of the desktop: the island, launcher, terminal, editor, browser, control centre, calendar, Nearby, wallpaper and theme pickers, and the lock screen" width="100%">
 
-<br>
+</div>
 
-## Stack
+## Highlights
 
-| Layer | Choice |
-|---|---|
-| OS | NixOS unstable, flakes |
-| Compositor | Hyprland (UWSM session) |
-| Display mgr | greetd, autologin |
-| Lock / idle | quickshell + hypridle |
-| Desktop shell | quickshell (bar, control center, launcher, wallpaper, calendar, recorder, profiles, notifications, OSD, lock) |
-| Wallpaper | awww |
-| CLI shell | fish + starship + atuin + zoxide + fzf |
-| Terminal | ghostty + herdr |
-| Editor | helix (Steel plugin fork) |
-| Browser | helium, extensions pinned in Nix |
-| AI agents | Claude Code, opencode, T3 Code nightly |
-| Custom tools | gen-commit, ical-agenda, note-tui, backup |
-| Secrets | sops-nix (age) |
-| Backups | borg to the NAS over a Cloudflare tunnel |
-| Bootloader | limine (Rose Pine themed) |
-| Theme | Rose Pine Moon |
-
-<br>
+- **A morphing island shell.** One pill at the top of the screen grows into every surface: launcher, control centre, calendar, wallpaper and theme pickers, Nearby sharing, power profiles, the screen recorder, notifications, OSDs, the session menu and polkit prompts. Written in QML under [`home/quickshell`](home/quickshell).
+- **Live theme switching.** `Alt + T` recolours the shell, Hyprland, Ghostty, fish, Helix, GTK and Helium in place, with no rebuild. Ships **Ariadne** (the default), **Rosé Pine** and **ASCII World**.
+- **Quick Share and AirDrop** from the Nearby panel (`Alt + N`). Files dragged anywhere in the compositor travel as a card pile drawn by [`dragpile`](pkgs/dragpile), a small Hyprland plugin.
+- **A locked-down session.** greetd autologin goes straight to a Quickshell lock screen that is secured before any desktop helper starts. Secrets are kept in sops-nix, and borg backs up to a NAS every day.
+- **Its own tooling.** Custom tools are packaged as a flake overlay in [`pkgs/`](pkgs), with tests next to them.
 
 ## Screenshots
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/terminal.png" alt="Terminal"/><br><sub>Terminal</sub></td>
-    <td align="center"><img src="screenshots/browser.png" alt="Browser"/><br><sub>Browser</sub></td>
+    <td width="50%"><img src="screenshots/island.png" alt="Expanded island"><br><sub><b>Island</b>, showing what's playing, the week ahead and system gauges</sub></td>
+    <td width="50%"><img src="screenshots/control.png" alt="Control centre"><br><sub><b>Control centre</b> (<code>Alt + A</code>)</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/lockscreen.png" alt="Lockscreen"/><br><sub>Lockscreen</sub></td>
-    <td align="center"><img src="screenshots/desktop.png" alt="Desktop"/><br><sub>Desktop</sub></td>
+    <td><img src="screenshots/launcher.png" alt="Launcher"><br><sub><b>Launcher</b> (<code>Super + Space</code>)</sub></td>
+    <td><img src="screenshots/calendar.png" alt="Calendar"><br><sub><b>Calendar</b>, from Google Calendar via iCal (<code>Alt + C</code>)</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/theme.png" alt="Theme picker"><br><sub><b>Theme picker</b> (<code>Alt + T</code>)</sub></td>
+    <td><img src="screenshots/wallpaper.png" alt="Wallpaper picker"><br><sub><b>Wallpaper picker</b> (<code>Ctrl + Super + Space</code>)</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/nearby.png" alt="Nearby"><br><sub><b>Nearby</b>: Quick Share and AirDrop (<code>Alt + N</code>)</sub></td>
+    <td><img src="screenshots/notification.png" alt="Notification"><br><sub><b>Notifications</b> grow out of the island</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/terminal.png" alt="Ghostty and Helix"><br><sub><b>Ghostty</b> running fastfetch next to <b>Helix</b></sub></td>
+    <td><img src="screenshots/browser.png" alt="Helium"><br><sub><b>Helium</b>, themed to match</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/lockscreen.png" alt="Lock screen"><br><sub><b>Lock screen</b> (<code>Super + L</code>)</sub></td>
+    <td><img src="screenshots/session.png" alt="Session menu"><br><sub><b>Session menu</b> (<code>Super + Escape</code>)</sub></td>
   </tr>
 </table>
 
-<br>
+## Stack
+
+| | |
+|---|---|
+| **OS** | NixOS unstable, flakes, home-manager |
+| **Session** | Hyprland (Lua config) on UWSM, greetd autologin, limine and plymouth |
+| **Shell UI** | Quickshell: bar, island, every panel, notifications, OSD, lock screen and polkit agent |
+| **Wallpaper** | awww |
+| **Terminal** | Ghostty, herdr, fish, starship, atuin, zoxide, fzf |
+| **Editor** | Helix (Steel plugin fork) |
+| **Browser** | Helium, with extensions pinned in Nix and a theme extension per palette |
+| **AI** | Claude Code, opencode, T3 Code nightly |
+| **Tools** | `gen-commit`, `ical-agenda`, `note-tui`, `backup`, `showcase`, … |
+| **Secrets / backups** | sops-nix (age); borg to a NAS over a Cloudflare tunnel |
+
+## Themes
+
+`theme-switch <ariadne|rose-pine|dark>`, or `Alt + T`, swaps one symlink to a generated
+theme directory and nudges each running program to pick it up. Palettes are defined in
+[`home/themes/palettes.nix`](home/themes/palettes.nix), and every per-program fragment is
+generated from them in [`home/theme.nix`](home/theme.nix). New installs start on Ariadne,
+and each theme remembers its own last wallpaper.
 
 ## Layout
 
 ```
 .
-├── flake.nix                      # hosts via mkHost; exports the pkgs/ overlay, packages and checks
-├── hosts/
-│   └── ryans-nixos/               # one directory per machine, named after its hostname
-│       ├── default.nix            # stateVersions, NPU, monitor rule
-│       ├── hardware-configuration.nix
-│       └── sof-sdw-ptl-rt721.*    # audio fix for this laptop's codec only
-├── modules/system/                # shared by every host
-│   ├── default.nix                # locale, nix, hyprland, greetd, audio, power, fonts, zram
-│   ├── boot.nix, users.nix        # limine, plymouth, kernel params; the ryan user
-│   ├── secrets.nix, wifi.nix      # sops-nix secrets and templates; Wi-Fi profiles
-│   └── backups.nix, backup.sh     # borg job and the `backup` CLI
-├── secrets/                       # age-encrypted; see Secrets
-├── pkgs/                          # my own tools as an overlay (pkgs.gen-commit, …); tests sit beside each
-├── backgrounds/                   # wallpapers
-└── home/
-    ├── default.nix                # entry point, XDG, session vars
-    ├── desktop.nix, monitors.nix  # hyprland, hypridle, fuzzel; per-host monitor rules
-    ├── shell.nix                  # fish, starship, atuin, zoxide, fzf, git
-    ├── terminal.nix               # ghostty, herdr
-    ├── editors.nix, helix/        # helix and its Steel plugins
-    ├── programs.nix               # yazi, zathura, lazygit, btop, …
-    ├── packages.nix               # user packages, GTK/Qt theming, helium
-    ├── dev.nix                    # direnv, gh, ssh, toolchain env
-    ├── custom-packages.nix        # installs the pkgs/ tools
-    ├── claude.nix, opencode.nix   # agent settings and MCP servers
-    ├── quickshell/                # QML shell, symlinked live from ~/nixos
-    ├── themes/                    # Rose Pine Moon colour files
-    └── backgrounds.nix            # wallpaper install + default symlink
+├── flake.nix             # hosts via mkHost; exports the pkgs/ overlay, packages and checks
+├── hosts/<hostname>/     # hardware, stateVersions, monitors
+├── modules/system/       # boot, users, secrets, Wi-Fi, backups, shared system config
+├── home/                 # home-manager: desktop, shell, terminal, editors, theme, apps
+│   ├── quickshell/       # the QML shell, symlinked live from ~/nixos
+│   └── themes/           # palettes and per-program theme sources
+├── pkgs/                 # own tools as an overlay (pkgs.gen-commit, pkgs.showcase, …)
+├── backgrounds/<theme>/  # wallpapers, grouped by theme
+├── secrets/              # age-encrypted
+└── screenshots/          # generated by `nix run .#showcase`
 ```
-
-<br>
 
 ## Installation
 
-> Requires a fresh NixOS install on an Intel machine, with a user named `ryan`.
-> Tick disk encryption in the installer; the hardware scan below records it.
+> Needs a fresh NixOS install on an Intel machine with a user named `ryan`. Tick disk
+> encryption in the installer; the hardware scan below records it.
 
 ```bash
-# The repo must live at ~/nixos: quickshell is symlinked from there.
+# The repo must live at ~/nixos, because quickshell is symlinked from there.
 nix-shell -p git --run 'git clone https://github.com/RNAV2019/nixos ~/nixos'
 cd ~/nixos
 
-# Reinstalling an existing host: regenerate its hardware file and skip ahead.
 # A new machine gets its own hosts/<name>, which also becomes its hostname.
 host=new-laptop
 mkdir -p hosts/$host
 sudo nixos-generate-config --show-hardware-config > hosts/$host/hardware-configuration.nix
 ```
 
-For a new machine, write `hosts/$host/default.nix` from `hosts/ryans-nixos`,
-keeping only what is true of the new hardware: the hardware import, both
-`stateVersion`s set to the release just installed, and optionally
-`desktop.monitors`. Add `$host = mkHost "$host";` to `nixosConfigurations` in
-`flake.nix`, then `git add hosts/$host`, since flakes only see tracked files.
+For a new machine, write `hosts/$host/default.nix` based on `hosts/ryans-nixos`, keeping
+only what is true of the new hardware: the hardware import, both `stateVersion`s, and
+optionally `desktop.monitors`. Then add `$host = mkHost "$host";` to `flake.nix` and
+`git add hosts/$host`, since flakes only see tracked files.
 
 ```bash
-# Restore the age key from Bitwarden. It is the only thing not in this repo,
-# and without it nothing below decrypts.
+# The age key, restored from Bitwarden, is the only thing not in this repo.
 sudo install -Dm600 /path/to/age.key /etc/nixos-secrets/age.key
 
-# The first build has to enable flakes itself, because the config that sets
-# them is not active yet.
+# The first build has to enable flakes itself.
 sudo NIX_CONFIG='experimental-features = nix-command flakes' \
   nixos-rebuild switch --flake ~/nixos#$host
 
-# Put the data back. Everything this needs was decrypted by the rebuild above,
-# which is why it has to come last. Then reboot, which applies the hostname.
+# Restore data last, because it needs the secrets the rebuild just decrypted. Then reboot.
 backup restore
 ```
 
-Not restored by any of the above: Bluetooth pairings, and T3 Code / opencode
-session history.
+None of the steps above bring back Bluetooth pairings or T3 Code and opencode history.
 
-<br>
-
-## Secrets
-
-`secrets/secrets.yaml` is encrypted with [sops-nix](https://github.com/Mic92/sops-nix)
-and holds the login password hash, the gh token, the cloudflared origin
-certificate and tunnel credentials, the Cloudflare Access token and borg
-passphrase and SSH key used by backups, the Google Calendar iCal addresses,
-the Penpot MCP URL, and the OpenRouter and opencode API keys.
+## Daily use
 
 ```bash
-sudo edit-secrets             # secrets.yaml in helix; re-encrypts on save
-sudo edit-secrets wifi.yaml   # any other file under secrets/
-rebuild
+rebuild              # nixos-rebuild switch for this hostname
+nix flake update     # bump inputs
+nix flake check      # tool tests and qmlformat
+nix-clean            # collect old generations
+nix run .#showcase   # regenerate screenshots/ and showcase.webp
 ```
 
+<details>
+<summary><b>Secrets</b></summary>
+
+`secrets/secrets.yaml` is encrypted with [sops-nix](https://github.com/Mic92/sops-nix). It
+holds the login password hash, API tokens, the Cloudflare tunnel and Access credentials,
+the borg passphrase and SSH key, and the calendar feed addresses. Wi-Fi passwords live in
+`secrets/wifi.yaml`, and each network also needs an entry in `modules/system/wifi.nix`.
+
 ```bash
-sudo -v                              # authenticate first, on its own
-umask 077
+sudo edit-secrets             # secrets.yaml in Helix; re-encrypts on save
+sudo edit-secrets wifi.yaml   # any other file under secrets/
+```
+
+To change the login password:
+
+```bash
+sudo -v && umask 077
 mkpasswd -m yescrypt | jq -Rs 'rtrimstr("\n")' > /tmp/hash.json
 sudo SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key \
-  sops set --value-stdin secrets/secrets.yaml \
-  '["users"]["ryan-hashed-password"]' < /tmp/hash.json
-shred -u /tmp/hash.json
-sudo chown ryan:users secrets/secrets.yaml
+  sops set --value-stdin secrets/secrets.yaml '["users"]["ryan-hashed-password"]' < /tmp/hash.json
+shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 ```
 
-Wi-Fi passwords are in `secrets/wifi.yaml`, edited the same way. A new network
-needs a line there and an entry in `modules/system/wifi.nix`.
+</details>
 
-<br>
+<details>
+<summary><b>Backups</b></summary>
 
-## Daily Ops
+Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
+tunnel. If the NAS can't be reached, the run is skipped and the persistent timer catches
+up later. The backup covers projects, documents, media folders, `~/.claude`, the Helium
+profile, and the atuin and zoxide databases. It leaves out build outputs, virtualenvs and
+anything tagged with `CACHEDIR.TAG`.
+
+The job never creates the repository: run `borg init -e repokey-blake2` once by hand, using
+`lanSeed` in `modules/system/backups.nix` for the first upload. This client's key can't
+prune, so prune on the NAS with the admin key. `backup status` warns once there are 60
+archives.
 
 ```bash
-rebuild           # sudo nixos-rebuild switch --flake ~/nixos (picks this hostname)
-nix flake update  # bump all inputs
-nix flake check   # gen-commit/ical-agenda tests, qmlformat
-nix-clean         # garbage-collect old generations
+backup now | status | list [ARCHIVE] | restore [PATH...] | mount [ARCHIVE] | check [--data]
 ```
 
-<br>
+</details>
 
-## Backups
+<details>
+<summary><b>Showcase</b></summary>
 
-Borg archives are pushed daily to an append-only server on the NAS through a
-Cloudflare tunnel. If the NAS is unreachable the job skips cleanly and the
-persistent timer catches up later.
+`nix run .#showcase [--shots-only | --webp-only]` regenerates every image in this README, and
+gives the same result on every run. It runs inside a nested Hyprland on a hidden workspace,
+in a bubblewrap sandbox. That sandbox has a scratch `$HOME`, its own D-Bus and its own
+runtime directory, so nothing personal is ever on screen. A made-up calendar, demo Nearby
+devices, a silent "now playing" track and a frozen clock fill in for real data. The tour is
+scripted in [`pkgs/showcase/showcase.sh`](pkgs/showcase/showcase.sh). The walkthrough is
+recorded losslessly and encoded as a full-colour 1920×1200, 30 fps animated WebP, so unlike
+a GIF it has no palette banding.
 
-- **Included:** `~/Projects`, `~/Work`, `~/Documents`, `~/resume`, the XDG
-  media folders, `~/Desktop`, `~/Downloads`, `~/.claude`, the Helium profile,
-  and the atuin and zoxide databases.
-- **Excluded:** `node_modules`, `.direnv`, `.venv`, `__pycache__`, any directory
-  tagged with `CACHEDIR.TAG` (e.g. Cargo's `target/`), and caches in `~/.claude`
-  and Helium.
-- **First run:** the job never creates the repository (`doInit = false`).
-  Create it once by hand with `borg init -e repokey-blake2`, seeding over
-  the LAN by setting `lanSeed` in `modules/system/backups.nix`.
-- **Retention:** this client's key cannot prune. Prune by hand on the NAS with
-  the admin key. `backup status` warns once there are 60 archives.
-
-```bash
-backup now                 # run one immediately
-backup status              # last run, next run, size, staleness
-backup list [ARCHIVE]      # list archives or archive contents
-backup restore [PATH...]   # restore paths, or everything, from a chosen archive
-backup mount [ARCHIVE]     # browse an archive, then: backup umount
-backup check [--data]      # verify repository integrity
-```
-
-<br>
-
-## AI Commit Messages
-
-`gen-commit` generates a Conventional Commit message from the staged Git
-snapshot and commits it only after explicit confirmation. Repository status
-and diff content are sent to OpenRouter.
-
-Running it:
-
-```bash
-gen-commit
-gen-commit --model google/gemini-2.5-flash-lite
-```
-
-<br>
+</details>
 
 ## Keybinds
 
-| Key | Action |
-|---|---|
-| `Super + Return` | Terminal |
-| `Super + Shift + B` | Browser |
-| `Super + Shift + F` | File manager |
-| `Super + Space` | App launcher |
-| `Super + W` | Close window |
-| `Super + L` | Lock |
-| `Super + Escape` | Logout menu |
-| `Alt + A` | Control center |
-| `Ctrl + Super + Space` | Wallpaper picker |
-| `Alt + R` | Screen recorder |
-| `Alt + C` | Calendar |
-| `Alt + P` | Power profiles |
-| `PrtSc` | Screenshot region |
-| `Alt + PrtSc` | Screenshot output |
-| `Super + Ctrl + PrtSc` | Screenshot all outputs |
-| `Super + PrtSc` | Colour picker |
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `Super + Return` | Terminal | `Alt + A` | Control centre |
+| `Super + Shift + B` | Browser | `Alt + C` | Calendar |
+| `Super + Shift + F` | Files | `Alt + N` | Nearby |
+| `Super + Space` | Launcher | `Alt + T` | Theme picker |
+| `Super + W` | Close window | `Ctrl + Super + Space` | Wallpaper picker |
+| `Super + L` | Lock | `Alt + R` | Screen recorder |
+| `Super + Escape` | Session menu | `Alt + P` | Power profiles |
+| `PrtSc` | Screenshot region | `Super + PrtSc` | Colour picker |
 
-Full list in `home/desktop.nix`.
+The full list is in [`home/desktop.nix`](home/desktop.nix).

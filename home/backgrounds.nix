@@ -10,9 +10,9 @@
   filesOf = theme: lib.attrNames (lib.filterAttrs (_: type: type == "regular") (builtins.readDir (root + "/${theme}")));
 
   # Wallpaper for a fresh session; checked at build time so a rename can't dangle.
-  defaultTheme = "rose-pine";
+  defaultTheme = "ariadne";
   defaultWallpaper = let
-    file = "nbhd_v2.jpg";
+    file = "in-memory-of-summer-8.jpg";
   in
     lib.throwIf (!lib.elem file (filesOf defaultTheme))
     "backgrounds: the default wallpaper ${defaultTheme}/${file} is no longer in the tree"
