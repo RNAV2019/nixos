@@ -240,8 +240,8 @@ Scope {
       FrostedSurface {
         id: surface
 
-        x: (window.width - width) / 2
-        y: Theme.barMarginTop
+        x: snap((window.width - width) / 2)
+        y: snap(Theme.barMarginTop)
 
         clipContent: true
 

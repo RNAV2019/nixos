@@ -64,7 +64,8 @@ Variants {
     Island {
       id: island
 
-      anchors.horizontalCenter: parent.horizontalCenter
+      // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
+      x: snap((parent.width - width) / 2)
       anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""

@@ -23,6 +23,18 @@ Item {
 
   default property alias content: contentHolder.data
 
+  // At a fractional scale most logical coordinates fall between device pixels, and the
+  // clipContent layer is then resampled, softening every glyph in it. Size lands on the
+  // pixel grid here; callers place the surface with snap().
+  readonly property real pixelRatio: QsWindow.window && QsWindow.window.devicePixelRatio > 0 ? QsWindow.window.devicePixelRatio : 1
+
+  function snap(v) {
+    return Math.round(v * pixelRatio) / pixelRatio;
+  }
+
+  width: snap(implicitWidth)
+  height: snap(implicitHeight)
+
   Item {
     id: frost
 

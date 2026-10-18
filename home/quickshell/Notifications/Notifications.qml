@@ -229,8 +229,8 @@ Variants {
     FrostedSurface {
       id: surface
 
-      x: (win.width - width) / 2
-      y: Theme.barMarginTop
+      x: snap((win.width - width) / 2)
+      y: snap(Theme.barMarginTop)
 
       clipContent: true
 
