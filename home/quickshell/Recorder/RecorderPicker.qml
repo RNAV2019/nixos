@@ -94,6 +94,23 @@ Variants {
       selected = Math.max(0, ["screen", "window", "region"].indexOf(Recorder.target));
       // Re-ask Hyprland, so a mode change since last open is what gates 120.
       Recorder.refreshMonitor();
+      launchPending = false;
+      settleCap.stop();
+    }
+
+    // Opened out of the control centre's Record tile: the control centre handed its live
+    // shape over and still holds the island's place, so backing out returns there, as one
+    // more handover, instead of shrinking to the pill. Starting or clicking away still closes.
+    property string returnTo: ""
+
+    onOpenChanged: if (open)
+      returnTo = origin.handedOver && win.screen && Bus.ownerOf("control") === win.screen.name ? "control" : ""
+
+    function back() {
+      if (win.returnTo === "control")
+        Bus.toggleSurface("control");
+      else
+        win.hide();
     }
 
     function step(delta) {
@@ -101,20 +118,44 @@ Variants {
     }
 
     // Closing first, because slurp cannot draw over a surface that still holds the keyboard;
-    // the wait then lets the pill back to its resting shape before the capture spawns.
+    // the launch then waits for the pill to be back at its resting shape, so neither the
+    // capture nor slurp's overlay catches the tail of the close.
     function activate() {
       Recorder.target = win.targets[win.selected].key;
       win.hide();
-      settle.restart();
+      launchPending = true;
+      settleCap.restart();
+      launchIfSettled();
     }
 
-    // The launch waits out the close (~190 ms) rather than jumping in on the next frame,
-    // so the pill is itself again by the time wl-screenrec or slurp is asked for.
-    Timer {
-      id: settle
+    property bool launchPending: false
 
-      interval: Theme.actionSettleDelay
-      onTriggered: Recorder.start()
+    // Within a pixel of the pill: the close is over for the eye, without waiting out the
+    // spring's last half-pixel of rest.
+    readonly property bool closeSettled: !win.open && surface.width <= origin.collapsedWidth + 1 && surface.height <= Theme.barHeight + 1
+
+    function launchIfSettled() {
+      if (!launchPending || !(closeSettled || !showing))
+        return;
+      launchPending = false;
+      settleCap.stop();
+      Recorder.start();
+    }
+
+    onCloseSettledChanged: launchIfSettled()
+    onShowingChanged: launchIfSettled()
+
+    // A backstop only: if the shape never reports rest (a lock mid-close), launch anyway.
+    Timer {
+      id: settleCap
+
+      interval: Theme.actionSettleDelay * 4
+      onTriggered: {
+        if (!win.launchPending)
+          return;
+        win.launchPending = false;
+        Recorder.start();
+      }
     }
 
     Connections {
@@ -154,6 +195,10 @@ Variants {
       case Qt.Key_Return:
       case Qt.Key_Enter:
         win.activate();
+        break;
+      case Qt.Key_Escape:
+      case Qt.Key_Backspace:
+        win.back();
         break;
       default:
         return;

@@ -27,17 +27,35 @@ Variants {
 
     readonly property var subView: subLoader.item
 
+    // The sub-view is built off the frame clock, so the push waits for it rather than sliding
+    // an empty pane in and hitching when the view lands mid-travel.
+    readonly property bool subShown: view !== "" && loadedView === view && subLoader.status === Loader.Ready
+
     readonly property int contentHeight: {
-      if (view !== "" && subView)
+      if (subShown && subView)
         return subView.contentHeight;
       return home.contentHeight;
     }
 
+    // Set when the Record tile hands the island to the picker, so backing out of the picker
+    // lands on the tile it left from rather than on the first one.
+    property bool recorderOut: false
+
     onOpening: {
       view = "";
-      home.keyboardIndex = 0;
+      home.keyboardIndex = recorderOut && Bus.ownerOf("recorder") !== "" ? 6 : 0;
+      recorderOut = false;
       // Nothing pushes a colour-temperature change, so ask now, while it is about to be seen.
       NightLight.refresh();
+    }
+
+    Connections {
+      target: Bus
+
+      function onOwnersChanged() {
+        if (win.recorderOut && Bus.ownerOf("recorder") === "" && !win.open)
+          win.recorderOut = false;
+      }
     }
 
     // Back goes one step: out of a sub-view if there is one, out of the panel if not.
@@ -48,13 +66,16 @@ Variants {
         hide();
     }
 
-    // The view being left has to stay drawn until it has finished travelling.
-    Timer {
-      id: unload
+    // The view being left stays drawn until it is wholly past the card's right edge, which
+    // the clip hides; a fixed timer cut it off mid-travel whenever the spring ran long.
+    function unloadIfParked() {
+      if (view === "" && loadedView !== "" && subLoader.x >= openWidth - 0.5)
+        loadedView = "";
+    }
 
-      interval: Theme.morphSurface + 40
-      onTriggered: if (win.view === "")
-        win.loadedView = ""
+    function focusSubView() {
+      if (win.open && win.subShown && win.subView)
+        win.subView.forceActiveFocus();
     }
 
     onShowingChanged: {
@@ -67,16 +88,14 @@ Variants {
     onViewChanged: {
       if (view !== "") {
         loadedView = view;
-        unload.stop();
-        var nextView = view;
-        Qt.callLater(function () {
-          if (win.open && win.view === nextView && win.subView)
-            win.subView.forceActiveFocus();
-        });
+        Qt.callLater(win.focusSubView);
       } else {
-        unload.restart();
+        unloadIfParked();
       }
     }
+
+    onSubShownChanged: if (subShown)
+      Qt.callLater(win.focusSubView)
 
     onKeyPressed: function (event) {
       switch (event.key) {
@@ -124,26 +143,20 @@ Variants {
       event.accepted = true;
     }
 
+    // No fade of its own: IslandSurface's bodyHolder carries every panel's open, close and
+    // handover fade, and a second one inside it compounded into a faster, deeper dissolve.
     Item {
       id: body
 
       anchors.fill: parent
       enabled: win.open
-      opacity: win.open || win.origin.held ? 1 : 0
-      visible: opacity > 0
 
-      Behavior on opacity {
-        enabled: !win.origin.held
-
-        Morph {
-          duration: Theme.morphContent
-        }
-      }
-
+      // The push travels a full column, so it rides the shape's own spring (half-pixel rest)
+      // rather than MicroSpring, whose unit-scale epsilon kept a 520 px slide alive for ~1.5 s.
       HomeView {
         id: home
 
-        x: win.view === "" ? 0 : -win.openWidth
+        x: win.subShown ? -win.openWidth : 0
         y: 0
         width: win.openWidth
         height: contentHeight
@@ -155,28 +168,34 @@ Variants {
 
         // The picker claims the island through the shared protocol, which stands this panel
         // down: dismiss() publishes this panel's live shape so the picker contracts out of it.
-        onRecorderRequested: Bus.recorderRequested()
+        onRecorderRequested: {
+          win.recorderOut = true;
+          Bus.recorderRequested();
+        }
 
         Behavior on x {
           enabled: !Theme.reduceMotion
 
-          MicroSpring {}
+          SurfaceSpring {}
         }
       }
 
       Loader {
         id: subLoader
 
-        x: win.view === "" ? win.openWidth : 0
+        x: win.subShown ? 0 : win.openWidth
         y: 0
         width: win.openWidth
         height: item ? item.contentHeight : 0
         active: win.loadedView !== ""
+        asynchronous: true
+
+        onXChanged: win.unloadIfParked()
 
         Behavior on x {
           enabled: !Theme.reduceMotion
 
-          MicroSpring {}
+          SurfaceSpring {}
         }
 
         sourceComponent: {
