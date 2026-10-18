@@ -73,9 +73,11 @@
     pkgs = import nixpkgs {inherit system;};
     gen-commit = import ./home/gen-commit.nix {inherit pkgs;};
     ical-agenda = import ./home/ical-agenda.nix {inherit pkgs;};
+    # Hyprland plugin: the drag-and-drop card pile (pkgs/dragpile).
+    dragpile = pkgs.callPackage ./pkgs/dragpile {};
   in {
     packages.${system} = {
-      inherit gen-commit ical-agenda;
+      inherit gen-commit ical-agenda dragpile;
       default = gen-commit;
     };
 

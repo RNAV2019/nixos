@@ -65,6 +65,9 @@ in {
     # UWSM owns the user systemd session.
     systemd.enable = false;
 
+    # Loaded ahead of the settings, so plugin options below resolve.
+    plugins = [(pkgs.callPackage ../pkgs/dragpile {})];
+
     settings = {
       env = [
         {_args = ["XCURSOR_SIZE" "24"];}
@@ -136,6 +139,10 @@ in {
           # Matches Plymouth's black for the handoff to the lock screen.
           background_color = "rgba(000000ff)";
         };
+
+        # File drags from any client show board 16d's card pile; colours come from the theme
+        # (home/theme.nix). The arrow stays during a drag, as on the board.
+        plugin.dragpile.cursor = "default";
       };
 
       # Omarchy preset.

@@ -297,6 +297,27 @@
               inactive_border = "rgba(${bare p.overlay}aa)",
             },
           },
+          -- The drag pile (pkgs/dragpile) in the shell's own roles: cards are raised surfaces,
+          -- the count badge is the accent cut out by the island surface, glyphs are tinted as
+          -- in the Nearby panel.
+          plugin = {
+            dragpile = {
+              col = {
+                card = "rgba(${bare p.overlay}ff)",
+                border = "rgba(${bare p.text}38)",
+                badge = "rgba(${bare p.accent}ff)",
+                badge_ring = "rgba(${bare p.surface}ff)",
+                badge_text = "rgba(${bare p.base}ff)",
+                glyph = "rgba(${bare p.subtle}ff)",
+                glyph_folder = "rgba(${bare p.accent}ff)",
+                glyph_image = "rgba(${bare p.foam}ff)",
+                glyph_pdf = "rgba(${bare p.love}ff)",
+                glyph_archive = "rgba(${bare p.gold}ff)",
+                glyph_audio = "rgba(${bare p.rose}ff)",
+                glyph_video = "rgba(${bare p.pine}ff)",
+              },
+            },
+          },
         }
       '';
       "ghostty" = text "ghostty" x.ghostty;

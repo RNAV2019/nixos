@@ -1,0 +1,1 @@
+@REPO@/screenshots/desktop.png @REPO@/screenshots/browser.png @REPO@/screenshots/lockscreen.png @REPO@/README.md @OUT@/fixtures/bundle.zip @OUT@/fixtures/handout.pdf @OUT@/fixtures/song.flac @OUT@/fixtures/clip.mp4 @REPO@/home @REPO@/flake.nix @REPO@/flake.lock @OUT@/fixtures/notes.txt

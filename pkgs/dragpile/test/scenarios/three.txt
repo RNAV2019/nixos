@@ -1,0 +1,7 @@
+wait 400
+move 260 120 260
+wait 30
+wait 600
+move -320 40 200
+wait 500
+release
