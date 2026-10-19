@@ -3,15 +3,9 @@
   pkgs,
   ...
 }: {
-  programs.tealdeer = {
-    enable = true;
-    settings = {
-      updates = {
-        auto_update = true;
-        auto_update_interval_hours = 168;
-      };
-    };
-  };
+  # Updates come from home-manager's weekly tldr-update timer; in-command
+  # auto_update makes `tldr` exit without showing cached pages when offline.
+  programs.tealdeer.enable = true;
 
   programs.yazi = {
     enable = true;
