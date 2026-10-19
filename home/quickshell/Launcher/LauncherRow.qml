@@ -57,7 +57,7 @@ Item {
       color: root.glyph ? Theme.accent : root.tint
       font.family: root.glyph ? Theme.iconFont : Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
-      font.weight: Font.Bold
+      font.weight: Theme.weightBold
     }
   }
 

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -108,9 +107,7 @@ Variants {
       if (!hasFiles)
         ignoreIds = Nearby.outboundIds();
       // Folders become their files; sizes come back with the list.
-      stager.running = false;
-      stager.command = ["sh", "-c", "for p; do if [ -d \"$p\" ]; then find -L \"$p\" -type f -not -path '*/.*' -printf '%s\\t%p\\n' 2>/dev/null | head -n 500; elif [ -e \"$p\" ]; then stat -L --printf '%s\\t%n\\n' -- \"$p\"; fi; done", "sh"].concat(paths);
-      stager.running = true;
+      stager.expand(paths);
     }
 
     function removeFile(path) {
@@ -131,26 +128,19 @@ Variants {
 
     property string lastDir: ""
 
-    Process {
+    PathExpander {
       id: stager
 
-      stdout: StdioCollector {
-        onStreamFinished: {
-          var next = win.files.slice();
-          var sizes = Object.assign({}, win.fileBytes);
-          var lines = text.split("\n");
-          for (var i = 0; i < lines.length; i++) {
-            var tab = lines[i].indexOf("\t");
-            if (tab < 0)
-              continue;
-            var p = lines[i].substring(tab + 1);
-            sizes[p] = parseInt(lines[i].substring(0, tab), 10) || 0;
-            if (next.indexOf(p) === -1)
-              next.push(p);
-          }
-          win.fileBytes = sizes;
-          win.files = next;
+      onExpanded: function (entries) {
+        var next = win.files.slice();
+        var sizes = Object.assign({}, win.fileBytes);
+        for (var i = 0; i < entries.length; i++) {
+          sizes[entries[i].path] = entries[i].size;
+          if (next.indexOf(entries[i].path) === -1)
+            next.push(entries[i].path);
         }
+        win.fileBytes = sizes;
+        win.files = next;
       }
     }
 
@@ -313,180 +303,6 @@ Variants {
       }
     ]
 
-    // ---- the header both directions share ----
-
-    component Header: Item {
-      width: Theme.nearbyWidth
-      height: Theme.nearbyHeaderHeight
-
-      SegmentedTrack {
-        x: Theme.nearbyHeaderSide
-        currentIndex: Nearby.mode === "apple" ? 1 : 0
-        pending: Nearby.busy
-        segments: [
-          {
-            "icon": IconPaths.robotHead,
-            "label": "Android"
-          },
-          {
-            "icon": IconPaths.apple,
-            "label": "Apple",
-            "filled": true
-          }
-        ]
-        onChosen: function (index) {
-          Nearby.setMode(index === 1 ? "apple" : "android");
-        }
-      }
-
-      SegmentedTrack {
-        x: Theme.nearbyWidth - Theme.nearbyHeaderSide - Theme.nearbyTrackWidth
-        currentIndex: win.direction === "receive" ? 1 : 0
-        segments: [
-          {
-            "icon": IconPaths.arrowUp,
-            "label": "Send"
-          },
-          {
-            "icon": IconPaths.arrowDown,
-            "label": "Receive"
-          }
-        ]
-        onChosen: function (index) {
-          win.direction = index === 1 ? "receive" : "send";
-        }
-      }
-    }
-
-    // A section line: the tertiary label on the left, whatever sits on the right.
-    component SectionLine: Item {
-      id: line
-
-      property string label: ""
-      // A secondary note right after the label ("3 · 18.4 MB").
-      property string detail: ""
-      default property alias trailing: trailingRow.data
-
-      width: Theme.nearbyWidth
-      height: 14
-
-      Text {
-        id: labelText
-
-        x: Theme.nearbySectionSide
-        anchors.verticalCenter: parent.verticalCenter
-        text: line.label
-        color: Theme.inkTertiary
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.nearbySectionSize
-        font.weight: Theme.weightMedium
-      }
-
-      Text {
-        x: labelText.x + labelText.implicitWidth + 8
-        anchors.verticalCenter: parent.verticalCenter
-        visible: line.detail !== ""
-        text: line.detail
-        color: Theme.inkSecondary
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.nearbySectionSize
-        font.weight: Theme.weightMedium
-      }
-
-      Row {
-        id: trailingRow
-
-        anchors.right: parent.right
-        anchors.rightMargin: Theme.nearbySectionSide
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 5
-      }
-    }
-
-    // A capped list that scrolls fades out at the bottom edge while there is more below.
-    component ScrollFade: Rectangle {
-      required property Flickable list
-
-      x: list.x
-      y: list.y + list.height - height
-      width: list.width
-      height: 22
-      opacity: list.contentHeight > list.height + 1 && !list.atYEnd ? 1 : 0
-      visible: opacity > 0
-
-      Behavior on opacity {
-        Morph {
-          duration: Theme.morphState
-        }
-      }
-
-      gradient: Gradient {
-        GradientStop {
-          position: 0
-          color: Theme.withAlpha(Theme.surface, 0)
-        }
-
-        GradientStop {
-          position: 1
-          color: Theme.surface
-        }
-      }
-    }
-
-    // An accent glyph + label link in a section line ("+ Add", "Downloads").
-    component SectionLink: Item {
-      id: link
-
-      property string icon: ""
-      property string label: ""
-      property int glyph: 12
-
-      signal clicked
-
-      implicitWidth: linkRow.implicitWidth
-      implicitHeight: 14
-
-      Row {
-        id: linkRow
-
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
-
-        StrokeIcon {
-          anchors.verticalCenter: parent.verticalCenter
-          size: link.glyph
-          strokeWidth: 1.8
-          path: link.icon
-          color: Theme.accentFill
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: link.label
-          color: Theme.accentFill
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.nearbySectionSize
-          font.weight: Theme.weightMedium
-        }
-      }
-
-      opacity: linkArea.pressed ? 0.7 : 1
-
-      MouseArea {
-        id: linkArea
-
-        anchors.fill: parent
-        anchors.margins: -6
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: link.clicked()
-      }
-
-      Accessible.role: Accessible.Button
-      Accessible.name: link.label
-      Accessible.onPressAction: link.clicked()
-    }
-
     // ================= Send =================
 
     Item {
@@ -589,7 +405,7 @@ Variants {
       // Board 16e: "Files 3 · 18.4 MB" with an accent "+ Add", then one row per file.
       SectionLine {
         y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop
-        label: "Files"
+        title: "Files"
         detail: win.files.length + (win.filesBytes > 0 ? " · " + Nearby.sizeLabel(win.filesBytes) : "")
         opacity: win.hasFiles ? 1 : 0
         visible: opacity > 0
@@ -605,7 +421,6 @@ Variants {
           label: "Add"
           onClicked: win.chooseFiles()
         }
-
       }
 
       ListView {
@@ -636,7 +451,7 @@ Variants {
             property: "opacity"
             from: 0
             to: 1
-            duration: Theme.duration(160)
+            duration: Theme.duration(Theme.nearbyFileAppear)
           }
         }
       }
@@ -649,7 +464,7 @@ Variants {
       // note in Apple mode (16f), or Scanning… (16a).
       SectionLine {
         y: sendView.nearbyY
-        label: "Nearby"
+        title: "Nearby"
 
         StrokeIcon {
           visible: Nearby.noticeText === "" && Nearby.wifiPaused
@@ -897,7 +712,7 @@ Variants {
 
       SectionLine {
         y: receiveView.receivedY
-        label: "Received"
+        title: "Received"
         visible: receiveView.rowCount > 0
 
         SectionLink {
@@ -924,35 +739,172 @@ Variants {
         onContentYChanged: win.previewActive = false
 
         delegate: ReceivedRow {
-            id: receivedRow
+          id: receivedRow
 
-            required property string key
+          required property string key
 
-            width: receivedList.width
-            transfer: Nearby.transferById(key)
-            fresh: Nearby.freshArrival === key
-            progress: Nearby.progressOf(transfer)
-            onClicked: Nearby.openFile(receivedRow.path)
-            onHoverMoved: function (lx, ly) {
-              if (!receivedRow.done || receivedRow.path === "") {
-                win.previewActive = false;
-                return;
-              }
-              // Into the card, then the window: a PanelWindow is not an Item to map onto, but
-              // the overlay shares the window's origin and the card's offset is known.
-              var p = receivedRow.mapToItem(win.surface, lx, ly);
-              win.previewX = win.surface.x + p.x;
-              win.previewY = win.surface.y + p.y;
-              win.previewPath = receivedRow.path;
-              win.previewActive = true;
+          width: receivedList.width
+          transfer: Nearby.transferById(key)
+          fresh: Nearby.freshArrival === key
+          progress: Nearby.progressOf(transfer)
+          onClicked: Nearby.openFile(receivedRow.path)
+          onHoverMoved: function (lx, ly) {
+            if (!receivedRow.done || receivedRow.path === "") {
+              win.previewActive = false;
+              return;
             }
-            onHoverExited: win.previewActive = false
+            // Into the card, then the window: a PanelWindow is not an Item to map onto, but
+            // the overlay shares the window's origin and the card's offset is known.
+            var p = receivedRow.mapToItem(win.surface, lx, ly);
+            win.previewX = win.surface.x + p.x;
+            win.previewY = win.surface.y + p.y;
+            win.previewPath = receivedRow.path;
+            win.previewActive = true;
           }
+          onHoverExited: win.previewActive = false
+        }
       }
 
       ScrollFade {
         list: receivedList
       }
     }
+  }
+
+  // ---- the header both directions share ----
+
+  component Header: Item {
+    width: Theme.nearbyWidth
+    height: Theme.nearbyHeaderHeight
+
+    SegmentedTrack {
+      x: Theme.nearbyHeaderSide
+      currentIndex: Nearby.mode === "apple" ? 1 : 0
+      pending: Nearby.busy
+      segments: [
+        {
+          "icon": IconPaths.robotHead,
+          "label": "Android"
+        },
+        {
+          "icon": IconPaths.apple,
+          "label": "Apple",
+          "filled": true
+        }
+      ]
+      onChosen: function (index) {
+        Nearby.setMode(index === 1 ? "apple" : "android");
+      }
+    }
+
+    SegmentedTrack {
+      x: Theme.nearbyWidth - Theme.nearbyHeaderSide - Theme.nearbyTrackWidth
+      currentIndex: win.direction === "receive" ? 1 : 0
+      segments: [
+        {
+          "icon": IconPaths.arrowUp,
+          "label": "Send"
+        },
+        {
+          "icon": IconPaths.arrowDown,
+          "label": "Receive"
+        }
+      ]
+      onChosen: function (index) {
+        win.direction = index === 1 ? "receive" : "send";
+      }
+    }
+  }
+
+  // A section line: the tertiary label on the left, whatever sits on the right.
+  component SectionLine: SectionLabel {
+    width: Theme.nearbyWidth
+    height: 14
+    inset: Theme.nearbySectionSide
+    verticalAlignment: Qt.AlignVCenter
+  }
+
+  // A capped list that scrolls fades out at the bottom edge while there is more below.
+  component ScrollFade: Rectangle {
+    required property Flickable list
+
+    x: list.x
+    y: list.y + list.height - height
+    width: list.width
+    height: 22
+    opacity: list.contentHeight > list.height + 1 && !list.atYEnd ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.morphState
+      }
+    }
+
+    gradient: Gradient {
+      GradientStop {
+        position: 0
+        color: Theme.withAlpha(Theme.surface, 0)
+      }
+
+      GradientStop {
+        position: 1
+        color: Theme.surface
+      }
+    }
+  }
+
+  // An accent glyph + label link in a section line ("+ Add", "Downloads").
+  component SectionLink: Item {
+    id: link
+
+    property string icon: ""
+    property string label: ""
+    property int glyph: 12
+
+    signal clicked
+
+    implicitWidth: linkRow.implicitWidth
+    implicitHeight: 14
+
+    Row {
+      id: linkRow
+
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: 4
+
+      StrokeIcon {
+        anchors.verticalCenter: parent.verticalCenter
+        size: link.glyph
+        strokeWidth: 1.8
+        path: link.icon
+        color: Theme.accentFill
+      }
+
+      Text {
+        anchors.verticalCenter: parent.verticalCenter
+        text: link.label
+        color: Theme.accentFill
+        font.family: Theme.uiFont
+        font.pixelSize: Theme.nearbySectionSize
+        font.weight: Theme.weightMedium
+      }
+    }
+
+    opacity: linkArea.pressed ? 0.7 : 1
+
+    MouseArea {
+      id: linkArea
+
+      anchors.fill: parent
+      anchors.margins: -6
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: link.clicked()
+    }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: link.label
+    Accessible.onPressAction: link.clicked()
   }
 }

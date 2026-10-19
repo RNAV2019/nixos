@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 import qs.Services
 
 // Board 02's system gauge, beside the battery one: memory on the ring, CPU load in the chip
@@ -67,9 +68,8 @@ Gauge {
         color: Theme.text
 
         Behavior on height {
-          NumberAnimation {
+          Morph {
             duration: Theme.duration(Theme.morphState)
-            easing.type: Easing.OutCubic
           }
         }
       }

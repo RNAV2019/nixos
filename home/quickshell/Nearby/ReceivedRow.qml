@@ -71,9 +71,8 @@ Item {
       Behavior on width {
         enabled: !Theme.reduceMotion
 
-        NumberAnimation {
-          duration: 250
-          easing.type: Easing.OutCubic
+        Morph {
+          duration: Theme.duration(Theme.morphProgress)
         }
       }
     }

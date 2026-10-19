@@ -312,9 +312,8 @@ PanelWindow {
     Behavior on backdropOpacity {
       enabled: win.handover
 
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphGroundFade)
-        easing.type: Easing.OutCubic
       }
     }
 
@@ -356,9 +355,8 @@ PanelWindow {
             duration: win.entering ? Theme.duration(Theme.morphEnterDelay) : 0
           }
 
-          NumberAnimation {
+          Morph {
             duration: win.entering ? Theme.duration(Theme.morphEnter) : Theme.duration(Theme.morphContent)
-            easing.type: Easing.OutCubic
           }
         }
       }

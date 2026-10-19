@@ -136,28 +136,6 @@ Scope {
         }
       }
 
-      // Each state is laid out at its final size and centred, so the growing shape reveals it.
-      // The open and the close are the card's own fade; this only crosses between states.
-      component PillState: Item {
-        property string name: ""
-        property real stateWidth: Theme.sharingProgressWidth
-        property real stateHeight: Theme.sharingProgressHeight
-
-        x: (win.surface.width - stateWidth) / 2
-        y: (win.surface.height - stateHeight) / 2
-        width: stateWidth
-        height: stateHeight
-        opacity: win.shownMode === name ? 1 : 0
-        visible: opacity > 0
-        enabled: win.open && opacity > 0.5
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent * 2
-          }
-        }
-      }
-
       // ---- 16i connecting ----
       PillState {
         name: "connecting"
@@ -210,7 +188,7 @@ Scope {
           NumberAnimation on beat {
             from: 0
             to: 3
-            duration: 1200
+            duration: Theme.sharingPulse
             loops: Animation.Infinite
             running: win.open && win.shownMode === "connecting" && !Theme.reduceMotion
           }
@@ -390,9 +368,8 @@ Scope {
             Behavior on width {
               enabled: !Theme.reduceMotion
 
-              NumberAnimation {
-                duration: 250
-                easing.type: Easing.OutCubic
+              Morph {
+                duration: Theme.duration(Theme.morphProgress)
               }
             }
           }
@@ -488,6 +465,28 @@ Scope {
             root.clearSaved();
           }
         }
+      }
+    }
+  }
+
+  // Each state is laid out at its final size and centred, so the growing shape reveals it.
+  // The open and the close are the card's own fade; this only crosses between states.
+  component PillState: Item {
+    property string name: ""
+    property real stateWidth: Theme.sharingProgressWidth
+    property real stateHeight: Theme.sharingProgressHeight
+
+    x: (win.surface.width - stateWidth) / 2
+    y: (win.surface.height - stateHeight) / 2
+    width: stateWidth
+    height: stateHeight
+    opacity: win.shownMode === name ? 1 : 0
+    visible: opacity > 0
+    enabled: win.open && opacity > 0.5
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.morphContent * 2
       }
     }
   }

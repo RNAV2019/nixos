@@ -41,7 +41,7 @@ Item {
     color: Theme.text
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandClockSize + (clockRoot.origin ? clockRoot.origin.fromOpenness : 0) * (Theme.islandDisplaySize - Theme.islandClockSize)
-    font.weight: Font.DemiBold
+    font.weight: Theme.weightSemi
     opacity: clockRoot.shown ? 1 : 0
     visible: opacity > 0
 

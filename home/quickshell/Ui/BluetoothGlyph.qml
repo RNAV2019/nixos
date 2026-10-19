@@ -26,11 +26,26 @@ Item {
       startX: 7
       startY: 7
 
-      PathLine { x: 17; y: 17 }
-      PathLine { x: 12; y: 22 }
-      PathLine { x: 12; y: 2 }
-      PathLine { x: 17; y: 7 }
-      PathLine { x: 7; y: 17 }
+      PathLine {
+        x: 17
+        y: 17
+      }
+      PathLine {
+        x: 12
+        y: 22
+      }
+      PathLine {
+        x: 12
+        y: 2
+      }
+      PathLine {
+        x: 17
+        y: 7
+      }
+      PathLine {
+        x: 7
+        y: 17
+      }
     }
 
     ShapePath {
@@ -41,7 +56,10 @@ Item {
       startX: 3.5
       startY: 3.5
 
-      PathLine { x: 20.5; y: 20.5 }
+      PathLine {
+        x: 20.5
+        y: 20.5
+      }
     }
   }
 

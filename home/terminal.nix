@@ -1,5 +1,4 @@
-{ config, ... }:
-{
+{config, ...}: {
   home.file.".config/ghostty/config".text = ''
     # The colours come from the active theme (see theme.nix). Included last, so they win;
     # `?` because the file does not exist until the first activation has run.

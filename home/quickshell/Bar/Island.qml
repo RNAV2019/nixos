@@ -327,7 +327,7 @@ FrostedSurface {
           color: Theme.text
           font.family: Theme.uiFont
           font.pixelSize: Theme.islandTitleSize
-          font.weight: Font.DemiBold
+          font.weight: Theme.weightSemi
         }
 
         Text {
@@ -429,7 +429,7 @@ FrostedSurface {
     color: Theme.text
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandDisplaySize
-    font.weight: Font.DemiBold
+    font.weight: Theme.weightSemi
   }
 
   // The drop well (board 16e): a dashed well on the pill's surface, ringed in accent. Fades

@@ -13,7 +13,8 @@
   programs.gh = {
     enable = true;
     settings = {
-      git_protocol = "ssh";
+      # https because this machine has no SSH key yet; the token comes from sops (secrets.nix).
+      git_protocol = "https";
       editor = "hx";
     };
   };

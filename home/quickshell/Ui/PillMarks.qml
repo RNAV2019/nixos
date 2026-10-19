@@ -52,7 +52,7 @@ Item {
     id: eq
 
     active: root.mediaActive
-    lead: Theme.islandEqualiserGap
+    lead: Theme.islandMarkClockGap
     size: equaliser.implicitWidth
     height: equaliser.implicitHeight
     x: root.clockLeft - lead * presence - size
@@ -68,7 +68,8 @@ Item {
     id: cam
 
     active: root.camera
-    lead: Theme.privacyMarkGap
+    // Off the clock on its own, or the gap between marks beyond the equaliser, eased with it.
+    lead: Theme.islandMarkClockGap - (Theme.islandMarkClockGap - Theme.islandMarkGap) * eq.presence
     size: Theme.privacyGlyphSize
     x: root.clockLeft - eq.room - lead * presence - size
 
@@ -84,7 +85,7 @@ Item {
     id: rec
 
     active: root.recording
-    lead: Theme.recorderDotGap
+    lead: Theme.islandMarkClockGap
     size: Theme.recorderDotSize
     x: root.clockRight + lead * presence
 
@@ -99,7 +100,7 @@ Item {
     id: mic
 
     active: root.microphone
-    lead: Theme.privacyMarkGap
+    lead: Theme.islandMarkClockGap - (Theme.islandMarkClockGap - Theme.islandMarkGap) * rec.presence
     size: Theme.privacyGlyphSize
     x: root.clockRight + rec.room + lead * presence
 

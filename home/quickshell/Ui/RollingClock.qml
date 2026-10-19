@@ -92,8 +92,8 @@ Item {
           NumberAnimation {
             target: incoming
 
-             duration: Theme.duration(Theme.clockRoll)
-             easing.type: Easing.OutCubic
+            duration: Theme.duration(Theme.clockRoll)
+            easing.type: Easing.OutCubic
             from: root.rollTravel
             property: "y"
             to: 0
@@ -102,8 +102,8 @@ Item {
           NumberAnimation {
             target: outgoing
 
-             duration: Theme.duration(Theme.clockRoll)
-             easing.type: Easing.OutCubic
+            duration: Theme.duration(Theme.clockRoll)
+            easing.type: Easing.OutCubic
             from: 0
             property: "y"
             to: -root.rollTravel
@@ -112,8 +112,8 @@ Item {
           NumberAnimation {
             target: outgoing
 
-             duration: Theme.duration(Theme.clockRoll)
-             easing.type: Easing.OutCubic
+            duration: Theme.duration(Theme.clockRoll)
+            easing.type: Easing.OutCubic
             from: 1
             property: "opacity"
             to: 0
@@ -122,8 +122,8 @@ Item {
           NumberAnimation {
             target: incoming
 
-             duration: Theme.duration(Theme.clockRollFade)
-             easing.type: Easing.OutCubic
+            duration: Theme.duration(Theme.clockRollFade)
+            easing.type: Easing.OutCubic
             from: 0
             property: "opacity"
             to: 1

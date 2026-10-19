@@ -1,12 +1,10 @@
 import QtQuick
-import Quickshell.Io
 import Quickshell.Networking
 import qs.Commons
 import qs.Control
 import qs.Services
 import qs.Ui
 
-// Quickshell's Networking API has no disconnect or forget, so those go via nmcli.
 ControlSubView {
   id: root
 
@@ -37,18 +35,6 @@ ControlSubView {
       root.pendingSsid = "";
     else
       root.backed();
-  }
-
-  function runNmcli(args) {
-    // A second nmcli while one is still running would clobber its command.
-    if (nmcli.running)
-      return;
-    nmcli.command = ["nmcli"].concat(args);
-    nmcli.running = true;
-  }
-
-  Process {
-    id: nmcli
   }
 
   Timer {
@@ -136,15 +122,13 @@ ControlSubView {
     PillButton {
       label: "Disconnect"
       onAccent: true
-      onClicked: if (root.activeNetwork)
-        root.runNmcli(["device", "disconnect", root.activeNetwork.device.name])
+      onClicked: NetworkInfo.disconnect(root.activeNetwork)
     }
 
     PillButton {
       label: "Forget"
       onAccent: true
-      onClicked: if (root.activeNetwork)
-        root.runNmcli(["connection", "delete", "id", root.activeNetwork.name])
+      onClicked: NetworkInfo.forget(root.activeNetwork)
     }
   }
 
@@ -214,7 +198,7 @@ ControlSubView {
           text: Icons.lock
           color: Theme.muted
           font.family: Theme.iconFont
-          font.pixelSize: Theme.controlSectionSize
+          font.pixelSize: Theme.sectionSize
         }
       }
 
@@ -231,16 +215,14 @@ ControlSubView {
         clip: true
 
         Behavior on height {
-          NumberAnimation {
+          Morph {
             duration: Theme.duration(Theme.morphState)
-            easing.type: Easing.OutCubic
           }
         }
 
         Behavior on opacity {
-          NumberAnimation {
+          Morph {
             duration: Theme.duration(Theme.morphState)
-            easing.type: Easing.OutCubic
           }
         }
 

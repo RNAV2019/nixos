@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.Commons
+import qs.Ui
 
 // One island-gauge ring: 240 degrees about a 48 px box, open at the bottom where the label
 // sits. With `value` left at 1 it is the track.
@@ -23,9 +24,8 @@ ShapePath {
     sweepAngle: 240 * Theme.clamp01(arc.value)
 
     Behavior on sweepAngle {
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutCubic
       }
     }
   }

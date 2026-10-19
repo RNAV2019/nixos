@@ -312,7 +312,7 @@ Scope {
 
       // A transparent session-lock surface composites as black, so an opaque base stays
       // mounted for the whole secure-lock lifetime.
-       color: Theme.canvas
+      color: Theme.canvas
 
       // One per screen, sharing one reveal clock, so a second screen joins the ramp in
       // progress rather than restarting it.

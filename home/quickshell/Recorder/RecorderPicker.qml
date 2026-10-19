@@ -255,7 +255,7 @@ Variants {
             color: row.value ? Theme.text : Theme.muted
             font.family: Theme.uiFont
             font.pixelSize: Theme.recorderRowLabelSize
-            font.weight: Font.Medium
+            font.weight: Theme.weightMedium
           }
 
           Switch {
@@ -300,7 +300,7 @@ Variants {
           color: Theme.text
           font.family: Theme.uiFont
           font.pixelSize: Theme.recorderRowLabelSize
-          font.weight: Font.Medium
+          font.weight: Theme.weightMedium
         }
 
         Row {

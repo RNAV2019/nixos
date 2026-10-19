@@ -3,7 +3,6 @@ import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Io
 import Quickshell.Widgets
 import qs.Commons
 import qs.Services
@@ -32,75 +31,17 @@ Item {
   signal passwordEdited(string text)
   signal accepted
 
-  readonly property string userName: {
-    var name = Quickshell.env("USER") || Quickshell.env("LOGNAME") || "";
-    if (name.length > 0)
-      return name;
-    // Neither is set under some session managers; the home directory is named after the account.
-    var home = Quickshell.env("HOME") || "";
-    return home.substring(home.lastIndexOf("/") + 1);
-  }
+  // The account and its picture, and Caps Lock, come from Services (Account, Keyboard).
+  readonly property string facePath: Account.facePath
+  readonly property int faceRevision: Account.faceRevision
+  readonly property string displayName: Account.displayName
 
-  readonly property string facePath: Quickshell.env("HOME") + "/.face"
-  property int faceRevision: 0
-
-  // Watched rather than read once: the preview's view outlives a picture swap.
-  FileView {
-    id: faceFile
-
-    path: view.facePath
-    watchChanges: true
-    printErrors: false
-
-    onFileChanged: {
-      faceFile.reload();
-      view.faceRevision += 1;
-    }
-  }
-
-  // GECOS full name (users.users.<name>.description), read once; the account name until then.
-  property string fullName: ""
-  readonly property string displayName: fullName.length > 0 ? fullName : userName
-
-  Process {
-    running: view.userName.length > 0
-    command: ["getent", "passwd", view.userName]
-
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var gecos = (this.text.split(":")[4] || "").split(",")[0].trim();
-        view.fullName = gecos;
-      }
-    }
-  }
-
-  // Hyprland is the only source that tracks the keyd virtual keyboard's lock state. There is
-  // no event for it, so it is asked on every key in the field and on a slow beat besides.
-  property bool capsLock: false
+  readonly property bool capsLock: Keyboard.capsLock
   // Lets the IPC preview rehearse the caption without a physical Caps Lock.
   property bool forceCapsLock: false
 
   function checkCapsLock() {
-    if (!capsQuery.running)
-      capsQuery.running = true;
-  }
-
-  Process {
-    id: capsQuery
-
-    command: ["hyprctl", "devices", "-j"]
-
-    stdout: StdioCollector {
-      onStreamFinished: {
-        try {
-          var keyboards = JSON.parse(this.text).keyboards || [];
-          var main = keyboards.find(k => k.main) || keyboards[0];
-          view.capsLock = !!(main && main.capsLock);
-        } catch (e) {
-          view.capsLock = false;
-        }
-      }
-    }
+    Keyboard.check();
   }
 
   Timer {
@@ -159,7 +100,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-       color: Theme.canvas
+      color: Theme.canvas
       z: -2
     }
 
@@ -255,10 +196,34 @@ Item {
         readonly property real travel: canvas.u(Theme.lockShakeTravel)
         readonly property int step: Theme.lockShake / 6
 
-        NumberAnimation { target: shake; property: "x"; to: -shakeAnimation.travel; duration: shakeAnimation.step; easing.type: Easing.OutQuad }
-        NumberAnimation { target: shake; property: "x"; to: shakeAnimation.travel; duration: shakeAnimation.step * 2; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: shake; property: "x"; to: -shakeAnimation.travel; duration: shakeAnimation.step * 2; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: shake; property: "x"; to: 0; duration: shakeAnimation.step; easing.type: Easing.InQuad }
+        NumberAnimation {
+          target: shake
+          property: "x"
+          to: -shakeAnimation.travel
+          duration: shakeAnimation.step
+          easing.type: Easing.OutQuad
+        }
+        NumberAnimation {
+          target: shake
+          property: "x"
+          to: shakeAnimation.travel
+          duration: shakeAnimation.step * 2
+          easing.type: Easing.InOutQuad
+        }
+        NumberAnimation {
+          target: shake
+          property: "x"
+          to: -shakeAnimation.travel
+          duration: shakeAnimation.step * 2
+          easing.type: Easing.InOutQuad
+        }
+        NumberAnimation {
+          target: shake
+          property: "x"
+          to: 0
+          duration: shakeAnimation.step
+          easing.type: Easing.InQuad
+        }
       }
 
       Connections {

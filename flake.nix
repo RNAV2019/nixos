@@ -44,6 +44,9 @@
     };
 
     # Quick Share + AirDrop daemon (nearbyd) and the omdrop-owl AWDL backend.
+    # A local path only because the repo has no remote yet, so this flake evaluates on this
+    # machine alone. Once it is pushed, use its github: URL and develop against the checkout
+    # with `--override-input nearby path:/home/ryan/Projects/nearby`.
     nearby = {
       url = "path:/home/ryan/Projects/nearby";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -94,26 +97,51 @@
         default = pkgs.gen-commit;
       };
 
+    formatter.${system} = pkgs.alejandra;
+
     checks.${system} = {
       gen-commit = pkgs.callPackage ./pkgs/gen-commit/tests {};
       ical-agenda = pkgs.callPackage ./pkgs/ical-agenda/tests {};
 
-      quickshell-qmlformat = pkgs.runCommand "quickshell-qmlformat" {
-        nativeBuildInputs = [pkgs.qt6Packages.qtdeclarative];
-      } ''
-        cp -R ${./home/quickshell} quickshell
-        chmod -R u+w quickshell
-        find quickshell -type f -name '*.qml' -print0 | while IFS= read -r -d "" file; do
-          qmlformat --inplace "$file"
-        done
-        touch "$out"
-      '';
+      # qmlformat reads home/quickshell/.qmlformat.ini; any file it would change fails.
+      quickshell-qmlformat =
+        pkgs.runCommand "quickshell-qmlformat" {
+          nativeBuildInputs = [pkgs.qt6Packages.qtdeclarative];
+          LANG = "C.UTF-8";
+        } ''
+          cd ${./home/quickshell}
+          status=0
+          while IFS= read -r -d "" file; do
+            if ! qmlformat "$file" | diff -u "$file" - >&2; then
+              echo "needs qmlformat: $file" >&2
+              status=1
+            fi
+          done < <(find . -type f -name '*.qml' -print0)
+          [ "$status" -eq 0 ] && touch "$out"
+        '';
+
+      nix-format =
+        pkgs.runCommand "nix-format" {
+          nativeBuildInputs = [pkgs.alejandra];
+        } ''
+          alejandra --check ${self} && touch "$out"
+        '';
     };
 
     # Named after each hostname so a bare `nixos-rebuild --flake ~/nixos` picks
     # the right one. Per-machine config lives in hosts/<name>.
     nixosConfigurations = let
-      mkHost = hostName:
+      # `user` owns the session and the home-manager config; `repoDir` is this checkout,
+      # which out-of-store links (quickshell, profile.jpg) and edit-secrets point into.
+      mkHost = {
+        hostName,
+        user,
+      }: let
+        args = {
+          inherit helium-browser llm-agents sonora helix-steel fenix user;
+          repoDir = "/home/${user}/nixos";
+        };
+      in
         nixpkgs.lib.nixosSystem {
           inherit system;
           modules = [
@@ -132,14 +160,17 @@
               home-manager.useUserPackages = true;
               # Preserve unmanaged files during activation.
               home-manager.backupFileExtension = "hm-backup";
-              home-manager.users.ryan = import ./home/default.nix;
-              home-manager.extraSpecialArgs = {inherit helium-browser llm-agents sonora helix-steel fenix;};
+              home-manager.users.${user} = import ./home/default.nix;
+              home-manager.extraSpecialArgs = args;
             }
           ];
-          specialArgs = {inherit helium-browser llm-agents sonora helix-steel fenix;};
+          specialArgs = args;
         };
     in {
-      ryans-nixos = mkHost "ryans-nixos";
+      ryans-nixos = mkHost {
+        hostName = "ryans-nixos";
+        user = "ryan";
+      };
     };
   };
 }

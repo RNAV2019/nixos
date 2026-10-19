@@ -72,43 +72,6 @@ Variants {
       arrive(dayArrival, delta);
     }
 
-    component Arrival: ParallelAnimation {
-      id: arrival
-
-      property Item layer
-      property real travel: 0
-
-      NumberAnimation {
-        target: arrival.layer
-        property: "opacity"
-        from: 0
-        to: 1
-        duration: Theme.duration(Theme.morphEnter)
-        easing.type: Easing.OutCubic
-      }
-
-      NumberAnimation {
-        target: arrival.layer
-        property: "shift"
-        from: arrival.travel
-        to: 0
-        duration: Theme.duration(Theme.morphEnter)
-        easing.type: Easing.OutCubic
-      }
-    }
-
-    // A layer the arrival moves, without disturbing its children's own coordinates.
-    component ArrivalLayer: Item {
-      id: layer
-
-      property real shift: 0
-
-      anchors.fill: parent
-      transform: Translate {
-        x: layer.shift
-      }
-    }
-
     Arrival {
       id: monthArrival
 
@@ -155,379 +118,383 @@ Variants {
 
       anchors.fill: parent
 
-        Rectangle {
-          id: todayBtn
+      Rectangle {
+        id: todayBtn
 
-          x: prev.x - width - Theme.calNavGap * 2
+        x: prev.x - width - Theme.calNavGap * 2
+        y: Theme.calNavTop + (Theme.calNavSize - height) / 2
+        width: todayLabel.implicitWidth + 22
+        height: Theme.calTodayBtnHeight
+        radius: height / 2
+        Accessible.role: Accessible.Button
+        Accessible.name: "Today"
+        Accessible.focusable: true
+        Accessible.focused: todayHover.activeFocus
+        Accessible.onPressAction: Calendar.today()
+        color: Theme.withAlpha(Theme.highlightMed, todayHover.containsMouse ? 1 : 0.75)
+        scale: todayHover.pressed ? Theme.pressScale : 1
+
+        Behavior on color {
+          Tint {}
+        }
+
+        Behavior on scale {
+          Morph {
+            duration: Theme.morphState
+          }
+        }
+
+        Text {
+          id: todayLabel
+
+          anchors.centerIn: parent
+          text: "Today"
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calTodayBtnSize
+          font.weight: Theme.weightMedium
+        }
+
+        MouseArea {
+          id: todayHover
+
+          anchors.fill: parent
+          hoverEnabled: true
+          activeFocusOnTab: true
+          cursorShape: Qt.PointingHandCursor
+          onPressed: todayHover.forceActiveFocus()
+          onClicked: Calendar.today()
+        }
+      }
+
+      Item {
+        id: prev
+
+        x: next.x - width - Theme.calNavGap
+        y: Theme.calNavTop
+        width: Theme.calNavSize
+        height: width
+
+        IconButton {
+          anchors.centerIn: parent
+          text: Icons.chevronLeft
+          font.family: Theme.iconFont
+          font.pixelSize: Theme.calNavGlyphSize
+          baseColor: Theme.subtle
+          hoverColor: Theme.subtle
+          filled: true
+          fillSize: Theme.calNavSize
+          fillColor: Theme.withAlpha(Theme.highlightLow, 0.9)
+          fillHoverColor: Theme.highlightLow
+          hitSize: Theme.calNavSize
+          accessibleName: "Previous month"
+          activeFocusOnTab: true
+
+          onClicked: Calendar.step(-1)
+        }
+      }
+
+      Item {
+        id: next
+
+        x: Theme.calWidth - Theme.calInset - width
+        y: Theme.calNavTop
+        width: Theme.calNavSize
+        height: width
+
+        IconButton {
+          anchors.centerIn: parent
+          text: Icons.chevronRight
+          font.family: Theme.iconFont
+          font.pixelSize: Theme.calNavGlyphSize
+          baseColor: Theme.subtle
+          hoverColor: Theme.subtle
+          filled: true
+          fillSize: Theme.calNavSize
+          fillColor: Theme.withAlpha(Theme.highlightLow, 0.9)
+          fillHoverColor: Theme.highlightLow
+          hitSize: Theme.calNavSize
+          accessibleName: "Next month"
+          activeFocusOnTab: true
+
+          onClicked: Calendar.step(1)
+        }
+      }
+
+      Repeater {
+        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+
+        Text {
+          required property int index
+          required property string modelData
+
+          x: Theme.calColumnFirst + index * Theme.calColumnPitch - width / 2
+          y: Theme.calWeekdayTop
+          text: modelData
+          color: Theme.muted
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calWeekdaySize
+        }
+      }
+
+      // The month's title and grid move as one; the nav and weekday header stay put.
+      ArrivalLayer {
+        id: monthLayer
+
+        // Centred off its measured height, not a constant, so the header stays level whatever
+        // Inter reports for an 18 px cut.
+        Text {
+          x: Theme.calInset
           y: Theme.calNavTop + (Theme.calNavSize - height) / 2
-          width: todayLabel.implicitWidth + 22
-          height: Theme.calTodayBtnHeight
-          radius: height / 2
-          Accessible.role: Accessible.Button
-          Accessible.name: "Today"
-          Accessible.focusable: true
-          Accessible.focused: todayHover.activeFocus
-          Accessible.onPressAction: Calendar.today()
-          color: Theme.withAlpha(Theme.highlightMed, todayHover.containsMouse ? 1 : 0.75)
-          scale: todayHover.pressed ? 0.97 : 1
-
-          Behavior on color {
-            Tint {}
-          }
-
-          Behavior on scale {
-            Morph { duration: Theme.morphState }
-          }
-
-          Text {
-            id: todayLabel
-
-            anchors.centerIn: parent
-            text: "Today"
-            color: Theme.text
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.calTodayBtnSize
-            font.weight: Font.Medium
-          }
-
-          MouseArea {
-            id: todayHover
-
-            anchors.fill: parent
-            hoverEnabled: true
-            activeFocusOnTab: true
-            cursorShape: Qt.PointingHandCursor
-            onPressed: todayHover.forceActiveFocus()
-            onClicked: Calendar.today()
-          }
-        }
-
-        Rectangle {
-          id: prev
-
-          x: next.x - width - Theme.calNavGap
-          y: Theme.calNavTop
-          width: Theme.calNavSize
-          height: width
-          radius: width / 2
-          Accessible.role: Accessible.Button
-          Accessible.name: "Previous month"
-          Accessible.focusable: true
-          Accessible.focused: prevHover.activeFocus
-          Accessible.onPressAction: Calendar.step(-1)
-          color: Theme.withAlpha(Theme.highlightLow, prevHover.containsMouse ? 1 : 0.9)
-          scale: prevHover.pressed ? 0.95 : 1
-
-          Behavior on color {
-            Tint {}
-          }
-
-          Behavior on scale {
-            Morph { duration: Theme.morphState }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            text: Icons.chevronLeft
-            color: Theme.subtle
-            font.family: Theme.iconFont
-            font.pixelSize: Theme.calNavGlyphSize
-          }
-
-          MouseArea {
-            id: prevHover
-
-            anchors.fill: parent
-            hoverEnabled: true
-            activeFocusOnTab: true
-            cursorShape: Qt.PointingHandCursor
-            onPressed: prevHover.forceActiveFocus()
-            onClicked: Calendar.step(-1)
-          }
-        }
-
-        Rectangle {
-          id: next
-
-          x: Theme.calWidth - Theme.calInset - width
-          y: Theme.calNavTop
-          width: Theme.calNavSize
-          height: width
-          radius: width / 2
-          Accessible.role: Accessible.Button
-          Accessible.name: "Next month"
-          Accessible.focusable: true
-          Accessible.focused: nextHover.activeFocus
-          Accessible.onPressAction: Calendar.step(1)
-          color: Theme.withAlpha(Theme.highlightLow, nextHover.containsMouse ? 1 : 0.9)
-          scale: nextHover.pressed ? 0.95 : 1
-
-          Behavior on color {
-            Tint {}
-          }
-
-          Behavior on scale {
-            Morph { duration: Theme.morphState }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            text: Icons.chevronRight
-            color: Theme.subtle
-            font.family: Theme.iconFont
-            font.pixelSize: Theme.calNavGlyphSize
-          }
-
-          MouseArea {
-            id: nextHover
-
-            anchors.fill: parent
-            hoverEnabled: true
-            activeFocusOnTab: true
-            cursorShape: Qt.PointingHandCursor
-            onPressed: nextHover.forceActiveFocus()
-            onClicked: Calendar.step(1)
-          }
+          text: Qt.formatDateTime(Calendar.anchor, "MMMM yyyy")
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calTitleSize
+          font.weight: Theme.weightSemi
         }
 
         Repeater {
-          model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+          model: 42
 
-          Text {
+          Item {
+            id: cell
+
             required property int index
-            required property string modelData
 
-            x: Theme.calColumnFirst + index * Theme.calColumnPitch - width / 2
-            y: Theme.calWeekdayTop
-            text: modelData
-            color: Theme.muted
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.calWeekdaySize
-          }
-        }
+            readonly property date day: win.cellDate(index)
+            readonly property bool inMonth: day.getMonth() === Calendar.anchor.getMonth()
+            readonly property bool isToday: Calendar.sameDay(day, new Date())
+            readonly property bool isSelected: Calendar.sameDay(day, Calendar.selected)
 
-        // The month's title and grid move as one; the nav and weekday header stay put.
-        ArrivalLayer {
-          id: monthLayer
+            x: Theme.calColumnFirst + (index % 7) * Theme.calColumnPitch - width / 2
+            y: Theme.calGridTop + Math.floor(index / 7) * Theme.calRowPitch
+            width: Theme.calColumnPitch
+            height: Theme.calRowPitch
 
-          // Centred off its measured height, not a constant, so the header stays level whatever
-          // Inter reports for an 18 px cut.
-          Text {
-            x: Theme.calInset
-            y: Theme.calNavTop + (Theme.calNavSize - height) / 2
-            text: Qt.formatDateTime(Calendar.anchor, "MMMM yyyy")
-            color: Theme.text
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.calTitleSize
-            font.weight: Font.DemiBold
-          }
+            // Today is where the selection starts, so a ring says "today, but looking elsewhere".
+            Rectangle {
+              x: (parent.width - Theme.calTodayMarker) / 2
+              y: (parent.height - Theme.calTodayMarker) / 2
+              width: Theme.calTodayMarker
+              height: Theme.calTodayMarker
+              radius: width / 2
+              visible: cell.isSelected || cell.isToday
+              color: cell.isSelected ? Theme.accent : "transparent"
+              border.width: cell.isSelected ? 0 : 1
+              border.color: Theme.withAlpha(Theme.accent, 0.55)
 
-          Repeater {
-            model: 42
-
-            Item {
-              id: cell
-
-              required property int index
-
-              readonly property date day: win.cellDate(index)
-              readonly property bool inMonth: day.getMonth() === Calendar.anchor.getMonth()
-              readonly property bool isToday: Calendar.sameDay(day, new Date())
-              readonly property bool isSelected: Calendar.sameDay(day, Calendar.selected)
-
-              x: Theme.calColumnFirst + (index % 7) * Theme.calColumnPitch - width / 2
-              y: Theme.calGridTop + Math.floor(index / 7) * Theme.calRowPitch
-              width: Theme.calColumnPitch
-              height: Theme.calRowPitch
-
-              // Today is where the selection starts, so a ring says "today, but looking elsewhere".
-              Rectangle {
-                x: (parent.width - Theme.calTodayMarker) / 2
-                y: (parent.height - Theme.calTodayMarker) / 2
-                width: Theme.calTodayMarker
-                height: Theme.calTodayMarker
-                radius: width / 2
-                visible: cell.isSelected || cell.isToday
-                color: cell.isSelected ? Theme.accent : "transparent"
-                border.width: cell.isSelected ? 0 : 1
-                border.color: Theme.withAlpha(Theme.accent, 0.55)
-
-                Behavior on color {
-                  Tint {}
-                }
+              Behavior on color {
+                Tint {}
               }
+            }
 
-              Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: (parent.height - height) / 2
-                text: cell.day.getDate()
-                color: cell.isSelected ? Theme.inkOnAccent : cell.inMonth ? Theme.inkPrimary : Theme.inkTertiary
-                font.family: Theme.uiFont
-                font.pixelSize: Theme.calDaySize
-                font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              y: (parent.height - height) / 2
+              text: cell.day.getDate()
+              color: cell.isSelected ? Theme.inkOnAccent : cell.inMonth ? Theme.inkPrimary : Theme.inkTertiary
+              font.family: Theme.uiFont
+              font.pixelSize: Theme.calDaySize
+              font.weight: cell.isSelected || cell.isToday ? Font.DemiBold : Font.Normal
 
-                Behavior on color {
-                  Tint {}
-                }
+              Behavior on color {
+                Tint {}
               }
+            }
 
-              // One dot per day with events, in its first calendar's colour. It hangs under the
-              // number but stays inside the marker; on the selected day it takes the ink on the fill.
-              Rectangle {
-                x: (parent.width - width) / 2
-                y: parent.height / 2 + Theme.calDotDrop - height / 2
-                width: Theme.calDotSize
-                height: width
-                radius: width / 2
-                visible: Calendar.hasEvents(cell.day)
-                color: {
-                  if (cell.isSelected)
-                    return Theme.inkOnAccent;
-                  var day = Calendar.eventsOn(cell.day);
-                  return day.length > 0 ? Calendar.colourFor(day[0].calendar) : Theme.accent;
-                }
+            // One dot per day with events, in its first calendar's colour. It hangs under the
+            // number but stays inside the marker; on the selected day it takes the ink on the fill.
+            Rectangle {
+              x: (parent.width - width) / 2
+              y: parent.height / 2 + Theme.calDotDrop - height / 2
+              width: Theme.calDotSize
+              height: width
+              radius: width / 2
+              visible: Calendar.hasEvents(cell.day)
+              color: {
+                if (cell.isSelected)
+                  return Theme.inkOnAccent;
+                var day = Calendar.eventsOn(cell.day);
+                return day.length > 0 ? Calendar.colourFor(day[0].calendar) : Theme.accent;
               }
+            }
 
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Calendar.selectDay(cell.day)
-              }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: Calendar.selectDay(cell.day)
             }
           }
         }
+      }
 
-        Rectangle {
+      Rectangle {
+        x: Theme.calInset
+        y: Theme.calDividerTop
+        width: Theme.calWidth - Theme.calInset * 2
+        height: 1
+        color: Theme.withAlpha(Theme.highlightMed, 0.6)
+      }
+
+      // The selected day's heading, agenda and footnote arrive together.
+      ArrivalLayer {
+        id: dayLayer
+
+        SectionLabel {
           x: Theme.calInset
-          y: Theme.calDividerTop
+          y: Theme.calSectionTop
           width: Theme.calWidth - Theme.calInset * 2
-          height: 1
-          color: Theme.withAlpha(Theme.highlightMed, 0.6)
+          verticalAlignment: Qt.AlignTop
+          title: Qt.formatDateTime(Calendar.selected, "dddd, d MMMM")
         }
 
-        // The selected day's heading, agenda and footnote arrive together.
-        ArrivalLayer {
-          id: dayLayer
+        // Room for three rows; a fuller day scrolls one row per wheel notch, keeping rows aligned.
+        ScrollView {
+          id: agendaView
 
-          Text {
-            x: Theme.calInset
-            y: Theme.calSectionTop
-            text: Qt.formatDateTime(Calendar.selected, "dddd, d MMMM")
-            color: Theme.muted
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.calSectionSize
-          }
+          x: Theme.calInset
+          y: Theme.calAgendaTop
+          width: Theme.calWidth - Theme.calInset * 2
+          height: Theme.calAgendaBlock
+          wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
 
-          // Room for three rows; a fuller day scrolls one row per wheel notch, keeping rows aligned.
-          ScrollView {
-            id: agendaView
+          Column {
+            width: agendaView.width
+            spacing: Theme.calAgendaGap
 
-            x: Theme.calInset
-            y: Theme.calAgendaTop
-            width: Theme.calWidth - Theme.calInset * 2
-            height: Theme.calAgendaBlock
-            wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
+            Repeater {
+              model: win.agenda.length
 
-            Column {
-              width: agendaView.width
-              spacing: Theme.calAgendaGap
+              Rectangle {
+                id: row
 
-              Repeater {
-                model: win.agenda.length
+                required property int index
+
+                readonly property var event: win.agenda[index]
+
+                width: agendaView.width
+                height: Theme.calAgendaHeight
+                radius: Theme.calAgendaRadius
+                color: Theme.withAlpha(Theme.highlightLow, 0.9)
 
                 Rectangle {
-                  id: row
+                  x: Theme.calSpineLeft
+                  y: (parent.height - height) / 2
+                  width: Theme.calSpineWidth
+                  height: Theme.calSpineHeight
+                  radius: width / 2
+                  color: Calendar.colourFor(row.event.calendar)
+                }
 
-                  required property int index
+                Text {
+                  x: Theme.calTimeLeft
+                  y: (parent.height - height) / 2
+                  text: row.event.allDay ? "all day" : Qt.formatDateTime(row.event.start, "HH:mm")
+                  color: Theme.subtle
+                  font.family: Theme.monoFont
+                  font.pixelSize: Theme.calTimeSize
+                }
 
-                  readonly property var event: win.agenda[index]
+                Text {
+                  x: Theme.calTitleLeft
+                  y: (parent.height - height) / 2
+                  width: Math.max(0, meta.x - x - 12)
+                  text: row.event.title
+                  color: Theme.text
+                  font.family: Theme.uiFont
+                  font.pixelSize: Theme.calEventTitleSize
+                  elide: Text.ElideRight
+                }
 
-                  width: agendaView.width
-                  height: Theme.calAgendaHeight
-                  radius: Theme.calAgendaRadius
-                  color: Theme.withAlpha(Theme.highlightLow, 0.9)
+                Text {
+                  id: meta
 
-                  Rectangle {
-                    x: Theme.calSpineLeft
-                    y: (parent.height - height) / 2
-                    width: Theme.calSpineWidth
-                    height: Theme.calSpineHeight
-                    radius: width / 2
-                    color: Calendar.colourFor(row.event.calendar)
+                  x: parent.width - width - Theme.calSpineLeft
+                  y: (parent.height - height) / 2
+                  text: {
+                    if (row.event.location !== "")
+                      return row.event.location;
+                    if (row.event.allDay)
+                      return "";
+                    var mins = Math.round((row.event.end - row.event.start) / 60000);
+                    if (mins <= 0)
+                      return "";
+                    return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
                   }
-
-                  Text {
-                    x: Theme.calTimeLeft
-                    y: (parent.height - height) / 2
-                    text: row.event.allDay ? "all day" : Qt.formatDateTime(row.event.start, "HH:mm")
-                    color: Theme.subtle
-                    font.family: Theme.monoFont
-                    font.pixelSize: Theme.calTimeSize
-                  }
-
-                  Text {
-                    x: Theme.calTitleLeft
-                    y: (parent.height - height) / 2
-                    width: Math.max(0, meta.x - x - 12)
-                    text: row.event.title
-                    color: Theme.text
-                    font.family: Theme.uiFont
-                    font.pixelSize: Theme.calEventTitleSize
-                    elide: Text.ElideRight
-                  }
-
-                  Text {
-                    id: meta
-
-                    x: parent.width - width - Theme.calSpineLeft
-                    y: (parent.height - height) / 2
-                    text: {
-                      if (row.event.location !== "")
-                        return row.event.location;
-                      if (row.event.allDay)
-                        return "";
-                      var mins = Math.round((row.event.end - row.event.start) / 60000);
-                      if (mins <= 0)
-                        return "";
-                      return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
-                    }
-                    color: Theme.muted
-                    font.family: Theme.uiFont
-                    font.pixelSize: Theme.calMetaSize
-                    elide: Text.ElideRight
-                  }
+                  color: Theme.muted
+                  font.family: Theme.uiFont
+                  font.pixelSize: Theme.calMetaSize
+                  elide: Text.ElideRight
                 }
               }
             }
           }
+        }
 
-          // Covers the states the list is not in: empty, truncated, loading, or never set up. With
-          // rows it is a footnote under the reserved block; with none it is centred, reading as empty.
-          Text {
-            readonly property bool alone: win.agenda.length === 0
+        // Covers the states the list is not in: empty, truncated, loading, or never set up. With
+        // rows it is a footnote under the reserved block; with none it is centred, reading as empty.
+        Text {
+          readonly property bool alone: win.agenda.length === 0
 
-            x: Theme.calInset
-            y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap * 2
-            width: Theme.calWidth - Theme.calInset * 2
-            horizontalAlignment: alone ? Text.AlignHCenter : Text.AlignLeft
-            elide: Text.ElideRight
-            text: {
-              if (Calendar.error !== "")
-                return Calendar.error;
-              if (Calendar.loading && win.agenda.length === 0)
-                return "Loading…";
-              if (win.agenda.length === 0)
-                return "Nothing on";
-              // Only rows still below the view count, so it clears once scrolled to the end.
-              var scrolled = Math.floor(agendaView.contentY / (Theme.calAgendaHeight + Theme.calAgendaGap));
-              var more = win.agenda.length - Theme.calAgendaMax - scrolled;
-              return more > 0 ? "+ " + more + " more" : "";
-            }
-            color: Calendar.error !== "" ? Theme.urgent : Theme.muted
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.calMetaSize
+          x: Theme.calInset
+          y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap * 2
+          width: Theme.calWidth - Theme.calInset * 2
+          horizontalAlignment: alone ? Text.AlignHCenter : Text.AlignLeft
+          elide: Text.ElideRight
+          text: {
+            if (Calendar.error !== "")
+              return Calendar.error;
+            if (Calendar.loading && win.agenda.length === 0)
+              return "Loading…";
+            if (win.agenda.length === 0)
+              return "Nothing on";
+            // Only rows still below the view count, so it clears once scrolled to the end.
+            var scrolled = Math.floor(agendaView.contentY / (Theme.calAgendaHeight + Theme.calAgendaGap));
+            var more = win.agenda.length - Theme.calAgendaMax - scrolled;
+            return more > 0 ? "+ " + more + " more" : "";
           }
+          color: Calendar.error !== "" ? Theme.urgent : Theme.muted
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calMetaSize
         }
       }
     }
   }
+
+  component Arrival: ParallelAnimation {
+    id: arrival
+
+    property Item layer
+    property real travel: 0
+
+    NumberAnimation {
+      target: arrival.layer
+      property: "opacity"
+      from: 0
+      to: 1
+      duration: Theme.duration(Theme.morphEnter)
+      easing.type: Easing.OutCubic
+    }
+
+    NumberAnimation {
+      target: arrival.layer
+      property: "shift"
+      from: arrival.travel
+      to: 0
+      duration: Theme.duration(Theme.morphEnter)
+      easing.type: Easing.OutCubic
+    }
+  }
+
+  // A layer the arrival moves, without disturbing its children's own coordinates.
+  component ArrivalLayer: Item {
+    id: layer
+
+    property real shift: 0
+
+    anchors.fill: parent
+    transform: Translate {
+      x: layer.shift
+    }
+  }
+}

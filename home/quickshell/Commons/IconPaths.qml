@@ -40,7 +40,7 @@ Singleton {
   // Recreated file glyphs - sharp fold notch, board line lengths and dot slot.
   readonly property string fileText: "M14 3L7 3C5.9 3 5 3.9 5 5L5 19C5 20.1 5.9 21 7 21L17 21C18.1 21 19 20.1 19 19L19 8L14 3M14 3L14 8L19 8M9 13L15 13M9 17L13 17"
   readonly property string file: "M14 3L7 3C5.9 3 5 3.9 5 5L5 19C5 20.1 5.9 21 7 21L17 21C18.1 21 19 20.1 19 19L19 8L14 3M14 3L14 8L19 8"
-  readonly property string fileArchive:"M14 3L7 3C5.9 3 5 3.9 5 5L5 19C5 20.1 5.9 21 7 21L17 21C18.1 21 19 20.1 19 19L19 8L14 3M14 3L14 8L19 8M11 6L12 6M11 9L12 9M11 12L12 12M10.5 15L12.5 15L12.5 18L10.5 18L10.5 15"
+  readonly property string fileArchive: "M14 3L7 3C5.9 3 5 3.9 5 5L5 19C5 20.1 5.9 21 7 21L17 21C18.1 21 19 20.1 19 19L19 8L14 3M14 3L14 8L19 8M11 6L12 6M11 9L12 9M11 12L12 12M10.5 15L12.5 15L12.5 18L10.5 18L10.5 15"
 
   // Recreated: small square dot at the top right, polyline hills in a wide frame.
   readonly property string image: "M6.33 4L17.67 4A3.33 3.33 0 0 1 21 7.33L21 16.67A3.33 3.33 0 0 1 17.67 20L6.33 20A3.33 3.33 0 0 1 3 16.67L3 7.33A3.33 3.33 0 0 1 6.33 4ZM4 17L9 12L13 16L15.5 13.5L20 18M15.5 8.5L15.51 8.5"

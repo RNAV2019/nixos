@@ -62,12 +62,30 @@ Gauge {
         startX: 4.4
         startY: 0.3
 
-        PathLine { x: 0.5; y: 5.9 }
-        PathLine { x: 3.4; y: 5.9 }
-        PathLine { x: 2.6; y: 9.7 }
-        PathLine { x: 6.5; y: 4.1 }
-        PathLine { x: 3.6; y: 4.1 }
-        PathLine { x: 4.4; y: 0.3 }
+        PathLine {
+          x: 0.5
+          y: 5.9
+        }
+        PathLine {
+          x: 3.4
+          y: 5.9
+        }
+        PathLine {
+          x: 2.6
+          y: 9.7
+        }
+        PathLine {
+          x: 6.5
+          y: 4.1
+        }
+        PathLine {
+          x: 3.6
+          y: 4.1
+        }
+        PathLine {
+          x: 4.4
+          y: 0.3
+        }
       }
     }
 

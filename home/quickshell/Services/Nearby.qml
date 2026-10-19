@@ -592,8 +592,10 @@ Singleton {
 
   // One-shot snapshot merge after (re)connect: the daemon's subscribe already
   // replays, but an explicit transfers dump covers a Lagged Status-only repair.
-  Call {
+  Command {
     id: resyncCall
+
+    logFailures: false
 
     command: ["nearby", "transfers", "--json"]
     stdout: StdioCollector {
@@ -622,18 +624,7 @@ Singleton {
     onTriggered: events.running = true
   }
 
-  component Call: Process {
-    id: call
-
-    property string errText: ""
-    property int exitCode: 0
-
-    stderr: StdioCollector {
-      onStreamFinished: call.errText = text.trim()
-    }
-  }
-
-  Call {
+  Command {
     id: modeCall
 
     onExited: function (code) {
@@ -641,7 +632,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: windowCall
 
     onExited: function (code) {
@@ -649,7 +640,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: scanCall
 
     onExited: function (code) {
@@ -657,7 +648,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: sendCall
 
     onExited: function (code) {
@@ -665,7 +656,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: acceptCall
 
     onExited: function (code) {
@@ -673,7 +664,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: declineCall
 
     onExited: function (code) {
@@ -681,7 +672,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: cancelCall
 
     onExited: function (code) {
@@ -689,7 +680,7 @@ Singleton {
     }
   }
 
-  Call {
+  Command {
     id: clearCall
 
     onExited: function (code) {

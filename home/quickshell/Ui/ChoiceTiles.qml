@@ -79,7 +79,7 @@ Item {
         border.width: 1
         border.color: {
           if (tile.isActive && root.activeIsCommitting)
-             return root.activeColor;
+            return root.activeColor;
           if (tile.isCurrent || hover.containsMouse)
             return Theme.accent;
           if (tile.isActive)
@@ -87,7 +87,7 @@ Item {
           return Theme.withAlpha(Theme.highlightMed, Theme.powerTileBorderAlpha);
         }
 
-        scale: hover.pressed ? 0.97 : 1
+        scale: hover.pressed ? Theme.pressScale : 1
 
         Behavior on scale {
           Morph {
@@ -108,7 +108,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.powerGlyphTop - Theme.powerTileTop - height / 2 + Theme.powerGlyphSize / 2
         text: tile.modelData.glyph
-         color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
+        color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
         font.family: Theme.iconFont
         font.pixelSize: Theme.powerGlyphSize
 
@@ -120,8 +120,8 @@ Item {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.powerLabelTop - Theme.powerTileTop
-         text: tile.isActive && root.activeLabel !== "" ? root.activeLabel : tile.modelData.label
-         color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
+        text: tile.isActive && root.activeLabel !== "" ? root.activeLabel : tile.modelData.label
+        color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
         font.family: Theme.uiFont
         font.pixelSize: Theme.powerLabelSize
         font.weight: tile.ink ? Font.Bold : Font.Medium

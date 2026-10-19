@@ -48,8 +48,6 @@
   boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
 
-  # Android x86 emulation requires Intel KVM acceleration.
-  boot.kernelModules = ["kvm-intel"];
   # Required for the shutdown/reboot Plymouth splash.
   boot.initrd.systemd.enable = true;
 

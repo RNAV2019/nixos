@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  repoDir,
   ...
 }: {
   # Repaints already-open Ghostty windows over OSC when the universal `theme_osc`
@@ -36,7 +37,7 @@
       la = "eza -lha --group-directories-first --icons=auto";
 
       # Picks nixosConfigurations.<hostname>.
-      rebuild = "sudo nixos-rebuild switch --flake ~/nixos";
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
 

@@ -45,13 +45,13 @@ Rectangle {
 
       NumberAnimation {
         to: 0.72
-        duration: 420
+        duration: Theme.duration(Theme.morphAmbient)
         easing.type: Easing.InOutQuad
       }
 
       NumberAnimation {
         to: 1
-        duration: 420
+        duration: Theme.duration(Theme.morphAmbient)
         easing.type: Easing.InOutQuad
       }
     }

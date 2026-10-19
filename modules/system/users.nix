@@ -1,9 +1,10 @@
 {
   config,
   pkgs,
+  user,
   ...
 }: {
-  users.users.ryan = {
+  users.users.${user} = {
     isNormalUser = true;
     # The full name; the lock screen reads it from GECOS.
     description = "Ryan Navsaria";
@@ -13,12 +14,4 @@
     # Decrypted from secrets/secrets.yaml before user creation.
     hashedPasswordFile = config.sops.secrets."users/ryan-hashed-password".path;
   };
-
-  services.fwupd.enable = true;
-
-  # Allow brightnessctl to control the backlight without sudo.
-  services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
-    ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
-  '';
 }

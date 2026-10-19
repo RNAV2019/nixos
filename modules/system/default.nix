@@ -3,6 +3,7 @@
   lib,
   pkgs,
   fenix,
+  user,
   ...
 }: let
   start-hyprland = pkgs.writeShellApplication {
@@ -67,29 +68,6 @@ in {
   # Required for Bluetooth HID input.
   services.libinput.enable = true;
 
-  # Copilot key (Shift+Meta+F23) becomes Ctrl. PrtSc (Shift+Meta+S) and the Ideapad
-  # screenshot button (which keyd rewrites to F16) become sysrq, Hyprland's Print.
-  services.keyd = {
-    enable = true;
-    keyboards.default = {
-      ids = ["*"];
-      settings = {
-        main."leftshift+leftmeta+f23" = "layer(control)";
-        main."leftshift+leftmeta+s" = "sysrq";
-        main.f16 = "sysrq";
-      };
-    };
-  };
-
-  # Mark keyd's virtual keyboard as internal so libinput's disable-while-typing
-  # still pairs it with the touchpad.
-  environment.etc."libinput/local-overrides.quirks".text = ''
-    [keyd virtual keyboard]
-    MatchUdevType=keyboard
-    MatchName=keyd virtual keyboard
-    AttrKeyboardIntegration=internal
-  '';
-
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -135,7 +113,7 @@ in {
     enable = true;
     settings.default_session = {
       command = "${start-hyprland}/bin/start-hyprland";
-      user = "ryan";
+      inherit user;
     };
   };
 
@@ -157,20 +135,9 @@ in {
     nodelay = true;
   };
 
-  # Panther Lake Xe3 needs a current kernel; there is no i915 fallback
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-
-  hardware.graphics = {
-    enable = true;
-    extraPackages = with pkgs; [intel-media-driver vpl-gpu-rt];
-  };
-
-  # Compressed swap in RAM; there is no swap partition.
+  # Compressed swap in RAM, used ahead of the disk swap partition (higher priority).
   zramSwap.enable = true;
 
-  # thermald --adaptive applies the firmware's DPTF tables and pins MMIO PL1 to
-  # 10 W, holding all-core clocks under 1 GHz. The kernel's int340x driver and
-  # hardware TCC still handle thermal protection.
   services.power-profiles-daemon.enable = true;
 
   # D-Bus power state for the shell and upower CLI.
@@ -193,8 +160,6 @@ in {
   ];
 
   fonts.fontconfig = {
-    # The OLED's subpixel layout is unknown, so grayscale AA avoids colour fringes.
-    subpixel.rgba = "none";
     hinting = {
       enable = true;
       # Keeps glyph spacing even and suits grayscale better than full hinting.

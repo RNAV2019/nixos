@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Services
@@ -93,12 +92,10 @@ Variants {
         Bus.lockRequested();
         break;
       case 1:
-        systemctl.command = ["systemctl", "reboot"];
-        systemctl.running = true;
+        Session.reboot();
         break;
       case 2:
-        systemctl.command = ["systemctl", "poweroff"];
-        systemctl.running = true;
+        Session.poweroff();
         break;
       }
     }
@@ -118,10 +115,6 @@ Variants {
         if (win.pending >= 0 && win.screen && screen === win.screen.name)
           win.cancel();
       }
-    }
-
-    Process {
-      id: systemctl
     }
 
     onKeyPressed: function (event) {

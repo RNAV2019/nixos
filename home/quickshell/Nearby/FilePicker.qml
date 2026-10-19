@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Io
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -594,23 +593,12 @@ Item {
     }
 
     // The first lines of a small text file, read only when one is focused.
-    Process {
+    FilePeek {
       id: textPeek
 
-      property string text: ""
-      readonly property string target: preview.kind === "text" && preview.entry && preview.entry.size < 512 * 1024 ? preview.entry.path : ""
-
-      command: ["head", "-n", "24", "-c", "4096", "--", target]
-      onTargetChanged: {
-        text = "";
-        running = false;
-        if (target !== "")
-          running = true;
-      }
-
-      stdout: StdioCollector {
-        onStreamFinished: textPeek.text = text.replace(/\t/g, "  ")
-      }
+      path: preview.kind === "text" && preview.entry && preview.entry.size < 512 * 1024 ? preview.entry.path : ""
+      lines: 24
+      bytes: 4096
     }
 
     Text {
@@ -648,39 +636,10 @@ Item {
       font.pixelSize: 11
     }
 
-    // `identify` would need ImageMagick; the file header is enough for JPEG/PNG, so read the
-    // dimensions with `file`, which every system has.
-    Process {
-      id: origProbe
-
-      readonly property string target: preview.showsImage ? preview.entry.path : ""
-
-      command: ["file", "-bL", "--", target]
-      onTargetChanged: {
-        origSize.w = 0;
-        origSize.h = 0;
-        running = false;
-        if (target !== "")
-          running = true;
-      }
-
-      stdout: StdioCollector {
-        onStreamFinished: {
-          var m = text.match(/(\d+)\s*x\s*(\d+)/g);
-          if (!m || m.length === 0)
-            return;
-          var last = m[m.length - 1].match(/(\d+)\s*x\s*(\d+)/);
-          origSize.w = parseInt(last[1], 10);
-          origSize.h = parseInt(last[2], 10);
-        }
-      }
-    }
-
-    QtObject {
+    ImageSize {
       id: origSize
 
-      property int w: 0
-      property int h: 0
+      path: preview.showsImage ? preview.entry.path : ""
     }
   }
 }

@@ -48,13 +48,15 @@ Rectangle {
   color: {
     if (selected)
       return Theme.accent;
-      return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
+    return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
   }
 
   scale: pressed ? Theme.pressScale : 1
 
   Behavior on scale {
-    Morph { duration: Theme.morphState }
+    Morph {
+      duration: Theme.morphState
+    }
   }
 
   Behavior on color {
@@ -150,14 +152,15 @@ Rectangle {
     font.pixelSize: 16
 
     Behavior on opacity {
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutCubic
       }
     }
 
     Behavior on scale {
-      Morph { duration: Theme.morphState }
+      Morph {
+        duration: Theme.morphState
+      }
     }
   }
 }

@@ -34,7 +34,9 @@ Rectangle {
   }
 
   Behavior on scale {
-    Morph { duration: Theme.morphState }
+    Morph {
+      duration: Theme.morphState
+    }
   }
 
   Rectangle {

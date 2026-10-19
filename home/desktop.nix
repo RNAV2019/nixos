@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  repoDir,
   ...
 }: let
   inherit (lib.generators) mkLuaInline;
@@ -514,12 +515,12 @@ in {
   programs.quickshell.enable = true;
 
   xdg.configFile."quickshell".source =
-    config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/home/quickshell";
+    config.lib.file.mkOutOfStoreSymlink "${repoDir}/home/quickshell";
 
   # The account picture, read by the lock screen. Out of store, so replacing
-  # ~/nixos/profile.jpg shows on the next lock without a rebuild.
+  # profile.jpg in this repo shows on the next lock without a rebuild.
   home.file.".face" = {
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nixos/profile.jpg";
+    source = config.lib.file.mkOutOfStoreSymlink "${repoDir}/profile.jpg";
     force = true;
   };
 }

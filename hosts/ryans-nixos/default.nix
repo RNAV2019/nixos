@@ -1,13 +1,11 @@
 # Panther Lake laptop with a Samsung OLED. Machine-specific settings only;
 # modules/system and home are shared by every host.
-{...}: {
+{user, ...}: {
   imports = [
     ./hardware-configuration.nix
+    ./platform.nix
     ./sof-sdw-ptl-rt721.nix
   ];
-
-  # Here rather than in hardware-configuration.nix, which gets regenerated.
-  hardware.cpu.intel.npu.enable = true;
 
   # Quick Share and AirDrop (`nearby`). The Intel BE211 runs AWDL only in
   # omdrop-owl's exclusive mode: Wi-Fi drops while an AirDrop window is open.
@@ -17,12 +15,12 @@
   # and show arrivals themselves, so a toast would only duplicate them.
   services.nearby = {
     enable = true;
-    user = "ryan";
+    inherit user;
     settings.notifications = false;
     settings.android_visible_on_start = true;
   };
 
-  home-manager.users.ryan = {
+  home-manager.users.${user} = {
     desktop.monitors = [
       {
         output = "eDP-1";

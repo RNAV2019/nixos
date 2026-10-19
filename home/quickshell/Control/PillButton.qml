@@ -40,8 +40,8 @@ Rectangle {
   opacity: revealed ? 1 : 0
 
   Behavior on opacity {
-    NumberAnimation {
-      duration: Theme.morphState
+    Morph {
+      duration: Theme.duration(Theme.morphState)
     }
   }
 
@@ -58,7 +58,9 @@ Rectangle {
   }
 
   Behavior on scale {
-    Morph { duration: Theme.morphState }
+    Morph {
+      duration: Theme.morphState
+    }
   }
 
   Text {

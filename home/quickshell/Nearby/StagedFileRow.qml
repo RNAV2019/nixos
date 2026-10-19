@@ -105,27 +105,15 @@ Rectangle {
     font.weight: Theme.weightMedium
   }
 
-  StrokeIcon {
+  StrokeIconButton {
     x: root.width - Theme.nearbyFileRemoveRight - size
     y: (root.height - size) / 2
     size: Theme.nearbyFileRemove
     strokeWidth: 1.6
     path: IconPaths.x
-    color: removeArea.containsMouse ? Theme.inkPrimary : Theme.inkTertiary
+    accessibleName: "Remove " + root.name
 
-    Behavior on color {
-      Tint {}
-    }
-
-    MouseArea {
-      id: removeArea
-
-      anchors.fill: parent
-      anchors.margins: -8
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: root.removeClicked()
-    }
+    onClicked: root.removeClicked()
   }
 
   Accessible.role: Accessible.ListItem

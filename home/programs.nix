@@ -1,5 +1,8 @@
-{ config, pkgs, ... }:
 {
+  config,
+  pkgs,
+  ...
+}: {
   programs.tealdeer = {
     enable = true;
     settings = {
@@ -34,7 +37,11 @@
 
     keymap = {
       manager.prepend_keymap = [
-        { on = [ "T" ]; run = "shell ghostty &"; desc = "Open terminal here"; }
+        {
+          on = ["T"];
+          run = "shell ghostty &";
+          desc = "Open terminal here";
+        }
       ];
     };
   };
@@ -43,13 +50,13 @@
     enable = true;
     options = {
       # The colours are included from the active theme; see theme.nix.
-      recolor                   = false;
-      recolor-keephue           = false;
+      recolor = false;
+      recolor-keephue = false;
 
       scroll-step = 50;
-      zoom-min    = 10;
-      guioptions  = "";
-      font        = "JetBrainsMono Nerd Font 11";
+      zoom-min = 10;
+      guioptions = "";
+      font = "JetBrainsMono Nerd Font 11";
     };
     mappings = {
       "f" = "toggle_fullscreen";
@@ -79,9 +86,9 @@
     settings = {
       # color_theme is the active theme's file; see theme.nix.
       theme_background = false;
-      vim_keys         = true;
-      rounded_corners  = true;
-      update_ms        = 1000;
+      vim_keys = true;
+      rounded_corners = true;
+      update_ms = 1000;
     };
   };
 }

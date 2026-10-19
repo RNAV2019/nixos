@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   helix-steel,
   ...
@@ -19,26 +20,105 @@
     hash = "sha256-TpYnGqROkKfoB9G+JTjADWvMtpRJbv4NVaTqiUfW1Eg=";
   };
 
+  # Grammars to build. The fork builds all ~290 from source on every toolchain bump, so only
+  # these are compiled: the languages configured below, the file types in ~/Projects, and
+  # the injection grammars they embed. A language missing here opens as plain text; add its
+  # grammar name (from the fork's languages.toml) to highlight it.
+  grammars = [
+    # Configured below.
+    "rust"
+    "typescript"
+    "tsx"
+    "javascript"
+    "nix"
+    "html"
+    "css"
+    "python"
+    "haskell"
+    "java"
+    "latex"
+    "bibtex"
+    "typst"
+    # Seen in ~/Projects and this repo.
+    "kotlin"
+    "xml"
+    "qmljs"
+    "go"
+    "gomod"
+    "dart"
+    "swift"
+    "c"
+    "cpp"
+    "proto"
+    "scheme"
+    "lua"
+    "bash"
+    "fish"
+    "toml"
+    "yaml"
+    "json"
+    "json5"
+    "markdown"
+    "ini"
+    "properties"
+    "groovy"
+    "glsl"
+    "sql"
+    "dockerfile"
+    "make"
+    "cmake"
+    "meson"
+    "just"
+    "kdl"
+    "csv"
+    "scss"
+    "astro"
+    "svelte"
+    "vue"
+    "hyprlang"
+    "ssh_client_config"
+    # Git and editor plumbing.
+    "diff"
+    "gitcommit"
+    "git-rebase"
+    "git-config"
+    "gitattributes"
+    "gitignore"
+    # Injections the above embed.
+    "markdown_inline"
+    "comment"
+    "regex"
+    "jsdoc"
+    "rust-format-args"
+    "go-format-string"
+    "lua-format-string"
+    "gotmpl"
+    "jinja2"
+    "query"
+  ];
+
   # The Steel fork pins grammar revisions that predate two upstream compiler
   # fixes, so patch them the same way nixpkgs patches its own Helix grammars.
+  # Each applies only while its grammar is in the list above.
   grammarFixes = [
-    (final: prev: {
-      # glibc 2.44 defines bsearch as a macro, colliding with the pinned grammar's
-      # own bsearch.c. Drop it; tree-sitter-perl#220 does the same upstream.
-      perl = prev.perl.overrideAttrs {
-        postPatch = ''
-          rm src/bsearch.c
-          substituteInPlace src/tsp_unicode.h \
-            --replace-fail '#include "bsearch.c"' ""
-        '';
-      };
+    (final: prev:
+      lib.filterAttrs (name: _: prev ? ${name}) {
+        # glibc 2.44 defines bsearch as a macro, colliding with the pinned grammar's
+        # own bsearch.c. Drop it; tree-sitter-perl#220 does the same upstream.
+        perl = prev.perl.overrideAttrs {
+          postPatch = ''
+            rm src/bsearch.c
+            substituteInPlace src/tsp_unicode.h \
+              --replace-fail '#include "bsearch.c"' ""
+          '';
+        };
 
-      # GCC 16 miscompiles the pinned Haskell scanner without this; see
-      # NixOS/nixpkgs#569011.
-      haskell = prev.haskell.overrideAttrs (old: {
-        NIX_CFLAGS_COMPILE = (old.NIX_CFLAGS_COMPILE or "") + " -fno-strict-aliasing";
-      });
-    })
+        # GCC 16 miscompiles the pinned Haskell scanner without this; see
+        # NixOS/nixpkgs#569011.
+        haskell = prev.haskell.overrideAttrs (old: {
+          NIX_CFLAGS_COMPILE = (old.NIX_CFLAGS_COMPILE or "") + " -fno-strict-aliasing";
+        });
+      })
   ];
 in {
   home.packages = [pkgs.typst-preview-window];
@@ -61,6 +141,7 @@ in {
     enable = true;
     package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
       grammarOverlays = grammarFixes;
+      includeGrammarIf = grammar: builtins.elem grammar.name grammars;
     };
 
     settings = {

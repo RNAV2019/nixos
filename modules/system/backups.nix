@@ -2,9 +2,11 @@
   config,
   lib,
   pkgs,
+  user,
   ...
 }: let
-  home = "/home/ryan";
+  home = config.users.users.${user}.home;
+  inherit (config.networking) hostName;
   nasHost = "backup.ryannavsaria.co.uk";
 
   # Set to the NAS's LAN host:port to seed the first archive without the tunnel,
@@ -27,7 +29,7 @@
     then lanSeed
     else nasHost;
 
-  repo = "ssh://borg@${nasAddress}/backup/ryans-nixos/repo";
+  repo = "ssh://borg@${nasAddress}/backup/${hostName}/repo";
 
   secret = name: config.sops.secrets.${name}.path;
 
@@ -123,7 +125,7 @@ in {
 
   services.borgbackup.jobs.nas = {
     inherit repo;
-    archiveBaseName = "ryans-nixos";
+    archiveBaseName = hostName;
 
     paths = [
       "${home}/Projects"

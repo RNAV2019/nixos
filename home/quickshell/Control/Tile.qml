@@ -44,8 +44,8 @@ Rectangle {
 
   color: {
     if (on)
-       return hovered ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill;
-       return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
+      return hovered ? Qt.lighter(Theme.accentFill, 1.08) : Theme.accentFill;
+    return Theme.withAlpha(hovered ? Theme.highlightMed : Theme.surfaceSubtle, 0.9);
   }
 
   border.width: on ? 0 : 1
@@ -57,7 +57,9 @@ Rectangle {
   }
 
   Behavior on scale {
-    Morph { duration: Theme.morphState }
+    Morph {
+      duration: Theme.morphState
+    }
   }
 
   Rectangle {

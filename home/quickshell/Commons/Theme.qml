@@ -7,80 +7,56 @@ import Quickshell.Io
 Singleton {
   id: root
 
-  // The palettes, keyed by the theme id `theme-switch` takes; they mirror
-  // home/themes/palettes.nix. The other themes reuse the Rose Pine role names.
-  readonly property var palettes: ({
-      "rose-pine": {
-        label: "Rosé Pine",
-        paletteName: "rose-pine",
-        base: "#191724",
-        surface: "#1f1d2e",
-        overlay: "#26233a",
-        // Rose Pine's muted #6e6a86 is only 3.2:1 against the panel tint, and carries almost
-        // every 11 px label; lifted towards `subtle` to read 4.7:1 on the darkest ground.
-        muted: "#8a86a4",
-        subtle: "#908caa",
-        text: "#e0def4",
-        love: "#eb6f92",
-        gold: "#f6c177",
-        rose: "#ebbcba",
-        pine: "#31748f",
-        foam: "#9ccfd8",
-        iris: "#c4a7e7",
-        highlightLow: "#21202e",
-        highlightMed: "#403d52",
-        highlightHigh: "#524f67",
-        accent: "#c4a7e7"
-      },
-      "dark": {
-        label: "Dark",
-        paletteName: "ascii-world",
-        base: "#0b0b0b",
-        surface: "#141414",
-        overlay: "#1f1f1f",
-        muted: "#8c8c8c",
-        subtle: "#a6a6a6",
-        text: "#ffffff",
-        love: "#ff5c5c",
-        gold: "#ffd166",
-        rose: "#ffb3b3",
-        pine: "#8c8c8c",
-        foam: "#d6d6d6",
-        iris: "#ffffff",
-        highlightLow: "#181818",
-        highlightMed: "#303030",
-        highlightHigh: "#3f3f3f",
-        accent: "#ffffff"
-      },
-      "ariadne": {
-        label: "Ariadne",
-        paletteName: "ariadne",
-        base: "#002018",
-        surface: "#0a0a0a",
-        overlay: "#1e1c1a",
-        muted: "#707e78",
-        subtle: "#8a8a86",
-        text: "#e6e4de",
-        love: "#e0563b",
-        gold: "#d99f66",
-        rose: "#d8a8bc",
-        pine: "#8c94a9",
-        foam: "#7cc4c0",
-        iris: "#3eddb8",
-        highlightLow: "#141311",
-        highlightMed: "#2e4c45",
-        highlightHigh: "#3a5a50",
-        accent: "#3eddb8"
-      }
-    })
+  // The palettes, keyed by the theme id `theme-switch` takes, in the order the theme picker
+  // shows them. palettes.json is the one source: home/themes/palettes.nix reads the same file
+  // for every other program, and this one is read live, so an edit recolours without a rebuild.
+  FileView {
+    id: paletteFile
 
-  // In the order the theme picker shows them.
-  readonly property var themeIds: ["rose-pine", "dark", "ariadne"]
+    path: Quickshell.shellPath("Commons/palettes.json")
+    blockLoading: true
+    watchChanges: true
+
+    onFileChanged: paletteFile.reload()
+  }
+
+  readonly property var palettes: {
+    try {
+      return JSON.parse(paletteFile.text());
+    } catch (e) {
+      console.warn("Theme: palettes.json unreadable:", e);
+      return {};
+    }
+  }
+
+  readonly property var themeIds: Object.keys(palettes)
+
+  // Drawn only if palettes.json cannot be read, so every colour binding still resolves.
+  readonly property var fallbackPalette: ({
+      label: "Fallback",
+      paletteName: "fallback",
+      base: "#000000",
+      surface: "#111111",
+      overlay: "#222222",
+      muted: "#888888",
+      subtle: "#aaaaaa",
+      text: "#ffffff",
+      love: "#ff5c5c",
+      gold: "#ffd166",
+      rose: "#ffb3b3",
+      pine: "#888888",
+      foam: "#cccccc",
+      iris: "#ffffff",
+      highlightLow: "#181818",
+      highlightMed: "#303030",
+      highlightHigh: "#3f3f3f",
+      accent: "#ffffff"
+    })
 
   // Which theme is up. `theme-switch` writes the id into this watched file, so a switch
   // recolours in place: Tint colours cross-fade, the rest change on the next frame.
   property string name: "ariadne"
-  readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes["ariadne"]
+  readonly property var palette: palettes[name] !== undefined ? palettes[name] : palettes[themeIds[0]] !== undefined ? palettes[themeIds[0]] : fallbackPalette
 
   FileView {
     id: nameFile
@@ -107,7 +83,7 @@ Singleton {
   readonly property color base: palette.base
   readonly property color surface: palette.surface
   readonly property color overlay: palette.overlay
-  readonly property color muted: palette.muted
+  readonly property color muted: palette.shellMuted !== undefined ? palette.shellMuted : palette.muted
   readonly property color subtle: palette.subtle
   readonly property color text: palette.text
   readonly property color love: palette.love
@@ -134,9 +110,7 @@ Singleton {
   readonly property color dangerFill: urgent
   readonly property color inkOnDanger: base
   readonly property color focusRing: accent
-  readonly property color disabledInk: withAlpha(inkSecondary, 0.45)
   readonly property color surfaceOutline: Qt.rgba(1, 1, 1, 0.10)
-  readonly property color surfaceShadow: Qt.rgba(0, 0, 0, 0.24)
 
   // The palette every colour above comes from, for the surfaces that name it.
   readonly property string paletteName: palette.paletteName
@@ -191,9 +165,10 @@ Singleton {
   readonly property int fontSize: 12
   readonly property int fontSizeLarge: 13
 
-  readonly property int spacingLg: 12
+  // Every section heading (Ui/SectionLabel.qml) and the small labels set beside one.
+  readonly property int sectionSize: 11
 
-  readonly property int gapsOut: 5
+  readonly property int spacingLg: 12
 
   readonly property int panelRowInset: spacingLg
   readonly property int panelRowRadius: 8
@@ -201,7 +176,6 @@ Singleton {
 
   readonly property int barHeight: 36
   readonly property int barMarginTop: 8
-  readonly property int barMarginLeft: 24
   readonly property int panelSideMargin: 24
 
   function panelWidth(screen, desired) {
@@ -214,10 +188,6 @@ Singleton {
   // surfaces hide during handoff; MultiEffect blur is a fraction of blurMax, not a pixel radius.
   readonly property int surfaceBlurMax: 64
   readonly property real surfaceBlur: 0.53
-  readonly property int surfaceShadowOffset: 6
-  readonly property int surfaceShadowMax: 32
-  readonly property real surfaceShadowBlur: 0.75
-  readonly property real surfaceShadowAlpha: 0.24
 
   // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation; an
   // environment switch, not a theme, so it applies to both.
@@ -254,14 +224,16 @@ Singleton {
 
   // The island: one pill carrying the clock, growing an equaliser while playing and
   // expanding into a media and status card on hover.
-  readonly property int islandRadius: 18
   readonly property int islandIdleWidth: 118
-  // The equaliser's room beside the clock: 14.5 px of bars and a 7.5 px gap.
-  readonly property real islandEqualiserGap: 7.5
-  readonly property int islandEqualiserRoom: 22
-  // The idle pill's padding either side of the clock, and the least a mark keeps off the end.
+  // The shut pill's marks: the equaliser's width (four 2.5 px bars on 1.5 px gaps, see
+  // Bar/Widgets/Equaliser.qml), the gap off the clock to the first mark on each side, the gap
+  // between two marks, the idle pill's padding either side of the clock, and the least the
+  // outermost mark keeps off the pill's end.
+  readonly property real islandEqualiserWidth: 14.5
+  readonly property int islandMarkClockGap: 12
+  readonly property int islandMarkGap: 10
   readonly property int islandSideInset: 34
-  readonly property int islandMarkInset: 14
+  readonly property int islandMarkInset: 18
   readonly property int islandExpandedWidth: panelColumnWidth
   readonly property int islandExpandedHeight: 84
   readonly property int islandExpandedRadius: panelRadius
@@ -443,7 +415,6 @@ Singleton {
 
   readonly property int controlSectionGap: 23
   readonly property int controlSectionHeight: 22
-  readonly property int controlSectionSize: 11
   readonly property int controlNotifRadius: 14
   readonly property int controlNotifGap: 10
   readonly property int controlNotifAvatar: 28
@@ -537,21 +508,12 @@ Singleton {
   readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
   // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel,
-  // so its tile constants alias the power ones; the toggle rows below are this card's own.
+  // so ChoiceTiles draws it from the power tokens; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
   // Four rows under the capture tiles: three toggles plus the frame-rate row.
   readonly property int recorderHeight: 264
   readonly property int recorderRadius: panelRadius
   readonly property int recorderInset: 11
-  readonly property int recorderTileTop: powerTileTop
-  readonly property int recorderTileWidth: powerTileWidth
-  readonly property int recorderTileHeight: powerTileHeight
-  readonly property int recorderTileGap: powerTileGap
-  readonly property int recorderTileRadius: powerTileRadius
-  readonly property int recorderGlyphSize: powerGlyphSize
-  readonly property int recorderGlyphTop: powerGlyphTop
-  readonly property int recorderTileLabelTop: powerLabelTop
-  readonly property int recorderTileLabelSize: powerLabelSize
 
   readonly property int recorderRowsTop: 108
   readonly property int recorderRowHeight: 32
@@ -569,14 +531,12 @@ Singleton {
   // The recording mark the pill carries: love rather than the accent, so it does not read as
   // one more thing merely on.
   readonly property int recorderDotSize: 8
-  readonly property int recorderDotGap: 10
 
   // The privacy marks: a camera in foam left of the clock, a microphone in gold right of it,
-  // after macOS's green and orange, so neither reads as the recording's love. 10 px off
-  // whatever they sit beside; see Ui/PillMarks.qml for the split.
+  // after macOS's green and orange, so neither reads as the recording's love; see
+  // Ui/PillMarks.qml for the split.
   readonly property int privacyGlyphSize: 14
   readonly property real privacyGlyphStroke: 1.75
-  readonly property int privacyMarkGap: 10
   readonly property color cameraMark: foam
   readonly property color microphoneMark: gold
 
@@ -610,7 +570,6 @@ Singleton {
   // room is reserved for calAgendaMax rows regardless, letting calHeight stay constant.
   readonly property int calDividerTop: 392
   readonly property int calSectionTop: 406
-  readonly property real calSectionSize: 11.5
   readonly property int calAgendaTop: 430
   readonly property int calAgendaHeight: 38
   readonly property int calAgendaGap: 4
@@ -729,14 +688,12 @@ Singleton {
   readonly property int nearbyFileSizeRight: 40
   // Staged rows past this many scroll inside the list rather than growing the panel.
   readonly property int nearbyFilesMax: 4
-  readonly property int nearbyLinkGlyph: 12
 
   // The "Nearby" section row and the device tiles under it. A tile is a 56 px disc centred
   // on a 120 px column (centres 140/260/380 for three), ringed by a progress arc while
   // sending and filled with a check when sent.
-  readonly property int nearbySectionSize: 11
+  readonly property int nearbySectionSize: sectionSize
   readonly property int nearbySectionSide: 16
-  readonly property int nearbySectionGap: 8
   readonly property int nearbyDeviceSlot: 120
   readonly property int nearbyDeviceSize: 56
   readonly property int nearbyDeviceGlyph: 22
@@ -857,10 +814,15 @@ Singleton {
   // pill's own side padding, keeping islandMarkInset clear of the end, and the pill only
   // widens, evenly, once the heavier side outgrows it.
   function islandCollapsedWidth(media, recording, camera, microphone) {
-    var glyph = privacyMarkGap + privacyGlyphSize;
-    var left = (media ? islandEqualiserRoom : 0) + (camera ? glyph : 0);
-    var right = (recording ? recorderDotGap + recorderDotSize : 0) + (microphone ? glyph : 0);
-    var overflow = Math.max(0, Math.max(left, right) + islandMarkInset - islandSideInset);
+    function side(widths) {
+      var room = 0;
+      for (var i = 0; i < widths.length; i++)
+        room += (i === 0 ? islandMarkClockGap : islandMarkGap) + widths[i];
+      return room > 0 ? room + islandMarkInset : 0;
+    }
+    var left = side((media ? [islandEqualiserWidth] : []).concat(camera ? [privacyGlyphSize] : []));
+    var right = side((recording ? [recorderDotSize] : []).concat(microphone ? [privacyGlyphSize] : []));
+    var overflow = Math.max(0, Math.max(left, right) - islandSideInset);
     return islandIdleWidth + 2 * overflow;
   }
 
@@ -940,6 +902,18 @@ Singleton {
   // spring is within half a pixel of the pill by about 450 ms.
   readonly property int actionSettleDelay: reduceMotion ? 0 : 500
 
+  // Ambient state rather than a control answering: the media card's hills swelling, the
+  // radar going live, each half of a pending pulse. Slower than morphState, so it reads as
+  // mood rather than feedback.
+  readonly property int morphAmbient: 420
+  // A transfer's progress fill catching up with the reported fraction.
+  readonly property int morphProgress: 250
+  // One loop of the sharing pill's three connecting dots.
+  readonly property int sharingPulse: 1200
+  // The Nearby hover preview fading in, and a staged file row appearing.
+  readonly property int nearbyPreviewFade: 140
+  readonly property int nearbyFileAppear: 160
+
   // The island's equaliser: each bar rises on its own tween, then falls, staggered across
   // the row so the set waves rather than jumps.
   readonly property int eqRiseBase: 320
@@ -949,7 +923,6 @@ Singleton {
 
   // The island's small round gauge (a reading like battery or volume) and where its label sits.
   readonly property int islandGaugeSize: 48
-  readonly property int islandGaugeHeight: 52
   readonly property int islandGaugeRadius: 21
   readonly property int islandGaugeLabelY: 38
 
@@ -960,8 +933,4 @@ Singleton {
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
-
-  // Fallback curve for direct NumberAnimations not yet on a spring. Never overshoots;
-  // geometry uses SurfaceSpring and colour uses Tint.
-  readonly property var morphCurve: [0.22, 0.61, 0.36, 1.0]
 }

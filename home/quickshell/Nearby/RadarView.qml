@@ -41,7 +41,7 @@ Item {
 
   Behavior on live {
     NumberAnimation {
-      duration: Theme.duration(420)
+      duration: Theme.duration(Theme.morphAmbient)
       easing.type: Easing.InOutQuad
     }
   }

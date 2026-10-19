@@ -48,7 +48,7 @@ ControlSubView {
   }
 
   onAdapterChanged: if (adapter)
-    adapter.discovering = active && adapter.enabled;
+    adapter.discovering = active && adapter.enabled
 
   function glyphFor(device) {
     var icon = (device.icon || "").toLowerCase();

@@ -7,5 +7,5 @@ Text {
   color: Theme.subtle
   font.family: Theme.uiFont
   font.pixelSize: 11
-  font.weight: Font.DemiBold
+  font.weight: Theme.weightSemi
 }

@@ -76,7 +76,7 @@ Variants {
         color: Theme.text
         font.family: Theme.uiFont
         font.pixelSize: Theme.wallpaperTitleSize
-        font.weight: Font.Medium
+        font.weight: Theme.weightMedium
       }
 
       Text {
@@ -138,7 +138,7 @@ Variants {
         color: Theme.subtle
         font.family: Theme.monoFont
         font.pixelSize: Theme.wallpaperMetaSize
-        font.weight: Font.DemiBold
+        font.weight: Theme.weightSemi
       }
 
       Text {

@@ -153,9 +153,18 @@ Item {
 
     Repeater {
       model: [
-        { kind: "previous", name: "Previous track" },
-        { kind: "toggle", name: "Play or pause" },
-        { kind: "next", name: "Next track" }
+        {
+          kind: "previous",
+          name: "Previous track"
+        },
+        {
+          kind: "toggle",
+          name: "Play or pause"
+        },
+        {
+          kind: "next",
+          name: "Next track"
+        }
       ]
 
       Rectangle {
@@ -197,7 +206,9 @@ Item {
         }
 
         Behavior on scale {
-          Morph { duration: Theme.morphState }
+          Morph {
+            duration: Theme.morphState
+          }
         }
 
         TransportGlyph {
@@ -255,9 +266,8 @@ Item {
     property real phase: 0
 
     Behavior on swell {
-      NumberAnimation {
-        duration: 420
-        easing.type: Easing.OutCubic
+      Morph {
+        duration: Theme.duration(Theme.morphAmbient)
       }
     }
 
@@ -303,9 +313,33 @@ Item {
       visible: scrub.swell > 0.001
 
       readonly property var layers: [
-        { ink: Qt.darker(Theme.accent, 1.5), alpha: 0.85, f1: 0.045, f2: 0.11, s1: 0.9, s2: -1.3, k: 1 },
-        { ink: Qt.darker(Theme.accent, 2), alpha: 0.8, f1: 0.07, f2: 0.031, s1: -0.7, s2: 1.1, k: 0.8 },
-        { ink: Qt.darker(Theme.accent, 2.6), alpha: 0.75, f1: 0.028, f2: 0.083, s1: 1.4, s2: 0.6, k: 0.62 }
+        {
+          ink: Qt.darker(Theme.accent, 1.5),
+          alpha: 0.85,
+          f1: 0.045,
+          f2: 0.11,
+          s1: 0.9,
+          s2: -1.3,
+          k: 1
+        },
+        {
+          ink: Qt.darker(Theme.accent, 2),
+          alpha: 0.8,
+          f1: 0.07,
+          f2: 0.031,
+          s1: -0.7,
+          s2: 1.1,
+          k: 0.8
+        },
+        {
+          ink: Qt.darker(Theme.accent, 2.6),
+          alpha: 0.75,
+          f1: 0.028,
+          f2: 0.083,
+          s1: 1.4,
+          s2: 0.6,
+          k: 0.62
+        }
       ]
 
       function ease(edge0, edge1, x) {
@@ -380,7 +414,9 @@ Item {
       color: Theme.inkSecondary
       font.family: Theme.uiFont
       font.pixelSize: Theme.controlMediaCaptionSize
-      font.features: { "tnum": 1 }
+      font.features: {
+        "tnum": 1
+      }
     }
 
     Text {
@@ -390,7 +426,9 @@ Item {
       color: Theme.inkSecondary
       font.family: Theme.uiFont
       font.pixelSize: Theme.controlMediaCaptionSize
-      font.features: { "tnum": 1 }
+      font.features: {
+        "tnum": 1
+      }
     }
 
     // Taller than the drawn track, so the thumb is easy to catch.

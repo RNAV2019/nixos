@@ -157,7 +157,7 @@ ControlSubView {
         text: Math.round(Math.max(0, Math.min(1, streamVolume.displayValue)) * 100) + "%"
         color: Theme.muted
         font.family: Theme.monoFont
-        font.pixelSize: Theme.controlSectionSize
+        font.pixelSize: Theme.sectionSize
       }
     }
   }

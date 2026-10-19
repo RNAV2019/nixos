@@ -57,4 +57,21 @@ Singleton {
   function secured(network) {
     return network.security !== WifiSecurityType.Open && network.security !== WifiSecurityType.Unknown;
   }
+
+  // Quickshell's Networking API has no disconnect or forget, so those go via nmcli.
+  function disconnect(network) {
+    if (network)
+      nmcli.exec(["nmcli", "device", "disconnect", network.device.name]);
+  }
+
+  function forget(network) {
+    if (network)
+      nmcli.exec(["nmcli", "connection", "delete", "id", network.name]);
+  }
+
+  Command {
+    id: nmcli
+
+    label: "nmcli"
+  }
 }

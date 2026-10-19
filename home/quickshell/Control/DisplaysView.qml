@@ -183,10 +183,22 @@ ControlSubView {
       var y = along(ly, p.y, p.h, e.h, overlapY);
       var x = along(lx, p.x, p.w, e.w, overlapX);
       var options = [
-        { x: p.x + p.w, y: y },
-        { x: p.x - e.w, y: y },
-        { x: x, y: p.y - e.h },
-        { x: x, y: p.y + p.h }
+        {
+          x: p.x + p.w,
+          y: y
+        },
+        {
+          x: p.x - e.w,
+          y: y
+        },
+        {
+          x: x,
+          y: p.y - e.h
+        },
+        {
+          x: x,
+          y: p.y + p.h
+        }
       ];
       var best = options[0], bestDistance = Infinity;
       for (var j = 0; j < options.length; j++) {
@@ -304,16 +316,28 @@ ControlSubView {
       var p = panelRect, e = screenRect;
       switch (event.key) {
       case Qt.Key_Right:
-        commit({ x: p.x + p.w, y: p.y });
+        commit({
+          x: p.x + p.w,
+          y: p.y
+        });
         break;
       case Qt.Key_Left:
-        commit({ x: p.x - e.w, y: p.y });
+        commit({
+          x: p.x - e.w,
+          y: p.y
+        });
         break;
       case Qt.Key_Up:
-        commit({ x: p.x, y: p.y - e.h });
+        commit({
+          x: p.x,
+          y: p.y - e.h
+        });
         break;
       case Qt.Key_Down:
-        commit({ x: p.x, y: p.y + p.h });
+        commit({
+          x: p.x,
+          y: p.y + p.h
+        });
         break;
       default:
         return;
@@ -366,18 +390,42 @@ ControlSubView {
           horizontal: true,
           name: "Horizontal position",
           marks: [
-            { mark: "start", glyph: Icons.alignLeft, name: "Left of the built-in display" },
-            { mark: "centre", glyph: Icons.alignCentre, name: "Centred over or under it" },
-            { mark: "end", glyph: Icons.alignRight, name: "Right of the built-in display" }
+            {
+              mark: "start",
+              glyph: Icons.alignLeft,
+              name: "Left of the built-in display"
+            },
+            {
+              mark: "centre",
+              glyph: Icons.alignCentre,
+              name: "Centred over or under it"
+            },
+            {
+              mark: "end",
+              glyph: Icons.alignRight,
+              name: "Right of the built-in display"
+            }
           ]
         },
         {
           horizontal: false,
           name: "Vertical position",
           marks: [
-            { mark: "start", glyph: Icons.alignTop, name: "Above it, or beside it with top edges level" },
-            { mark: "centre", glyph: Icons.alignMiddle, name: "Beside it, centred" },
-            { mark: "end", glyph: Icons.alignBottom, name: "Below it, or beside it with bottom edges level" }
+            {
+              mark: "start",
+              glyph: Icons.alignTop,
+              name: "Above it, or beside it with top edges level"
+            },
+            {
+              mark: "centre",
+              glyph: Icons.alignMiddle,
+              name: "Beside it, centred"
+            },
+            {
+              mark: "end",
+              glyph: Icons.alignBottom,
+              name: "Below it, or beside it with bottom edges level"
+            }
           ]
         }
       ]
@@ -434,7 +482,9 @@ ControlSubView {
               }
 
               Behavior on scale {
-                Morph { duration: Theme.morphState }
+                Morph {
+                  duration: Theme.morphState
+                }
               }
 
               Text {

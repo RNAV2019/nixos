@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import Quickshell.Io
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -109,9 +108,8 @@ Item {
   transformOrigin: Item.TopLeft
 
   Behavior on opacity {
-    NumberAnimation {
-      duration: Theme.duration(140)
-      easing.type: Easing.OutCubic
+    Morph {
+      duration: Theme.duration(Theme.nearbyPreviewFade)
     }
   }
 
@@ -205,22 +203,11 @@ Item {
     border.color: Theme.withAlpha(Theme.separator, 0.7)
   }
 
-  Process {
+  FilePeek {
     id: peek
 
-    property string text: ""
-    readonly property string target: root.kind === "text" && root.path !== "" ? root.path : ""
-
-    command: ["head", "-n", "14", "-c", "2048", "--", target]
-    onTargetChanged: {
-      text = "";
-      running = false;
-      if (target !== "")
-        running = true;
-    }
-
-    stdout: StdioCollector {
-      onStreamFinished: peek.text = text.replace(/\t/g, "  ")
-    }
+    path: root.kind === "text" && root.path !== "" ? root.path : ""
+    lines: 14
+    bytes: 2048
   }
 }

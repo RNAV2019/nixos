@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Notifications
 import qs.Commons
 
@@ -16,6 +17,29 @@ Singleton {
 
   // Peace mode. Toasts other than critical ones are suppressed, but everything still lands in the list.
   property bool peace: false
+
+  // Peace survives a reboot: every change to the flag is saved, and the saved one is
+  // applied once the file is read at startup, unless a toggle has already landed.
+  property bool _peaceTouched: false
+
+  onPeaceChanged: {
+    root._peaceTouched = true;
+    peaceState.setText(root.peace ? "1" : "0");
+  }
+
+  FileView {
+    id: peaceState
+
+    path: Paths.stateDir + "/peace"
+    printErrors: false
+
+    onLoaded: {
+      if (root._peaceTouched)
+        return;
+      if (peaceState.text().trim() === "1")
+        root.peace = true;
+    }
+  }
 
   property var popups: []
 

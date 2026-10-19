@@ -14,6 +14,8 @@ Text {
 
   // Extra invisible margin around the glyph, beyond its drawn size.
   property int hitSlop: 8
+  // A centred square hit area of this size instead, e.g. the whole of a disc button.
+  property real hitSize: 0
 
   // A filled disc behind the glyph, for the media card's play button.
   property bool filled: false
@@ -40,7 +42,9 @@ Text {
   scale: hover.pressed ? Theme.pressScale : 1
 
   Behavior on scale {
-    Morph { duration: Theme.morphState }
+    Morph {
+      duration: Theme.morphState
+    }
   }
 
   Rectangle {
@@ -60,8 +64,9 @@ Text {
   MouseArea {
     id: hover
 
-    anchors.fill: parent
-    anchors.margins: -root.hitSlop
+    anchors.centerIn: parent
+    width: root.hitSize > 0 ? root.hitSize : parent.width + root.hitSlop * 2
+    height: root.hitSize > 0 ? root.hitSize : parent.height + root.hitSlop * 2
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onPressed: if (root.activeFocusOnTab)

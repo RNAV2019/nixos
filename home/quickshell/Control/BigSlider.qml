@@ -108,7 +108,7 @@ Item {
     interval: 250
     repeat: false
     onTriggered: if (!root._interactionActive)
-      root._previewing = false;
+      root._previewing = false
   }
 
   Rectangle {
@@ -133,9 +133,8 @@ Item {
     Behavior on width {
       enabled: !drag.pressed
 
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutCubic
       }
     }
 
@@ -144,7 +143,9 @@ Item {
     }
 
     Behavior on scale {
-      Morph { duration: Theme.morphState }
+      Morph {
+        duration: Theme.morphState
+      }
     }
   }
 

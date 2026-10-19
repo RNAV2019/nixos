@@ -2,9 +2,11 @@
   config,
   lib,
   pkgs,
+  user,
+  repoDir,
   ...
 }: let
-  home = "/home/ryan";
+  home = config.users.users.${user}.home;
 
   # `sudo edit-secrets [FILE]` opens secrets/FILE (default secrets.yaml) in sops.
   # A command, not an alias, since sudo can't see fish aliases and drops EDITOR.
@@ -17,16 +19,16 @@
         exit 1
       fi
 
-      file="${home}/nixos/secrets/''${1:-secrets.yaml}"
+      file="${repoDir}/secrets/''${1:-secrets.yaml}"
       [[ -f "$file" ]] || { echo "edit-secrets: no such file: $file" >&2; exit 1; }
 
       export SOPS_AGE_KEY_FILE=${config.sops.age.keyFile}
-      export EDITOR=${lib.getExe config.home-manager.users.ryan.programs.helix.package}
+      export EDITOR=${lib.getExe config.home-manager.users.${user}.programs.helix.package}
 
-      # sops exits non-zero when nothing changed; hand the file back to ryan either way.
+      # sops exits non-zero when nothing changed; hand the file back to the user either way.
       rc=0
       sops "$file" || rc=$?
-      chown ryan:users "$file"
+      chown ${user}:users "$file"
       exit "$rc"
     '';
   };
@@ -34,7 +36,7 @@
   # Secrets are read-only symlinks into /run/secrets.d, so programs that rewrite
   # their own config (gh auth login, opencode) must be updated via secrets.yaml.
   owned = {
-    owner = "ryan";
+    owner = user;
     group = "users";
     mode = "0400";
   };
@@ -73,7 +75,7 @@ in {
       "openrouter/opencode-key" = owned;
       "opencode/go-key" = owned;
 
-      # Owned by ryan so reading an archive needs no sudo; the backup job runs as root.
+      # Owned by the user so reading an archive needs no sudo; the backup job runs as root.
       "borg/passphrase" = owned;
       "borg/ssh-key" = owned;
 
@@ -87,13 +89,11 @@ in {
         owned
         // {
           path = "${home}/.config/gh/hosts.yml";
-          # https because this machine has no SSH key yet.
           content = ''
             github.com:
                 users:
                     RNAV2019:
                         oauth_token: ${config.sops.placeholder."gh/token"}
-                git_protocol: https
                 oauth_token: ${config.sops.placeholder."gh/token"}
                 user: RNAV2019
           '';
@@ -110,7 +110,7 @@ in {
     };
   };
 
-  # Create parent dirs as ryan before sops-nix would create them as root.
+  # Create parent dirs as the user before sops-nix would create them as root.
   system.activationScripts.userSecretDirs = {
     deps = ["users" "groups"];
     text = ''
@@ -121,7 +121,7 @@ in {
         ${home}/.config/quickshell-calendar \
         ${home}/.cloudflared \
         ${home}/.local/share/opencode; do
-        install -d -o ryan -g users -m 0700 "$dir"
+        install -d -o ${user} -g users -m 0700 "$dir"
       done
     '';
   };

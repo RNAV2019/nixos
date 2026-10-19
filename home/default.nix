@@ -3,6 +3,7 @@
   pkgs,
   helium-browser,
   llm-agents,
+  user,
   ...
 }: {
   imports = [
@@ -22,8 +23,8 @@
     ./sonora.nix
   ];
 
-  home.username = "ryan";
-  home.homeDirectory = "/home/ryan";
+  home.username = user;
+  home.homeDirectory = "/home/${user}";
   programs.home-manager.enable = true;
   xdg.enable = true;
 

@@ -70,16 +70,14 @@ Item {
     height: Math.max(20, view.visibleArea.heightRatio * root.height)
 
     Behavior on y {
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutCubic
       }
     }
 
     Behavior on height {
-      NumberAnimation {
+      Morph {
         duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutCubic
       }
     }
   }

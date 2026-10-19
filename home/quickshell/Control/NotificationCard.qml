@@ -67,7 +67,7 @@ Rectangle {
     text: root.appName
     color: Theme.inkTertiary
     font.family: Theme.uiFont
-    font.pixelSize: Theme.controlSectionSize
+    font.pixelSize: Theme.sectionSize
     elide: Text.ElideRight
   }
 

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell.Io
-import qs.Services
 
 // One directory's listing for the file picker: a single `find` for the entries and a second
 // pass that counts each folder's own entries, which is the number board 16b shows beside a

@@ -157,10 +157,10 @@ Singleton {
     if (cur && cur.rank === rank)
       return;
     transientWants = writeMap(transientWants, id, {
-        key: key,
-        screen: screenName,
-        rank: rank
-      });
+      key: key,
+      screen: screenName,
+      rank: rank
+    });
   }
 
   // The IslandOrigin that last claimed the island on each output and has not let it go. Unlike
@@ -278,12 +278,12 @@ Singleton {
   function claimIsland(screen, width, height, radius, duration) {
     claimSerial++;
     islandClaims = writeMap(islandClaims, screen, {
-        serial: claimSerial,
-        width: width,
-        height: height,
-        radius: radius,
-        duration: duration
-      });
+      serial: claimSerial,
+      width: width,
+      height: height,
+      radius: radius,
+      duration: duration
+    });
     islandClaimed(screen);
   }
 
@@ -300,10 +300,10 @@ Singleton {
 
   function publishHandoff(screen, width, height, radius) {
     islandHandoffs = writeMap(islandHandoffs, screen, {
-        width: width,
-        height: height,
-        radius: radius
-      });
+      width: width,
+      height: height,
+      radius: radius
+    });
   }
 
   function consumeHandoff(screen) {
