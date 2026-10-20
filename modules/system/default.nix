@@ -125,6 +125,9 @@ in {
     curl
     vim
     start-hyprland
+    # The Hyprland wrapper override above skips the script's PATH suffix, so the
+    # dialog helpers Hyprland probes for (hyprland-dialog) must be on PATH here.
+    hyprland-qtutils
     # Multiboot USB writer. Writes raw block devices, so not home.packages: sudo resets PATH.
     ventoy-full
   ];

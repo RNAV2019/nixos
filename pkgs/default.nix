@@ -20,4 +20,5 @@ final: _prev: {
   # Helium extensions
   fetchCrx = final.callPackage ./fetch-crx {};
   helium-bionic-reading = final.callPackage ./helium-bionic-reading {};
+  helium-jump-labels = final.callPackage ./helium-jump-labels {};
 }

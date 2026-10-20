@@ -69,6 +69,10 @@
       password = "$EDUROAM_PASSWORD";
       ca-cert = "/etc/ssl/certs/ca-certificates.crt";
       domain-suffix-match = "warwick.ac.uk";
+      # Warwick's RADIUS can take 12s+ to answer the first EAP after a resume,
+      # so a full PEAP exchange overruns NetworkManager's 25s default and is
+      # torn down just before it would have succeeded.
+      auth-timeout = 60;
     };
     ipv4.method = "auto";
     ipv6 = {

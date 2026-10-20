@@ -28,7 +28,7 @@
   # PDFs open in bionic-reading's bundled PDF.js, so it replaces the PDF Viewer extension.
   helium-extension-dirs =
     pkgs.lib.mapAttrsToList (name: ext: pkgs.fetchCrx (ext // {inherit name;})) helium-extensions
-    ++ [pkgs.helium-bionic-reading];
+    ++ [pkgs.helium-bionic-reading pkgs.helium-jump-labels];
   # One flag with a comma-separated list: Chromium keeps only the last
   # --load-extension when the switch is repeated.
   helium-extension-flags =
