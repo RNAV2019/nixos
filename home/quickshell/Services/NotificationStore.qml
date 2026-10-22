@@ -153,8 +153,8 @@ Singleton {
       while (historyModel.count > root.maxHistory)
         historyModel.remove(historyModel.count - 1);
 
-      // Critical ones, like the battery's last warning, still break through peace.
-      if (root.peace && notification.urgency !== NotificationUrgency.Critical)
+      // Critical ones and the battery's own warnings (see Battery.qml) still break through peace.
+      if (root.peace && notification.urgency !== NotificationUrgency.Critical && notification.appName !== "Battery")
         return;
 
       notification.tracked = true;

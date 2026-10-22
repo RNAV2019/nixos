@@ -1,5 +1,6 @@
 # Helix's gw jump labels for Helium: g then w labels the links, controls and text blocks in
-# view, and typing a label focuses it. Labels take the colours of the live desktop theme.
+# view, and typing a label focuses it; j and k scroll smoothly. Labels take the colours of the
+# live desktop theme.
 # Loaded through --load-extension in home/packages.nix.
 {
   lib,
@@ -25,7 +26,7 @@
   manifest = {
     manifest_version = 3;
     name = "Jump Labels";
-    description = "Helix-style gw: label what's in view, type a label to focus it.";
+    description = "Helix-style gw: label what's in view, type a label to focus it. j and k scroll.";
     version = "1.0.0";
     inherit key;
     # management: to see which theme extension is enabled.

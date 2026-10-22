@@ -5,6 +5,22 @@
   llm-agents,
   ...
 }: let
+  agents = llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
+
+  # Ahead of llm-agents until it catches up; the guard drops this once it does.
+  claude-code-version = "2.1.308";
+  claude-code =
+    if pkgs.lib.versionOlder agents.claude-code.version claude-code-version
+    then
+      agents.claude-code.overrideAttrs {
+        version = claude-code-version;
+        src = pkgs.fetchurl {
+          url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${claude-code-version}/linux-x64/claude";
+          hash = "sha256-NWcz8YX6mI5r86qaVVJp/dFnmCouKoDTyKeAN7uSrVg=";
+        };
+      }
+    else agents.claude-code;
+
   # Pinned Web Store CRXes via --load-extension, since policy installs are broken
   # (imputnet/helium#1737); signing key injected to keep IDs. Bump version and hash to update.
   helium-extensions = {
@@ -111,8 +127,8 @@ in {
     helium-themed
     firefox
 
-    llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
-    llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.opencode
+    claude-code
+    agents.opencode
 
     tree
     upower
