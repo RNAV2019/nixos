@@ -103,6 +103,9 @@
       gen-commit = pkgs.callPackage ./pkgs/gen-commit/tests {};
       ical-agenda = pkgs.callPackage ./pkgs/ical-agenda/tests {};
 
+      # NixOS VM: wifi.nix on iwd against hostapd/RADIUS on mac80211_hwsim.
+      wifi-iwd = import ./tests/wifi-iwd.nix {inherit pkgs;};
+
       # qmlformat reads home/quickshell/.qmlformat.ini; any file it would change fails.
       quickshell-qmlformat =
         pkgs.runCommand "quickshell-qmlformat" {

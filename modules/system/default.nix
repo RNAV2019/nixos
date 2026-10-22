@@ -53,6 +53,12 @@ in {
   nixpkgs.config.permittedInsecurePackages = ["ventoy-1.1.17"];
 
   networking.networkmanager.enable = true;
+  # NixOS defaults to WARN, which hides DHCP and connectivity state changes.
+  networking.networkmanager.logLevel = "INFO";
+  # iwd reconnects faster after resume: it rescans only the channels it has seen
+  # known networks on. "wpa_supplicant" restores the old stack unchanged; wifi.nix
+  # writes iwd's network files only while this is "iwd".
+  networking.networkmanager.wifi.backend = "iwd";
 
   # LocalSend (discovery + transfer on port 53317)
   networking.firewall.allowedTCPPorts = [53317];
