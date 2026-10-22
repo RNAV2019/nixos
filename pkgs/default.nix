@@ -6,6 +6,8 @@ final: _prev: {
   # Hyprland plugin: the drag-and-drop card pile.
   dragpile = final.callPackage ./dragpile {};
   rose-pine-gtk-theme = final.callPackage ./rose-pine-gtk-theme {};
+  # gtk4 with the user gtk.css reloaded live; grafted in by modules/system.
+  gtk4-live-css = final.callPackage ./gtk4-live-css {};
 
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};

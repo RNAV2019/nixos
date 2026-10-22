@@ -106,6 +106,15 @@ in {
     })
   ];
 
+  # GTK 4 apps reload the user gtk.css live (pkgs/gtk4-live-css). Grafted rather than
+  # overlaid: an overlay would rebuild everything that links GTK 4, webkitgtk included.
+  system.replaceDependencies.replacements = [
+    {
+      oldDependency = pkgs.gtk4;
+      newDependency = pkgs.gtk4-live-css;
+    }
+  ];
+
   programs.uwsm.enable = true;
 
   # Quickshell locks the autologin session before desktop helpers start.

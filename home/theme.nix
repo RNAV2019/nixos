@@ -273,6 +273,48 @@
     border=${bare p.highlightMed}ff
   '';
 
+  # libadwaita's colour variables, layered as Adwaita dark is: views darkest, then the
+  # window, then bars, sidebars and popovers. pkgs/gtk4-live-css reloads it in open apps.
+  gtk4Fragment = p: ''
+    :root {
+      --accent-color: ${p.accent};
+      --accent-bg-color: ${p.accent};
+      --accent-fg-color: ${p.base};
+      --destructive-color: ${p.love};
+      --destructive-bg-color: ${p.love};
+      --destructive-fg-color: ${p.base};
+      --success-color: ${p.foam};
+      --success-bg-color: ${p.foam};
+      --success-fg-color: ${p.base};
+      --warning-color: ${p.gold};
+      --warning-bg-color: ${p.gold};
+      --warning-fg-color: ${p.base};
+      --error-color: ${p.love};
+      --error-bg-color: ${p.love};
+      --error-fg-color: ${p.base};
+
+      --window-bg-color: ${p.highlightLow};
+      --window-fg-color: ${p.text};
+      --view-bg-color: ${p.surface};
+      --view-fg-color: ${p.text};
+      --headerbar-bg-color: ${p.overlay};
+      --headerbar-fg-color: ${p.text};
+      --headerbar-backdrop-color: ${p.highlightLow};
+      --sidebar-bg-color: ${p.overlay};
+      --sidebar-fg-color: ${p.text};
+      --sidebar-backdrop-color: ${p.highlightLow};
+      --secondary-sidebar-bg-color: ${p.highlightLow};
+      --secondary-sidebar-fg-color: ${p.text};
+      --secondary-sidebar-backdrop-color: ${p.surface};
+      --dialog-bg-color: ${p.overlay};
+      --dialog-fg-color: ${p.text};
+      --popover-bg-color: ${p.overlay};
+      --popover-fg-color: ${p.text};
+      --thumbnail-bg-color: ${p.overlay};
+      --thumbnail-fg-color: ${p.text};
+    }
+  '';
+
   # Each role as hex and `r;g;b`, for the claude status line and gen-commit.
   colorsFragment = p:
     lib.concatMapStrings (r: let
@@ -331,6 +373,7 @@
         ICON_THEME_NAME=${x.iconTheme}
         COLOR_SCHEME=${x.colorScheme}
       '';
+      "gtk4.css" = text "gtk4.css" (gtk4Fragment p);
       "kvantum.kvconfig" = text "kvantum.kvconfig" ''
         [General]
         theme=${x.kvantum}
@@ -490,6 +533,7 @@ in {
   xdg.configFile."herdr/config.toml".source = lib.mkForce (link "${current}/herdr.toml");
   xdg.configFile."Kvantum/kvantum.kvconfig".source = link "${current}/kvantum.kvconfig";
   xdg.configFile."yazi/flavors/current.yazi".source = link "${current}/yazi.yazi";
+  xdg.configFile."gtk-4.0/gtk.css".source = link "${current}/gtk4.css";
 
   home.sessionVariables.FZF_DEFAULT_OPTS_FILE = "${current}/fzf";
 
