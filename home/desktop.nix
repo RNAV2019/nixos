@@ -445,6 +445,26 @@ in {
           ];
         }
 
+        # mpv sizes its window from the video's pixels and a guessed display scale
+        # (2 on the 1.33 laptop panel, 1 if it maps before the output reports
+        # one), so a big video could open wider than the screen. Keep its shape
+        # but fit it in 65% of the monitor, then re-centre.
+        {
+          _args = [
+            "window.open"
+            (mkLuaInline ''
+              function(w)
+                if w.class ~= "mpv" or not w.floating or not w.monitor then return end
+                local m = w.monitor
+                local mw, mh = m.size.width / m.scale, m.size.height / m.scale
+                if m.transform % 2 == 1 then mw, mh = mh, mw end
+                local s = math.min(mw * 0.65 / w.size.x, mh * 0.65 / w.size.y)
+                hl.dispatch(hl.dsp.window.resize({ x = math.floor(w.size.x * s), y = math.floor(w.size.y * s), window = w }))
+                hl.dispatch(hl.dsp.window.center({ window = w }))
+              end'')
+          ];
+        }
+
         # A reload drops rules added at runtime.
         {
           _args = [

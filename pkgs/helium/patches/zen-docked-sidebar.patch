@@ -1,0 +1,2419 @@
+diff --git a/chrome/browser/sessions/session_restore.cc b/chrome/browser/sessions/session_restore.cc
+index 64b19f76..1841dd72 100644
+--- a/chrome/browser/sessions/session_restore.cc
++++ b/chrome/browser/sessions/session_restore.cc
+@@ -1356,6 +1356,12 @@ class SessionRestoreImpl : public BrowserCollectionObserver {
+       }
+     }
+ 
++    if (auto it = extra_data.find(
++            BrowserWindowCreateParams::kHeliumZenSidebarShownKey);
++        it != extra_data.end()) {
++      params.helium_zen_sidebar_shown = it->second == "true";
++    }
++
+     if (base::FeatureList::IsEnabled(features::kTabGroupsFocusing)) {
+       auto it = extra_data.find(
+           tabs::TabStripModelSelectionState::kFocusedTabGroupIdKey);
+diff --git a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
+index 2f361407..18f8b54b 100644
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -3559,6 +3559,8 @@ static_library("ui") {
+       "views/helium/frame_corner_radius.h",
+       "views/helium/native_frame_materials.cc",
+       "views/helium/native_frame_materials.h",
++      "views/helium/zen_sidebar_toolbar.cc",
++      "views/helium/zen_sidebar_toolbar.h",
+     ]
+ 
+     sources += get_target_outputs(":webui_name_variants")
+diff --git a/chrome/browser/ui/browser_window/internal/create_browser_window_non_android.cc b/chrome/browser/ui/browser_window/internal/create_browser_window_non_android.cc
+index 3b394efe..76993cfd 100644
+--- a/chrome/browser/ui/browser_window/internal/create_browser_window_non_android.cc
++++ b/chrome/browser/ui/browser_window/internal/create_browser_window_non_android.cc
+@@ -42,6 +42,7 @@ BrowserWindowCreateParams BrowserWindowCreateParams::Clone() const {
+   clone.vertical_tab_strip_collapsed = vertical_tab_strip_collapsed;
+   clone.vertical_tab_strip_uncollapsed_width =
+       vertical_tab_strip_uncollapsed_width;
++  clone.helium_zen_sidebar_shown = helium_zen_sidebar_shown;
+   clone.focused_tab_group_id = focused_tab_group_id;
+ #if BUILDFLAG(IS_CHROMEOS)
+   clone.display_id = display_id;
+diff --git a/chrome/browser/ui/browser_window/public/create_browser_window.h b/chrome/browser/ui/browser_window/public/create_browser_window.h
+index 6ecba965..c6ad4dfa 100644
+--- a/chrome/browser/ui/browser_window/public/create_browser_window.h
++++ b/chrome/browser/ui/browser_window/public/create_browser_window.h
+@@ -170,6 +170,13 @@ struct BrowserWindowCreateParams {
+   // Specifies the width for the uncollapsed Vertical Tab Strip.
+   std::optional<int> vertical_tab_strip_uncollapsed_width;
+ 
++  // Whether the window shows its sidebar in Helium's zen mode, if it was
++  // saved for the window. Saved in session window extra data under
++  // `kHeliumZenSidebarShownKey`.
++  static constexpr char kHeliumZenSidebarShownKey[] =
++      "helium_zen_sidebar_shown";
++  std::optional<bool> helium_zen_sidebar_shown;
++
+   // Specifies the focused tab group ID, if the window should be created in a
+   // focused state.
+   std::optional<tab_groups::TabGroupId> focused_tab_group_id;
+diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
+index af92d58d..cfc83d4a 100644
+--- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
++++ b/chrome/browser/ui/tabs/tab_strip_prefs.cc
+@@ -36,7 +36,8 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+                                 std::to_underlying(HeliumLayoutType::kClassic));
+   registry->RegisterBooleanPref(prefs::kHeliumVerticalRightAligned, false);
+   registry->RegisterBooleanPref(prefs::kHeliumZenMode, false);
+-  registry->RegisterBooleanPref(prefs::kHeliumZenModeSidebarPinned, false);
++  // New windows show the zen sidebar; there is no other way to reveal it.
++  registry->RegisterBooleanPref(prefs::kHeliumZenModeSidebarPinned, true);
+   registry->RegisterBooleanPref(prefs::kHeliumZenModeTopChromePinned, false);
+ }
+ 
+diff --git a/chrome/browser/ui/views/bubble_anchor_util_views.cc b/chrome/browser/ui/views/bubble_anchor_util_views.cc
+index bd418d54..c3ed584c 100644
+--- a/chrome/browser/ui/views/bubble_anchor_util_views.cc
++++ b/chrome/browser/ui/views/bubble_anchor_util_views.cc
+@@ -39,6 +39,20 @@ AnchorConfiguration GetPageInfoAnchorConfiguration(
+   auto* location_bar_view =
+       browser_view ? browser_view->GetLocationBarView() : nullptr;
+ 
++  // Frameless mode hides the location bar, along with its permission chips.
++  // Anchor to the sidebar's site pill while it is shown. Otherwise return no
++  // anchor, so GetPageInfoAnchorRect() places the bubble at the page's corner.
++  if (anchor == Anchor::kLocationBar && browser_view &&
++      browser_view->IsZenModeLocationBarHidden()) {
++    if (views::View* site_pill = browser_view->GetZenSidebarSitePill()) {
++      return {views::BubbleAnchor(site_pill), std::nullopt,
++              browser_view->IsVerticalTabStripRightAligned()
++                  ? views::BubbleBorder::TOP_RIGHT
++                  : views::BubbleBorder::TOP_LEFT};
++    }
++    return {};
++  }
++
+   if (base::FeatureList::IsEnabled(
+           content_settings::features::kLeftHandSideActivityIndicators) &&
+       location_bar_view) {
+@@ -133,7 +147,13 @@ AnchorConfiguration GetPermissionPromptBubbleAnchorConfiguration(
+         BrowserWindow::FromBrowser(browser)->GetLocationBar();
+     ChipController* chip_controller =
+         location_bar ? location_bar->GetChipController() : nullptr;
+-    if (chip_controller && chip_controller->IsPermissionPromptChipVisible()) {
++    BrowserView* const browser_view =
++        BrowserView::GetBrowserViewForBrowser(browser);
++    // A chip left over in the location bar frameless mode hides can't anchor.
++    const bool zen_location_bar_hidden =
++        browser_view && browser_view->IsZenModeLocationBarHidden();
++    if (chip_controller && chip_controller->IsPermissionPromptChipVisible() &&
++        !zen_location_bar_hidden) {
+       if (auto chip_anchor = location_bar->GetChipAnchor()) {
+         return *chip_anchor;
+       }
+@@ -183,6 +203,11 @@ gfx::Rect GetPageInfoAnchorRect(BrowserWindowInterface* browser) {
+   DCHECK(GetPageInfoAnchorConfiguration(browser).anchor.IsNull());
+ 
+   BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
++  // In frameless mode use the page's top-right corner, which stays clear of
++  // the sidebar.
++  if (views::View* zen_anchor = browser_view->GetZenFallbackBubbleAnchor()) {
++    return zen_anchor->GetBoundsInScreen();
++  }
+   // Get position in view (taking RTL UI into account).
+   int x_within_browser_view = browser_view->GetMirroredXInView(
+       bubble_anchor_util::kNoToolbarLeftOffset);
+diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
+index 60616989..e3e67fb9 100644
+--- a/chrome/browser/ui/views/frame/browser_view.cc
++++ b/chrome/browser/ui/views/frame/browser_view.cc
+@@ -34,6 +34,7 @@
+ #include "base/scoped_observation.h"
+ #include "base/strings/string_number_conversions.h"
+ #include "base/strings/stringprintf.h"
++#include "base/strings/to_string.h"
+ #include "base/task/sequenced_task_runner.h"
+ #include "base/task/single_thread_task_runner.h"
+ #include "base/trace_event/trace_event.h"
+@@ -62,6 +63,8 @@
+ #include "chrome/browser/profiles/profile_manager.h"
+ #include "chrome/browser/profiles/profile_window.h"
+ #include "chrome/browser/profiles/profiles_state.h"
++#include "chrome/browser/sessions/session_service.h"
++#include "chrome/browser/sessions/session_service_factory.h"
+ #include "chrome/browser/sessions/tab_restore_service_factory.h"
+ #include "chrome/browser/sharing_hub/sharing_hub_features.h"
+ #include "chrome/browser/signin/chrome_signin_helper.h"
+@@ -193,6 +196,7 @@
+ #include "chrome/browser/ui/views/glic/glic_button_interface.h"
+ #include "chrome/browser/ui/views/global_media_controls/media_toolbar_button_view.h"
+ #include "chrome/browser/ui/views/hats/hats_next_web_dialog.h"
++#include "chrome/browser/ui/views/helium/zen_sidebar_toolbar.h"
+ #include "chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.h"
+ #include "chrome/browser/ui/views/infobars/infobar_container_view.h"
+ #include "chrome/browser/ui/views/intent_picker_bubble_view.h"
+@@ -346,6 +350,7 @@
+ #include "ui/display/types/display_constants.h"
+ #include "ui/events/event.h"
+ #include "ui/events/event_handler.h"
++#include "ui/events/event_observer.h"
+ #include "ui/events/event_utils.h"
+ #include "ui/events/keycodes/keyboard_codes.h"
+ #include "ui/gfx/animation/animation.h"
+@@ -440,14 +445,20 @@ namespace {
+ // The visible height of the shadow above the tabs. Clicks in this area are
+ // treated as clicks to the frame, rather than clicks to the tab.
+ const int kTabShadowSize = 2;
+-constexpr int kZenModeRevealTriggerThickness = 6;
+-constexpr int kZenModeChromeHoverLeeway = 8;
+ constexpr base::TimeDelta kZenModeRevealAnimationDuration =
+     base::Milliseconds(200);
+-constexpr base::TimeDelta kZenModeCursorExitGracePeriod =
+-    base::Milliseconds(3000);
+-constexpr base::TimeDelta kZenModeHoverExitGracePeriod =
+-    base::Milliseconds(150);
++// The docked sidebar eases in and accelerates out, without overshoot.
++constexpr base::TimeDelta kZenSidebarShowDuration = base::Milliseconds(200);
++constexpr base::TimeDelta kZenSidebarHideDuration = base::Milliseconds(150);
++
++// While the sidebar slides, the page is clipped at its far edge, where
++// NativeViewHostAura squares off the corners. If true, the page's container
++// rounds all four corners itself for the duration of the slide instead.
++constexpr bool kZenSlideRoundedClip = true;
++
++// Set while a window writes the sidebar pref for new windows, so the other
++// windows don't follow it. Only used on the UI thread.
++bool g_writing_zen_sidebar_pref = false;
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+ // UMA histograms that record animation smoothness for tab loading animation.
+@@ -1043,10 +1054,12 @@ BrowserView::BrowserView(BrowserWindowInterface* browser)
+       gfx::Animation::RichAnimationDuration(kZenModeRevealAnimationDuration));
+   zen_top_chrome_animation_.SetTweenType(gfx::Tween::FAST_OUT_SLOW_IN_3);
+   zen_top_chrome_animation_.Reset(1);
+-  zen_side_chrome_animation_.SetSlideDuration(
+-      gfx::Animation::RichAnimationDuration(kZenModeRevealAnimationDuration));
+-  zen_side_chrome_animation_.SetTweenType(gfx::Tween::FAST_OUT_SLOW_IN_3);
+-  zen_side_chrome_animation_.Reset(1);
++  zen_sidebar_shown_ = GetInitialZenSidebarShown();
++  zen_side_chrome_animation_.Reset(zen_sidebar_shown_ ? 1 : 0);
++  // SetZenModeSidebarShown() sets the slide's duration and tween.
++  zen_animation_container_ = base::MakeRefCounted<gfx::AnimationContainer>();
++  zen_top_chrome_animation_.SetContainer(zen_animation_container_.get());
++  zen_side_chrome_animation_.SetContainer(zen_animation_container_.get());
+ 
+   browser_->GetTabStripModel()->AddObserver(this);
+ 
+@@ -1126,6 +1139,14 @@ BrowserView::BrowserView(BrowserWindowInterface* browser)
+   // bar widget.
+   find_bar_host_view_ = AddChildView(std::make_unique<View>());
+ 
++  // Bubbles anchor to this point at the page's top-right corner when zen mode
++  // hides the toolbar or sidebar control they belong to.
++  if (GetIsNormalType()) {
++    zen_bubble_anchor_view_ = AddChildView(std::make_unique<View>());
++    zen_bubble_anchor_view_->SetCanProcessEventsWithinSubtree(false);
++    zen_bubble_anchor_view_->GetViewAccessibility().SetIsIgnored(true);
++  }
++
+   window_scrim_view_ = AddChildView(std::make_unique<ScrimView>());
+   window_scrim_view_->layer()->SetName("BrowserView:WindowScrimView");
+ 
+@@ -1244,9 +1265,9 @@ BrowserView::~BrowserView() {
+   // Stop the animation timer explicitly here to avoid running it in a nested
+   // message loop, which may run by Browser destructor.
+   loading_animation_timer_.Stop();
+-  zen_mode_event_monitor_.reset();
+   zen_expand_on_hover_lock_.reset();
+-  app_menu_control_observation_.Reset();
++  // Puts the toolbar's controls back while both it and the sidebar exist.
++  zen_sidebar_toolbar_.reset();
+ 
+   // Reset autofill bubble handler to make sure it does not out-live toolbar,
+   // since it is responsible for showing autofill related bubbles from toolbar's
+@@ -1265,6 +1286,7 @@ BrowserView::~BrowserView() {
+   toolbar_ = nullptr;
+   top_container_separator_ = nullptr;
+   find_bar_host_view_ = nullptr;
++  zen_bubble_anchor_view_ = nullptr;
+   infobar_container_ = nullptr;
+   multi_contents_view_ = nullptr;
+   main_shadow_overlay_ = nullptr;
+@@ -1731,8 +1753,21 @@ float BrowserView::GetSideChromeRevealRatio() const {
+ }
+ 
+ bool BrowserView::IsZenModeSideChromePinned() const {
+-  return zen_mode_enabled_ && browser_->GetProfile()->GetPrefs()->GetBoolean(
+-                                  prefs::kHeliumZenModeSidebarPinned);
++  // The zen sidebar is always docked: Ctrl+S slides it in and out, pushing the
++  // page aside, and it never floats over the page.
++  return zen_mode_enabled_;
++}
++
++bool BrowserView::IsZenModeSideChromeAnimating() const {
++  return zen_mode_enabled_ && zen_side_chrome_animation_.is_animating();
++}
++
++bool BrowserView::IsZenModeLocationBarHidden() const {
++  if (!zen_mode_enabled_) {
++    return false;
++  }
++  const LocationBarView* const location_bar = GetLocationBarView();
++  return !location_bar || !location_bar->IsDrawn();
+ }
+ 
+ bool BrowserView::IsZenModeTopChromePinned() const {
+@@ -1744,9 +1779,8 @@ void BrowserView::ToggleZenModeSideChrome() {
+   if (!IsZenModeEnabled() || !ShouldDrawVerticalTabStrip()) {
+     return;
+   }
+-  const bool was_pinned = IsZenModeSideChromePinned();
+-  browser_->GetProfile()->GetPrefs()->SetBoolean(
+-      prefs::kHeliumZenModeSidebarPinned, !was_pinned);
++  SetZenModeSidebarShown(!zen_sidebar_shown_, /*animate=*/true,
++                         /*persist_pref=*/true);
+ }
+ 
+ void BrowserView::ToggleZenModeTopChrome() {
+@@ -1809,6 +1843,7 @@ void BrowserView::OnVerticalTabStripModeChanged(
+     horizontal_tab_strip_region_view_->InitializeTabStrip();
+   }
+   UpdateZenModeExpandOnHoverLock();
++  UpdateZenSidebarToolbar();
+ 
+   GetFrameView()->OnTabStripStateChanged();
+ 
+@@ -1844,26 +1879,15 @@ void BrowserView::OnToolbarTabStripStateChanged(
+ }
+ 
+ void BrowserView::OnZenModeSideChromePinnedPrefChanged() {
+-  if (!zen_mode_enabled_) {
++  // Ctrl+S records its state for new windows but leaves other windows alone
++  // (helium#1718). A change made elsewhere, such as in settings, applies to
++  // every window.
++  if (g_writing_zen_sidebar_pref) {
+     return;
+   }
+-
+-  UpdateZenModeExpandOnHoverLock();
+-  if (IsZenModeSideChromePinned()) {
+-    zen_side_chrome_animation_.Reset(1);
+-  } else {
+-    UpdateZenModeRevealFromCursor();
+-  }
+-
+-  if (vertical_tab_strip_region_view_) {
+-    vertical_tab_strip_region_view_->UpdateInteriorMargin();
+-  }
+-
+-  if (multi_contents_view_) {
+-    multi_contents_view_->MaybeUpdateContentsBorderAndOverlay();
+-  }
+-  UpdateZenCollapseButtonVisibility();
+-  InvalidateLayout();
++  SetZenModeSidebarShown(browser_->GetProfile()->GetPrefs()->GetBoolean(
++                             prefs::kHeliumZenModeSidebarPinned),
++                         /*animate=*/true, /*persist_pref=*/false);
+ }
+ 
+ void BrowserView::OnZenModeTopChromePinnedPrefChanged() {
+@@ -1871,11 +1895,20 @@ void BrowserView::OnZenModeTopChromePinnedPrefChanged() {
+     return;
+   }
+ 
++  // The pinned toolbar takes its controls back from the sidebar.
++  UpdateZenSidebarToolbar();
++
+   const bool top_chrome_pinned = IsZenModeTopChromePinned();
+   if (top_chrome_pinned) {
+     RevealZenModeTopChromeImmediately();
+   } else {
+-    UpdateZenModeRevealFromCursor();
++    // Don't leave focus in the toolbar that is about to hide.
++    views::FocusManager* const focus_manager = GetFocusManager();
++    if (toolbar_ && focus_manager && multi_contents_view_ &&
++        toolbar_->Contains(focus_manager->GetFocusedView())) {
++      multi_contents_view_->GetActiveContentsView()->RequestFocus();
++    }
++    UpdateZenModeTopChromeReveal();
+   }
+ 
+   if (vertical_tab_strip_region_view_) {
+@@ -1889,15 +1922,14 @@ void BrowserView::OnZenModeTopChromePinnedPrefChanged() {
+   InvalidateLayout();
+ }
+ 
+-// Unpinned sidebar floats in zen mode, so we make sure that VTS is usable
+-// in that state by keeping it expanded on hover while it floats. This leaves
+-// the collapsed state alone for when the sidebar is pinned again.
++// Zen mode never reveals chrome on hover, so a collapsed tab strip doesn't
++// expand on hover either.
+ void BrowserView::UpdateZenModeExpandOnHoverLock() {
+   const bool vertical_initialized =
+       vertical_tab_strip_region_view_ &&
+       vertical_tab_strip_region_view_->GetTabStripView() != nullptr;
+-  if (!zen_mode_enabled_ || IsZenModeSideChromePinned() ||
+-      !ShouldDrawVerticalTabStrip() || !vertical_initialized) {
++  if (!zen_mode_enabled_ || !ShouldDrawVerticalTabStrip() ||
++      !vertical_initialized) {
+     zen_expand_on_hover_lock_.reset();
+     return;
+   }
+@@ -1905,18 +1937,15 @@ void BrowserView::UpdateZenModeExpandOnHoverLock() {
+   if (!zen_expand_on_hover_lock_) {
+     zen_expand_on_hover_lock_ =
+         vertical_tab_strip_region_view_->GetExpandOnHoverLock(
+-            ExpandOnHoverLockType::kKeepExpanded);
++            ExpandOnHoverLockType::kForceCollapse);
+   }
+ }
+ 
+ void BrowserView::UpdateZenModeState() {
+   const bool zen_mode_enabled = IsZenModeEnabled();
+-  UpdateZenModeEventMonitor();
+ 
+   if (zen_mode_enabled_ == zen_mode_enabled) {
+-    if (zen_mode_enabled_) {
+-      UpdateZenModeRevealFromCursor();
+-    }
++    UpdateZenSidebarToolbar();
+     UpdateZenCollapseButtonVisibility();
+     return;
+   }
+@@ -1926,21 +1955,23 @@ void BrowserView::UpdateZenModeState() {
+       IDC_TOGGLE_ZEN_MODE_TOP_CHROME_PIN, zen_mode_enabled);
+ 
+   if (zen_mode_enabled_) {
+-    // When entering zen mode with pinned chrome, snap that chrome fully shown.
+-    // Unpinned chrome should slide out from its current position.
+-    if (IsZenModeSideChromePinned()) {
+-      zen_side_chrome_animation_.Reset(1);
+-    }
+-
++    // Snap the sidebar to this window's state, e.g. when leaving fullscreen.
++    // Pinned top chrome snaps fully shown; otherwise it slides out from its
++    // current position.
++    zen_side_chrome_animation_.Reset(zen_sidebar_shown_ ? 1 : 0);
+     if (IsZenModeTopChromePinned()) {
+       zen_top_chrome_animation_.Reset(1);
+     }
+ 
+-    UpdateZenModeReveal(/*reveal_top=*/false, /*reveal_side=*/false);
++    UpdateZenModeTopChromeReveal();
++  } else {
++    zen_side_chrome_animation_.Reset(1);
+   }
++  UpdateZenSlideClip();
+ 
+   UpdateZenModeExpandOnHoverLock();
+   UpdateZenCollapseButtonVisibility();
++  UpdateZenSidebarToolbar();
+ 
+   if (!zen_mode_enabled_) {
+     if (auto* frame_view = GetFrameView()) {
+@@ -1949,9 +1980,6 @@ void BrowserView::UpdateZenModeState() {
+     if (!zen_top_chrome_animation_.IsShowing()) {
+       zen_top_chrome_animation_.Show();
+     }
+-    if (!zen_side_chrome_animation_.IsShowing()) {
+-      zen_side_chrome_animation_.Show();
+-    }
+   }
+ 
+   if (multi_contents_view_) {
+@@ -1959,139 +1987,13 @@ void BrowserView::UpdateZenModeState() {
+   }
+ }
+ 
+-void BrowserView::UpdateZenModeEventMonitor() {
+-  if (!GetWidget() || !IsZenModeEnabled()) {
+-    zen_mode_event_monitor_.reset();
+-    return;
+-  }
+-
+-  if (!zen_mode_event_monitor_) {
+-    zen_mode_event_monitor_ = views::EventMonitor::CreateWindowMonitor(
+-        this, GetWidget()->GetNativeWindow(),
+-        {ui::EventType::kMouseMoved, ui::EventType::kMouseExited});
+-  }
+-}
+-
+-void BrowserView::StartZenCollapseTimer(base::TimeDelta delay) {
+-  if (zen_cursor_exit_timer_.IsRunning()) {
+-    return;
+-  }
+-  zen_cursor_exit_timer_.Start(
+-      FROM_HERE, delay,
+-      base::BindOnce(&BrowserView::UpdateZenModeReveal, base::Unretained(this),
+-                     /*reveal_top=*/false, /*reveal_side=*/false));
+-}
+-
+-bool BrowserView::IsLeavingZenSideGap(const gfx::Point& previous_point,
+-                                      const gfx::Point& point) const {
+-  if (!zen_side_chrome_animation_.IsShowing() || IsZenModeSideChromePinned() ||
+-      !vertical_tab_strip_region_view_ ||
+-      !vertical_tab_strip_region_view_->parent()) {
+-    return false;
+-  }
+-
+-  const gfx::Rect vts_bounds = views::View::ConvertRectToTarget(
+-      vertical_tab_strip_region_view_->parent(), this,
+-      vertical_tab_strip_region_view_->bounds());
+-  if (IsVerticalTabStripRightAligned()) {
+-    return previous_point.x() < vts_bounds.right() &&
+-           point.x() >= vts_bounds.right() && point.x() < width();
+-  }
+-  return previous_point.x() >= vts_bounds.x() && point.x() >= 0 &&
+-         point.x() < vts_bounds.x();
+-}
+-
+-void BrowserView::UpdateZenModeRevealFromCursor() {
+-  if (!zen_mode_enabled_) {
+-    return;
+-  }
+-
+-  gfx::Point cursor;
+-  // When the cursor leaves the window, start a timer before collapsing.
+-  // Brief cursor excursions outside the window shouldn't collapse
+-  // the chrome.
+-  gfx::Rect zen_hover_bounds = GetLocalBounds();
+-  zen_hover_bounds.Outset(gfx::Outsets::VH(0, kZenModeRevealTriggerThickness));
+-  if (!GetCursorLocationInBrowserView(&cursor) ||
+-      !zen_hover_bounds.Contains(cursor)) {
+-    zen_last_cursor_.reset();
+-    StartZenCollapseTimer(kZenModeCursorExitGracePeriod);
+-    return;
+-  }
+-
+-  const std::optional<gfx::Point> previous_cursor = zen_last_cursor_;
+-  zen_last_cursor_ = cursor;
+-
+-  const bool in_top_trigger = IsPointInZenTopTrigger(cursor);
+-  const bool in_top_chrome = IsPointInZenTopChromeBounds(cursor);
+-  const bool reveal_top = in_top_trigger || in_top_chrome;
+-
+-  // Top bar takes precedence: don't reveal side chrome when the cursor
+-  // is in the top trigger zone or over the revealed top chrome.
+-  const bool in_side_trigger = IsPointInZenSideTrigger(cursor);
+-  const bool in_side_chrome = IsPointInZenSideChromeBounds(cursor);
+-  const bool moving_out_through_side_gap =
+-      previous_cursor && IsLeavingZenSideGap(*previous_cursor, cursor);
+-  const bool reveal_side =
+-      !reveal_top && !moving_out_through_side_gap &&
+-      (in_side_trigger || in_side_chrome);
+-
+-  // Defer the collapse briefly so quick excursions don't cause the
+-  // chrome to snap closed.
+-  if (!reveal_top && !reveal_side) {
+-    StartZenCollapseTimer(kZenModeHoverExitGracePeriod);
+-    return;
+-  }
+-
+-  zen_cursor_exit_timer_.Stop();
+-  UpdateZenModeReveal(reveal_top, reveal_side);
+-}
+-
+-void BrowserView::UpdateZenModeReveal(bool reveal_top, bool reveal_side) {
++void BrowserView::UpdateZenModeTopChromeReveal() {
+   if (!zen_mode_enabled_) {
+     return;
+   }
+ 
+-  if (!ShouldDrawVerticalTabStrip()) {
+-    reveal_side = false;
+-  }
+-
+-  // Pinned VTS stays visible regardless of cursor position.
+-  if (IsZenModeSideChromePinned()) {
+-    reveal_side = true;
+-  }
+-
+-  // Pinned top chrome stays visible regardless of cursor position.
++  // Nothing reveals the toolbar in zen mode except pinning it.
+   if (IsZenModeTopChromePinned()) {
+-    reveal_top = true;
+-  }
+-
+-  // Keep the top chrome visible while the omnibox is focused.
+-  const bool omnibox_focused = toolbar_ && toolbar_->location_bar_view() &&
+-                               toolbar_->location_bar_view()->HasFocus();
+-  if (omnibox_focused) {
+-    reveal_top = true;
+-  }
+-
+-  // Keep the top chrome visible while a bubble/popup anchored inside the top
+-  // container or a side panel is open.
+-  if (!reveal_top && HasOpenBubbleFromTopContainer()) {
+-    reveal_top = true;
+-  }
+-
+-  // Menus are not BubbleDialogDelegate widgets, so handle the app menu
+-  // explicitly.
+-  if (!reveal_top) {
+-    auto* toolbar_button_provider = ToolbarButtonProvider::From(browser_);
+-    const AppMenuControl* app_menu_control =
+-        toolbar_button_provider ? toolbar_button_provider->GetAppMenuControl()
+-                                : nullptr;
+-    if (app_menu_control && app_menu_control->IsMenuShowing()) {
+-      reveal_top = true;
+-    }
+-  }
+-
+-  if (reveal_top) {
+     if (!zen_top_chrome_animation_.IsShowing()) {
+       zen_top_chrome_animation_.Show();
+       if (toolbar_) {
+@@ -2101,17 +2003,14 @@ void BrowserView::UpdateZenModeReveal(bool reveal_top, bool reveal_side) {
+   } else if (zen_top_chrome_animation_.IsShowing()) {
+     zen_top_chrome_animation_.Hide();
+   }
+-
+-  if (reveal_side) {
+-    if (!zen_side_chrome_animation_.IsShowing()) {
+-      zen_side_chrome_animation_.Show();
+-    }
+-  } else if (zen_side_chrome_animation_.IsShowing()) {
+-    zen_side_chrome_animation_.Hide();
+-  }
+ }
+ 
+ void BrowserView::RevealZenModeTopChromeImmediately() {
++  // Only the pinned toolbar is ever shown; focusing the location bar doesn't
++  // reveal it.
++  if (!IsZenModeTopChromePinned()) {
++    return;
++  }
+   zen_top_chrome_animation_.Reset(1);
+   if (vertical_tab_strip_region_view_) {
+     vertical_tab_strip_region_view_->UpdateInteriorMargin();
+@@ -2143,135 +2042,177 @@ void BrowserView::UpdateZenCollapseButtonVisibility() {
+   }
+ }
+ 
+-bool BrowserView::IsPointInZenTopTrigger(const gfx::Point& point) const {
+-  return point.y() >= 0 && point.y() < kZenModeRevealTriggerThickness;
+-}
+-
+-bool BrowserView::IsPointInZenSideTrigger(const gfx::Point& point) const {
+-  if (!ShouldDrawVerticalTabStrip()) {
+-    return false;
+-  }
+-  auto* controller = tabs::VerticalTabStripStateController::From(browser_);
+-  const bool right_aligned = controller && controller->IsTabStripRightAligned();
+-  if (right_aligned) {
+-    return point.x() >= width() - kZenModeRevealTriggerThickness;
++bool BrowserView::GetInitialZenSidebarShown() const {
++  if (const BrowserInitState* const init_state =
++          BrowserInitState::From(browser_.get())) {
++    const BrowserWindowCreateParams& params = init_state->create_params();
++    // The tab being dragged into this window must stay visible.
++    if (params.in_tab_dragging) {
++      return true;
++    }
++    // A restored window gets its own state back.
++    if (params.helium_zen_sidebar_shown.has_value()) {
++      return *params.helium_zen_sidebar_shown;
++    }
+   }
+-  return point.x() < kZenModeRevealTriggerThickness;
++  // Otherwise use the state most recently chosen in any window.
++  return browser_->GetProfile()->GetPrefs()->GetBoolean(
++      prefs::kHeliumZenModeSidebarPinned);
+ }
+ 
+-namespace {
+-
+-bool IsOpenBubbleAnchoredInViewSubtree(views::Widget* widget,
+-                                       const views::View* anchor_root) {
+-  if (!widget || widget->IsClosed() || !widget->IsVisible()) {
+-    return false;
++void BrowserView::SetZenModeSidebarShown(bool shown,
++                                         bool animate,
++                                         bool persist_pref) {
++  if (persist_pref) {
++    base::AutoReset<bool> writing_pref(&g_writing_zen_sidebar_pref, true);
++    browser_->GetProfile()->GetPrefs()->SetBoolean(
++        prefs::kHeliumZenModeSidebarPinned, shown);
+   }
+ 
+-  views::WidgetDelegate* widget_delegate = widget->widget_delegate();
+-  if (!widget_delegate) {
+-    return false;
++  if (zen_sidebar_shown_ == shown) {
++    return;
+   }
++  zen_sidebar_shown_ = shown;
++  SaveZenSidebarShownToSession();
+ 
+-  auto* bubble_delegate = widget_delegate->AsBubbleDialogDelegate();
+-  if (!bubble_delegate) {
+-    return false;
++  // Otherwise the state applies once zen mode is entered.
++  if (!zen_mode_enabled_) {
++    return;
+   }
+ 
+-  // Toasts are anchored to the top container, but since they're passive
+-  // notifications, such as link copy success, we ignore them.
+-  views::View* contents_view = bubble_delegate->GetContentsView();
+-  if (contents_view &&
+-      contents_view->GetProperty(views::kElementIdentifierKey) ==
+-          toasts::ToastView::kToastViewId) {
+-    return false;
++  // Don't leave focus in a sidebar that is going away.
++  views::FocusManager* const focus_manager = GetFocusManager();
++  if (!shown && vertical_tab_strip_region_view_ && focus_manager &&
++      multi_contents_view_ &&
++      vertical_tab_strip_region_view_->Contains(
++          focus_manager->GetFocusedView())) {
++    multi_contents_view_->GetActiveContentsView()->RequestFocus();
+   }
+ 
+-  views::View* anchor_view = bubble_delegate->GetAnchorView();
+-  return anchor_view && anchor_root->Contains(anchor_view);
+-}
++  if (animate && ShouldDrawVerticalTabStrip()) {
++    // The slide starts from wherever the sidebar is, so reversing it mid-way
++    // doesn't jump. Reduced motion makes the duration zero.
++    zen_side_chrome_animation_.SetSlideDuration(
++        gfx::Animation::RichAnimationDuration(
++            shown ? kZenSidebarShowDuration : kZenSidebarHideDuration));
++    zen_side_chrome_animation_.SetTweenType(
++        shown ? gfx::Tween::ACCEL_LIN_DECEL_100_3
++              : gfx::Tween::FAST_OUT_LINEAR_IN);
++    if (shown) {
++      zen_side_chrome_animation_.Show();
++    } else {
++      zen_side_chrome_animation_.Hide();
++    }
++  } else {
++    zen_side_chrome_animation_.Reset(shown ? 1 : 0);
++  }
++  UpdateZenSlideClip();
+ 
+-bool IsSidePanelOpen(const SidePanel* side_panel) {
+-  if (!side_panel) {
+-    return false;
++  if (vertical_tab_strip_region_view_) {
++    vertical_tab_strip_region_view_->UpdateInteriorMargin();
+   }
+-  switch (side_panel->state()) {
+-    case SidePanel::State::kOpening:
+-    case SidePanel::State::kOpen:
+-      return true;
+-    case SidePanel::State::kClosing:
+-    case SidePanel::State::kClosed:
+-      return false;
++  if (multi_contents_view_) {
++    multi_contents_view_->MaybeUpdateContentsBorderAndOverlay();
+   }
+-  NOTREACHED();
++  InvalidateLayout();
+ }
+ 
+-}  // namespace
++void BrowserView::SaveZenSidebarShownToSession() {
++  SessionService* const session_service =
++      SessionServiceFactory::GetForProfileIfExisting(browser_->GetProfile());
++  if (!session_service) {
++    return;
++  }
++  session_service->AddWindowExtraData(
++      browser_->GetSessionID(),
++      BrowserWindowCreateParams::kHeliumZenSidebarShownKey,
++      base::ToString(zen_sidebar_shown_));
++  zen_sidebar_shown_saved_to_session_ = true;
++}
+ 
+-bool BrowserView::HasOpenBubbleFromTopContainer() const {
+-  if (IsSidePanelOpen(side_panel_)) {
+-    return true;
++void BrowserView::UpdateZenSlideClip() {
++  if (multi_contents_view_) {
++    multi_contents_view_->SetRoundedClipForSlide(
++        kZenSlideRoundedClip && IsZenModeSideChromeAnimating());
+   }
+-  if (!top_container_ || !GetWidget()) {
+-    return false;
++}
++
++void BrowserView::UpdateZenSidebarToolbar() {
++  if (!zen_sidebar_toolbar_) {
++    return;
+   }
+-  for (views::Widget* widget :
+-       views::Widget::GetAllOwnedWidgets(GetWidget()->GetNativeView())) {
+-    if (IsOpenBubbleAnchoredInViewSubtree(widget, top_container_)) {
+-      return true;
+-    }
++
++  // The toolbar keeps its controls while it is pinned, and in layouts without
++  // a vertical tab strip.
++  const bool relocate = zen_mode_enabled_ && ShouldDrawVerticalTabStrip() &&
++                        !IsZenModeTopChromePinned();
++  if (zen_sidebar_toolbar_->relocated() == relocate) {
++    return;
+   }
+-  return false;
++  zen_sidebar_toolbar_->SetRelocated(relocate);
++  UpdateZenSidebarToolbarForActiveContents();
++  InvalidateLayout();
+ }
+ 
+-void BrowserView::AppMenuShown() {
+-  if (zen_mode_enabled_) {
+-    UpdateZenModeReveal(/*reveal_top=*/true, /*reveal_side=*/false);
++void BrowserView::UpdateZenSidebarToolbarForActiveContents() {
++  if (!zen_sidebar_toolbar_ || !zen_sidebar_toolbar_->relocated()) {
++    return;
+   }
++  content::WebContents* const contents = GetActiveWebContents();
++  zen_sidebar_toolbar_->top_row()->UpdateForActiveContents(contents);
++  zen_sidebar_toolbar_->bottom_row()->UpdateForActiveContents(contents);
+ }
+ 
+-void BrowserView::AppMenuClosed() {
+-  if (zen_mode_enabled_) {
+-    UpdateZenModeRevealFromCursor();
++views::View* BrowserView::GetZenLocationBarBubbleAnchor() {
++  if (views::View* const site_pill = GetZenSidebarSitePill()) {
++    return site_pill;
+   }
++  return GetZenFallbackBubbleAnchor();
+ }
+ 
+-bool BrowserView::IsPointInZenTopChromeBounds(const gfx::Point& point) const {
+-  if (!top_container_ || !top_container_->parent()) {
+-    return false;
++views::View* BrowserView::GetZenFallbackBubbleAnchor() {
++  return zen_mode_enabled_ && zen_bubble_anchor_view_ &&
++                 zen_bubble_anchor_view_->IsDrawn()
++             ? zen_bubble_anchor_view_.get()
++             : nullptr;
++}
++
++views::View* BrowserView::GetZenSidebarSitePill() {
++  if (!zen_mode_enabled_ || !zen_sidebar_toolbar_ ||
++      !zen_sidebar_toolbar_->relocated()) {
++    return nullptr;
+   }
+-  gfx::Rect bounds = views::View::ConvertRectToTarget(
+-      top_container_->parent(), this, top_container_->bounds());
+-  // Extend the hit region to always include the full area from the top of
+-  // the window to below the top container.  The top container's y-position
+-  // changes during animation, so a fixed leeway above it would cause the
+-  // cursor to flicker in and out of the region.
+-  bounds.set_height(bounds.bottom() + kZenModeChromeHoverLeeway);
+-  bounds.set_y(0);
+-  bounds.Inset(gfx::Insets::VH(0, -kZenModeChromeHoverLeeway));
+-  return bounds.Contains(point);
+-}
+-
+-bool BrowserView::IsPointInZenSideChromeBounds(const gfx::Point& point) const {
+-  if (!vertical_tab_strip_region_view_ ||
+-      !vertical_tab_strip_region_view_->parent()) {
+-    return false;
++  views::View* const site_pill = zen_sidebar_toolbar_->top_row()->site_pill();
++  return site_pill && site_pill->IsDrawn() ? site_pill : nullptr;
++}
++
++views::View* BrowserView::GetZenSidebarBookmarkStar() {
++  if (!zen_mode_enabled_ || !zen_sidebar_toolbar_ ||
++      !zen_sidebar_toolbar_->relocated()) {
++    return nullptr;
+   }
+-  gfx::Rect bounds = views::View::ConvertRectToTarget(
+-      vertical_tab_strip_region_view_->parent(), this,
+-      vertical_tab_strip_region_view_->bounds());
+-  bounds.Outset(
+-      gfx::Outsets::VH(kZenModeChromeHoverLeeway, kZenModeChromeHoverLeeway));
+-  return bounds.Contains(point);
++  views::View* const star = zen_sidebar_toolbar_->bottom_row()->bookmark_star();
++  return star && star->IsDrawn() ? star : nullptr;
+ }
+ 
+-bool BrowserView::GetCursorLocationInBrowserView(
+-    gfx::Point* cursor_location) const {
+-  if (!zen_mode_event_monitor_) {
+-    return false;
++// static
++std::optional<gfx::Rect> BrowserView::GetZenFallbackAnchorBoundsInScreen(
++    const views::View* anchor) {
++  if (!anchor || anchor->IsDrawn()) {
++    return std::nullopt;
+   }
+-  *cursor_location = zen_mode_event_monitor_->GetLastMouseLocation();
+-  views::View::ConvertPointFromScreen(this, cursor_location);
+-  return true;
++  const views::Widget* const widget = anchor->GetWidget();
++  if (!widget) {
++    return std::nullopt;
++  }
++  BrowserView* const browser_view = GetBrowserViewForNativeWindow(
++      widget->GetTopLevelWidget()->GetNativeWindow());
++  views::View* const fallback =
++      browser_view ? browser_view->GetZenFallbackBubbleAnchor() : nullptr;
++  if (!fallback) {
++    return std::nullopt;
++  }
++  return fallback->GetBoundsInScreen();
+ }
+ 
+ ///////////////////////////////////////////////////////////////////////////////
+@@ -3058,12 +2999,17 @@ void BrowserView::UpdateToolbar(content::WebContents* contents) {
+   if (toolbar_) {
+     toolbar_->Update(contents);
+   }
++  UpdateZenSidebarToolbarForActiveContents();
+ }
+ 
+ bool BrowserView::UpdateToolbarSecurityState() {
+   // We may end up here during destruction.
+   if (toolbar_) {
+-    return toolbar_->UpdateSecurityState();
++    const bool updated = toolbar_->UpdateSecurityState();
++    if (updated) {
++      UpdateZenSidebarToolbarForActiveContents();
++    }
++    return updated;
+   }
+ 
+   return false;
+@@ -4867,9 +4813,10 @@ void BrowserView::OnWidgetActivationChanged(views::Widget* widget,
+     }
+   }
+ 
+-  // Collapse zen mode chrome when the window is deactivated.
+-  if (!active && zen_mode_enabled_) {
+-    UpdateZenModeReveal(/*reveal_top=*/false, /*reveal_side=*/false);
++  // Record this window's sidebar state once its session is tracked, so it is
++  // restored even if the window never toggles it.
++  if (active && !zen_sidebar_shown_saved_to_session_ && GetIsNormalType()) {
++    SaveZenSidebarShownToSession();
+   }
+ 
+   ExtensionKeybindingRegistryViews::From(browser_)->OnHostActivationChanged(
+@@ -5707,6 +5654,12 @@ void BrowserView::ViewHierarchyChanged(
+ }
+ 
+ void BrowserView::AddedToWidget() {
++  // Step the zen animations with the compositor's frames, which keeps them
++  // smooth on high refresh rate displays.
++  zen_animation_container_->SetAnimationRunner(
++      std::make_unique<views::CompositorAnimationRunner>(GetWidget(),
++                                                         FROM_HERE));
++
+   // BrowserView may be added to a widget more than once if the user changes
+   // themes after starting the browser. Do not re-initialize BrowserView in
+   // this case.
+@@ -5855,6 +5808,7 @@ void BrowserView::AddedToWidget() {
+   layout_views.multi_contents_view = multi_contents_view_;
+   layout_views.side_panel = side_panel_;
+   layout_views.top_container_separator = top_container_separator_;
++  layout_views.zen_bubble_anchor = zen_bubble_anchor_view_;
+   // LINT.ThenChange(//chrome/browser/ui/views/frame/layout/browser_view_layout.h:BrowserViewLayoutViews)
+ 
+   SetLayoutManager(BrowserViewLayout::CreateLayout(
+@@ -5867,9 +5821,6 @@ void BrowserView::AddedToWidget() {
+   // once per browser instance.
+   auto* toolbar_button_provider = ToolbarButtonProvider::From(browser_);
+   CHECK(toolbar_button_provider);
+-  if (auto* app_menu_control = toolbar_button_provider->GetAppMenuControl()) {
+-    app_menu_control_observation_.Observe(app_menu_control);
+-  }
+ 
+   // `AutofillBubbleHandlerImpl` depends on the ToolbarButtonProvider so it must
+   // be constructed following the check above.
+@@ -5913,6 +5864,14 @@ void BrowserView::AddedToWidget() {
+     }
+   }
+ 
++  // In zen mode the sidebar takes over some of the hidden toolbar's controls.
++  if (vertical_tab_strip_region_view_ && toolbar_ && GetIsNormalType()) {
++    zen_sidebar_toolbar_ = std::make_unique<ZenSidebarToolbarController>(
++        toolbar_, vertical_tab_strip_region_view_->zen_top_row(),
++        vertical_tab_strip_region_view_->zen_bottom_row());
++    UpdateZenSidebarToolbar();
++  }
++
+   dialog_anchor_ = std::make_unique<views::ViewSubregionAnchor>(
+       kBrowserDialogAnchorElementId, *this);
+ 
+@@ -5920,8 +5879,7 @@ void BrowserView::AddedToWidget() {
+ }
+ 
+ void BrowserView::RemovedFromWidget() {
+-  zen_mode_event_monitor_.reset();
+-  app_menu_control_observation_.Reset();
++  zen_animation_container_->SetAnimationRunner(nullptr);
+   CHECK(GetFocusManager());
+ #if BUILDFLAG(IS_WIN)
+   pip_exclusion_observer_.reset();
+@@ -6860,30 +6818,6 @@ void BrowserView::OnWillChangeFocus(View* focused_before, View* focused_now) {
+ }
+ void BrowserView::OnDidChangeFocus(View* focused_before, View* focused_now) {
+   UpdateAccessibleNameForRootView();
+-  if (zen_mode_enabled_) {
+-    UpdateZenModeRevealFromCursor();
+-  }
+-}
+-
+-void BrowserView::OnEvent(const ui::Event& event) {
+-  if (!zen_mode_enabled_ || !event.IsMouseEvent()) {
+-    return;
+-  }
+-  // Mouse exit events can also come from internal view transitions. Only use
+-  // the longer window-exit grace period after confirming the cursor left the
+-  // BrowserView bounds.
+-  if (event.type() == ui::EventType::kMouseExited) {
+-    gfx::Point cursor;
+-    if (GetCursorLocationInBrowserView(&cursor) &&
+-        GetLocalBounds().Contains(cursor)) {
+-      UpdateZenModeRevealFromCursor();
+-      return;
+-    }
+-    zen_last_cursor_.reset();
+-    StartZenCollapseTimer(kZenModeCursorExitGracePeriod);
+-    return;
+-  }
+-  UpdateZenModeRevealFromCursor();
+ }
+ 
+ void BrowserView::AnimationProgressed(const gfx::Animation* animation) {
+@@ -6910,6 +6844,14 @@ void BrowserView::AnimationProgressed(const gfx::Animation* animation) {
+ 
+ void BrowserView::AnimationEnded(const gfx::Animation* animation) {
+   AnimationProgressed(animation);
++  if (animation == &zen_side_chrome_animation_) {
++    // The page goes back to its own rounded corners at its final size.
++    UpdateZenSlideClip();
++  }
++}
++
++void BrowserView::AnimationCanceled(const gfx::Animation* animation) {
++  AnimationEnded(animation);
+ }
+ 
+ WebAppFrameToolbarView* BrowserView::web_app_frame_toolbar() {
+diff --git a/chrome/browser/ui/views/frame/browser_view.h b/chrome/browser/ui/views/frame/browser_view.h
+index e39efba0..3b4124ad 100644
+--- a/chrome/browser/ui/views/frame/browser_view.h
++++ b/chrome/browser/ui/views/frame/browser_view.h
+@@ -15,6 +15,7 @@
+ #include "base/containers/enum_set.h"
+ #include "base/gtest_prod_util.h"
+ #include "base/memory/raw_ptr.h"
++#include "base/memory/scoped_refptr.h"
+ #include "base/scoped_observation.h"
+ #include "base/task/cancelable_task_tracker.h"
+ #include "base/time/time.h"
+@@ -33,7 +34,6 @@
+ #include "chrome/browser/ui/tabs/vertical_tab_strip_state_controller.h"
+ #include "chrome/browser/ui/translate/partial_translate_bubble_model.h"
+ #include "chrome/browser/ui/user_education/browser_user_education_interface.h"
+-#include "chrome/browser/ui/views/frame/app_menu_button_observer.h"
+ #include "chrome/browser/ui/views/frame/browser_widget.h"
+ #include "chrome/browser/ui/views/frame/contents_container_view.h"
+ #include "chrome/browser/ui/views/frame/layout/browser_view_layout_params.h"
+@@ -60,7 +60,7 @@
+ #include "ui/base/metadata/metadata_header_macros.h"
+ #include "ui/base/mojom/window_show_state.mojom-forward.h"
+ #include "ui/base/pointer/touch_ui_controller.h"
+-#include "ui/events/event_observer.h"
++#include "ui/gfx/animation/animation_container.h"
+ #include "ui/gfx/animation/animation_delegate.h"
+ #include "ui/gfx/animation/slide_animation.h"
+ #include "ui/gfx/native_ui_types.h"
+@@ -79,7 +79,6 @@
+ // view: http://dev.ch40m1um.qjz9zk/developers/design-documents/browser-window
+ 
+ class AccessibilityFocusHighlight;
+-class AppMenuControl;
+ class BookmarkBarController;
+ class BookmarkBarView;
+ class BrowserWindowInterface;
+@@ -112,6 +111,7 @@ class TopControlsSlideController;
+ class TopControlsSlideControllerTest;
+ class VerticalTabStripRegionView;
+ class WebAppFrameToolbarView;
++class ZenSidebarToolbarController;
+ 
+ namespace gfx {
+ class AnimationRunner;
+@@ -130,7 +130,6 @@ enum class Channel;
+ }
+ 
+ namespace views {
+-class EventMonitor;
+ class LabelButton;
+ class NativeViewHost;
+ class WebView;
+@@ -155,16 +154,10 @@ class BrowserView : public BrowserWindow,
+                     public GlobalErrorObserver,
+                     public views::FocusChangeListener,
+                     public BookmarkBarController::Delegate,
+-                    public ui::EventObserver,
+-                    public gfx::AnimationDelegate,
+-                    public AppMenuButtonObserver {
++                    public gfx::AnimationDelegate {
+   METADATA_HEADER(BrowserView, views::ClientView)
+ 
+  public:
+-  // Unhide views::View::OnEvent (takes ui::Event*) which is shadowed by
+-  // ui::EventObserver::OnEvent (takes const ui::Event&).
+-  using views::View::OnEvent;
+-
+   // The name of a key to store on the window handle so that other code can
+   // locate this object using just the handle.
+   static constexpr char kBrowserViewKey[] = "__BROWSER_VIEW__";
+@@ -440,11 +433,31 @@ class BrowserView : public BrowserWindow,
+   float GetSideChromeRevealRatio() const;
+   bool IsZenModeSideChromePinned() const;
+   bool IsZenModeTopChromePinned() const;
++  // True while the sidebar slides in or out in zen mode.
++  bool IsZenModeSideChromeAnimating() const;
++  // True in zen mode while the location bar isn't drawn, which is whenever the
++  // toolbar isn't pinned.
++  bool IsZenModeLocationBarHidden() const;
+ 
+-  // Toggles the side chrome (VTS) visibility in zen mode.
++  // Toggles the side chrome (VTS) visibility of this window in zen mode.
+   void ToggleZenModeSideChrome();
+   void ToggleZenModeTopChrome();
+ 
++  // Zen mode keeps the toolbar hidden and shows some of its controls in the
++  // sidebar instead. These return the views bubbles anchor to instead of the
++  // hidden ones, or nullptr outside zen mode:
++  // The sidebar's site pill while the sidebar is shown, or else the fallback
++  // anchor.
++  views::View* GetZenLocationBarBubbleAnchor();
++  // A point at the top-right corner of the page.
++  views::View* GetZenFallbackBubbleAnchor();
++  // The sidebar's site pill and bookmark star while the sidebar is shown.
++  views::View* GetZenSidebarSitePill();
++  views::View* GetZenSidebarBookmarkStar();
++  // Returns the fallback anchor's screen bounds if zen mode hides `anchor`.
++  static std::optional<gfx::Rect> GetZenFallbackAnchorBoundsInScreen(
++      const views::View* anchor);
++
+   // Returns the widget for anchoring bubbles and dialogs.
+   // This returns BrowserWidget except on fullscreen macOS where the toolbar is
+   // hosted in an OverlayWidget.
+@@ -801,16 +814,10 @@ class BrowserView : public BrowserWindow,
+       BookmarkBar::AnimateChangeType change_type) override;
+   void OnFocusBookmarksToolbar() override;
+ 
+-  // ui::EventObserver:
+-  void OnEvent(const ui::Event& event) override;
+-
+   // gfx::AnimationDelegate:
+   void AnimationProgressed(const gfx::Animation* animation) override;
+   void AnimationEnded(const gfx::Animation* animation) override;
+-
+-  // AppMenuButtonObserver:
+-  void AppMenuShown() override;
+-  void AppMenuClosed() override;
++  void AnimationCanceled(const gfx::Animation* animation) override;
+ 
+   // Testing interface:
+   BrowserViewLayout* GetBrowserViewLayoutForTesting() {
+@@ -957,20 +964,22 @@ class BrowserView : public BrowserWindow,
+   void UpdateZenModeState();
+   void UpdateZenModeExpandOnHoverLock();
+   void UpdateZenCollapseButtonVisibility();
+-  void UpdateZenModeEventMonitor();
+-  void StartZenCollapseTimer(base::TimeDelta delay);
+-  bool IsLeavingZenSideGap(const gfx::Point& previous_point,
+-                           const gfx::Point& point) const;
+-  void UpdateZenModeRevealFromCursor();
+-  void UpdateZenModeReveal(bool reveal_top, bool reveal_side);
++  // Shows the toolbar while it is pinned and hides it otherwise.
++  void UpdateZenModeTopChromeReveal();
+   void RevealZenModeTopChromeImmediately();
+   bool IsZenModeEnabled() const;
+-  bool IsPointInZenTopTrigger(const gfx::Point& point) const;
+-  bool IsPointInZenSideTrigger(const gfx::Point& point) const;
+-  bool IsPointInZenTopChromeBounds(const gfx::Point& point) const;
+-  bool IsPointInZenSideChromeBounds(const gfx::Point& point) const;
+-  bool HasOpenBubbleFromTopContainer() const;
+-  bool GetCursorLocationInBrowserView(gfx::Point* cursor_location) const;
++  // Returns whether a new window starts with its sidebar shown.
++  bool GetInitialZenSidebarShown() const;
++  // Shows or hides this window's sidebar. `persist_pref` also makes `shown`
++  // the state of new windows.
++  void SetZenModeSidebarShown(bool shown, bool animate, bool persist_pref);
++  // Saves this window's sidebar state for session restore.
++  void SaveZenSidebarShownToSession();
++  // Rounds the corners of the page's container while the sidebar slides.
++  void UpdateZenSlideClip();
++  // Moves toolbar controls into the sidebar, or back into the toolbar.
++  void UpdateZenSidebarToolbar();
++  void UpdateZenSidebarToolbarForActiveContents();
+ 
+   // Callback for the loading animation(s) associated with this view.
+   void LoadingAnimationTimerCallback();
+@@ -1438,9 +1447,6 @@ class BrowserView : public BrowserWindow,
+   base::ScopedObservation<GlobalErrorService, GlobalErrorObserver>
+       global_error_observation_{this};
+ 
+-  base::ScopedObservation<AppMenuControl, AppMenuButtonObserver>
+-      app_menu_control_observation_{this};
+-
+   bool interactive_resize_in_progress_ = false;
+ 
+   // The last bounds we notified about in TryNotifyWindowBoundsChanged().
+@@ -1502,13 +1508,20 @@ class BrowserView : public BrowserWindow,
+   std::unique_ptr<TabCyclingEventHandler> tab_cycling_event_handler_;
+ 
+   // Zen mode state.
+-  std::unique_ptr<views::EventMonitor> zen_mode_event_monitor_;
+   std::unique_ptr<ExpandOnHoverLock> zen_expand_on_hover_lock_;
+   gfx::SlideAnimation zen_top_chrome_animation_;
+   gfx::SlideAnimation zen_side_chrome_animation_;
+-  base::OneShotTimer zen_cursor_exit_timer_;
+-  std::optional<gfx::Point> zen_last_cursor_;
+   bool zen_mode_enabled_ = false;
++  // Whether this window's sidebar is shown in zen mode. Each window keeps its
++  // own state; the profile pref only seeds new windows.
++  bool zen_sidebar_shown_ = true;
++  bool zen_sidebar_shown_saved_to_session_ = false;
++  // Drives the zen animations from the compositor's frame clock.
++  scoped_refptr<gfx::AnimationContainer> zen_animation_container_;
++  // A 1x1 view at the top-right corner of the page, which bubbles anchor to
++  // when zen mode hides their usual anchor.
++  raw_ptr<views::View> zen_bubble_anchor_view_ = nullptr;
++  std::unique_ptr<ZenSidebarToolbarController> zen_sidebar_toolbar_;
+ 
+   mutable base::WeakPtrFactory<BrowserView> weak_ptr_factory_{this};
+ };
+diff --git a/chrome/browser/ui/views/frame/contents_container_view.cc b/chrome/browser/ui/views/frame/contents_container_view.cc
+index b666028f..9e9c4b0d 100644
+--- a/chrome/browser/ui/views/frame/contents_container_view.cc
++++ b/chrome/browser/ui/views/frame/contents_container_view.cc
+@@ -335,6 +335,8 @@ void ContentsContainerView::SetBorderRoundedCornersFrom(
+ void ContentsContainerView::UpdateBorderRoundedCorners() {
+   if (!should_round_contents_) {
+     SetBorderRoundedCornersFrom(rounded_corner_radii_);
++    rounded_clip_radii_ = rounded_corner_radii_;
++    UpdateRoundedClip();
+     return;
+   }
+ 
+@@ -364,6 +366,42 @@ void ContentsContainerView::UpdateBorderRoundedCorners() {
+     capture_contents_border_view_->SetCornerRadii(container_rounded_corners);
+   }
+   SetBorderRoundedCornersFrom(inner_rounded_corners);
++  // The page's corners are concentric with these.
++  rounded_clip_radii_ = container_rounded_corners;
++  UpdateRoundedClip();
++}
++
++void ContentsContainerView::SetRoundedClip(bool enabled) {
++  if (rounded_clip_ == enabled) {
++    return;
++  }
++  rounded_clip_ = enabled;
++  UpdateRoundedClip();
++}
++
++void ContentsContainerView::UpdateRoundedClip() {
++  if (!rounded_clip_) {
++    // Nothing else puts this view on a layer.
++    if (layer()) {
++      DestroyLayer();
++    }
++    return;
++  }
++
++  if (!layer()) {
++    SetPaintToLayer();
++    layer()->SetFillsBoundsOpaquely(false);
++    layer()->SetName("ContentsContainerView:RoundedClip");
++  }
++  // Layers aren't mirrored, so mirror the radii like NativeViewHostAura does.
++  gfx::RoundedCornersF radii = rounded_clip_radii_;
++  if (base::i18n::IsRTL()) {
++    radii = gfx::RoundedCornersF(radii.upper_right(), radii.upper_left(),
++                                 radii.lower_left(), radii.lower_right());
++  }
++  layer()->SetMasksToBounds(true);
++  layer()->SetRoundedCornerRadius(radii);
++  layer()->SetIsFastRoundedCorner(true);
+ }
+ 
+ void ContentsContainerView::ChildVisibilityChanged(View* child) {
+diff --git a/chrome/browser/ui/views/frame/contents_container_view.h b/chrome/browser/ui/views/frame/contents_container_view.h
+index 28a807ff..ffc07f7f 100644
+--- a/chrome/browser/ui/views/frame/contents_container_view.h
++++ b/chrome/browser/ui/views/frame/contents_container_view.h
+@@ -143,6 +143,12 @@ class ContentsContainerView : public views::View,
+ 
+   void SetRoundedCorners(const gfx::RoundedCornersF& corner_radii);
+ 
++  // While enabled, this view paints to a layer that clips everything inside
++  // it to its bounds with its rounded corners. Zen mode uses this while the
++  // sidebar slides: the page is then clipped at its far edge, where
++  // NativeViewHostAura squares off the page's own corners.
++  void SetRoundedClip(bool enabled);
++
+   views::View* GetToastAnchorView() { return toast_anchor_view_; }
+ 
+  private:
+@@ -155,6 +161,7 @@ class ContentsContainerView : public views::View,
+ 
+   void UpdateBorderRoundedCorners();
+   void SetBorderRoundedCornersFrom(const gfx::RoundedCornersF& corner_radii);
++  void UpdateRoundedClip();
+ 
+   // views::View:
+   void ChildVisibilityChanged(View* child) override;
+@@ -245,6 +252,10 @@ class ContentsContainerView : public views::View,
+   // This is rounded corner radii that will be used.
+   gfx::RoundedCornersF rounded_corner_radii_;
+ 
++  // See `SetRoundedClip()`. The radii are those of this view's outer edge.
++  bool rounded_clip_ = false;
++  gfx::RoundedCornersF rounded_clip_radii_;
++
+   DevToolsContentsResizingStrategy strategy_;
+   base::ScopedObservation<View, ViewObserver> view_bounds_observer_{this};
+ };
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout.h b/chrome/browser/ui/views/frame/layout/browser_view_layout.h
+index a951b0f3..d28c56ce 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout.h
+@@ -85,6 +85,9 @@ struct BrowserViewLayoutViews {
+   // overlaid (i.e. no immersive fullscreen).
+   raw_ptr<views::View> top_container_separator = nullptr;
+ 
++  // Where bubbles anchor when zen mode hides their usual anchor.
++  raw_ptr<views::View> zen_bubble_anchor = nullptr;
++
+   // LINT.ThenChange(//chrome/browser/ui/views/frame/browser_view.cc:BrowserViewLayoutViews)
+ 
+   // These views are dynamically set.
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+index ac5736c1..fed9aa1d 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+@@ -64,6 +64,7 @@ class BrowserViewLayoutDelegate {
+   virtual float GetSideChromeRevealRatio() const { return 1.f; }
+   virtual bool IsZenModeSideChromePinned() const { return false; }
+   virtual bool IsZenModeTopChromePinned() const { return false; }
++  virtual bool IsZenModeSideChromeAnimating() const { return false; }
+   virtual gfx::NativeView GetHostViewForAnchoring() const = 0;
+   virtual bool HasFindBarController() const = 0;
+   virtual void MoveWindowForFindBarIfNecessary() const = 0;
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+index fbd3bccb..a56cfbef 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+@@ -249,6 +249,10 @@ bool BrowserViewLayoutDelegateImpl::IsZenModeTopChromePinned() const {
+   return browser_view_->IsZenModeTopChromePinned();
+ }
+ 
++bool BrowserViewLayoutDelegateImpl::IsZenModeSideChromeAnimating() const {
++  return browser_view_->IsZenModeSideChromeAnimating();
++}
++
+ gfx::NativeView BrowserViewLayoutDelegateImpl::GetHostViewForAnchoring() const {
+   return browser_view_->GetWidgetForAnchoring()->GetNativeView();
+ }
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+index 547a550d..c129060a 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+@@ -48,6 +48,7 @@ class BrowserViewLayoutDelegateImpl : public BrowserViewLayoutDelegate {
+   float GetSideChromeRevealRatio() const override;
+   bool IsZenModeSideChromePinned() const override;
+   bool IsZenModeTopChromePinned() const override;
++  bool IsZenModeSideChromeAnimating() const override;
+   gfx::NativeView GetHostViewForAnchoring() const override;
+   bool HasFindBarController() const override;
+   void MoveWindowForFindBarIfNecessary() const override;
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+index dd2b70e4..f0197f18 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+@@ -82,6 +82,10 @@ constexpr int kZenModeVTSPadding = 8;
+ struct ZenModeLayoutState {
+   bool enabled = false;
+   bool floating_vertical_tab_strip = false;
++  // The sidebar is docked next to the page, which it pushes aside as it
++  // slides in and out.
++  bool docked_vertical_tab_strip = false;
++  bool side_chrome_animating = false;
+   float top_chrome_ratio = 1.0f;
+   float side_chrome_ratio = 1.0f;
+   int vertical_tab_strip_padding = 0;
+@@ -90,7 +94,8 @@ struct ZenModeLayoutState {
+   bool TopChromeVisible() const { return top_chrome_ratio > 0.0f; }
+ 
+   bool ShouldLayoutVerticalTabStrip() const {
+-    return !floating_vertical_tab_strip || side_chrome_ratio > 0.0f;
++    return (!floating_vertical_tab_strip && !docked_vertical_tab_strip) ||
++           side_chrome_ratio > 0.0f;
+   }
+ };
+ 
+@@ -139,6 +144,11 @@ ZenModeLayoutState GetZenModeLayoutState(
+                                       !delegate.IsZenModeSideChromePinned();
+   state.top_chrome_ratio = delegate.GetTopChromeRevealRatio();
+   state.side_chrome_ratio = delegate.GetSideChromeRevealRatio();
++  state.docked_vertical_tab_strip = state.enabled &&
++                                    vertical_tab_strip_active &&
++                                    !state.floating_vertical_tab_strip;
++  state.side_chrome_animating = state.docked_vertical_tab_strip &&
++                                delegate.IsZenModeSideChromeAnimating();
+ 
+   if (!state.floating_vertical_tab_strip) {
+     return state;
+@@ -939,6 +949,10 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+   bool clip_content_for_animation = false;
+   gfx::Rect unclipped_contents_region = params.visual_client_area;
+ 
++  // How much wider than its laid out width the page is kept while the zen
++  // sidebar slides.
++  int zen_contents_overflow = 0;
++
+   // Lay out vertical tab strip if visible.
+   const VerticalTabStripAnimation& vertical_tab_strip_animation =
+       layout_data_->vertical_tab_strip_animation;
+@@ -995,7 +1009,8 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+           params.visual_client_area.y() + top_offset +
+               zen.vertical_tab_strip_top_padding,
+           vertical_tab_strip_width, vertical_tab_strip_height};
+-      if (zen.floating_vertical_tab_strip) {
++      if (zen.floating_vertical_tab_strip ||
++          (zen.docked_vertical_tab_strip && zen.side_chrome_ratio < 1.0f)) {
+         vertical_tab_strip_bounds = SlideBoundsFromSide(
+             vertical_tab_strip_bounds, params.visual_client_area,
+             zen.side_chrome_ratio, vertical_right_aligned);
+@@ -1016,9 +1031,26 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+       vertical_tab_strip_width = vertical_tab_strip_bounds.width();
+       if (!zen.floating_vertical_tab_strip) {
+         // Expand on hover overlaps the contents instead of resizing them.
+-        const int inset_amount = vertical_tab_strip_width -
+-                                 vertical_tab_strip_hover_width -
+-                                 GetVerticalTabStripContentOverlap();
++        int inset_amount = vertical_tab_strip_width -
++                           vertical_tab_strip_hover_width -
++                           GetVerticalTabStripContentOverlap();
++        if (zen.docked_vertical_tab_strip) {
++          // The page edge follows the edge of the sliding sidebar. Use the slid
++          // bounds so the two never differ by a rounding pixel.
++          const int on_screen_width =
++              vertical_right_aligned
++                  ? params.visual_client_area.right() -
++                        vertical_tab_strip_bounds.x()
++                  : vertical_tab_strip_bounds.right() -
++                        params.visual_client_area.x();
++          inset_amount = std::clamp(on_screen_width -
++                                        vertical_tab_strip_hover_width -
++                                        GetVerticalTabStripContentOverlap(),
++                                    0, std::max(0, inset_amount));
++          if (zen.side_chrome_animating) {
++            zen_contents_overflow = inset_amount;
++          }
++        }
+         params.InsetHorizontal(inset_amount,
+                                /*leading=*/!vertical_right_aligned);
+       }
+@@ -1300,7 +1332,7 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+   }
+ 
+   if (layout_data_->tab_strip_type == TabStripType::kVertical &&
+-      !zen.floating_vertical_tab_strip) {
++      !zen.floating_vertical_tab_strip && zen.ShouldLayoutVerticalTabStrip()) {
+     if (delegate().IsVerticalTabStripRightAligned()) {
+       trailing_side_chrome_attached = true;
+       trailing_vertical_tab_strip_attached = true;
+@@ -1392,9 +1424,12 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+   // repositioning status bubble.
+   const bool is_origin_changing =
+       (side_panel_is_animating && !views().side_panel->IsRightAligned()) ||
+-      (vertical_tab_strip_animation.current_motion && !base::i18n::IsRTL());
++      (vertical_tab_strip_animation.current_motion && !base::i18n::IsRTL()) ||
++      (zen.side_chrome_animating &&
++       vertical_right_aligned == base::i18n::IsRTL());
+   views().multi_contents_view->SetIsAnimatingContent(
+-      side_panel_is_animating || vertical_tab_strip_animation.current_motion,
++      side_panel_is_animating || vertical_tab_strip_animation.current_motion ||
++          zen.side_chrome_animating,
+       is_origin_changing);
+ 
+   // Lay out contents container. The contents container contains the multi-
+@@ -1424,8 +1459,35 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+                                 content_right - content_left,
+                                 params.visual_client_area.height()));
+ 
++  // Bubbles anchor near the page's top-right corner when zen mode hides
++  // their usual anchor. It moves with the page as the sidebar slides.
++  if (IsParentedTo(views().zen_bubble_anchor, views().browser_view)) {
++    constexpr int kZenBubbleAnchorInset = 8;
++    layout.AddChild(
++        views().zen_bubble_anchor,
++        gfx::Rect(contents_layout.bounds.right() - kZenBubbleAnchorInset - 1,
++                  contents_layout.bounds.y() + kZenBubbleAnchorInset, 1, 1),
++        zen.enabled);
++  }
++
+   // Maybe expand and clip the web contents to avoid issues during animation.
+-  if (features::UseSidePanelFlyoverAnimation()) {
++  if (zen_contents_overflow > 0) {
++    // While the zen sidebar slides, keep the page as wide as it is without
++    // the sidebar and clip it at the far edge. The renderer resizes once per
++    // slide instead of every frame, and the page is pushed along with the
++    // sidebar instead of being overlaid. This bypasses the flyover gate that
++    // Helium turns off for the side panel.
++    gfx::Rect unclipped_contents = contents_layout.bounds;
++    InsetHorizontal(unclipped_contents, -zen_contents_overflow,
++                    /*leading=*/vertical_right_aligned);
++    views().multi_contents_view->SetTargetContentBounds(
++        MultiContentsView::TargetContentBounds(
++            unclipped_contents.size(),
++            unclipped_contents.InsetsFrom(contents_layout.bounds)));
++    if (main_background_layout) {
++      main_background_layout->visibility = true;
++    }
++  } else if (features::UseSidePanelFlyoverAnimation()) {
+     if (clip_content_for_animation) {
+       // Vertical span is whatever it is, minus any shadow overlay insets.
+       unclipped_contents_region.set_y(contents_layout.bounds.y());
+@@ -1463,6 +1525,9 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+     } else {
+       views().multi_contents_view->SetTargetContentBounds(std::nullopt);
+     }
++  } else {
++    // Clears the target bounds once the zen sidebar stops sliding.
++    views().multi_contents_view->SetTargetContentBounds(std::nullopt);
+   }
+ 
+   // If the window goes out of glass mode, these changes won't hurt anything.
+@@ -1616,8 +1681,11 @@ gfx::Rect BrowserViewTabbedLayoutImpl::CalculateTopContainerLayout(
+       params.SetTop(toolbar_bounds.bottom());
+       needs_exclusion = false;
+     }
++    // Zen mode hides the toolbar for real once it has slid away, so nothing
++    // anchors to it or focuses it off screen.
+     layout.AddChild(views().toolbar, toolbar_bounds,
+-                    toolbar_visible && toolbar_bounds.height() > 0);
++                    toolbar_visible && toolbar_bounds.height() > 0 &&
++                        zen.TopChromeVisible());
+   }
+ 
+   // Clamp the margins visually by overlapping toolbar and the tab strip
+@@ -1713,7 +1781,8 @@ void BrowserViewTabbedLayoutImpl::ConfigureTopContainerBackground(
+     }
+     const auto window_corner = background->GetWindowCorner(/*upper=*/true);
+     CustomCornersBackground::Corners corners;
+-    if (delegate().IsZenModeSideChromePinned()) {
++    // A shown sidebar covers one of the top corners.
++    if (delegate().GetSideChromeRevealRatio() > 0.0f) {
+       const bool vts_right = delegate().IsVerticalTabStripRightAligned();
+       if (vts_right) {
+         corners[CornerOrientation::kTopLeading] = window_corner;
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.cc b/chrome/browser/ui/views/frame/multi_contents_view.cc
+index 80b85ef4..2b46b3b8 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view.cc
+@@ -408,6 +408,12 @@ void MultiContentsView::SetIsAnimatingContent(bool is_animating,
+   }
+ }
+ 
++void MultiContentsView::SetRoundedClipForSlide(bool enabled) {
++  for (auto& contents_container_view : contents_container_views_) {
++    contents_container_view->SetRoundedClip(enabled);
++  }
++}
++
+ std::vector<views::View*> MultiContentsView::GetAccessiblePanes() {
+   std::vector<views::View*> accessible_panes;
+   for (auto& contents_container_view : contents_container_views_) {
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.h b/chrome/browser/ui/views/frame/multi_contents_view.h
+index 23b42c04..1ab1da8e 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.h
++++ b/chrome/browser/ui/views/frame/multi_contents_view.h
+@@ -163,6 +163,10 @@ class MultiContentsView
+ 
+   void SetIsAnimatingContent(bool is_animating, bool is_origin_changing);
+ 
++  // Rounds all corners of the contents while zen mode slides the sidebar. See
++  // `ContentsContainerView::SetRoundedClip()`.
++  void SetRoundedClipForSlide(bool enabled);
++
+   // Returns accessible panes to be used in BrowserView to create the order of
+   // pane traversal.
+   std::vector<views::View*> GetAccessiblePanes();
+diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
+index 5cada2a6..8f55a8db 100644
+--- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
++++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
+@@ -43,6 +43,7 @@
+ #include "chrome/browser/ui/views/frame/safe_invoke/safe_invoke.h"
+ #include "chrome/browser/ui/views/frame/shadow_frame_view.h"
+ #include "chrome/browser/ui/views/frame/tab_strip_region_view.h"
++#include "chrome/browser/ui/views/helium/zen_sidebar_toolbar.h"
+ #include "chrome/browser/ui/views/tabs/common/pinned_tab_container_view.h"
+ #include "chrome/browser/ui/views/tabs/common/root_tab_collection_node.h"
+ #include "chrome/browser/ui/views/tabs/common/tab_collection_node.h"
+@@ -141,6 +142,16 @@ VerticalTabStripRegionView::VerticalTabStripRegionView(
+   const int region_horizontal_padding =
+       GetLayoutConstant(LayoutConstant::kVerticalTabStripHorizontalPadding);
+ 
++  // Zen mode moves toolbar controls into these rows while it hides the
++  // toolbar. They are hidden otherwise.
++  zen_top_row_ =
++      content_area_view_->AddChildView(std::make_unique<ZenSidebarToolbarRow>(
++          ZenSidebarToolbarRow::Kind::kTop, browser_view, state_controller_));
++  zen_top_row_->SetProperty(
++      views::kMarginsKey,
++      gfx::Insets::TLBR(0, region_horizontal_padding, 2 * kBottomContainerGap,
++                        region_horizontal_padding));
++
+   bottom_button_container_ = content_area_view_->AddChildView(
+       std::make_unique<VerticalTabStripBottomContainer>(
+           state_controller_, root_action_item, browser_view->browser(),
+@@ -155,6 +166,9 @@ VerticalTabStripRegionView::VerticalTabStripRegionView(
+       views::kMarginsKey,
+       gfx::Insets::TLBR(kBottomContainerGap, region_horizontal_padding,
+                         0, region_horizontal_padding));
++  zen_bottom_row_ = bottom_button_container_->AddChildView(
++      std::make_unique<ZenSidebarToolbarRow>(
++          ZenSidebarToolbarRow::Kind::kBottom, browser_view, state_controller_));
+ 
+   gemini_button_ =
+       content_area_view_->AddChildView(std::make_unique<views::View>());
+diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
+index 3e145fe2..cc7e92e6 100644
+--- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
++++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
+@@ -39,6 +39,7 @@ class BrowserView;
+ class VerticalTabStripBottomContainer;
+ class VerticalTabStripFocusSwipeController;
+ class ShadowFrameView;
++class ZenSidebarToolbarRow;
+ 
+ namespace tabs {
+ class VerticalTabStripStateController;
+@@ -88,6 +89,11 @@ class VerticalTabStripRegionView final
+     return bottom_button_container_;
+   }
+ 
++  // Rows that show toolbar controls while zen mode hides the toolbar: above
++  // the tabs, and next to the new tab button.
++  ZenSidebarToolbarRow* zen_top_row() { return zen_top_row_; }
++  ZenSidebarToolbarRow* zen_bottom_row() { return zen_bottom_row_; }
++
+   bool IsPositionInWindowCaption(const gfx::Point& point) override;
+ 
+   void SetHasLeadingExclusionForLayout(bool has_leading_exclusion);
+@@ -269,6 +275,8 @@ class VerticalTabStripRegionView final
+   gfx::Insets interior_margin_;
+ 
+   raw_ptr<VerticalTabStripBottomContainer> bottom_button_container_ = nullptr;
++  raw_ptr<ZenSidebarToolbarRow> zen_top_row_ = nullptr;
++  raw_ptr<ZenSidebarToolbarRow> zen_bottom_row_ = nullptr;
+   raw_ptr<views::View> gemini_button_ = nullptr;
+   raw_ptr<views::ResizeArea> resize_area_ = nullptr;
+   raw_ptr<ShadowFrameView> shadow_frame_ = nullptr;
+diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
+new file mode 100644
+index 00000000..12023a65
+--- /dev/null
++++ b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
+@@ -0,0 +1,401 @@
++// Copyright 2026 The Helium Authors
++// You can use, redistribute, and/or modify this source code under
++// the terms of the GPL-3.0 license that can be found in the LICENSE file.
++
++#include "chrome/browser/ui/views/helium/zen_sidebar_toolbar.h"
++
++#include <algorithm>
++#include <string>
++#include <utility>
++
++#include "base/check.h"
++#include "base/functional/bind.h"
++#include "base/functional/callback_helpers.h"
++#include "chrome/app/chrome_command_ids.h"
++#include "chrome/browser/ui/browser_commands.h"
++#include "chrome/browser/ui/bubble_anchor_util.h"
++#include "chrome/browser/ui/color/chrome_color_id.h"
++#include "chrome/browser/ui/layout_constants.h"
++#include "chrome/browser/ui/page_info/page_info_dialog.h"
++#include "chrome/browser/ui/tabs/vertical_tab_strip_state_controller.h"
++#include "chrome/browser/ui/views/frame/browser_view.h"
++#include "chrome/browser/ui/views/toolbar/toolbar_ink_drop_util.h"
++#include "chrome/browser/ui/views/toolbar/toolbar_view.h"
++#include "chrome/grit/generated_resources.h"
++#include "components/omnibox/browser/location_bar_model.h"
++#include "components/omnibox/browser/vector_icons.h"
++#include "components/security_state/core/security_state.h"
++#include "components/strings/grit/components_strings.h"
++#include "content/public/browser/web_contents.h"
++#include "ui/accessibility/ax_enums.mojom.h"
++#include "ui/base/l10n/l10n_util.h"
++#include "ui/base/metadata/metadata_impl_macros.h"
++#include "ui/base/models/image_model.h"
++#include "ui/base/ui_base_features.h"
++#include "ui/gfx/geometry/insets.h"
++#include "ui/gfx/geometry/size.h"
++#include "ui/gfx/text_constants.h"
++#include "ui/views/accessibility/view_accessibility.h"
++#include "ui/views/background.h"
++#include "ui/views/border.h"
++#include "ui/views/controls/highlight_path_generator.h"
++#include "ui/views/layout/fill_layout.h"
++#include "ui/views/layout/flex_layout_types.h"
++#include "ui/views/layout/layout_manager_base.h"
++#include "ui/views/layout/layout_types.h"
++#include "ui/views/view_class_properties.h"
++#include "ui/views/view_utils.h"
++
++namespace {
++
++// Space between controls in a row.
++constexpr int kControlSpacing = 2;
++// Space between the controls and the site pill below them.
++constexpr int kSitePillTopMargin = 4;
++constexpr int kSitePillHorizontalPadding = 10;
++constexpr int kSitePillImageLabelSpacing = 6;
++// The spacer between the leading and trailing controls only takes width once
++// every control has its preferred width.
++constexpr int kSpacerFlexOrder = 2;
++
++// Holds one re-parented toolbar control. The toolbar sets its own flex and
++// margin properties on its children, which this row must not pick up, so the
++// row lays out slots instead and each slot fills itself with its control.
++class ZenSidebarToolbarSlot : public views::View {
++  METADATA_HEADER(ZenSidebarToolbarSlot, views::View)
++
++ public:
++  explicit ZenSidebarToolbarSlot(bool can_shrink) {
++    SetLayoutManager(std::make_unique<views::FillLayout>())
++        ->SetMinimumSizeEnabled(can_shrink);
++    SetProperty(
++        views::kFlexBehaviorKey,
++        views::FlexSpecification(
++            can_shrink ? views::MinimumFlexSizeRule::kScaleToMinimum
++                       : views::MinimumFlexSizeRule::kPreferred,
++            views::MaximumFlexSizeRule::kPreferred));
++  }
++  ZenSidebarToolbarSlot(const ZenSidebarToolbarSlot&) = delete;
++  ZenSidebarToolbarSlot& operator=(const ZenSidebarToolbarSlot&) = delete;
++  ~ZenSidebarToolbarSlot() override = default;
++
++  void SetControl(std::unique_ptr<views::View> control) {
++    CHECK(children().empty());
++    SetVisible(AddChildView(std::move(control))->GetVisible());
++  }
++
++  // views::View:
++  void ChildVisibilityChanged(views::View* child) override {
++    // Controls such as the profile button are hidden by their own prefs.
++    SetVisible(child->GetVisible());
++  }
++  void ChildPreferredSizeChanged(views::View* child) override {
++    PreferredSizeChanged();
++  }
++};
++
++BEGIN_METADATA(ZenSidebarToolbarSlot)
++END_METADATA
++
++}  // namespace
++
++////////////////////////////////////////////////////////////////////////////////
++// ZenSidebarSitePill:
++
++ZenSidebarSitePill::ZenSidebarSitePill(BrowserView* browser_view)
++    : views::LabelButton(base::BindRepeating(&ZenSidebarSitePill::OnPressed,
++                                             base::Unretained(this))),
++      browser_view_(browser_view) {
++  const int height = GetLayoutConstant(LayoutConstant::kToolbarButtonHeight);
++  SetMinSize(gfx::Size(0, height));
++  SetBorder(views::CreateEmptyBorder(
++      gfx::Insets::VH(0, kSitePillHorizontalPadding)));
++  SetImageLabelSpacing(kSitePillImageLabelSpacing);
++  SetHorizontalAlignment(gfx::ALIGN_LEFT);
++  // Keep the end of the host, which carries the registrable domain.
++  SetElideBehavior(gfx::ELIDE_HEAD);
++  SetEnabledTextColors(kColorOmniboxText);
++  SetBackground(views::CreateRoundedRectBackground(kColorLocationBarBackground,
++                                                   height / 2.0f));
++  ConfigureInkDrop(this, std::make_unique<views::PillHighlightPathGenerator>());
++  GetViewAccessibility().SetName(
++      l10n_util::GetStringUTF16(IDS_TOOLTIP_LOCATION_ICON));
++}
++
++ZenSidebarSitePill::~ZenSidebarSitePill() = default;
++
++void ZenSidebarSitePill::Update() {
++  const LocationBarModel* const model =
++      LocationBarModel::From(browser_view_->browser());
++  if (!model) {
++    return;
++  }
++
++  const bool show_url = model->ShouldDisplayURL();
++  SetText(show_url ? model->GetURLForDisplay(/*trim_after_host_name=*/true)
++                   : std::u16string());
++  SetTooltipText(show_url
++                     ? model->GetURLForDisplay()
++                     : l10n_util::GetStringUTF16(IDS_TOOLTIP_LOCATION_ICON));
++
++  const bool dangerous =
++      model->GetSecurityLevel() == security_state::DANGEROUS;
++  SetImageModel(
++      views::Button::STATE_NORMAL,
++      ui::ImageModel::FromVectorIcon(
++          model->GetVectorIcon(),
++          dangerous ? kColorOmniboxSecurityChipDangerous
++                    : kColorOmniboxSecurityChipDefault,
++          GetLayoutConstant(LayoutConstant::kLocationBarIconSize)));
++}
++
++void ZenSidebarSitePill::OnPressed() {
++  // Page info anchors itself to this pill through
++  // bubble_anchor_util::GetPageInfoAnchorConfiguration().
++  ShowPageInfoDialog(browser_view_->GetActiveWebContents(), base::DoNothing(),
++                     bubble_anchor_util::Anchor::kLocationBar);
++}
++
++BEGIN_METADATA(ZenSidebarSitePill)
++END_METADATA
++
++////////////////////////////////////////////////////////////////////////////////
++// ZenSidebarBookmarkStar:
++
++ZenSidebarBookmarkStar::ZenSidebarBookmarkStar(BrowserView* browser_view)
++    : ToolbarButton(base::BindRepeating(&ZenSidebarBookmarkStar::OnPressed,
++                                        base::Unretained(this))),
++      browser_view_(browser_view) {
++  UpdateStarred(false);
++}
++
++ZenSidebarBookmarkStar::~ZenSidebarBookmarkStar() = default;
++
++void ZenSidebarBookmarkStar::SetWebContents(content::WebContents* contents) {
++  bookmark_tab_helper_observation_.Reset();
++  Observe(contents);
++  BookmarkTabHelper* const helper =
++      contents ? BookmarkTabHelper::FromWebContents(contents) : nullptr;
++  if (helper) {
++    bookmark_tab_helper_observation_.Observe(helper);
++  }
++  UpdateStarred(helper && helper->is_starred());
++}
++
++void ZenSidebarBookmarkStar::URLStarredChanged(
++    content::WebContents* web_contents,
++    bool starred) {
++  UpdateStarred(starred);
++}
++
++void ZenSidebarBookmarkStar::WebContentsDestroyed() {
++  // The tab helper is user data of the contents being destroyed.
++  bookmark_tab_helper_observation_.Reset();
++  Observe(nullptr);
++  UpdateStarred(false);
++}
++
++void ZenSidebarBookmarkStar::OnPressed() {
++  chrome::ExecuteCommand(browser_view_->browser(), IDC_BOOKMARK_THIS_TAB);
++}
++
++void ZenSidebarBookmarkStar::UpdateStarred(bool starred) {
++  const bool rounded_icons = features::IsRoundedIconsEnabled();
++  const gfx::VectorIcon& starred_icon =
++      rounded_icons ? omnibox::kStarFilledIcon
++                    : omnibox::kStarActiveChromeRefreshOldIcon;
++  const gfx::VectorIcon& unstarred_icon =
++      rounded_icons ? omnibox::kStarIcon : omnibox::kStarChromeRefreshOldIcon;
++  SetVectorIcon(starred ? starred_icon : unstarred_icon);
++
++  const std::u16string name = l10n_util::GetStringUTF16(
++      starred ? IDS_TOOLTIP_STARRED : IDS_TOOLTIP_STAR);
++  SetTooltipText(name);
++  GetViewAccessibility().SetName(name);
++}
++
++BEGIN_METADATA(ZenSidebarBookmarkStar)
++END_METADATA
++
++////////////////////////////////////////////////////////////////////////////////
++// ZenSidebarToolbarRow:
++
++ZenSidebarToolbarRow::ZenSidebarToolbarRow(
++    Kind kind,
++    BrowserView* browser_view,
++    tabs::VerticalTabStripStateController* state_controller) {
++  SetOrientation(views::LayoutOrientation::kVertical);
++  SetCrossAxisAlignment(views::LayoutAlignment::kStretch);
++  // Shown by ZenSidebarToolbarController while it hosts toolbar controls.
++  SetVisible(false);
++  // The controls come from the toolbar; don't expose them as part of the
++  // tab list that contains this row.
++  GetViewAccessibility().SetRole(ax::mojom::Role::kToolbar);
++
++  auto controls = std::make_unique<views::FlexLayoutView>();
++  controls->SetCrossAxisAlignment(views::LayoutAlignment::kCenter);
++  controls->SetCollapseMargins(true);
++  controls_ = AddChildView(std::move(controls));
++
++  spacer_ = controls_->AddChildView(std::make_unique<views::View>());
++  spacer_->SetProperty(views::kMarginsKey, gfx::Insets());
++  spacer_->SetProperty(
++      views::kFlexBehaviorKey,
++      views::FlexSpecification(views::MinimumFlexSizeRule::kScaleToZero,
++                               views::MaximumFlexSizeRule::kUnbounded)
++          .WithOrder(kSpacerFlexOrder));
++
++  if (kind == Kind::kTop) {
++    site_pill_ =
++        AddChildView(std::make_unique<ZenSidebarSitePill>(browser_view));
++    site_pill_->SetProperty(views::kMarginsKey,
++                            gfx::Insets::TLBR(kSitePillTopMargin, 0, 0, 0));
++  } else {
++    bookmark_star_ = controls_->AddChildViewAt(
++        std::make_unique<ZenSidebarBookmarkStar>(browser_view), 0);
++  }
++
++  if (state_controller) {
++    OnCollapseStateChanged(state_controller->GetCollapseState());
++    collapse_state_subscription_ =
++        state_controller->RegisterOnCollapseChanged(base::BindRepeating(
++            &ZenSidebarToolbarRow::OnCollapseStateChanged,
++            base::Unretained(this)));
++  }
++}
++
++ZenSidebarToolbarRow::~ZenSidebarToolbarRow() = default;
++
++void ZenSidebarToolbarRow::AddControl(std::unique_ptr<views::View> control,
++                                      Edge edge,
++                                      bool can_shrink) {
++  auto slot = std::make_unique<ZenSidebarToolbarSlot>(can_shrink);
++  slot->SetControl(std::move(control));
++  const size_t index = edge == Edge::kLeading
++                           ? controls_->GetIndexOf(spacer_).value()
++                           : controls_->children().size();
++  controls_->AddChildViewAt(std::move(slot), index);
++}
++
++std::unique_ptr<views::View> ZenSidebarToolbarRow::RemoveControl(
++    views::View* control) {
++  auto* const slot =
++      views::AsViewClass<ZenSidebarToolbarSlot>(control->parent());
++  CHECK(slot);
++  CHECK(slot->parent() == controls_.get());
++  std::unique_ptr<views::View> owned_control = slot->RemoveChildViewT(control);
++  controls_->RemoveChildViewT(slot).reset();
++  return owned_control;
++}
++
++void ZenSidebarToolbarRow::UpdateForActiveContents(
++    content::WebContents* contents) {
++  if (site_pill_) {
++    site_pill_->Update();
++  }
++  if (bookmark_star_) {
++    bookmark_star_->SetWebContents(contents);
++  }
++}
++
++void ZenSidebarToolbarRow::OnCollapseStateChanged(
++    tabs::VerticalTabStripCollapseState state) {
++  // Like the new tab button, stack the controls while the tab strip is (or is
++  // becoming) collapsed to its icon-only width.
++  const bool collapsed =
++      state != tabs::VerticalTabStripCollapseState::kExpanded;
++  controls_->SetOrientation(collapsed ? views::LayoutOrientation::kVertical
++                                      : views::LayoutOrientation::kHorizontal);
++  controls_->SetDefault(views::kMarginsKey,
++                        collapsed ? gfx::Insets::VH(kControlSpacing / 2, 0)
++                                  : gfx::Insets::VH(0, kControlSpacing / 2));
++  spacer_->SetVisible(!collapsed);
++  if (site_pill_) {
++    site_pill_->SetVisible(!collapsed);
++  }
++}
++
++BEGIN_METADATA(ZenSidebarToolbarRow)
++END_METADATA
++
++////////////////////////////////////////////////////////////////////////////////
++// ZenSidebarToolbarController:
++
++ZenSidebarToolbarController::ZenSidebarToolbarController(
++    ToolbarView* toolbar,
++    ZenSidebarToolbarRow* top_row,
++    ZenSidebarToolbarRow* bottom_row)
++    : toolbar_(toolbar), top_row_(top_row), bottom_row_(bottom_row) {
++  CHECK(toolbar_);
++  CHECK(top_row_);
++  CHECK(bottom_row_);
++}
++
++ZenSidebarToolbarController::~ZenSidebarToolbarController() {
++  SetRelocated(false);
++}
++
++void ZenSidebarToolbarController::SetRelocated(bool relocated) {
++  if (relocated_ == relocated) {
++    return;
++  }
++  relocated_ = relocated;
++
++  if (relocated_) {
++    // Let pending icon animations finish before the containers change parent.
++    toolbar_->AbortToolbarContainerAnimationsForZenReveal();
++
++    using Edge = ZenSidebarToolbarRow::Edge;
++    const ToolbarView::ZenSidebarControls controls =
++        toolbar_->GetZenSidebarControls();
++    Move(controls.back, top_row_, Edge::kLeading, /*can_shrink=*/false);
++    Move(controls.forward, top_row_, Edge::kLeading, /*can_shrink=*/false);
++    Move(controls.reload, top_row_, Edge::kLeading, /*can_shrink=*/false);
++    Move(controls.extensions, top_row_, Edge::kTrailing, /*can_shrink=*/true);
++    Move(controls.pinned_actions, top_row_, Edge::kTrailing,
++         /*can_shrink=*/false);
++    Move(controls.avatar, bottom_row_, Edge::kTrailing, /*can_shrink=*/false);
++    Move(controls.app_menu, bottom_row_, Edge::kTrailing,
++         /*can_shrink=*/false);
++  } else {
++    for (auto it = moved_controls_.rbegin(); it != moved_controls_.rend();
++         ++it) {
++      std::unique_ptr<views::View> control =
++          it->row->RemoveControl(it->control);
++      // ToolbarView may have reordered its other children meanwhile.
++      toolbar_->AddChildViewAt(
++          std::move(control),
++          std::min(it->toolbar_index, toolbar_->children().size()));
++    }
++    moved_controls_.clear();
++  }
++
++  top_row_->SetVisible(relocated_);
++  bottom_row_->SetVisible(relocated_);
++  toolbar_->InvalidateLayout();
++}
++
++void ZenSidebarToolbarController::Move(views::View* control,
++                                       ZenSidebarToolbarRow* row,
++                                       ZenSidebarToolbarRow::Edge edge,
++                                       bool can_shrink) {
++  if (!control || control->parent() != toolbar_.get()) {
++    return;
++  }
++
++  // The toolbar's flex layout hides controls that overflow a narrow toolbar.
++  // Carry over whether the toolbar wants the control shown, not whether it
++  // happens to fit right now.
++  const auto* const toolbar_layout =
++      static_cast<const views::LayoutManagerBase*>(
++          toolbar_->GetLayoutManager());
++  const bool visible = toolbar_layout ? toolbar_layout->CanBeVisible(control)
++                                      : control->GetVisible();
++
++  const size_t toolbar_index = toolbar_->GetIndexOf(control).value();
++  std::unique_ptr<views::View> owned_control =
++      toolbar_->RemoveChildViewT(control);
++  owned_control->SetVisible(visible);
++  row->AddControl(std::move(owned_control), edge, can_shrink);
++  moved_controls_.push_back({control, row, toolbar_index});
++}
+diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
+new file mode 100644
+index 00000000..fe248a4d
+--- /dev/null
++++ b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
+@@ -0,0 +1,185 @@
++// Copyright 2026 The Helium Authors
++// You can use, redistribute, and/or modify this source code under
++// the terms of the GPL-3.0 license that can be found in the LICENSE file.
++
++#ifndef CHROME_BROWSER_UI_VIEWS_HELIUM_ZEN_SIDEBAR_TOOLBAR_H_
++#define CHROME_BROWSER_UI_VIEWS_HELIUM_ZEN_SIDEBAR_TOOLBAR_H_
++
++#include <memory>
++#include <vector>
++
++#include "base/callback_list.h"
++#include "base/memory/raw_ptr.h"
++#include "base/scoped_observation.h"
++#include "chrome/browser/ui/bookmarks/bookmark_tab_helper.h"
++#include "chrome/browser/ui/bookmarks/bookmark_tab_helper_observer.h"
++#include "chrome/browser/ui/views/toolbar/toolbar_button.h"
++#include "content/public/browser/web_contents_observer.h"
++#include "ui/base/metadata/metadata_header_macros.h"
++#include "ui/views/controls/button/label_button.h"
++#include "ui/views/layout/flex_layout_view.h"
++
++class BrowserView;
++class ToolbarView;
++
++namespace content {
++class WebContents;
++}  // namespace content
++
++namespace tabs {
++class VerticalTabStripStateController;
++enum class VerticalTabStripCollapseState;
++}  // namespace tabs
++
++// Shows the security state and host of the active tab in the sidebar while
++// frameless (zen) mode hides the location bar. Pressing it opens page info,
++// like the location bar's icon does.
++class ZenSidebarSitePill : public views::LabelButton {
++  METADATA_HEADER(ZenSidebarSitePill, views::LabelButton)
++
++ public:
++  explicit ZenSidebarSitePill(BrowserView* browser_view);
++  ZenSidebarSitePill(const ZenSidebarSitePill&) = delete;
++  ZenSidebarSitePill& operator=(const ZenSidebarSitePill&) = delete;
++  ~ZenSidebarSitePill() override;
++
++  // Refreshes the icon and host from the window's location bar model.
++  void Update();
++
++ private:
++  void OnPressed();
++
++  const raw_ptr<BrowserView> browser_view_;
++};
++
++// Bookmark star shown in the sidebar while frameless (zen) mode hides the
++// location bar, where the star normally lives as a page action. It reflects
++// the active tab's starred state and runs the bookmark command.
++class ZenSidebarBookmarkStar : public ToolbarButton,
++                               public BookmarkTabHelperObserver,
++                               public content::WebContentsObserver {
++  METADATA_HEADER(ZenSidebarBookmarkStar, ToolbarButton)
++
++ public:
++  explicit ZenSidebarBookmarkStar(BrowserView* browser_view);
++  ZenSidebarBookmarkStar(const ZenSidebarBookmarkStar&) = delete;
++  ZenSidebarBookmarkStar& operator=(const ZenSidebarBookmarkStar&) = delete;
++  ~ZenSidebarBookmarkStar() override;
++
++  // Starts tracking the starred state of `contents`, which may be null.
++  void SetWebContents(content::WebContents* contents);
++
++  // BookmarkTabHelperObserver:
++  void URLStarredChanged(content::WebContents* web_contents,
++                         bool starred) override;
++
++  // content::WebContentsObserver:
++  void WebContentsDestroyed() override;
++
++ private:
++  void OnPressed();
++  void UpdateStarred(bool starred);
++
++  const raw_ptr<BrowserView> browser_view_;
++  base::ScopedObservation<BookmarkTabHelper, BookmarkTabHelperObserver>
++      bookmark_tab_helper_observation_{this};
++};
++
++// A group of browser controls that frameless (zen) mode shows in the vertical
++// tab strip instead of the hidden toolbar. The controls are the toolbar's own
++// views, re-parented here by ZenSidebarToolbarController, so their state and
++// bubbles keep working.
++class ZenSidebarToolbarRow : public views::FlexLayoutView {
++  METADATA_HEADER(ZenSidebarToolbarRow, views::FlexLayoutView)
++
++ public:
++  enum class Kind {
++    // Above the tabs: navigation, extensions and downloads, with the site
++    // pill below them.
++    kTop,
++    // Next to the new tab button: bookmark star, profile and app menu.
++    kBottom,
++  };
++
++  // Which end of the row a control is added to.
++  enum class Edge {
++    kLeading,
++    kTrailing,
++  };
++
++  ZenSidebarToolbarRow(Kind kind,
++                       BrowserView* browser_view,
++                       tabs::VerticalTabStripStateController* state_controller);
++  ZenSidebarToolbarRow(const ZenSidebarToolbarRow&) = delete;
++  ZenSidebarToolbarRow& operator=(const ZenSidebarToolbarRow&) = delete;
++  ~ZenSidebarToolbarRow() override;
++
++  // Takes a toolbar control. It is wrapped in a slot that ignores the flex and
++  // margin properties the toolbar sets on it. If `can_shrink` is true the
++  // control is laid out between its minimum and preferred widths, which lets
++  // the extensions container overflow pinned actions into its menu.
++  void AddControl(std::unique_ptr<views::View> control,
++                  Edge edge,
++                  bool can_shrink);
++
++  // Returns a control previously passed to AddControl().
++  std::unique_ptr<views::View> RemoveControl(views::View* control);
++
++  // Updates the site pill and bookmark star for the active tab.
++  void UpdateForActiveContents(content::WebContents* contents);
++
++  ZenSidebarSitePill* site_pill() { return site_pill_; }
++  ZenSidebarBookmarkStar* bookmark_star() { return bookmark_star_; }
++
++ private:
++  void OnCollapseStateChanged(tabs::VerticalTabStripCollapseState state);
++
++  raw_ptr<views::FlexLayoutView> controls_ = nullptr;
++  raw_ptr<views::View> spacer_ = nullptr;
++  raw_ptr<ZenSidebarSitePill> site_pill_ = nullptr;
++  raw_ptr<ZenSidebarBookmarkStar> bookmark_star_ = nullptr;
++  base::CallbackListSubscription collapse_state_subscription_;
++};
++
++// Moves the toolbar's navigation, extensions, pinned actions, profile and app
++// menu controls into the vertical tab strip's rows while frameless (zen) mode
++// hides the toolbar, and puts them back afterwards.
++class ZenSidebarToolbarController {
++ public:
++  ZenSidebarToolbarController(ToolbarView* toolbar,
++                              ZenSidebarToolbarRow* top_row,
++                              ZenSidebarToolbarRow* bottom_row);
++  ZenSidebarToolbarController(const ZenSidebarToolbarController&) = delete;
++  ZenSidebarToolbarController& operator=(const ZenSidebarToolbarController&) =
++      delete;
++  // Puts the controls back into the toolbar. Must run while both the toolbar
++  // and the rows are alive.
++  ~ZenSidebarToolbarController();
++
++  void SetRelocated(bool relocated);
++  bool relocated() const { return relocated_; }
++
++  ZenSidebarToolbarRow* top_row() { return top_row_; }
++  ZenSidebarToolbarRow* bottom_row() { return bottom_row_; }
++
++ private:
++  struct MovedControl {
++    raw_ptr<views::View> control;
++    raw_ptr<ZenSidebarToolbarRow> row;
++    size_t toolbar_index;
++  };
++
++  void Move(views::View* control,
++            ZenSidebarToolbarRow* row,
++            ZenSidebarToolbarRow::Edge edge,
++            bool can_shrink);
++
++  const raw_ptr<ToolbarView> toolbar_;
++  const raw_ptr<ZenSidebarToolbarRow> top_row_;
++  const raw_ptr<ZenSidebarToolbarRow> bottom_row_;
++  // In the order they were moved, so they can be put back in reverse.
++  std::vector<MovedControl> moved_controls_;
++  bool relocated_ = false;
++};
++
++#endif  // CHROME_BROWSER_UI_VIEWS_HELIUM_ZEN_SIDEBAR_TOOLBAR_H_
+diff --git a/chrome/browser/ui/views/side_panel/side_panel.cc b/chrome/browser/ui/views/side_panel/side_panel.cc
+index 4585f195..29042e08 100644
+--- a/chrome/browser/ui/views/side_panel/side_panel.cc
++++ b/chrome/browser/ui/views/side_panel/side_panel.cc
+@@ -86,8 +86,8 @@ gfx::RoundedCornersF GetContentRoundedCorners(const BrowserView* browser_view,
+       is_fullscreen ? generic_radius : GetPaddedFrameRadius();
+   const bool vertical_tabstrip_touches_window_edge =
+       browser_view->ShouldDrawVerticalTabStrip() &&
+-      (!browser_view->IsZenModeEnabledForLayout() ||
+-       browser_view->IsZenModeSideChromePinned()) &&
++      // The zen sidebar only touches the window edge while it is shown.
++      browser_view->GetSideChromeRevealRatio() > 0.0f &&
+       (browser_view->IsVerticalTabStripRightAligned() ==
+        side_panel->IsRightAligned());
+   const int lower_window_edge_radius =
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_action_view.cc b/chrome/browser/ui/views/toolbar/toolbar_action_view.cc
+index a9b7a016..d429dc3c 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_action_view.cc
++++ b/chrome/browser/ui/views/toolbar/toolbar_action_view.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "chrome/browser/ui/views/toolbar/toolbar_action_view.h"
+ 
++#include <optional>
+ #include <string>
+ 
+ #include "base/feature_list.h"
+@@ -19,6 +20,7 @@
+ #include "chrome/browser/ui/views/chrome_layout_provider.h"
+ #include "chrome/browser/ui/views/event_utils.h"
+ #include "chrome/browser/ui/views/extensions/extension_context_menu_controller.h"
++#include "chrome/browser/ui/views/frame/browser_view.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_button.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_icon_container_view.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_ink_drop_util.h"
+@@ -108,6 +110,11 @@ ToolbarActionView::~ToolbarActionView() {
+ }
+ 
+ gfx::Rect ToolbarActionView::GetAnchorBoundsInScreen() const {
++  // Frameless mode can hide the toolbar or sidebar holding this action.
++  if (const std::optional<gfx::Rect> zen_bounds =
++          BrowserView::GetZenFallbackAnchorBoundsInScreen(this)) {
++    return *zen_bounds;
++  }
+   gfx::Rect bounds = GetBoundsInScreen();
+   bounds.Inset(GetToolbarInkDropInsets(this));
+   return bounds;
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_button.cc b/chrome/browser/ui/views/toolbar/toolbar_button.cc
+index 4abe8533..f6dfa76c 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_button.cc
++++ b/chrome/browser/ui/views/toolbar/toolbar_button.cc
+@@ -25,6 +25,7 @@
+ #include "chrome/browser/ui/ui_features.h"
+ #include "chrome/browser/ui/views/chrome_layout_provider.h"
+ #include "chrome/browser/ui/views/chrome_typography.h"
++#include "chrome/browser/ui/views/frame/browser_view.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_ink_drop_util.h"
+ #include "components/user_education/common/user_education_class_properties.h"
+ #include "third_party/skia/include/core/SkPath.h"
+@@ -444,6 +445,11 @@ void ToolbarButton::OnThemeChanged() {
+ }
+ 
+ gfx::Rect ToolbarButton::GetAnchorBoundsInScreen() const {
++  // Frameless mode can hide the toolbar or sidebar holding this button.
++  if (const std::optional<gfx::Rect> zen_bounds =
++          BrowserView::GetZenFallbackAnchorBoundsInScreen(this)) {
++    return *zen_bounds;
++  }
+   gfx::Rect bounds = GetBoundsInScreen();
+   gfx::Insets insets = GetToolbarInkDropInsets(this);
+   // If the button is extended, don't inset the leading edge. The anchored menu
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+index 2d1cd950..498e089d 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+@@ -1584,7 +1584,11 @@ void ToolbarView::ShowBookmarkBubble(const GURL& url, bool already_bookmarked) {
+     bookmark_star_icon = GetPageActionViewInterface(kActionBookmarkThisTab);
+     CHECK(bookmark_star_icon);
+   }
+-  BookmarkBubbleView::ShowBubble(GetBubbleAnchor(std::nullopt),
++  // Frameless mode shows the star in the vertical tab strip.
++  views::View* const zen_star =
++      browser_view_ ? browser_view_->GetZenSidebarBookmarkStar() : nullptr;
++  BookmarkBubbleView::ShowBubble(zen_star ? views::BubbleAnchor(zen_star)
++                                          : GetBubbleAnchor(std::nullopt),
+                                  GetWebContents(), bookmark_star_icon, browser_,
+                                  url, already_bookmarked);
+ }
+@@ -2128,7 +2132,8 @@ void ToolbarView::LayoutCommon() {
+     }
+   } else {
+     if (back_) {
+-      back_->SetLeadingMargin(margin);
++      // Not extended while frameless mode shows it in the vertical tab strip.
++      back_->SetLeadingMargin(back_->parent() == this ? margin : 0);
+     }
+   }
+ 
+@@ -2197,6 +2202,11 @@ bool ToolbarView::ShouldAppMenuApplyFittsLaw(
+     return false;
+   }
+ 
++  // Frameless mode may show the app menu in the vertical tab strip instead.
++  if (app_menu_button_ && app_menu_button_->parent() != this) {
++    return false;
++  }
++
+   // `SetIsMaximizedOrFullscreen()` informs the app menu control to extend its
+   // hit target to the window edge per Fitts' law when maximized or fullscreen.
+   // When the contextual tasks button is placed at the trailing edge, the app
+@@ -2253,9 +2263,11 @@ void ToolbarView::UpdateToolbarLayout() {
+   UpdateDynamicNewTabButton();
+ 
+   if (vertical_tabs_collapse_button_) {
++    // Frameless mode may have moved the app menu into the vertical tab strip.
++    const std::optional<size_t> app_menu_index = GetIndexOf(app_menu_button_);
+     const size_t target_index =
+         IsVerticalLayout() && IsVerticalTabsRightAligned()
+-            ? GetIndexOf(app_menu_button_).value() + 1
++            ? (app_menu_index ? *app_menu_index + 1 : children().size() - 1)
+             : 0;
+     if (GetIndexOf(vertical_tabs_collapse_button_).value() != target_index) {
+       ReorderChildView(vertical_tabs_collapse_button_, target_index);
+@@ -2305,6 +2317,21 @@ void ToolbarView::AbortToolbarContainerAnimationsForZenReveal() {
+   }
+ }
+ 
++ToolbarView::ZenSidebarControls ToolbarView::GetZenSidebarControls() {
++  ZenSidebarControls controls;
++  if (display_mode_ != DisplayMode::kNormal || !initialized_) {
++    return controls;
++  }
++  controls.back = back_.get();
++  controls.forward = forward_.get();
++  controls.reload = reload_.get();
++  controls.extensions = extensions_container_.get();
++  controls.pinned_actions = pinned_toolbar_actions_container_.get();
++  controls.avatar = avatar_.get();
++  controls.app_menu = app_menu_button_.get();
++  return controls;
++}
++
+ bool ToolbarView::IsCompactLayout() const {
+   auto* controller =
+       HeliumLayoutStateController::From(browser_view_->browser());
+@@ -2514,6 +2541,12 @@ views::BubbleAnchor ToolbarView::GetBubbleAnchor(
+   // anchoring bubbles to a non-drawn view (e.g. on Ozone/Wayland) and always
+   // return a valid view anchor by falling back to the contents view.
+   if (anchor_not_drawn && browser_view_) {
++    // Frameless mode hides the toolbar; use the sidebar's site pill or the
++    // top-right corner of the page instead.
++    if (views::View* zen_anchor =
++            browser_view_->GetZenLocationBarBubbleAnchor()) {
++      return views::BubbleAnchor(zen_anchor);
++    }
+     auto* top_container = browser_view_->top_container();
+     CHECK(top_container);
+     return views::BubbleAnchor(top_container);
+@@ -2526,7 +2559,16 @@ views::BubbleAnchor ToolbarView::GetPageActionBubbleAnchor(
+   page_actions::PageActionViewInterface* view =
+       GetPageActionViewInterface(action_id);
+   if (view) {
+-    return view->GetBubbleAnchor();
++    views::BubbleAnchor anchor = view->GetBubbleAnchor();
++    // The page action may sit in the location bar that frameless mode hides.
++    if (views::View* anchor_view = anchor.GetIfView();
++        anchor_view && !anchor_view->IsDrawn() && browser_view_) {
++      if (views::View* zen_anchor =
++              browser_view_->GetZenLocationBarBubbleAnchor()) {
++        return views::BubbleAnchor(zen_anchor);
++      }
++    }
++    return anchor;
+   }
+   return views::BubbleAnchor();
+ }
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_view.h b/chrome/browser/ui/views/toolbar/toolbar_view.h
+index db88bc75..33f99b27 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.h
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.h
+@@ -193,6 +193,20 @@ class ToolbarView : public views::AccessiblePaneView,
+   // Updates the vertical tabs collapse button visibility and icon.
+   void UpdateVerticalTabsCollapseButton();
+ 
++  // The controls frameless (zen) mode moves into the vertical tab strip while
++  // the toolbar is hidden. Members are null when the toolbar doesn't have the
++  // control as a native view.
++  struct ZenSidebarControls {
++    raw_ptr<views::View> back = nullptr;
++    raw_ptr<views::View> forward = nullptr;
++    raw_ptr<views::View> reload = nullptr;
++    raw_ptr<views::View> extensions = nullptr;
++    raw_ptr<views::View> pinned_actions = nullptr;
++    raw_ptr<views::View> avatar = nullptr;
++    raw_ptr<views::View> app_menu = nullptr;
++  };
++  ZenSidebarControls GetZenSidebarControls();
++
+   // Accessors.
+   BrowserWindowInterface* browser() const { return browser_; }
+   views::Button* GetChromeLabsButton() const;

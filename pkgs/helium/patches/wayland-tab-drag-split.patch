@@ -1,0 +1,419 @@
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
+index da782256..99fad486 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
+@@ -10,6 +10,7 @@
+ #include "base/check_deref.h"
+ #include "base/functional/bind.h"
+ #include "base/i18n/rtl.h"
++#include "base/logging.h"
+ #include "base/memory/raw_ref.h"
+ #include "base/metrics/user_metrics.h"
+ #include "base/time/time.h"
+@@ -21,6 +22,8 @@
+ #include "chrome/common/pref_names.h"
+ #include "components/prefs/pref_service.h"
+ #include "content/public/common/drop_data.h"
++#include "ui/base/clipboard/clipboard_constants.h"
++#include "ui/base/clipboard/clipboard_format_type.h"
+ #include "ui/base/dragdrop/drag_drop_types.h"
+ #include "ui/base/dragdrop/os_exchange_data.h"
+ #include "ui/compositor/layer_tree_owner.h"
+@@ -50,6 +53,21 @@ bool IsPointEligibleForDrag(gfx::Point point_in_view,
+   return view->GetLocalBounds().Contains(gfx::Rect(point_in_view, gfx::Size()));
+ }
+ 
++// Drop callback for a tab dragged through a system DnD session (Wayland
++// without xdg_toplevel_drag). The tab itself is moved by TabDragController:
++// ending the session here, while the drop target is still visible, makes
++// CompleteDrag() hand the tab to HandleTabDrop().
++void DoSystemDnDTabDrop(
++    const ui::DropTargetEvent& event,
++    ui::mojom::DragOperation& output_drag_op,
++    std::unique_ptr<ui::LayerTreeOwner> drag_image_layer_owner) {
++  VLOG(1) << "MultiContentsViewDropTargetController: system DnD tab drop";
++  output_drag_op = ui::mojom::DragOperation::kMove;
++  if (TabDragController::IsSystemDnDSessionRunning()) {
++    TabDragController::OnSystemDnDEnded();
++  }
++}
++
+ }  // namespace
+ 
+ // static
+@@ -120,6 +138,12 @@ MultiContentsViewDropTargetController::DropTargetShowTimer::DropTargetShowTimer(
+ TabDragContext* MultiContentsViewDropTargetController::OnTabDragUpdated(
+     TabDragTarget::DragController& controller,
+     const gfx::Point& point_in_screen) {
++  if (TabDragController::IsSystemDnDSessionRunning()) {
++    // With a system DnD tab drag the cursor crossing from the web contents
++    // onto the (growing) drop target starts the link-drag hide timer; the
++    // tab drag decides visibility itself below.
++    hide_drop_target_timer_.Stop();
++  }
+   const auto& drag_data = controller.GetSessionData();
+   // Only allow creating split with a single dragged tab, that is not a tab
+   // group drag (i.e. the tab should not be the only member of its group).
+@@ -130,6 +154,10 @@ TabDragContext* MultiContentsViewDropTargetController::OnTabDragUpdated(
+ 
+   const gfx::Point point_in_parent = views::View::ConvertPointFromScreen(
+       &drop_target_parent_view_.get(), point_in_screen);
++  VLOG(2) << __func__ << " screen=" << point_in_screen.ToString()
++          << " parent=" << point_in_parent.ToString()
++          << " parent_size=" << drop_target_parent_view_->size().ToString()
++          << " single_ungrouped=" << dragging_single_ungrouped_tab;
+   if (!dragging_single_ungrouped_tab ||
+       PointOverlapsWithOSDropTarget(point_in_screen) ||
+       !IsPointEligibleForDrag(point_in_parent, drop_target_parent_view_)) {
+@@ -167,11 +195,21 @@ bool MultiContentsViewDropTargetController::GetDropFormats(
+     std::set<ui::ClipboardFormatType>* format_types) {
+   *formats = ui::OSExchangeData::URL;
+   format_types->insert(ui::ClipboardFormatType::UrlType());
++  if (TabDragController::IsSystemDnDSessionRunning()) {
++    format_types->insert(
++        ui::ClipboardFormatType::CustomPlatformType(ui::kMimeTypeWindowDrag));
++  }
+   return true;
+ }
+ 
+ bool MultiContentsViewDropTargetController::CanDrop(
+     const ui::OSExchangeData& data) {
++  if (TabDragController::IsSystemDnDTabDragData(data)) {
++    // A tab dragged through a system DnD session: only accept it while the
++    // drop target is showing for that tab drag.
++    return drop_target_view_->drag_type() ==
++           MultiContentsDropTargetView::DragType::kTab;
++  }
+   if (!data.HasURL(ui::FilenameToURLPolicy::CONVERT_FILENAMES)) {
+     return false;
+   }
+@@ -223,6 +261,10 @@ void MultiContentsViewDropTargetController::OnDragDone() {
+ 
+ int MultiContentsViewDropTargetController::OnDragUpdated(
+     const ui::DropTargetEvent& event) {
++  // Must not be DRAG_NONE, or views::DropHelper cancels the drop.
++  if (TabDragController::IsSystemDnDTabDragData(event.data())) {
++    return ui::DragDropTypes::DRAG_MOVE;
++  }
+   return ui::DragDropTypes::DRAG_LINK;
+ }
+ 
+@@ -239,6 +281,9 @@ void MultiContentsViewDropTargetController::OnTabStripModelChanged(
+ views::View::DropCallback
+ MultiContentsViewDropTargetController::GetDropCallback(
+     const ui::DropTargetEvent& event) {
++  if (TabDragController::IsSystemDnDTabDragData(event.data())) {
++    return base::BindOnce(&DoSystemDnDTabDrop);
++  }
+   return base::BindOnce(&MultiContentsViewDropTargetController::DoDrop,
+                         base::Unretained(this));
+ }
+@@ -515,6 +560,11 @@ void MultiContentsViewDropTargetController::ShowTimerDelayedNudge(
+ 
+ bool MultiContentsViewDropTargetController::PointOverlapsWithOSDropTarget(
+     const gfx::Point& point_in_screen) {
++  // A system DnD tab drag (Wayland) moves no window, so there is no OS snap
++  // target to avoid; its points are also window-local, not screen, ones.
++  if (TabDragController::IsSystemDnDSessionRunning()) {
++    return false;
++  }
+   if (!drop_target_parent_view_->GetWidget() ||
+       !drop_target_parent_view_->GetWidget()->IsMaximized()) {
+     return false;
+diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+index 8966c0a6..787fbb45 100644
+--- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
++++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
+@@ -398,6 +398,50 @@ const int TabDragController::kTouchVerticalDetachMagnetism = 50;
+ // static
+ const int TabDragController::kVerticalDetachMagnetism = 15;
+ 
++#if defined(USE_AURA)
++// Observes one window's DragDropClient during a system DnD tab drag and
++// forwards its position updates to TabDragController. The client notifies
++// observers on every motion, whichever aura window (tab strip widget, web
++// contents, ...) is under the cursor.
++class TabDragController::SystemDnDClientObserver
++    : public aura::client::DragDropClientObserver {
++ public:
++  explicit SystemDnDClientObserver(aura::client::DragDropClient* client) {
++    observation_.Observe(client);
++  }
++  SystemDnDClientObserver(const SystemDnDClientObserver&) = delete;
++  SystemDnDClientObserver& operator=(const SystemDnDClientObserver&) = delete;
++  ~SystemDnDClientObserver() override = default;
++
++  bool IsObserving(aura::client::DragDropClient* client) const {
++    return observation_.IsObservingSource(client);
++  }
++
++  // aura::client::DragDropClientObserver:
++  void OnDragUpdated(const ui::DropTargetEvent& event) override {
++    if (!TabDragController::IsSystemDnDTabDragData(event.data())) {
++      return;
++    }
++    // The tab strip's DropTarget may already have forwarded this location.
++    if (g_tab_drag_controller->last_system_dnd_root_location_ ==
++        event.root_location()) {
++      return;
++    }
++    VLOG(2) << "SystemDnDClientObserver::OnDragUpdated root="
++            << event.root_location().ToString();
++    // May destroy `this` (via the TabDragController); don't touch members
++    // afterwards.
++    TabDragController::OnSystemDnDUpdated(event);
++  }
++  void OnDragDropClientDestroying() override { observation_.Reset(); }
++
++ private:
++  base::ScopedObservation<aura::client::DragDropClient,
++                          aura::client::DragDropClientObserver>
++      observation_{this};
++};
++#endif  // defined(USE_AURA)
++
+ TabDragController::TabDragController()
+     : source_context_(nullptr),
+       attached_context_(nullptr),
+@@ -669,6 +713,8 @@ bool TabDragController::IsSystemDnDSessionRunning() {
+ void TabDragController::OnSystemDnDUpdated(const ui::DropTargetEvent& event) {
+   CHECK(IsSystemDnDSessionRunning());
+   VLOG(2) << __func__ << " event=" << event.ToString();
++  g_tab_drag_controller->last_system_dnd_root_location_ =
++      event.root_location();
+   // It is important to use the event's root location instead of its location.
+   // The latter may have been transformed to be relative to a child window, e.g.
+   // Aura's clipping window. But we need the location relative to the browser
+@@ -700,6 +746,13 @@ void TabDragController::OnSystemDnDEnded() {
+   g_tab_drag_controller->EndDrag(EndDragReason::kComplete);
+ }
+ 
++// static
++bool TabDragController::IsSystemDnDTabDragData(const ui::OSExchangeData& data) {
++  return IsSystemDnDSessionRunning() &&
++         data.HasCustomFormat(ui::ClipboardFormatType::CustomPlatformType(
++             ui::kMimeTypeWindowDrag));
++}
++
+ // static
+ TabDragContext* TabDragController::GetSourceContext() {
+   return g_tab_drag_controller ? g_tab_drag_controller->source_context_.get()
+@@ -1088,6 +1141,14 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+     }
+   }
+ 
++  // During a system DnD session the dragged tabs already sit in a hidden
++  // window and the platform drag shows them. With no tab strip under the
++  // cursor (e.g. over the web contents or the split-view drop target), stay
++  // put instead of re-running the detach path on every motion.
++  if (!target_context && current_state_ == DragState::kDraggingUsingSystemDnD) {
++    target_context = attached_context_;
++  }
++
+   if (target_context != attached_context_) {
+     is_dragging_new_browser_ = false;
+     did_restore_window_ = false;
+@@ -1363,6 +1424,7 @@ TabDragController::Liveness TabDragController::StartSystemDnDSessionIfNecessary(
+   if (client) {
+     drag_drop_client_observation_.Observe(client);
+   }
++  ObserveSystemDnDClients();
+ #endif  // defined(USE_AURA)
+ 
+   base::WeakPtr<TabDragController> ref(weak_factory_.GetWeakPtr());
+@@ -1406,6 +1468,34 @@ void TabDragController::HideAttachedContext() {
+ #endif  // defined(USE_AURA)
+ }
+ 
++#if defined(USE_AURA)
++void TabDragController::ObserveSystemDnDClients() {
++  system_dnd_client_observers_.clear();
++  last_system_dnd_root_location_.reset();
++  ForEachCurrentBrowserWindowInterfaceOrderedByActivation(
++      [this](BrowserWindowInterface* browser) {
++        gfx::NativeWindow window =
++            browser->GetWindow() ? browser->GetWindow()->GetNativeWindow()
++                                 : gfx::NativeWindow();
++        aura::Window* root_window = window ? window->GetRootWindow() : nullptr;
++        aura::client::DragDropClient* client =
++            root_window ? aura::client::GetDragDropClient(root_window)
++                        : nullptr;
++        if (client && std::ranges::none_of(
++                          system_dnd_client_observers_,
++                          [client](const auto& observer) {
++                            return observer->IsObserving(client);
++                          })) {
++          system_dnd_client_observers_.push_back(
++              std::make_unique<SystemDnDClientObserver>(client));
++        }
++        return true;
++      });
++  VLOG(1) << __func__ << " observing " << system_dnd_client_observers_.size()
++          << " window(s)";
++}
++#endif  // defined(USE_AURA)
++
+ std::tuple<TabDragController::Liveness, TabDragContext*, TabDragTarget*>
+ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+   TRACE_EVENT1("views", "TabDragController::GetTargetTabStripForPoint",
+@@ -1419,6 +1509,15 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+     return std::tuple(Liveness::kDeleted, nullptr, nullptr);
+   }
+ 
++  // During a system DnD session the attached window holds only the dragged
++  // tabs and is (about to be) hidden. Never offer its own tab strip or
++  // split-view drop target: a tab can't be split with itself. (Attaching to
++  // its own strip would be a no-op anyway, see ContinueDragging().)
++  if (current_state_ == DragState::kDraggingUsingSystemDnD && local_window &&
++      local_window == GetAttachedBrowserWidget()->GetNativeWindow()) {
++    local_window = gfx::NativeWindow();
++  }
++
+   if (local_window && CanAttachTo(local_window)) {
+     BrowserView* browser_view =
+         BrowserView::GetBrowserViewForNativeWindow(local_window);
+@@ -2111,12 +2210,19 @@ void TabDragController::EndDragImpl(EndDragType type) {
+           }
+ #endif  // defined(USE_AURA)
+ 
+-          // Make the hidden window containing the dragged tabs visible. Show()
+-          // may trigger platform event handlers that synchronously close the
+-          // window and destroy `this`.
+-          GetAttachedBrowserWidget()->Show();
+-          if (!ref) {
+-            return;
++          if (current_drag_target_ && current_drag_target_->CanDropTab()) {
++            // The drag target (e.g. the split-view drop target) takes the
++            // tabs in CompleteDrag(); the hidden window then closes empty, so
++            // don't flash it.
++            VLOG(1) << __func__ << " dropping onto drag target";
++          } else {
++            // Make the hidden window containing the dragged tabs visible.
++            // Show() may trigger platform event handlers that synchronously
++            // close the window and destroy `this`.
++            GetAttachedBrowserWidget()->Show();
++            if (!ref) {
++              return;
++            }
+           }
+         }
+         CompleteDrag();
+diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h
+index a08a5a5b..c3c159b9 100644
+--- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h
++++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.h
+@@ -8,6 +8,7 @@
+ #include <stddef.h>
+ 
+ #include <memory>
++#include <optional>
+ #include <tuple>
+ #include <variant>
+ #include <vector>
+@@ -34,6 +35,7 @@
+ #include "content/public/browser/render_widget_host_view.h"
+ #include "ui/base/dragdrop/mojom/drag_drop_types.mojom-shared.h"
+ #include "ui/base/models/list_selection_model.h"
++#include "ui/gfx/geometry/point.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/vector2d.h"
+ #include "ui/gfx/image/image_skia.h"
+@@ -48,6 +50,7 @@
+ 
+ namespace ui {
+ class ListSelectionModel;
++class OSExchangeData;
+ class PresentationTimeRecorder;
+ }  // namespace ui
+ namespace views {
+@@ -169,6 +172,10 @@ class TabDragController : public views::WidgetObserver,
+   static void OnSystemDnDExited();
+   static void OnSystemDnDEnded();
+ 
++  // Returns true if a system DnD session is running and `data` is its payload
++  // (see StartSystemDnDSessionIfNecessary()).
++  static bool IsSystemDnDTabDragData(const ui::OSExchangeData& data);
++
+   // Returns the pointer of `source_context_`.
+   static TabDragContext* GetSourceContext();
+ 
+@@ -703,8 +710,21 @@ class TabDragController : public views::WidgetObserver,
+   base::ScopedObservation<aura::client::DragDropClient,
+                           aura::client::DragDropClientObserver>
+       drag_drop_client_observation_{this};
++
++  // While a system DnD session runs, forwards drag updates from the
++  // DragDropClient of every browser window to OnSystemDnDUpdated(). Over the
++  // web contents nothing else reports the drag position (only the tab strip
++  // forwards it), so without this the split-view drop target never sees it.
++  class SystemDnDClientObserver;
++  void ObserveSystemDnDClients();
++  std::vector<std::unique_ptr<SystemDnDClientObserver>>
++      system_dnd_client_observers_;
+ #endif  // defined(USE_AURA)
+ 
++  // Last root location handled by OnSystemDnDUpdated(). Used to drop
++  // duplicate updates from `system_dnd_client_observers_`.
++  std::optional<gfx::Point> last_system_dnd_root_location_;
++
+   std::unique_ptr<EventTracker> event_tracker_;
+ 
+   std::unique_ptr<SourceTabStripEmptinessTracker>
+diff --git a/content/browser/web_contents/web_contents_view_aura.cc b/content/browser/web_contents/web_contents_view_aura.cc
+index 9f402051..52aa1bc5 100644
+--- a/content/browser/web_contents/web_contents_view_aura.cc
++++ b/content/browser/web_contents/web_contents_view_aura.cc
+@@ -71,6 +71,7 @@
+ #include "ui/aura/window_observer.h"
+ #include "ui/aura/window_tree_host_observer.h"
+ #include "ui/base/clipboard/clipboard.h"
++#include "ui/base/clipboard/clipboard_constants.h"
+ #include "ui/base/clipboard/custom_data_helper.h"
+ #include "ui/base/clipboard/file_info.h"
+ #include "ui/base/data_transfer_policy/data_transfer_endpoint.h"
+@@ -364,6 +365,15 @@ blink::DragOperationsMask ConvertToDragOperationsMask(int drag_op) {
+   return static_cast<blink::DragOperationsMask>(web_drag_op);
+ }
+ 
++// Chromium's own tab-dragging fallback (Wayland without xdg_toplevel_drag)
++// runs a system drag session carrying only this MIME type. It is handled by
++// the browser UI (tab strip, split-view drop target); never hand it to the
++// page, which would otherwise see an empty drag and drop.
++bool IsBrowserWindowDrag(const ui::OSExchangeData& data) {
++  return data.HasCustomFormat(
++      ui::ClipboardFormatType::CustomPlatformType(ui::kMimeTypeWindowDrag));
++}
++
+ GlobalRoutingID GetRenderViewHostID(RenderViewHost* rvh) {
+   return GlobalRoutingID(rvh->GetProcess()->GetID(), rvh->GetRoutingID());
+ }
+@@ -1564,6 +1574,9 @@ void WebContentsViewAura::OnDragEntered(const ui::DropTargetEvent& event) {
+   if (web_contents_->ShouldIgnoreInputEvents()) {
+     return;
+   }
++  if (IsBrowserWindowDrag(event.data())) {
++    return;
++  }
+ 
+ 
+   std::unique_ptr<DropData> drop_data = std::make_unique<DropData>();
+@@ -1655,6 +1668,9 @@ aura::client::DragUpdateInfo WebContentsViewAura::OnDragUpdated(
+   if (web_contents_->ShouldIgnoreInputEvents()) {
+     return aura::client::DragUpdateInfo();
+   }
++  if (IsBrowserWindowDrag(event.data())) {
++    return aura::client::DragUpdateInfo();
++  }
+   aura::client::DragUpdateInfo drag_info;
+   auto* focused_frame = web_contents_->GetFocusedFrame();
+   if (focused_frame && !web_contents_->GetBrowserContext()->IsOffTheRecord() &&
+@@ -1883,6 +1899,9 @@ aura::client::DragDropDelegate::DropCallback
+ WebContentsViewAura::GetDropCallback(const ui::DropTargetEvent& event) {
+   if (web_contents_->ShouldIgnoreInputEvents())
+     return base::DoNothing();
++  if (IsBrowserWindowDrag(event.data())) {
++    return base::NullCallback();
++  }
+   base::ScopedClosureRunner drag_exit(base::BindOnce(
+       &WebContentsViewAura::CompleteDragExit, weak_ptr_factory_.GetWeakPtr()));
+   DropMetadata drop_metadata(event);
