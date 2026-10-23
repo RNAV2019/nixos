@@ -67,6 +67,15 @@
     inherit (pkgs) lib;
     stateDir = "${config.home.homeDirectory}/.local/state/theme";
   };
+
+  # nixpkgs wraps Nautilus with GStreamer's base plugins only, so Properties ›
+  # Audio/Video says "missing a plug-in" for MP4, MKV and WebM. Good/bad have the
+  # demuxers; libav and ugly decode H.264, H.265, AAC and AC-3 far enough for it.
+  nautilus = pkgs.nautilus.overrideAttrs (old: {
+    buildInputs =
+      old.buildInputs
+      ++ (with pkgs.gst_all_1; [gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav]);
+  });
 in {
   # Rose Pine is the default; the other themes swap the GTK and icon theme at runtime.
   gtk = {
