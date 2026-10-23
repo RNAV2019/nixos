@@ -137,6 +137,13 @@ in
       # conversion of the profiles (see eduroamCa).
       networking.networkmanager.settings.main.iwd-config-path = "";
 
+      # iwd 3.12 drops the PEAPv0 tunnel, without logging why, when the MSCHAPv2
+      # server name is 12 characters long. Warwick's logins failed exactly this
+      # way, right after the inner identity; wpa_supplicant isn't affected.
+      networking.wireless.iwd.package = pkgs.iwd.overrideAttrs (o: {
+        patches = (o.patches or []) ++ [./iwd-peapv0-extensions.patch];
+      });
+
       # iwd has no auth-timeout: EAP and the 4-way handshake together get this
       # long (default 5s), and Warwick's RADIUS can stall for 20s+ after a resume.
       networking.wireless.iwd.settings.EAPoL.MaxHandshakeTime = 60;

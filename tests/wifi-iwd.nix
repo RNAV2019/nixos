@@ -2,7 +2,8 @@
 # the generated iwd files, WPA2-PSK, WPA3-SAE, and eduroam's PEAP/MSCHAPv2 through
 # a separate RADIUS server, with a stand-in PKI shaped like Warwick's (root,
 # intermediate, leaf eap.warwick.ac.uk). Also checks the traps wifi.nix works
-# around: the system CA bundle, iwd's 5s handshake limit and its retry storms.
+# around: the system CA bundle, iwd's 5s handshake limit, its retry storms and
+# its PEAPv0 bug.
 # Run: nix build .#checks.x86_64-linux.wifi-iwd -L
 {pkgs}: let
   # Stand-ins for the sops env file. The eduroam password has the characters
@@ -86,6 +87,12 @@
     eduroam-slow = builtins.replaceStrings ["auth_server_port=1812"] ["auth_server_port=18120"] apConfigs.eduroam;
   };
 
+  # hostapd only reads server_id (the MSCHAPv2 server name) when built with WPS.
+  radiusd = pkgs.hostapd.overrideAttrs (o: {extraConfig = o.extraConfig + "CONFIG_WPS=y\n";});
+
+  # Shaped like Warwick's Cisco ISE: PEAPv0, whose inner packets have no EAP
+  # header, and an MSCHAPv2 server name of 12 characters, which unpatched iwd
+  # mistakes for an EAP-Extensions packet (see iwd in wifi.nix).
   radius = server: ''
     driver=none
     interface=radius0
@@ -93,11 +100,12 @@
     radius_server_auth_port=1812
     eap_server=1
     eap_user_file=${pkgs.writeText "eap-users" ''
-      "${env.EDUROAM_IDENTITY}" PEAP
+      "${env.EDUROAM_IDENTITY}" PEAP [ver=0]
       "${env.EDUROAM_IDENTITY}" MSCHAPV2 "${env.EDUROAM_PASSWORD}" [2]
     ''}
     server_cert=${pki}/${server}.chain.pem
     private_key=${pki}/${server}.key
+    server_id=ise-psn-0001
   '';
 
   # A RADIUS relay on 18120 that holds the first request of each login (no
@@ -150,7 +158,11 @@ in
   pkgs.testers.runNixOSTest {
     name = "wifi-iwd";
 
-    nodes.machine = {lib, ...}: {
+    nodes.machine = {
+      config,
+      lib,
+      ...
+    }: {
       imports = [
         ../modules/system/wifi.nix
         # wifi.nix only reads .path from sops; point it at the stand-in env file.
@@ -176,7 +188,7 @@ in
         logLevel = "INFO";
         unmanaged = ["interface-name:wlan0"];
       };
-      systemd.services.iwd.serviceConfig.ExecStart = ["" "${pkgs.iwd}/libexec/iwd --nophys phy0"];
+      systemd.services.iwd.serviceConfig.ExecStart = ["" "${config.networking.wireless.iwd.package}/libexec/iwd --nophys phy0"];
 
       environment.etc."wifi-test.env" = {
         mode = "0400";
@@ -204,7 +216,7 @@ in
           aps += 1
           n = aps
           if radius:
-              machine.succeed(f"systemd-run --unit=radius-{n} hostapd {CONFS}/radius-{radius}.conf")
+              machine.succeed(f"systemd-run --unit=radius-{n} ${radiusd}/bin/hostapd {CONFS}/radius-{radius}.conf")
           if slow:
               machine.succeed(f"systemd-run --unit=slow-{n} ${slowRadius}")
           # A fresh BSSID each time, so iwd never takes this AP for the previous one.

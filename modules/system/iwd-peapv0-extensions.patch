@@ -1,0 +1,37 @@
+eap-peap: detect EAP-Extensions by its full header
+
+In PEAPv0 the phase2 packets have no EAP header, so byte 4 of an
+MSCHAPv2 Challenge is the low byte of MS-Length. With a 12-character
+server name (as Cisco ISE nodes can have) that is 33, EAP_TYPE_EXTENSIONS,
+and the Challenge was rejected as a malformed Extensions packet: the
+tunnel was closed without a log line and every login failed.
+
+--- a/src/eap-peap.c
++++ b/src/eap-peap.c
+@@ -507,17 +507,15 @@
+ 	struct peap_state *peap_state;
+ 	uint8_t id;
+ 
+-	if (len > 4 && pkt[4] == EAP_TYPE_EXTENSIONS) {
+-		uint16_t pkt_len;
+-		uint8_t code = pkt[0];
+-
+-		if (code != EAP_CODE_REQUEST)
+-			return false;
+-
+-		pkt_len = l_get_be16(pkt + 2);
+-		if (pkt_len != len)
+-			return false;
+-
++	/*
++	 * PEAPv0 phase2 packets are headerless, so pkt[4] alone can't identify
++	 * an EAP-Extensions packet: in an MSCHAPv2 Challenge it is the low byte
++	 * of MS-Length, which is 33 for a 12-character server name.  Require a
++	 * full header, as wpa_supplicant does, and hand anything else to phase2.
++	 */
++	if (len > 4 && pkt[0] == EAP_CODE_REQUEST &&
++			l_get_be16(pkt + 2) == len &&
++			pkt[4] == EAP_TYPE_EXTENSIONS) {
+ 		id = pkt[1];
+ 
+ 		eap_extensions_handle_request(eap, id,
