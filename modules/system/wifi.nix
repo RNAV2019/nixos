@@ -150,11 +150,8 @@ in
       # After a failed attempt iwd skips that access point for 60s by default, so
       # one failure at home (one AP) meant a minute offline. wpa_supplicant waits 10s.
       networking.wireless.iwd.settings.Blacklist.InitialTimeout = 10;
-      # Logs the TLS handshake and why a server certificate was rejected at info
-      # level; without it iwd only says "bad_certificate". Drop once eduroam is stable.
-      systemd.services.iwd.environment.IWD_TLS_DEBUG = "1";
 
-      # Rewritten on every iwd start, so edits made through iwctl don't stick.
+      # Rewritten at boot, so edits made through iwctl last until the next reboot.
       systemd.services.iwd-provision = {
         description = "Write the declared Wi-Fi networks into iwd's state directory";
         wantedBy = ["iwd.service"];
