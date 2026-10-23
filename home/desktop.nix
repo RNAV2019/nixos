@@ -481,6 +481,11 @@ in {
     ];
   };
 
+  # mpv's controls scale with window height, and the window.open hook above opens
+  # big videos smaller than mpv would; 1.4 gives back the size they had in a 4K
+  # video's window. Fullscreen controls are unchanged.
+  xdg.configFile."mpv/script-opts/osc.conf".text = "scalewindowed=1.4\n";
+
   # The colours are included from the active theme; see theme.nix.
   programs.fuzzel = {
     enable = true;
