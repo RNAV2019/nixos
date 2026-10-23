@@ -4,8 +4,14 @@
 // text/uri-list (with a bright red drag icon, so a screenshot shows whether the plugin hid it),
 // then plays a motion script and releases. With --accept the window also takes the drop.
 //
-// usage: dragsrc [--accept] [--no-icon] [--script FILE] URI...
-// Script lines: "move DX DY MS" glides by (DX, DY) over MS milliseconds; "wait MS"; "release".
+// --tab acts like Chromium dragging a tab out of its strip: the drag offers only
+// chromium/x-window-drag and its icon is a 240x150 gradient "preview" grabbed at (60, 20), so it
+// is attached at (-60, -20). --icon-scale N gives that icon an N-times buffer, as on a HiDPI
+// output. The script line "icon" swaps in a different, smaller preview mid-drag.
+//
+// usage: dragsrc [--accept] [--no-icon] [--tab] [--icon-scale N] [--script FILE] URI...
+// Script lines: "move DX DY MS" glides by (DX, DY) over MS milliseconds; "wait MS"; "release";
+// "icon" (with --tab).
 // Each step prints "t=<ms> <step>" so a runner can line screenshots up with motion.
 
 #define _GNU_SOURCE
@@ -42,7 +48,9 @@ static struct xdg_toplevel*                       toplevel;
 static int                                        winW = 0, winH = 0;
 static bool                                       configured = false, entered = false, dragging = false, finished = false;
 static uint32_t                                   pressSerial = 0;
-static bool                                       accept = false, withIcon = true, drive = false;
+static bool                                       accept = false, withIcon = true, drive = false, tab = false;
+static int                                        iconScale = 1;
+static struct wl_surface*                         iconSurface;
 static char**                                     uris;
 static int                                        uriCount;
 static struct timespec                            t0;
@@ -70,6 +78,36 @@ static struct wl_buffer* make_buffer(int w, int h, uint32_t argb) {
     munmap(data, size);
     struct wl_shm_pool* pool = wl_shm_create_pool(shm, fd, size);
     struct wl_buffer*   buf  = wl_shm_pool_create_buffer(pool, 0, w, h, stride, WL_SHM_FORMAT_ARGB8888);
+    wl_shm_pool_destroy(pool);
+    close(fd);
+    return buf;
+}
+
+// A stand-in tab preview, w x h logical at iconScale: a diagonal gradient from `a` to `b` with a
+// light "tab strip" band along the top and a dark grab mark at the hotspot, so screenshots show
+// orientation, scale and where the client's own icon would sit.
+static struct wl_buffer* make_preview(int w, int h, uint32_t a, uint32_t b) {
+    const int pw = w * iconScale, ph = h * iconScale, stride = pw * 4, size = stride * ph;
+    int       fd = memfd_create("dragsrc-icon", MFD_CLOEXEC);
+    if (fd < 0 || ftruncate(fd, size) < 0)
+        exit(1);
+    uint32_t* data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    for (int y = 0; y < ph; y++) {
+        for (int x = 0; x < pw; x++) {
+            const double u = ((double)x / pw + (double)y / ph) / 2;
+            uint32_t     px = 0xff000000;
+            for (int s = 0; s < 24; s += 8)
+                px |= (uint32_t)(((a >> s) & 0xff) * (1 - u) + ((b >> s) & 0xff) * u) << s;
+            if (y < 22 * iconScale)
+                px = 0xffe8e4dc;
+            if (abs(x - 60 * iconScale) < 5 * iconScale && abs(y - 20 * iconScale) < 5 * iconScale)
+                px = 0xff101010;
+            data[y * pw + x] = px;
+        }
+    }
+    munmap(data, size);
+    struct wl_shm_pool* pool = wl_shm_create_pool(shm, fd, size);
+    struct wl_buffer*   buf  = wl_shm_pool_create_buffer(pool, 0, pw, ph, stride, WL_SHM_FORMAT_ARGB8888);
     wl_shm_pool_destroy(pool);
     close(fd);
     return buf;
@@ -152,12 +190,23 @@ static void ptr_button(void* d, struct wl_pointer* p, uint32_t serial, uint32_t 
 
     struct wl_data_source* src = wl_data_device_manager_create_data_source(ddm);
     wl_data_source_add_listener(src, &src_listener, NULL);
-    wl_data_source_offer(src, "text/uri-list");
-    wl_data_source_offer(src, "text/plain;charset=utf-8");
+    if (tab)
+        wl_data_source_offer(src, "chromium/x-window-drag");
+    else {
+        wl_data_source_offer(src, "text/uri-list");
+        wl_data_source_offer(src, "text/plain;charset=utf-8");
+    }
     wl_data_source_set_actions(src, WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY | WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE);
 
     struct wl_surface* icon = NULL;
-    if (withIcon) {
+    if (withIcon && tab) {
+        // Grabbed at (60, 20) of the preview, so the client asks for it 60 px left and 20 px up.
+        icon = iconSurface = wl_compositor_create_surface(compositor);
+        wl_surface_set_buffer_scale(icon, iconScale);
+        wl_surface_attach(icon, make_preview(240, 150, 0xff3a6ea5, 0xffa5486e), -60, -20);
+        wl_surface_damage(icon, 0, 0, 240, 150);
+        wl_surface_commit(icon);
+    } else if (withIcon) {
         icon = wl_compositor_create_surface(compositor);
         wl_surface_attach(icon, make_buffer(40, 40, 0xffff0000), 0, 0);
         wl_surface_damage(icon, 0, 0, 40, 40);
@@ -262,6 +311,10 @@ int main(int argc, char** argv) {
             withIcon = false;
         else if (!strcmp(argv[i], "--drive"))
             drive = true;
+        else if (!strcmp(argv[i], "--tab"))
+            tab = true;
+        else if (!strcmp(argv[i], "--icon-scale") && i + 1 < argc)
+            iconScale = atoi(argv[++i]) > 0 ? atoi(argv[i]) : 1;
         else if (!strcmp(argv[i], "--script") && i + 1 < argc)
             script = argv[++i];
         else
@@ -335,6 +388,13 @@ int main(int argc, char** argv) {
             printf("t=%ld press\n", now_ms());
             button(true);
             pump(30);
+        } else if (!strncmp(line, "icon", 4) && iconSurface) {
+            // The client re-renders its preview mid-drag: new buffer, new size, same hotspot.
+            printf("t=%ld icon\n", now_ms());
+            wl_surface_attach(iconSurface, make_preview(200, 120, 0xff3eddb8, 0xff1e1c1a), 0, 0);
+            wl_surface_damage(iconSurface, 0, 0, 200, 120);
+            wl_surface_commit(iconSurface);
+            pump(4);
         } else if (!strncmp(line, "release", 7)) {
             printf("t=%ld release\n", now_ms());
             button(false);

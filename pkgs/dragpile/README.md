@@ -1,3 +1,4 @@
+| `tab_drags` | true | draw a browser tab drag's preview as a card on the springs |
 # dragpile
 
 A Hyprland plugin that turns every file drag into board 16d's pile of cards. It works for any
@@ -11,7 +12,14 @@ is more than one file. A card shows a thumbnail where one exists, otherwise a fi
   (`CWLDataDeviceProtocol::initiateDrag`, `renderDND`, `dropDrag`, `abortDrag`).
 - **Reading the files.** When a drag offers `text/uri-list`, the plugin asks the source for the
   list itself, the same way a drop target would. Only local `file://` URIs make a pile. Any other
-  drag (text, links, browser tabs) keeps the client's own icon.
+  drag (text, links) keeps the client's own icon.
+- **Browser tabs.** Chromium (Helium included) drags a tab out of its strip as a drag offering
+  only `chromium/x-window-drag`, with a preview of the page as the icon. With `tab_drags` on, that
+  icon becomes a single card on the same springs: offset from the pointer like the pile, swinging
+  a little (less the bigger it is), with `card_radius` corners, the `col.border` hairline and a
+  soft shadow. It lifts off from where the client put its icon. Each commit to the icon is copied
+  from its wl_shm buffer and re-dressed, so a new preview, size or buffer scale is picked up mid
+  drag. An icon that isn't wl_shm (dmabuf) is drawn bare from its texture instead.
 - **Drawing.** While the pile is up, the client's drag icon is hidden. Its frame callbacks keep
   coming so the source app doesn't stall. The cards are textures drawn in the drag icon's place
   each frame.
@@ -60,10 +68,17 @@ All options live under `plugin:dragpile:`. In a Lua config that is
 `test/dragsrc.c` is a scripted Wayland drag source. It has its own window and a red drag icon,
 which should never appear while the plugin is working. It drives a `zwlr_virtual_pointer_v1`.
 With `--drive`, it only moves and presses the pointer, so a real application under it starts the
-drag.
+drag. With `--tab` it acts like Chromium dragging a tab: it offers only `chromium/x-window-drag`
+and its icon is a 240x150 gradient grabbed at (60, 20); `--icon-scale 2` gives it a HiDPI buffer,
+and the script step `icon` swaps the preview mid-drag.
+
+`test/vpointer.c` drives the pointer of whatever runs in the compositor, at absolute positions:
+`vpointer --extent W H "abs X Y" "move DX DY MS" down "glide X Y MS" up "wait MS" click …`
+(layout px; steps also from `--script FILE`). `test/build.sh` builds both into
+`/tmp/dragpile-test/bin`.
 
 - `test/run.sh` runs the scenarios in `test/scenarios` inside a nested Hyprland, on a headless
-  output.
+  output. `DRAGPILE_OPTS="tab_drags = false"` adds plugin options.
 - `test/run-live.sh` runs them on an empty workspace of the live session.
 
 Both take grim screenshots at the times listed in each `.shots` file.

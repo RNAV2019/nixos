@@ -1,0 +1,1725 @@
+diff --git a/chrome/browser/ui/tabs/split_tab_menu_model.cc b/chrome/browser/ui/tabs/split_tab_menu_model.cc
+index 26ec17d0..6609a025 100644
+--- a/chrome/browser/ui/tabs/split_tab_menu_model.cc
++++ b/chrome/browser/ui/tabs/split_tab_menu_model.cc
+@@ -263,6 +263,8 @@ void SplitTabMenuModel::ExecuteCommand(int command_id, int event_flags) {
+       split_tabs::SplitTabOrientationChangeSource source;
+       switch (menu_source_) {
+         case MenuSource::kToolbarButton:
++        // The split pane handle's menu (see MultiContentsSplitHandle).
++        case MenuSource::kMiniToolbar:
+           source = split_tabs::SplitTabOrientationChangeSource::kToolbarButton;
+           break;
+         case MenuSource::kTabContextMenu:
+diff --git a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
+index d1973034..2f95e9d4 100644
+--- a/chrome/browser/ui/views/frame/BUILD.gn
++++ b/chrome/browser/ui/views/frame/BUILD.gn
+@@ -1304,6 +1304,11 @@ source_set("multi_contents_resize_area_impl") {
+     "//chrome/app:generated_resources",
+     "//chrome/browser/ui/color:color_headers",
+     "//components/split_tabs",
++    "//cc/paint",
++    "//components/tabs:public",
++    "//content/public/browser",
++    "//skia",
++    "//ui/color",
+     "//ui/base",
+     "//ui/compositor",
+     "//ui/gfx/geometry",
+@@ -2675,7 +2680,9 @@ source_set("multi_contents_view_impl") {
+     "//ui/base:ozone_buildflags",
+     "//ui/base/metadata",
+     "//ui/compositor",
++    "//ui/gfx/animation",
+     "//ui/gfx/geometry",
++    "//ui/gfx/geometry:geometry_skia",
+     "//ui/views",
+   ]
+ }
+diff --git a/chrome/browser/ui/views/frame/multi_contents_drop_target_view.cc b/chrome/browser/ui/views/frame/multi_contents_drop_target_view.cc
+index 9cfa36ae..619b0285 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_drop_target_view.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_drop_target_view.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/frame/multi_contents_drop_target_view.h"
+ 
++#include <algorithm>
++
+ #include "base/memory/raw_ptr.h"
+ #include "chrome/app/vector_icons/vector_icons.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+@@ -23,6 +25,7 @@
+ #include "ui/gfx/geometry/rounded_corners_f.h"
+ #include "ui/gfx/image/image_skia_operations.h"
+ #include "ui/gfx/text_constants.h"
++#include "ui/views/accessibility/view_accessibility.h"
+ #include "ui/views/animation/flood_fill_ink_drop_ripple.h"
+ #include "ui/views/background.h"
+ #include "ui/views/border.h"
+@@ -41,6 +44,17 @@ constexpr int kIconSize = 24;
+ constexpr int kAnimationDurationMs = 300;
+ constexpr gfx::Insets kInnerContainerMargins = gfx::Insets::VH(32, 10);
+ 
++// Zen-style overlay (tab drags) and split preview.
++constexpr int kOverlayAnimationDurationMs = 150;
++// Opacity of kColorSysStateScrim (60% black) dimming the page.
++constexpr float kPreviewDimOpacity = 0.35f;
++// Opacity of the kColorSysPrimary panel marking where the page lands.
++constexpr float kPreviewPanelOpacity = 0.3f;
++// Inset of the panel from the page edges, and the gap between the halves
++// (roughly the split view insets and resize area).
++constexpr int kOverlayPanelInset = 4;
++constexpr int kOverlayPanelGap = 6;
++
+ gfx::Insets GetOuterContainerMargins(
+     const std::optional<MultiContentsDropTargetView::DropSide>& side,
+     bool side_chrome_attached,
+@@ -93,6 +107,74 @@ void SetInnerContainerBackground(
+ 
+ }  // namespace
+ 
++MultiContentsDropPreviewView::MultiContentsDropPreviewView()
++    : dim_radii_(GetGenericFrameRadius()) {
++  // A not-drawn layer so the whole preview can be faded at once; every child
++  // is on its own layer, so the preview stacks above the web contents.
++  SetPaintToLayer(ui::LAYER_NOT_DRAWN);
++  SetCanProcessEventsWithinSubtree(false);
++  GetViewAccessibility().SetIsInvisible(true);
++
++  const gfx::RoundedCornersF panel_radii(GetGenericFrameRadius());
++
++  dim_ = AddChildView(std::make_unique<views::View>());
++  dim_->SetPaintToLayer(ui::LAYER_SOLID_COLOR);
++  dim_->layer()->SetOpacity(kPreviewDimOpacity);
++  dim_->SetBackground(views::CreateLayerBasedRoundedBackground(
++      ui::kColorSysStateScrim, dim_radii_));
++
++  panel_ = AddChildView(std::make_unique<views::View>());
++  panel_->SetPaintToLayer(ui::LAYER_SOLID_COLOR);
++  panel_->layer()->SetOpacity(kPreviewPanelOpacity);
++  panel_->SetBackground(views::CreateLayerBasedRoundedBackground(
++      ui::kColorSysPrimary, panel_radii));
++  panel_->SetVisible(false);
++
++  panel_outline_ =
++      AddChildView(std::make_unique<ContentsContainerOutline>(nullptr));
++  panel_outline_->UpdateState(/*is_highlighted=*/false, ui::kColorSysPrimary);
++  panel_outline_->SetCornerRadii(panel_radii);
++  panel_outline_->SetVisible(false);
++}
++
++MultiContentsDropPreviewView::~MultiContentsDropPreviewView() = default;
++
++void MultiContentsDropPreviewView::SetPanelBounds(
++    const gfx::Rect& panel_bounds) {
++  if (panel_bounds_ == panel_bounds) {
++    return;
++  }
++  panel_bounds_ = panel_bounds;
++  const bool show_panel = !panel_bounds_.IsEmpty();
++  panel_->SetVisible(show_panel);
++  panel_outline_->SetVisible(show_panel);
++  panel_->SetBoundsRect(panel_bounds_);
++  panel_outline_->SetBoundsRect(panel_bounds_);
++}
++
++void MultiContentsDropPreviewView::SetDimCornerRadii(
++    const gfx::RoundedCornersF& radii) {
++  if (dim_radii_ == radii) {
++    return;
++  }
++  dim_radii_ = radii;
++  dim_->SetBackground(views::CreateLayerBasedRoundedBackground(
++      ui::kColorSysStateScrim, dim_radii_));
++}
++
++void MultiContentsDropPreviewView::SetPreviewOpacity(float opacity) {
++  layer()->SetOpacity(opacity);
++}
++
++void MultiContentsDropPreviewView::Layout(PassKey) {
++  dim_->SetBoundsRect(GetLocalBounds());
++  panel_->SetBoundsRect(panel_bounds_);
++  panel_outline_->SetBoundsRect(panel_bounds_);
++}
++
++BEGIN_METADATA(MultiContentsDropPreviewView)
++END_METADATA
++
+ DEFINE_CLASS_ELEMENT_IDENTIFIER_VALUE(MultiContentsDropTargetView,
+                                       kMultiContentsDropTargetElementId);
+ 
+@@ -167,6 +249,10 @@ MultiContentsDropTargetView::MultiContentsDropTargetView()
+   outline_->SetProperty(views::kViewIgnoredByLayoutKey, true);
+   outline_->UpdateState(/*is_highlighted=*/false,
+                         kColorToolbarContentAreaSeparator);
++  overlay_preview_ =
++      AddChildView(std::make_unique<MultiContentsDropPreviewView>());
++  overlay_preview_->SetProperty(views::kViewIgnoredByLayoutKey, true);
++  overlay_preview_->SetVisible(false);
+   UpdateFrameGeometry();
+ 
+   animation_.SetTweenType(gfx::Tween::Type::EASE_IN_OUT_EMPHASIZED);
+@@ -194,6 +280,20 @@ bool MultiContentsDropTargetView::IsVisibleAndNotClosing() const {
+   return GetVisible() && !IsClosing();
+ }
+ 
++bool MultiContentsDropTargetView::IsOverlay() const {
++  return drag_type_ == DragType::kTab;
++}
++
++// static
++int MultiContentsDropTargetView::GetEntryPointSize(int web_contents_size,
++                                                   DragType drag_type) {
++  const int percentage = drag_type == DragType::kTab
++                             ? kDropTargetTargetSizePercentage
++                             : kDropTargetForLinkTargetSizePercentage;
++  const int target_size = web_contents_size * (percentage / 100.0);
++  return std::clamp(target_size, kDropTargetMinSize, kDropTargetMaxSize);
++}
++
+ // static
+ int MultiContentsDropTargetView::GetMaxSize(int web_contents_size,
+                                             DropTargetState state,
+@@ -214,12 +314,9 @@ int MultiContentsDropTargetView::GetMaxSize(int web_contents_size,
+       percentage = kNudgeToFullTargetSizePercentage;
+       break;
+     case DropTargetState::kFull:
+-      min_size = kDropTargetMinSize;
+-      max_size = kDropTargetMaxSize;
+-      percentage = drag_type == DragType::kTab
+-                       ? kDropTargetTargetSizePercentage
+-                       : kDropTargetForLinkTargetSizePercentage;
+-      break;
++      // Zen: a full drop target is the half of the page the new tab will
++      // take in the resulting 50/50 split.
++      return web_contents_size / 2;
+     default:
+       NOTREACHED();
+   }
+@@ -250,6 +347,11 @@ int MultiContentsDropTargetView::GetSizeForAvailableSpace(
+ 
+ void MultiContentsDropTargetView::AnimationProgressed(
+     const gfx::Animation* animation) {
++  if (IsOverlay()) {
++    // The overlay keeps its bounds and just fades.
++    UpdateOverlay();
++    return;
++  }
+   InvalidateLayout();
+ }
+ 
+@@ -289,7 +391,10 @@ void MultiContentsDropTargetView::Show(DropSide side,
+           ? views::LayoutAlignment::kStart
+           : views::LayoutAlignment::kCenter);
+ 
++  animation_.SetSlideDuration(base::Milliseconds(
++      IsOverlay() ? kOverlayAnimationDurationMs : kAnimationDurationMs));
+   UpdateVisibility(true);
++  UpdateOverlay();
+ }
+ 
+ void MultiContentsDropTargetView::Hide(bool suppress_animation /*=false*/) {
+@@ -332,6 +437,48 @@ void MultiContentsDropTargetView::SetVisible(bool visible) {
+ void MultiContentsDropTargetView::Layout(PassKey) {
+   LayoutSuperclass<views::View>(this);
+   outline_->SetBoundsRect(inner_container_->bounds());
++  overlay_preview_->SetBoundsRect(GetLocalBounds());
++  if (IsOverlay()) {
++    overlay_preview_->SetPanelBounds(GetOverlayPanelBounds());
++  }
++}
++
++void MultiContentsDropTargetView::UpdateOverlay() {
++  const bool overlay = IsOverlay();
++  overlay_preview_->SetVisible(overlay);
++  inner_container_->SetVisible(!overlay);
++  outline_->SetVisible(!overlay);
++  if (overlay) {
++    overlay_preview_->SetPanelBounds(GetOverlayPanelBounds());
++    overlay_preview_->SetPreviewOpacity(GetAnimationValue());
++  }
++}
++
++gfx::Rect MultiContentsDropTargetView::GetOverlayPanelBounds() const {
++  gfx::Rect bounds = GetLocalBounds();
++  bounds.Inset(kOverlayPanelInset);
++  if (!side_.has_value() || bounds.IsEmpty()) {
++    return bounds;
++  }
++  // Bounds are in unmirrored coordinates, which views flips for RTL, so the
++  // START half is on the left here, like the squeezing layout's.
++  switch (side_.value()) {
++    case DropSide::START:
++      bounds.set_width(std::max(0, (bounds.width() - kOverlayPanelGap) / 2));
++      break;
++    case DropSide::END: {
++      const int width = std::max(0, (bounds.width() - kOverlayPanelGap) / 2);
++      bounds.Inset(gfx::Insets().set_left(bounds.width() - width));
++      break;
++    }
++    case DropSide::BOTTOM: {
++      const int height =
++          std::max(0, (bounds.height() - kOverlayPanelGap) / 2);
++      bounds.Inset(gfx::Insets().set_top(bounds.height() - height));
++      break;
++    }
++  }
++  return bounds;
+ }
+ 
+ void MultiContentsDropTargetView::UpdateVisibility(bool should_be_open) {
+diff --git a/chrome/browser/ui/views/frame/multi_contents_drop_target_view.h b/chrome/browser/ui/views/frame/multi_contents_drop_target_view.h
+index 2facf886..21cd3c36 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_drop_target_view.h
++++ b/chrome/browser/ui/views/frame/multi_contents_drop_target_view.h
+@@ -13,6 +13,8 @@
+ #include "ui/base/metadata/metadata_header_macros.h"
+ #include "ui/gfx/animation/slide_animation.h"
+ #include "ui/views/animation/animation_delegate_views.h"
++#include "ui/gfx/geometry/rect.h"
++#include "ui/gfx/geometry/rounded_corners_f.h"
+ #include "ui/views/view.h"
+ 
+ namespace views {
+@@ -23,6 +25,44 @@ class Label;
+ 
+ class ContentsContainerOutline;
+ 
++// Zen-style split preview: dims the area it covers and highlights a rounded,
++// translucent panel where the dragged page will land. Used by the tab drop
++// target (see MultiContentsDropTargetView::IsOverlay()) and by
++// MultiContentsView while a split pane is dragged by its handle. All of its
++// content is on layers, so it paints above the web contents; it never takes
++// events.
++class MultiContentsDropPreviewView : public views::View {
++  METADATA_HEADER(MultiContentsDropPreviewView, views::View)
++
++ public:
++  MultiContentsDropPreviewView();
++  MultiContentsDropPreviewView(const MultiContentsDropPreviewView&) = delete;
++  MultiContentsDropPreviewView& operator=(const MultiContentsDropPreviewView&) =
++      delete;
++  ~MultiContentsDropPreviewView() override;
++
++  // Bounds of the highlighted panel in local coordinates. An empty rect shows
++  // only the dimming.
++  void SetPanelBounds(const gfx::Rect& panel_bounds);
++  const gfx::Rect& panel_bounds() const { return panel_bounds_; }
++
++  // Corner radii of the dimmed area, matching the page(s) underneath.
++  void SetDimCornerRadii(const gfx::RoundedCornersF& radii);
++
++  // Fades the whole preview; 1 is fully shown.
++  void SetPreviewOpacity(float opacity);
++
++  // views::View:
++  void Layout(PassKey) override;
++
++ private:
++  raw_ptr<views::View> dim_ = nullptr;
++  raw_ptr<views::View> panel_ = nullptr;
++  raw_ptr<ContentsContainerOutline> panel_outline_ = nullptr;
++  gfx::Rect panel_bounds_;
++  gfx::RoundedCornersF dim_radii_;
++};
++
+ // MultiContentsDropTargetView shows a drop target view used for the drag and
+ // drop link interaction to create a split view.
+ class MultiContentsDropTargetView : public views::View,
+@@ -101,11 +141,23 @@ class MultiContentsDropTargetView : public views::View,
+   bool IsClosing() const;
+   bool IsVisibleAndNotClosing() const;
+ 
++  // Whether the drop target is shown as a Zen-style overlay: it then covers
++  // the whole page (which keeps its size) instead of squeezing it, dims it and
++  // highlights the half the dragged tab will take. Used for tab drags, whose
++  // drop is resolved by TabDragController from the cursor position. Link
++  // drags keep the squeezing target so their drop lands on this view rather
++  // than on the page.
++  bool IsOverlay() const;
++
+   // Returns the maximum width or height that a view should be for the given web
+   // contents width or height.
+   static int GetMaxSize(int web_contents_size,
+                         DropTargetState state,
+                         DragType drag_type);
++  // Returns the width or height of the edge strip that starts showing the
++  // drop target for a link drag (Chromium's original full drop target size).
++  // Link drags elsewhere on the page are left to the page.
++  static int GetEntryPointSize(int web_contents_size, DragType drag_type);
+   // Returns the preferred width or height of this view for the given available
+   // space's width or height, considering animation progress.
+   int GetSizeForAvailableSpace(int available_space_size) const;
+@@ -145,6 +197,12 @@ class MultiContentsDropTargetView : public views::View,
+ 
+   double GetAnimationValue() const;
+ 
++  // Shows either the overlay preview or the squeezing inner container,
++  // depending on IsOverlay(), and updates the overlay's opacity.
++  void UpdateOverlay();
++  // Bounds of the overlay's highlighted half, in local coordinates.
++  gfx::Rect GetOverlayPanelBounds() const;
++
+   void DoDrop(const ui::DropTargetEvent& event,
+               ui::mojom::DragOperation& output_drag_op,
+               std::unique_ptr<ui::LayerTreeOwner> drag_image_layer_owner);
+@@ -175,6 +233,7 @@ class MultiContentsDropTargetView : public views::View,
+ 
+   raw_ptr<views::View> inner_container_ = nullptr;
+   raw_ptr<ContentsContainerOutline> outline_ = nullptr;
++  raw_ptr<MultiContentsDropPreviewView> overlay_preview_ = nullptr;
+   raw_ptr<views::FlexLayout> outer_container_layout_ = nullptr;
+   raw_ptr<views::FlexLayout> inner_container_layout_ = nullptr;
+ 
+diff --git a/chrome/browser/ui/views/frame/multi_contents_resize_area.cc b/chrome/browser/ui/views/frame/multi_contents_resize_area.cc
+index 86413b64..1011d833 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_resize_area.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_resize_area.cc
+@@ -7,16 +7,31 @@
+ #include "base/i18n/number_formatting.h"
+ #include "base/i18n/rtl.h"
+ #include "base/numerics/safe_conversions.h"
++#include "base/time/time.h"
++#include "cc/paint/paint_flags.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/tabs/split_tab_menu_model.h"
+ #include "chrome/browser/ui/tabs/tab_strip_model.h"
+ #include "chrome/browser/ui/views/frame/multi_contents_view.h"
+ #include "chrome/grit/generated_resources.h"
+ #include "components/split_tabs/split_tab_visual_data.h"
++#include "components/tabs/public/tab_interface.h"
++#include "content/public/browser/web_contents.h"
++#include "third_party/skia/include/core/SkColor.h"
++#include "ui/base/cursor/cursor.h"
++#include "ui/base/cursor/mojom/cursor_type.mojom-shared.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/metadata/metadata_impl_macros.h"
+ #include "ui/compositor/layer.h"
++#include "ui/compositor/layer_animator.h"
+ #include "ui/compositor/layer_type.h"
++#include "ui/compositor/scoped_layer_animation_settings.h"
++#include "ui/color/color_provider.h"
++#include "ui/events/event.h"
++#include "ui/gfx/animation/tween.h"
++#include "ui/gfx/canvas.h"
++#include "ui/gfx/geometry/point_conversions.h"
++#include "ui/gfx/geometry/rect_f.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/size.h"
+ #include "ui/views/accessibility/view_accessibility.h"
+@@ -26,6 +41,7 @@
+ #include "ui/views/controls/menu/menu_item_view.h"
+ #include "ui/views/controls/menu/menu_model_adapter.h"
+ #include "ui/views/controls/menu/menu_runner.h"
++#include "ui/views/event_monitor.h"
+ #include "ui/views/layout/flex_layout.h"
+ 
+ namespace {
+@@ -84,40 +100,21 @@ MultiContentsResizeArea::MultiContentsResizeArea(
+     MultiContentsView* multi_contents_view,
+     TabStripModel* tab_strip_model)
+     : ResizeArea(multi_contents_view),
+-      multi_contents_view_(multi_contents_view),
+-      split_tab_menu_(std::make_unique<SplitTabMenuModel>(
+-          tab_strip_model,
+-          SplitTabMenuModel::MenuSource::kToolbarButton)) {
+-  set_context_menu_controller(this);
++      multi_contents_view_(multi_contents_view) {
++  // No context menu on the divider: the split handle at the top of each pane
++  // (MultiContentsSplitHandle) opens the split menu instead.
+   flex_layout_manager_ =
+       SetLayoutManager(std::make_unique<views::FlexLayout>());
+   flex_layout_manager_->SetMainAxisAlignment(views::LayoutAlignment::kCenter)
+       .SetCrossAxisAlignment(views::LayoutAlignment::kCenter);
+ 
+   resize_handle_ = AddChildView(std::make_unique<MultiContentsResizeHandle>());
+-  resize_handle_->set_context_menu_controller(this);
+ 
+   SetProperty(views::kElementIdentifierKey, kMultiContentsResizeAreaElementId);
+   OnLayoutUpdated();
+-  tab_strip_model->AddObserver(this);
+-}
+-
+-MultiContentsResizeArea::~MultiContentsResizeArea() {
+-  TabStripModelObserver::StopObservingAll(this);
+ }
+ 
+-void MultiContentsResizeArea::OnTabStripModelChanged(
+-    TabStripModel*,
+-    const TabStripModelChange&,
+-    const TabStripSelectionChange& selection) {
+-  if (selection.active_tab_changed()) {
+-    CancelMenu();
+-  }
+-}
+-
+-void MultiContentsResizeArea::OnSplitTabChanged(const SplitTabChange&) {
+-  CancelMenu();
+-}
++MultiContentsResizeArea::~MultiContentsResizeArea() = default;
+ 
+ void MultiContentsResizeArea::SetLayout(split_tabs::SplitTabLayout layout) {
+   Axis old_axis = axis();
+@@ -191,37 +188,10 @@ void MultiContentsResizeArea::OnMouseExited(const ui::MouseEvent& event) {
+ }
+ 
+ void MultiContentsResizeArea::SetVisible(bool visible) {
+-  if (!visible) {
+-    CancelMenu();
+-  }
+   views::View::SetVisible(visible);
+   resize_handle_->UpdateVisibility();
+ }
+ 
+-void MultiContentsResizeArea::ShowContextMenuForViewImpl(
+-    views::View* source,
+-    const gfx::Point& point,
+-    ui::mojom::MenuSourceType source_type) {
+-  if (menu_runner_ && menu_runner_->IsRunning()) {
+-    return;
+-  }
+-  menu_runner_.reset();
+-  menu_model_adapter_ =
+-      std::make_unique<views::MenuModelAdapter>(split_tab_menu_.get());
+-  menu_runner_ = std::make_unique<views::MenuRunner>(
+-      menu_model_adapter_->CreateMenu(),
+-      views::MenuRunner::HAS_MNEMONICS | views::MenuRunner::CONTEXT_MENU);
+-  menu_runner_->RunMenuAt(source->GetWidget(), nullptr,
+-                          gfx::Rect(point, gfx::Size()),
+-                          views::MenuAnchorPosition::kTopLeft, source_type);
+-}
+-
+-void MultiContentsResizeArea::CancelMenu() {
+-  if (menu_runner_ && menu_runner_->IsRunning()) {
+-    menu_runner_->Cancel();
+-  }
+-}
+-
+ void MultiContentsResizeArea::OnLayoutUpdated() {
+   flex_layout_manager_->SetOrientation(
+       axis() == Axis::kHorizontal ? views::LayoutOrientation::kVertical
+@@ -266,3 +236,364 @@ std::pair<int, int> MultiContentsResizeArea::GetAccessibleAlertStringIds() {
+ 
+ BEGIN_METADATA(MultiContentsResizeArea)
+ END_METADATA
++
++// MultiContentsSplitHandle ---------------------------------------------------
++
++namespace {
++constexpr int kSplitHandleDotRadius = 1;
++constexpr int kSplitHandleDotSpacing = 6;
++constexpr base::TimeDelta kSplitHandleFadeDuration = base::Milliseconds(100);
++// Alpha of the dots while the handle itself isn't hovered.
++constexpr SkAlpha kSplitHandleIdleDotAlpha = 0xB3;
++
++// The handle's split menu. Its layout commands ("Show stacked / side by side",
++// "Reverse views") animate the panes into their new places.
++class SplitHandleMenuModel : public SplitTabMenuModel {
++ public:
++  SplitHandleMenuModel(MultiContentsView* multi_contents_view,
++                       TabStripModel* tab_strip_model,
++                       int split_tab_index)
++      : SplitTabMenuModel(tab_strip_model,
++                          SplitTabMenuModel::MenuSource::kMiniToolbar,
++                          split_tab_index),
++        multi_contents_view_(multi_contents_view) {}
++
++  // SplitTabMenuModel:
++  void ExecuteCommand(int command_id, int event_flags) override {
++    // The tab strip model notifies the browser view synchronously, so the
++    // split change lands inside this scope.
++    const auto animate = multi_contents_view_->AnimateSplitChanges();
++    SplitTabMenuModel::ExecuteCommand(command_id, event_flags);
++  }
++
++ private:
++  const raw_ptr<MultiContentsView> multi_contents_view_;
++};
++}  // namespace
++
++MultiContentsSplitHandle::MultiContentsSplitHandle(
++    MultiContentsView* multi_contents_view,
++    TabStripModel* tab_strip_model,
++    int pane_index)
++    : multi_contents_view_(multi_contents_view),
++      tab_strip_model_(tab_strip_model),
++      pane_index_(pane_index) {
++  CHECK(pane_index == 0 || pane_index == 1);
++  SetPaintToLayer();
++  layer()->SetFillsBoundsOpaquely(false);
++  layer()->SetOpacity(0);
++  SetVisible(false);
++
++  SetFocusBehavior(FocusBehavior::ALWAYS);
++  views::FocusRing::Install(this);
++  views::InstallPillHighlightPathGenerator(this);
++  const std::u16string name = l10n_util::GetStringUTF16(
++      IDS_ACCNAME_SPLIT_VIEW_MINI_TOOLBAR_MENU_BUTTON);
++  GetViewAccessibility().SetRole(ax::mojom::Role::kPopUpButton);
++  GetViewAccessibility().SetName(name);
++  SetTooltipText(name);
++  set_context_menu_controller(this);
++
++  tab_strip_model->AddObserver(this);
++}
++
++MultiContentsSplitHandle::~MultiContentsSplitHandle() {
++  hover_monitor_.reset();
++  TabStripModelObserver::StopObservingAll(this);
++}
++
++gfx::Size MultiContentsSplitHandle::CalculatePreferredSize(
++    const views::SizeBounds& available_size) const {
++  return gfx::Size(kWidth, kHeight);
++}
++
++void MultiContentsSplitHandle::OnPaint(gfx::Canvas* canvas) {
++  const ui::ColorProvider* color_provider = GetColorProvider();
++  if (!color_provider) {
++    return;
++  }
++  const gfx::RectF bounds(GetLocalBounds());
++  const float radius = bounds.height() / 2.0f;
++
++  cc::PaintFlags flags;
++  flags.setAntiAlias(true);
++  flags.setStyle(cc::PaintFlags::kFill_Style);
++  flags.setColor(color_provider->GetColor(kColorToolbar));
++  canvas->DrawRoundRect(bounds, radius, flags);
++
++  gfx::RectF border_bounds = bounds;
++  border_bounds.Inset(0.5f);
++  flags.setStyle(cc::PaintFlags::kStroke_Style);
++  flags.setStrokeWidth(1);
++  flags.setColor(
++      color_provider->GetColor(kColorToolbarContentAreaSeparator));
++  canvas->DrawRoundRect(border_bounds, radius - 0.5f, flags);
++
++  // Three dots, like Zen's rearrange grip.
++  SkColor dot_color = color_provider->GetColor(kColorToolbarText);
++  if (!IsMouseHovered() && !dragging_) {
++    dot_color = SkColorSetA(dot_color, kSplitHandleIdleDotAlpha);
++  }
++  flags.setStyle(cc::PaintFlags::kFill_Style);
++  flags.setColor(dot_color);
++  const gfx::PointF center = bounds.CenterPoint();
++  for (int i = -1; i <= 1; ++i) {
++    canvas->DrawCircle(
++        gfx::PointF(center.x() + i * kSplitHandleDotSpacing, center.y()),
++        kSplitHandleDotRadius + 0.25f, flags);
++  }
++}
++
++bool MultiContentsSplitHandle::OnMousePressed(const ui::MouseEvent& event) {
++  if (!event.IsOnlyLeftMouseButton()) {
++    return false;
++  }
++  press_location_ = event.location();
++  return true;
++}
++
++bool MultiContentsSplitHandle::OnMouseDragged(const ui::MouseEvent& event) {
++  if (!press_location_.has_value()) {
++    return false;
++  }
++  if (!dragging_) {
++    if (!views::View::ExceededDragThreshold(event.location() -
++                                            *press_location_)) {
++      return true;
++    }
++    if (!multi_contents_view_->IsInSplitView()) {
++      return true;
++    }
++    CancelMenu();
++    dragging_ = true;
++    UpdateOpacity();
++    SchedulePaint();
++  }
++  // The widget holds mouse capture while the button is down, so drags keep
++  // arriving here over the web contents and outside the window.
++  multi_contents_view_->UpdatePaneDrag(pane_index_,
++                                       ToMultiContentsPoint(event.location()));
++  return true;
++}
++
++void MultiContentsSplitHandle::OnMouseReleased(const ui::MouseEvent& event) {
++  const bool was_pressed = press_location_.has_value();
++  press_location_.reset();
++  if (dragging_) {
++    dragging_ = false;
++    UpdateOpacity();
++    SchedulePaint();
++    // May end the split (and hide `this`).
++    multi_contents_view_->EndPaneDrag(
++        pane_index_, ToMultiContentsPoint(event.location()),
++        /*cancelled=*/false);
++    return;
++  }
++  if (was_pressed && event.IsLeftMouseButton() &&
++      HitTestPoint(event.location())) {
++    ShowMenu(GetBoundsInScreen(), ui::mojom::MenuSourceType::kMouse);
++  }
++}
++
++void MultiContentsSplitHandle::OnMouseCaptureLost() {
++  press_location_.reset();
++  CancelDrag();
++}
++
++void MultiContentsSplitHandle::OnMouseEntered(const ui::MouseEvent& event) {
++  UpdateOpacity();
++  SchedulePaint();
++}
++
++void MultiContentsSplitHandle::OnMouseExited(const ui::MouseEvent& event) {
++  UpdateOpacity();
++  SchedulePaint();
++}
++
++bool MultiContentsSplitHandle::OnKeyPressed(const ui::KeyEvent& event) {
++  switch (event.key_code()) {
++    case ui::VKEY_RETURN:
++    case ui::VKEY_SPACE:
++    case ui::VKEY_APPS:
++      ShowMenu(GetBoundsInScreen(), ui::mojom::MenuSourceType::kKeyboard);
++      return true;
++    case ui::VKEY_ESCAPE:
++      if (dragging_) {
++        CancelDrag();
++        return true;
++      }
++      return false;
++    default:
++      return false;
++  }
++}
++
++ui::Cursor MultiContentsSplitHandle::GetCursor(const ui::MouseEvent& event) {
++  return ui::Cursor(dragging_ ? ui::mojom::CursorType::kGrabbing
++                              : ui::mojom::CursorType::kGrab);
++}
++
++void MultiContentsSplitHandle::OnFocus() {
++  views::View::OnFocus();
++  UpdateOpacity();
++}
++
++void MultiContentsSplitHandle::OnBlur() {
++  views::View::OnBlur();
++  UpdateOpacity();
++}
++
++void MultiContentsSplitHandle::AddedToWidget() {
++  // The pane's web contents receive the mouse events over it, so watch the
++  // browser window's events to tell when the pointer is over this pane. Key
++  // presses are watched to cancel a drag with Escape.
++  hover_monitor_ = views::EventMonitor::CreateWindowMonitor(
++      this, GetWidget()->GetNativeWindow(),
++      {ui::EventType::kMouseMoved, ui::EventType::kMouseExited,
++       ui::EventType::kKeyPressed});
++}
++
++void MultiContentsSplitHandle::RemovedFromWidget() {
++  hover_monitor_.reset();
++  CancelMenu();
++}
++
++void MultiContentsSplitHandle::VisibilityChanged(views::View* starting_from,
++                                                 bool is_visible) {
++  if (!is_visible) {
++    CancelMenu();
++    CancelDrag();
++    pointer_in_pane_ = false;
++  }
++  UpdateOpacity();
++}
++
++void MultiContentsSplitHandle::ShowContextMenuForViewImpl(
++    views::View* source,
++    const gfx::Point& point,
++    ui::mojom::MenuSourceType source_type) {
++  ShowMenu(gfx::Rect(point, gfx::Size()), source_type);
++}
++
++void MultiContentsSplitHandle::OnEvent(const ui::Event& event) {
++  if (event.type() == ui::EventType::kKeyPressed) {
++    if (dragging_ && event.AsKeyEvent()->key_code() == ui::VKEY_ESCAPE) {
++      CancelDrag();
++    }
++    return;
++  }
++  if (!event.IsLocatedEvent() || !GetVisible()) {
++    return;
++  }
++  // The observer's root location is in screen coordinates (see
++  // aura::Env::AddEventObserver()).
++  views::View* const pane =
++      multi_contents_view_->contents_container_views()[pane_index_];
++  gfx::Point point =
++      gfx::ToFlooredPoint(event.AsLocatedEvent()->root_location_f());
++  views::View::ConvertPointFromScreen(pane, &point);
++  const bool in_pane = event.type() != ui::EventType::kMouseExited &&
++                       pane->GetVisible() && pane->HitTestPoint(point);
++  if (in_pane != pointer_in_pane_) {
++    pointer_in_pane_ = in_pane;
++    UpdateOpacity();
++  }
++}
++
++void MultiContentsSplitHandle::OnTabStripModelChanged(
++    TabStripModel*,
++    const TabStripModelChange& change,
++    const TabStripSelectionChange& selection) {
++  // The menu acts on a tab strip index; don't let it outlive a change.
++  if (change.type() != TabStripModelChange::kSelectionOnly ||
++      selection.active_tab_changed()) {
++    CancelMenu();
++  }
++}
++
++void MultiContentsSplitHandle::OnSplitTabChanged(const SplitTabChange&) {
++  CancelMenu();
++}
++
++void MultiContentsSplitHandle::ShowMenu(const gfx::Rect& anchor_in_screen,
++                                        ui::mojom::MenuSourceType source_type) {
++  if (IsMenuRunning() || dragging_ || !GetWidget()) {
++    return;
++  }
++  content::WebContents* const contents =
++      multi_contents_view_->GetWebContentsForPane(pane_index_);
++  const int index = contents
++                        ? tab_strip_model_->GetIndexOfWebContents(contents)
++                        : TabStripModel::kNoTab;
++  if (index == TabStripModel::kNoTab ||
++      !tab_strip_model_->GetTabAtIndex(index)->IsSplit()) {
++    return;
++  }
++
++  menu_runner_.reset();
++  menu_model_adapter_.reset();
++  // kMiniToolbar: "Separate views", "Close" (this pane's tab), the
++  // orientation toggle and "Reverse views", acting on the tab at `index`.
++  menu_model_ = std::make_unique<SplitHandleMenuModel>(multi_contents_view_,
++                                                       tab_strip_model_, index);
++  menu_model_adapter_ = std::make_unique<views::MenuModelAdapter>(
++      menu_model_.get(),
++      base::BindRepeating(&MultiContentsSplitHandle::OnMenuClosed,
++                          base::Unretained(this)));
++  menu_runner_ = std::make_unique<views::MenuRunner>(
++      menu_model_adapter_->CreateMenu(), views::MenuRunner::HAS_MNEMONICS);
++  menu_runner_->RunMenuAt(GetWidget(), nullptr, anchor_in_screen,
++                          views::MenuAnchorPosition::kTopLeft, source_type);
++  UpdateOpacity();
++}
++
++void MultiContentsSplitHandle::CancelMenu() {
++  if (IsMenuRunning()) {
++    menu_runner_->Cancel();
++  }
++}
++
++bool MultiContentsSplitHandle::IsMenuRunning() const {
++  return menu_runner_ && menu_runner_->IsRunning();
++}
++
++void MultiContentsSplitHandle::OnMenuClosed() {
++  UpdateOpacity();
++}
++
++void MultiContentsSplitHandle::CancelDrag() {
++  if (!dragging_) {
++    return;
++  }
++  dragging_ = false;
++  UpdateOpacity();
++  SchedulePaint();
++  multi_contents_view_->EndPaneDrag(pane_index_, gfx::Point(),
++                                    /*cancelled=*/true);
++}
++
++gfx::Point MultiContentsSplitHandle::ToMultiContentsPoint(
++    const gfx::Point& point_in_this) const {
++  return views::View::ConvertPointToTarget(this, multi_contents_view_,
++                                           point_in_this);
++}
++
++void MultiContentsSplitHandle::UpdateOpacity() {
++  const bool shown = GetVisible() &&
++                     (pointer_in_pane_ || IsMouseHovered() || HasFocus() ||
++                      dragging_ || IsMenuRunning());
++  const float opacity = shown ? 1.0f : 0.0f;
++  if (target_opacity_ == opacity) {
++    return;
++  }
++  target_opacity_ = opacity;
++  ui::ScopedLayerAnimationSettings settings(layer()->GetAnimator());
++  settings.SetTransitionDuration(kSplitHandleFadeDuration);
++  settings.SetTweenType(gfx::Tween::EASE_OUT);
++  settings.SetPreemptionStrategy(
++      ui::LayerAnimator::IMMEDIATELY_ANIMATE_TO_NEW_TARGET);
++  layer()->SetOpacity(opacity);
++}
++
++BEGIN_METADATA(MultiContentsSplitHandle)
++END_METADATA
+diff --git a/chrome/browser/ui/views/frame/multi_contents_resize_area.h b/chrome/browser/ui/views/frame/multi_contents_resize_area.h
+index 89544810..9a8e8379 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_resize_area.h
++++ b/chrome/browser/ui/views/frame/multi_contents_resize_area.h
+@@ -6,12 +6,15 @@
+ #define CHROME_BROWSER_UI_VIEWS_FRAME_MULTI_CONTENTS_RESIZE_AREA_H_
+ 
+ #include <memory>
++#include <optional>
+ 
+ #include "base/memory/raw_ptr.h"
+ #include "chrome/browser/ui/tabs/tab_strip_model_observer.h"
+ #include "components/split_tabs/split_tab_visual_data.h"
+ #include "ui/base/interaction/element_identifier.h"
++#include "ui/events/event_observer.h"
+ #include "ui/events/keycodes/keyboard_codes.h"
++#include "ui/gfx/geometry/point.h"
+ #include "ui/views/context_menu_controller.h"
+ #include "ui/views/controls/resize_area.h"
+ #include "ui/views/focus/focus_manager.h"
+@@ -26,11 +29,104 @@ enum class SplitTabLayout;
+ }
+ 
+ namespace views {
++class EventMonitor;
+ class FlexLayout;
+ class MenuModelAdapter;
+ class MenuRunner;
+ }
+ 
++// Zen-style grab handle shown at the top centre of each pane of a split
++// (`pane_index` 0 is the start pane, 1 the end pane). It fades in while the
++// pointer is over its pane. Dragging it moves the pane: dropping it on the
++// other pane swaps the two, dropping it outside the contents area separates
++// the split. Clicking it (or Enter/Space, or a right click) opens the split
++// menu for that pane: separate views, close this pane, reverse views.
++class MultiContentsSplitHandle : public views::View,
++                                 public views::ContextMenuController,
++                                 public ui::EventObserver,
++                                 public TabStripModelObserver {
++  METADATA_HEADER(MultiContentsSplitHandle, views::View)
++
++ public:
++  static constexpr int kWidth = 40;
++  static constexpr int kHeight = 14;
++  // Gap between the top of the pane and the handle.
++  static constexpr int kTopMargin = 5;
++
++  MultiContentsSplitHandle(MultiContentsView* multi_contents_view,
++                           TabStripModel* tab_strip_model,
++                           int pane_index);
++  MultiContentsSplitHandle(const MultiContentsSplitHandle&) = delete;
++  MultiContentsSplitHandle& operator=(const MultiContentsSplitHandle&) = delete;
++  ~MultiContentsSplitHandle() override;
++
++  // views::View:
++  gfx::Size CalculatePreferredSize(
++      const views::SizeBounds& available_size) const override;
++  void OnPaint(gfx::Canvas* canvas) override;
++  bool OnMousePressed(const ui::MouseEvent& event) override;
++  bool OnMouseDragged(const ui::MouseEvent& event) override;
++  void OnMouseReleased(const ui::MouseEvent& event) override;
++  void OnMouseCaptureLost() override;
++  void OnMouseEntered(const ui::MouseEvent& event) override;
++  void OnMouseExited(const ui::MouseEvent& event) override;
++  bool OnKeyPressed(const ui::KeyEvent& event) override;
++  ui::Cursor GetCursor(const ui::MouseEvent& event) override;
++  void OnFocus() override;
++  void OnBlur() override;
++  void AddedToWidget() override;
++  void RemovedFromWidget() override;
++  void VisibilityChanged(views::View* starting_from, bool is_visible) override;
++
++  // views::ContextMenuController:
++  void ShowContextMenuForViewImpl(
++      views::View* source,
++      const gfx::Point& point,
++      ui::mojom::MenuSourceType source_type) override;
++
++  // ui::EventObserver:
++  void OnEvent(const ui::Event& event) override;
++
++  // TabStripModelObserver:
++  void OnTabStripModelChanged(
++      TabStripModel* tab_strip_model,
++      const TabStripModelChange& change,
++      const TabStripSelectionChange& selection) override;
++  void OnSplitTabChanged(const SplitTabChange& change) override;
++
++ private:
++  void ShowMenu(const gfx::Rect& anchor_in_screen,
++                ui::mojom::MenuSourceType source_type);
++  void CancelMenu();
++  bool IsMenuRunning() const;
++  void OnMenuClosed();
++
++  void CancelDrag();
++  gfx::Point ToMultiContentsPoint(const gfx::Point& point_in_this) const;
++
++  // Fades the handle in or out depending on hover, focus, drag and menu
++  // state.
++  void UpdateOpacity();
++
++  const raw_ptr<MultiContentsView> multi_contents_view_;
++  const raw_ptr<TabStripModel> tab_strip_model_;
++  const int pane_index_;
++
++  // Whether the pointer is over this handle's pane (tracked through
++  // `hover_monitor_`, as the pane's web contents get the mouse events).
++  bool pointer_in_pane_ = false;
++  // Location of the left button press, until it is released.
++  std::optional<gfx::Point> press_location_;
++  bool dragging_ = false;
++  std::optional<float> target_opacity_;
++
++  std::unique_ptr<views::EventMonitor> hover_monitor_;
++
++  std::unique_ptr<SplitTabMenuModel> menu_model_;
++  std::unique_ptr<views::MenuModelAdapter> menu_model_adapter_;
++  std::unique_ptr<views::MenuRunner> menu_runner_;
++};
++
+ // Keyboard-accessible drag handle icon intended to be drawn on top of a
+ // MultiContentsResizeArea.
+ class MultiContentsResizeHandle : public views::View,
+@@ -54,9 +150,9 @@ class MultiContentsResizeHandle : public views::View,
+ 
+ // ResizeArea meant to draw in between WebContents within a MultiContentsView,
+ // and responsiveness to key events via a focusable MultiContentsResizeHandle.
+-class MultiContentsResizeArea : public views::ResizeArea,
+-                                public views::ContextMenuController,
+-                                public TabStripModelObserver {
++// It has no context menu; each pane's MultiContentsSplitHandle has the split
++// menu.
++class MultiContentsResizeArea : public views::ResizeArea {
+   METADATA_HEADER(MultiContentsResizeArea, ResizeArea)
+ 
+  public:
+@@ -71,13 +167,6 @@ class MultiContentsResizeArea : public views::ResizeArea,
+ 
+   void SetLayout(split_tabs::SplitTabLayout layout);
+ 
+-  // TabStripModelObserver:
+-  void OnTabStripModelChanged(
+-      TabStripModel* tab_strip_model,
+-      const TabStripModelChange& change,
+-      const TabStripSelectionChange& selection) override;
+-  void OnSplitTabChanged(const SplitTabChange& change) override;
+-
+   // views::ResizeArea:
+   void OnGestureEvent(ui::GestureEvent* event) override;
+   void OnMouseReleased(const ui::MouseEvent& event) override;
+@@ -86,15 +175,7 @@ class MultiContentsResizeArea : public views::ResizeArea,
+   void OnMouseExited(const ui::MouseEvent& event) override;
+   void SetVisible(bool visible) override;
+ 
+-  // views::ContextMenuController:
+-  void ShowContextMenuForViewImpl(
+-      views::View* source,
+-      const gfx::Point& point,
+-      ui::mojom::MenuSourceType source_type) override;
+-
+  private:
+-  void CancelMenu();
+-
+   // Sets the layout manager orientation and preferred size according to the
+   // split view layout.
+   void OnLayoutUpdated();
+@@ -108,10 +189,6 @@ class MultiContentsResizeArea : public views::ResizeArea,
+   raw_ptr<MultiContentsResizeHandle> resize_handle_;
+ 
+   raw_ptr<views::FlexLayout> flex_layout_manager_;
+-
+-  std::unique_ptr<SplitTabMenuModel> split_tab_menu_;
+-  std::unique_ptr<views::MenuModelAdapter> menu_model_adapter_;
+-  std::unique_ptr<views::MenuRunner> menu_runner_;
+ };
+ 
+ #endif  // CHROME_BROWSER_UI_VIEWS_FRAME_MULTI_CONTENTS_RESIZE_AREA_H_
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.cc b/chrome/browser/ui/views/frame/multi_contents_view.cc
+index 80b85ef4..95af83bb 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view.cc
+@@ -9,7 +9,10 @@
+ #include <utility>
+ 
+ #include "base/check_deref.h"
++#include "base/functional/bind.h"
+ #include "base/notreached.h"
++#include "base/task/sequenced_task_runner.h"
++#include "base/time/time.h"
+ #include "build/build_config.h"
+ #include "chrome/browser/actor/ui/actor_overlay_web_view.h"
+ #include "chrome/browser/browser_process.h"
+@@ -44,9 +47,16 @@
+ #include "ui/base/metadata/metadata_impl_macros.h"
+ #include "ui/base/ozone_buildflags.h"
+ #include "ui/compositor/layer.h"
++#include "ui/compositor/layer_animator.h"
++#include "ui/gfx/animation/animation.h"
++#include "ui/gfx/animation/tween.h"
+ #include "ui/gfx/geometry/outsets.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/rounded_corners_f.h"
++#include "ui/gfx/geometry/transform.h"
++#include "ui/gfx/geometry/vector2d.h"
++#include "ui/gfx/geometry/vector2d_conversions.h"
++#include "ui/views/animation/animation_builder.h"
+ #include "ui/views/layout/flex_layout_types.h"
+ #include "ui/views/layout/layout_types.h"
+ #include "ui/views/layout/proposed_layout.h"
+@@ -59,6 +69,10 @@
+ namespace {
+ constexpr int kSnapDistance = 15;
+ constexpr float kZenTopChromeAttachedThreshold = 0.5f;
++// Swaps and orientation changes made from a split handle glide the panes into
++// place.
++constexpr base::TimeDelta kSplitAnimationDuration = base::Milliseconds(220);
++constexpr gfx::Tween::Type kSplitAnimationTween = gfx::Tween::EASE_OUT;
+ 
+ bool IsTopChromeAttached(const BrowserView& browser_view,
+                          bool should_show_top_separator) {
+@@ -142,6 +156,16 @@ MultiContentsView::MultiContentsView(
+   lens_overlay_view->SetLayoutManager(std::make_unique<views::FillLayout>());
+   lens_overlay_view_ = AddChildView(std::move(lens_overlay_view));
+ 
++  // Zen-style split pane handles, and the preview shown while dragging one.
++  // Added last so they stack above the web contents.
++  pane_drag_preview_ =
++      AddChildView(std::make_unique<MultiContentsDropPreviewView>());
++  pane_drag_preview_->SetVisible(false);
++  for (int i = 0; i < 2; ++i) {
++    split_handles_[i] = AddChildView(std::make_unique<MultiContentsSplitHandle>(
++        this, browser_view_->browser()->tab_strip_model(), i));
++  }
++
+   for (auto& contents_container_view : contents_container_views_) {
+     auto& view_map = container_focusable_map_[contents_container_view];
+ 
+@@ -206,6 +230,9 @@ MultiContentsView::~MultiContentsView() {
+     drop_target_controller_.reset();
+   }
+   drop_target_view_ = nullptr;
++  split_animation_layer_owners_.clear();
++  split_handles_ = {};
++  pane_drag_preview_ = nullptr;
+   lens_overlay_view_ = nullptr;
+   resize_area_ = nullptr;
+   contents_separators_.Reset();
+@@ -321,6 +348,8 @@ void MultiContentsView::CloseSplitView() {
+   contents_container_views_[1]->contents_view()->SetWebContents(nullptr);
+   contents_container_views_[1]->SetVisible(false);
+   resize_area_->SetVisible(false);
++  // Leaving the split isn't animated, even from a split handle's menu.
++  split_animation_pending_ = false;
+   UpdateContentsBorderAndOverlay();
+ 
+   SafeInvoke(GetActiveContentsView()->web_contents())
+@@ -343,6 +372,10 @@ void MultiContentsView::SwapContentsInSplitView() {
+   std::swap(contents_container_views_[0], contents_container_views_[1]);
+ 
+   active_index_ = active_index_ == 0 ? 1 : 0;
++
++  if (animate_split_changes_ && IsInSplitView()) {
++    split_animation_pending_ = true;
++  }
+ }
+ 
+ void MultiContentsView::SetActiveIndex(int index) {
+@@ -363,6 +396,10 @@ void MultiContentsView::UpdateSplitVisualData(
+     return;
+   }
+ 
++  if (animate_split_changes_ && IsInSplitView() &&
++      visual_data_.split_layout() != visual_data.split_layout()) {
++    split_animation_pending_ = true;
++  }
+   visual_data_ = visual_data;
+   resize_area_->SetLayout(visual_data.split_layout());
+   UpdateContentsBorderAndOverlay();
+@@ -390,6 +427,236 @@ void MultiContentsView::OnSwap() {
+   delegate_->ReverseWebContents();
+ }
+ 
++content::WebContents* MultiContentsView::GetWebContentsForPane(
++    int pane_index) const {
++  CHECK(pane_index == 0 || pane_index == 1);
++  return contents_container_views_[pane_index]->contents_view()->web_contents();
++}
++
++MultiContentsView::PaneDropTarget MultiContentsView::GetPaneDropTarget(
++    int pane_index,
++    const gfx::Point& point) const {
++  // Dragging the handle this far beyond the contents (onto the tab strip or
++  // sidebar, or out of the window) separates the split.
++  constexpr int kSeparateDistance = 24;
++  gfx::Rect keep_area = GetLocalBounds();
++  keep_area.Outset(kSeparateDistance);
++  if (!keep_area.Contains(point)) {
++    return PaneDropTarget::kSeparate;
++  }
++  const views::View* other_pane = contents_container_views_[1 - pane_index];
++  if (other_pane->GetVisible() &&
++      other_pane->HitTestPoint(
++          views::View::ConvertPointToTarget(this, other_pane, point))) {
++    return PaneDropTarget::kOtherPane;
++  }
++  return PaneDropTarget::kNone;
++}
++
++gfx::Rect MultiContentsView::GetPaneDragPreviewBounds() const {
++  return gfx::UnionRects(contents_container_views_[0]->bounds(),
++                         contents_container_views_[1]->bounds());
++}
++
++void MultiContentsView::UpdatePaneDrag(int pane_index,
++                                       const gfx::Point& point) {
++  CHECK(pane_index == 0 || pane_index == 1);
++  if (!IsInSplitView()) {
++    return;
++  }
++  dragging_pane_ = pane_index;
++
++  const gfx::Rect preview_bounds = GetPaneDragPreviewBounds();
++  pane_drag_preview_->SetBoundsRect(preview_bounds);
++  gfx::Rect panel_bounds;
++  if (GetPaneDropTarget(pane_index, point) == PaneDropTarget::kOtherPane) {
++    // Highlight where the dragged pane would go: the other pane's place.
++    panel_bounds = contents_container_views_[1 - pane_index]->bounds();
++    panel_bounds.Offset(-preview_bounds.OffsetFromOrigin());
++  }
++  pane_drag_preview_->SetPanelBounds(panel_bounds);
++  if (!pane_drag_preview_->GetVisible()) {
++    pane_drag_preview_->SetVisible(true);
++  }
++}
++
++void MultiContentsView::EndPaneDrag(int pane_index,
++                                    const gfx::Point& point,
++                                    bool cancelled) {
++  CHECK(pane_index == 0 || pane_index == 1);
++  const PaneDropTarget target = cancelled || !IsInSplitView()
++                                    ? PaneDropTarget::kNone
++                                    : GetPaneDropTarget(pane_index, point);
++  dragging_pane_.reset();
++  pane_drag_preview_->SetVisible(false);
++  pane_drag_preview_->SetPanelBounds(gfx::Rect());
++
++  switch (target) {
++    case PaneDropTarget::kNone:
++      break;
++    case PaneDropTarget::kOtherPane: {
++      const auto animate = AnimateSplitChanges();
++      OnSwap();
++      break;
++    }
++    case PaneDropTarget::kSeparate: {
++      TabStripModel* const model = browser_view_->browser()->tab_strip_model();
++      content::WebContents* const contents = GetWebContentsForPane(pane_index);
++      tabs::TabInterface* const tab =
++          contents ? tabs::TabInterface::MaybeGetFromContents(contents)
++                   : nullptr;
++      if (!tab || !tab->IsSplit()) {
++        break;
++      }
++      model->RemoveSplit(tab->GetSplit().value());
++      const int index = model->GetIndexOfTab(tab);
++      if (index != TabStripModel::kNoTab) {
++        model->ActivateTabAt(index);
++      }
++      break;
++    }
++  }
++}
++
++base::AutoReset<bool> MultiContentsView::AnimateSplitChanges() {
++  return base::AutoReset<bool>(&animate_split_changes_, true);
++}
++
++void MultiContentsView::MaybeStartSplitAnimation(
++    const views::ProposedLayout& layout) {
++  if (!std::exchange(split_animation_pending_, false)) {
++    return;
++  }
++  // Not during browser animations (`target_content_bounds_`, which clip the
++  // contents themselves), and not with reduced motion.
++  const base::TimeDelta duration =
++      gfx::Animation::RichAnimationDuration(kSplitAnimationDuration);
++  if (!IsInSplitView() || !GetWidget() || target_content_bounds_ ||
++      !duration.is_positive()) {
++    return;
++  }
++
++  // Each pane is laid out (and its page resized) at its new bounds straight
++  // away, then its layer is translated back to where it was drawn and clipped
++  // to its old size, and both glide to the new place. Interpolating the bounds
++  // instead would resize the renderers on every frame; scaling the layers
++  // would stretch the pages when the orientation changes.
++  struct Move {
++    raw_ptr<views::View> view;
++    // In layer space, i.e. mirrored in RTL.
++    gfx::Rect from;
++    gfx::Rect to;
++    // Whether to also animate the clip from the old size to the new one.
++    bool clip = false;
++  };
++  std::vector<Move> moves;
++  const auto add_move = [&](views::View* view, bool clip) {
++    const views::ChildLayout* const child = layout.GetLayoutFor(view);
++    if (!child || !child->visible || !view->GetVisible()) {
++      return;
++    }
++    const gfx::Rect to = GetMirroredRect(child->bounds);
++    gfx::Rect from = view->GetMirroredBounds();
++    if (ui::Layer* const layer = view->layer()) {
++      // Mid-animation: start from where the view is drawn now. The transform
++      // animates on the compositor thread, so its value here is only current
++      // once the animation is aborted.
++      ui::LayerAnimator* const animator = layer->GetAnimator();
++      if (std::ranges::any_of(
++              split_animation_layer_owners_,
++              [view](const views::View* owner) { return owner == view; })) {
++        // Only the split animation runs on these temporary layers.
++        animator->AbortAllAnimations();
++      } else if (animator->IsAnimatingProperty(
++                     ui::LayerAnimationElement::TRANSFORM)) {
++        // Leaves the handle's fade alone.
++        animator->StopAnimatingProperty(ui::LayerAnimationElement::TRANSFORM);
++      }
++      from.Offset(
++          gfx::ToRoundedVector2d(layer->transform().To2dTranslation()));
++      if (clip && !layer->clip_rect().IsEmpty()) {
++        from.set_size(layer->clip_rect().size());
++      }
++    }
++    if (from != to) {
++      moves.push_back({view, from, to, clip});
++    }
++  };
++  for (ContentsContainerView* const container : contents_container_views_) {
++    add_move(container, /*clip=*/true);
++  }
++  for (MultiContentsSplitHandle* const handle : split_handles_) {
++    // The handles have their own (fading) layer.
++    if (handle->layer()) {
++      add_move(handle, /*clip=*/false);
++    }
++  }
++  if (moves.empty()) {
++    return;
++  }
++
++  const int animation_id = ++split_animation_id_;
++  views::AnimationBuilder builder;
++  builder
++      .SetPreemptionStrategy(
++          ui::LayerAnimator::IMMEDIATELY_ANIMATE_TO_NEW_TARGET)
++      .OnEnded(base::BindOnce(&MultiContentsView::OnSplitAnimationDone,
++                              weak_ptr_factory_.GetWeakPtr(), animation_id))
++      .OnAborted(base::BindOnce(&MultiContentsView::OnSplitAnimationDone,
++                                weak_ptr_factory_.GetWeakPtr(),
++                                animation_id));
++  // Jump back to the old places...
++  views::AnimationSequenceBlock& jump = builder.Once();
++  for (const Move& move : moves) {
++    if (!move.view->layer()) {
++      // The pane containers paint nothing themselves; the layer only lives
++      // for the animation, so that the page (whose layer views manage) and
++      // the pane's overlays move and clip together.
++      move.view->SetPaintToLayer();
++      move.view->layer()->SetFillsBoundsOpaquely(false);
++      split_animation_layer_owners_.push_back(move.view);
++    }
++    const gfx::Vector2d offset = move.from.origin() - move.to.origin();
++    jump.SetTransform(move.view->layer(),
++                      gfx::Transform::MakeTranslation(offset.x(), offset.y()));
++    if (move.clip) {
++      jump.SetClipRect(move.view->layer(), gfx::Rect(move.from.size()));
++    }
++  }
++  // ...then glide to the new ones.
++  views::AnimationSequenceBlock& glide = jump.Then().SetDuration(duration);
++  for (const Move& move : moves) {
++    glide.SetTransform(move.view->layer(), gfx::Transform(),
++                       kSplitAnimationTween);
++    if (move.clip) {
++      glide.SetClipRect(move.view->layer(), gfx::Rect(move.to.size()),
++                        kSplitAnimationTween);
++    }
++  }
++}
++
++void MultiContentsView::OnSplitAnimationDone(int animation_id) {
++  // Don't drop layers from within the animator's callbacks.
++  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++      FROM_HERE,
++      base::BindOnce(&MultiContentsView::DestroySplitAnimationLayers,
++                     weak_ptr_factory_.GetWeakPtr(), animation_id));
++}
++
++void MultiContentsView::DestroySplitAnimationLayers(int animation_id) {
++  // A newer animation took over the layers.
++  if (animation_id != split_animation_id_) {
++    return;
++  }
++  for (views::View* const view : split_animation_layer_owners_) {
++    if (view->layer()) {
++      // Drops the transform and clip with it.
++      view->DestroyLayer();
++    }
++  }
++  split_animation_layer_owners_.clear();
++}
++
+ void MultiContentsView::SetTargetContentBounds(
+     std::optional<TargetContentBounds> target_content_bounds) {
+   if (target_content_bounds_ == target_content_bounds) {
+@@ -623,11 +890,35 @@ views::ProposedLayout MultiContentsView::CalculateProposedLayout(
+                                      lens_overlay_view_->GetVisible(),
+                                      gfx::Rect(width, height));
+ 
++  // The tab drop overlay covers the (single) page without squeezing it.
++  if (IsDragAndDropEnabled() && drop_target_view_->GetVisible() &&
++      drop_target_view_->IsOverlay()) {
++    layouts.child_layouts.emplace_back(drop_target_view_.get(), true,
++                                       start_rect);
++  }
++
++  // Split pane handles at the top centre of each pane.
++  for (int i = 0; i < 2; ++i) {
++    const gfx::Rect& pane = i == 0 ? start_rect : end_rect;
++    const gfx::Size handle_size = split_handles_[i]->GetPreferredSize();
++    layouts.child_layouts.emplace_back(
++        split_handles_[i].get(), is_in_split,
++        gfx::Rect(pane.x() + (pane.width() - handle_size.width()) / 2,
++                  pane.y() + MultiContentsSplitHandle::kTopMargin,
++                  handle_size.width(), handle_size.height()));
++  }
++  layouts.child_layouts.emplace_back(
++      pane_drag_preview_.get(), is_in_split && dragging_pane_.has_value(),
++      gfx::UnionRects(start_rect, end_rect));
++
+   layouts.host_size = gfx::Size(width, height);
+   return layouts;
+ }
+ 
+ void MultiContentsView::BeforeApplyLayout(const views::ProposedLayout& layout) {
++  // The panes still have their old bounds here.
++  MaybeStartSplitAnimation(layout);
++
+   if (!target_content_bounds_) {
+     for (auto& contents : contents_container_views_) {
+       contents->SetTargetContentBounds(std::nullopt);
+@@ -698,6 +989,12 @@ gfx::Rect MultiContentsView::CalculateDropTargetLayout(
+     child_layouts.emplace_back(drop_target_view_.get(), false, gfx::Rect());
+     return available_space;
+   }
++  if (drop_target_view_->IsOverlay()) {
++    // The tab drop overlay doesn't squeeze the page; it is laid out over the
++    // page in CalculateProposedLayout().
++    UpdateContentsBorderAndOverlay();
++    return available_space;
++  }
+ 
+   CHECK(drop_target_view_->side().has_value());
+   const auto drop_side = drop_target_view_->side().value();
+@@ -790,7 +1087,9 @@ gfx::Rect MultiContentsView::CalculateSeparatorLayouts(
+ 
+   const bool should_show_leading =
+       contents_separators_.leading_side_chrome_attached ||
+-      drop_target_view_->side() == MultiContentsDropTargetView::DropSide::START;
++      (!drop_target_view_->IsOverlay() &&
++       drop_target_view_->side() ==
++           MultiContentsDropTargetView::DropSide::START);
+   const int leading_separator_width =
+       should_show_leading
+           ? contents_separators_.leading_separator->GetPreferredSize().width()
+@@ -801,7 +1100,8 @@ gfx::Rect MultiContentsView::CalculateSeparatorLayouts(
+ 
+   const bool should_show_trailing =
+       contents_separators_.trailing_side_chrome_attached ||
+-      drop_target_view_->side() == MultiContentsDropTargetView::DropSide::END;
++      (!drop_target_view_->IsOverlay() &&
++       drop_target_view_->side() == MultiContentsDropTargetView::DropSide::END);
+ 
+   const int trailing_separator_width =
+       should_show_trailing
+@@ -907,7 +1207,8 @@ void MultiContentsView::UpdateContentsBorderAndOverlay() const {
+       GetSplitLayout() == split_tabs::SplitTabLayout::kSideBySide;
+   const bool should_round_single_contents =
+       !is_in_split && ShouldUseRoundedFrame();
+-  const bool is_drop_target_visible = drop_target_view_->GetVisible();
++  const bool is_drop_target_visible =
++      drop_target_view_->GetVisible() && !drop_target_view_->IsOverlay();
+   const bool is_drop_target_on_start =
+       is_drop_target_visible &&
+       drop_target_view_->side() == MultiContentsDropTargetView::DropSide::START;
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.h b/chrome/browser/ui/views/frame/multi_contents_view.h
+index 23b42c04..aeef99af 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.h
++++ b/chrome/browser/ui/views/frame/multi_contents_view.h
+@@ -5,13 +5,16 @@
+ #ifndef CHROME_BROWSER_UI_VIEWS_FRAME_MULTI_CONTENTS_VIEW_H_
+ #define CHROME_BROWSER_UI_VIEWS_FRAME_MULTI_CONTENTS_VIEW_H_
+ 
++#include <array>
+ #include <memory>
+ #include <optional>
+ 
++#include "base/auto_reset.h"
+ #include "base/callback_list.h"
+ #include "base/functional/callback_forward.h"
+ #include "base/gtest_prod_util.h"
+ #include "base/memory/raw_ptr.h"
++#include "base/memory/weak_ptr.h"
+ #include "chrome/browser/ui/tabs/split_tab_highlight_controller.h"
+ #include "chrome/browser/ui/ui_features.h"
+ #include "chrome/browser/ui/views/frame/contents_container_view.h"
+@@ -19,6 +22,8 @@
+ #include "components/split_tabs/split_tab_visual_data.h"
+ #include "ui/base/interaction/element_identifier.h"
+ #include "ui/base/metadata/metadata_header_macros.h"
++#include "ui/gfx/geometry/point.h"
++#include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/rounded_corners_f.h"
+ #include "ui/views/controls/resize_area_delegate.h"
+ #include "ui/views/layout/proposed_layout.h"
+@@ -27,8 +32,10 @@
+ class BrowserView;
+ class ContentsWebView;
+ class MultiContentsBackgroundView;
++class MultiContentsDropPreviewView;
+ class MultiContentsDropTargetView;
+ class MultiContentsResizeArea;
++class MultiContentsSplitHandle;
+ class MultiContentsViewDelegate;
+ class MultiContentsViewDropTargetController;
+ 
+@@ -137,6 +144,22 @@ class MultiContentsView
+   // If in a split view, swaps the positions of the two active tabs.
+   void OnSwap();
+ 
++  // Zen-style split pane handles (MultiContentsSplitHandle). `pane_index` is
++  // 0 for the start pane and 1 for the end pane; points are local to this
++  // view.
++  content::WebContents* GetWebContentsForPane(int pane_index) const;
++  // Previews where the pane dragged by its handle would go.
++  void UpdatePaneDrag(int pane_index, const gfx::Point& point);
++  // Drops the pane: on the other pane swaps the two, outside this view
++  // separates the split.
++  void EndPaneDrag(int pane_index, const gfx::Point& point, bool cancelled);
++
++  // While the returned object lives, swaps (SwapContentsInSplitView()) and
++  // orientation changes (UpdateSplitVisualData()) of the shown split animate
++  // the panes from their old places to their new ones at the next layout.
++  // Used by the split handles' menu and drag.
++  [[nodiscard]] base::AutoReset<bool> AnimateSplitChanges();
++
+   // If non-null, specifies an increase in target size so that web contents
+   // maintain their maximum extents during browser animations to prevent
+   // issues with reflow on some platforms.
+@@ -274,6 +297,23 @@ class MultiContentsView
+ 
+   int GetInactiveIndex() const;
+ 
++  // Where a pane dragged by its split handle would be dropped.
++  enum class PaneDropTarget {
++    kNone,       // Over its own pane: nothing happens.
++    kOtherPane,  // Over the other pane: swap the panes.
++    kSeparate,   // Away from the contents: separate the split.
++  };
++  PaneDropTarget GetPaneDropTarget(int pane_index,
++                                   const gfx::Point& point) const;
++  gfx::Rect GetPaneDragPreviewBounds() const;
++
++  // Starts the animation requested through AnimateSplitChanges(), if any,
++  // from the current pane bounds to those in `layout`. Called before `layout`
++  // is applied.
++  void MaybeStartSplitAnimation(const views::ProposedLayout& layout);
++  void OnSplitAnimationDone(int animation_id);
++  void DestroySplitAnimationLayers(int animation_id);
++
+   void OnWebContentsFocused(views::WebView*);
+   void OnNtpFooterFocused(views::WebView*);
+   void OnActorOverlayFocused(views::WebView*);
+@@ -328,6 +368,23 @@ class MultiContentsView
+   // the user drags a link to the edge of the contents view.
+   raw_ptr<MultiContentsDropTargetView> drop_target_view_ = nullptr;
+ 
++  // Grab handles at the top centre of the start and end panes of a split.
++  std::array<raw_ptr<MultiContentsSplitHandle>, 2> split_handles_ = {};
++  // Dims the split and highlights the drop target while a pane is dragged by
++  // its handle.
++  raw_ptr<MultiContentsDropPreviewView> pane_drag_preview_ = nullptr;
++  // The pane being dragged by its handle, if any.
++  std::optional<int> dragging_pane_;
++
++  // Set by AnimateSplitChanges().
++  bool animate_split_changes_ = false;
++  // A swap or orientation change to animate at the next layout.
++  bool split_animation_pending_ = false;
++  // Identifies the running split animation; bumped when one starts.
++  int split_animation_id_ = 0;
++  // Views given a layer for the split animation, to drop it once done.
++  std::vector<raw_ptr<views::View>> split_animation_layer_owners_;
++
+   // Holds subscriptions for when the attached contents to ContentsContainerView
+   // are focused.
+   std::vector<base::CallbackListSubscription> contents_focused_subscriptions_;
+@@ -375,6 +432,8 @@ class MultiContentsView
+   // `BrowserView::MaybeUpdateStoredFocusForWebContents`
+   base::flat_map<ContentsContainerView*, FocusableViewMap>
+       container_focusable_map_;
++
++  base::WeakPtrFactory<MultiContentsView> weak_ptr_factory_{this};
+ };
+ 
+ #endif  // CHROME_BROWSER_UI_VIEWS_FRAME_MULTI_CONTENTS_VIEW_H_
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
+index 99fad486..d254d0a4 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.cc
+@@ -34,6 +34,8 @@ static constexpr base::TimeDelta kShowDropTargetForLinkAfterHideLookbackWindow =
+     base::Seconds(30);
+ static constexpr base::TimeDelta kHideDropTargetDelay = base::Milliseconds(100);
+ static constexpr base::TimeDelta kShowNudgeDelay = base::Milliseconds(1000);
++static constexpr base::TimeDelta kShowDropTargetForTabOverlayDelay =
++    base::Milliseconds(120);
+ 
+ // Returns a value between `min_value` and `max_value`, scaled linearly
+ // according to `current_size`.
+@@ -241,6 +243,12 @@ void MultiContentsViewDropTargetController::OnDragExited() {
+   if (!drop_target_view_->GetVisible()) {
+     return;
+   }
++  if (drop_target_view_->IsOverlay()) {
++    // The tab drop overlay covers the page; a system DnD tab drag enters and
++    // leaves it whenever it crosses between the page and the views around
++    // it. Its visibility follows OnTabDragUpdated()/Exited()/Ended() only.
++    return;
++  }
+ 
+   CHECK(drop_target_view_->state().has_value());
+   if (*drop_target_view_->state() ==
+@@ -346,6 +354,12 @@ void MultiContentsViewDropTargetController::OnWebContentsDragUpdate(
+ }
+ 
+ void MultiContentsViewDropTargetController::OnWebContentsDragExit() {
++  if (TabDragController::IsSystemDnDSessionRunning() ||
++      drop_target_view_->IsOverlay()) {
++    // A tab drag (the page sees system DnD tab drags enter and leave as the
++    // cursor crosses it): visibility follows OnTabDragUpdated() instead.
++    return;
++  }
+   ResetDropTargetTimers();
+ 
+   if (drop_target_view_->GetVisible()) {
+@@ -371,6 +385,11 @@ void MultiContentsViewDropTargetController::HandleDragUpdate(
+   CHECK(IsPointEligibleForDrag(point_in_view, drop_target_parent_view_));
+   const bool is_rtl = base::i18n::IsRTL();
+ 
++  if (drag_type == MultiContentsDropTargetView::DragType::kTab) {
++    HandleTabDragUpdate(point_in_view, is_rtl);
++    return;
++  }
++
+   bool can_show_nudge =
+       drag_type == MultiContentsDropTargetView::DragType::kLink &&
+       ShouldShowNudge() && drop_target_view_->ShouldShowAnimation();
+@@ -378,12 +397,11 @@ void MultiContentsViewDropTargetController::HandleDragUpdate(
+   const int drop_entry_point_width =
+       can_show_nudge
+           ? drop_target_parent_view_->width() * kNudgeShowRatio
+-          : MultiContentsDropTargetView::GetMaxSize(
+-                drop_target_parent_view_->width(),
+-                MultiContentsDropTargetView::DropTargetState::kFull, drag_type);
+-  const int drop_entry_point_height = MultiContentsDropTargetView::GetMaxSize(
+-      drop_target_parent_view_->height(),
+-      MultiContentsDropTargetView::DropTargetState::kFull, drag_type);
++          : MultiContentsDropTargetView::GetEntryPointSize(
++                drop_target_parent_view_->width(), drag_type);
++  const int drop_entry_point_height =
++      MultiContentsDropTargetView::GetEntryPointSize(
++          drop_target_parent_view_->height(), drag_type);
+ 
+   // This differs from drop_target_view_->side() in that it is also std::nullopt
+   // if the drop target view is currently hiding.
+@@ -445,6 +463,55 @@ void MultiContentsViewDropTargetController::HandleDragUpdate(
+   }
+ }
+ 
++void MultiContentsViewDropTargetController::HandleTabDragUpdate(
++    const gfx::Point& point_in_view,
++    bool is_rtl) {
++  // Zen: every point of the page maps to its left or right half, and the
++  // dragged tab takes that half of a 50/50 split. Points are in physical
++  // (LTR) coordinates, sides are logical.
++  const bool in_left_half =
++      point_in_view.x() < drop_target_parent_view_->width() / 2;
++  const MultiContentsDropTargetView::DropSide drop_side =
++      in_left_half != is_rtl ? MultiContentsDropTargetView::DropSide::START
++                             : MultiContentsDropTargetView::DropSide::END;
++
++  if (drop_target_view_->GetVisible() &&
++      drop_target_view_->drag_type() !=
++          MultiContentsDropTargetView::DragType::kTab) {
++    // A link drop target still fading out; drop it at once.
++    drop_target_view_->Hide(/*suppress_animation=*/true);
++  }
++
++  if (drop_target_view_->GetVisible()) {
++    // Already showing (or fading out) for this tab drag: follow the cursor
++    // to the other half immediately, and bring a fading overlay back.
++    show_drop_target_timer_.reset();
++    if (drop_target_view_->side() != drop_side ||
++        drop_target_view_->IsClosing()) {
++      drop_target_view_->Show(
++          drop_side, MultiContentsDropTargetView::DropTargetState::kFull,
++          MultiContentsDropTargetView::DragType::kTab);
++    }
++    return;
++  }
++
++  if (show_drop_target_timer_.has_value()) {
++    show_drop_target_timer_->drop_side = drop_side;
++    show_drop_target_timer_->drag_type =
++        MultiContentsDropTargetView::DragType::kTab;
++    return;
++  }
++
++  // A short delay so that a tab merely crossing the page (e.g. on its way to
++  // another window) doesn't flash the overlay.
++  show_drop_target_timer_.emplace(drop_side,
++                                  MultiContentsDropTargetView::DragType::kTab);
++  drag_point_at_timer_start_ = point_in_view;
++  show_drop_target_timer_->timer.Start(
++      FROM_HERE, kShowDropTargetForTabOverlayDelay, this,
++      &MultiContentsViewDropTargetController::ShowTimerDelayedDropTarget);
++}
++
+ void MultiContentsViewDropTargetController::StartOrUpdateDropTargetTimer(
+     const gfx::Point& point_in_view,
+     int drop_entry_point_size,
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.h b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.h
+index 8d0b3bf3..e79d996c 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.h
++++ b/chrome/browser/ui/views/frame/multi_contents_view_drop_target_controller.h
+@@ -130,6 +130,9 @@ class MultiContentsViewDropTargetController final
+   void HandleDragUpdate(const gfx::Point& point_in_view,
+                         MultiContentsDropTargetView::DragType drag_type);
+ 
++  // Tab drags: shows the Zen-style overlay for the half under the cursor.
++  void HandleTabDragUpdate(const gfx::Point& point_in_view, bool is_rtl);
++
+   // Starts or updates a running timer to show `target_to_show`.
+   void StartOrUpdateDropTargetTimer(
+       const gfx::Point& point_in_view,

@@ -146,6 +146,87 @@ cairo_surface_t* renderCard(const SCardStyle& style, eFileKind kind, cairo_surfa
     return surf;
 }
 
+// One box-blur pass over `count` lines of A8 data, `len` samples each, `step` bytes apart.
+static void boxBlur(uint8_t* data, int len, int count, int step, int pitch, int r, std::vector<uint8_t>& line) {
+    line.resize(len);
+    for (int n = 0; n < count; ++n) {
+        uint8_t* p   = data + (size_t)n * pitch;
+        int      sum = 0;
+        for (int i = -r; i <= r; ++i)
+            sum += p[(size_t)std::clamp(i, 0, len - 1) * step];
+        for (int i = 0; i < len; ++i) {
+            line[i] = sum / (2 * r + 1);
+            sum += p[(size_t)std::min(i + r + 1, len - 1) * step] - p[(size_t)std::max(i - r, 0) * step];
+        }
+        for (int i = 0; i < len; ++i)
+            p[(size_t)i * step] = line[i];
+    }
+}
+
+cairo_surface_t* renderIconCard(const SCardStyle& style, double w, double h, cairo_surface_t* image) {
+    const double S  = style.scale;
+    const int    pw = std::max(1, (int)std::ceil((w + 2 * ICON_PAD) * S));
+    const int    ph = std::max(1, (int)std::ceil((h + 2 * ICON_PAD) * S));
+    const double r  = std::min(style.radius, std::min(w, h) / 2.0);
+
+    // The shadow: the card's silhouette nudged down and blurred by three box passes, which come
+    // close enough to a gaussian at this size.
+    auto* shadow = cairo_image_surface_create(CAIRO_FORMAT_A8, pw, ph);
+    {
+        auto* cr = cairo_create(shadow);
+        cairo_scale(cr, S, S);
+        roundedRect(cr, ICON_PAD, ICON_PAD + 4, w, h, r);
+        cairo_set_source_rgba(cr, 0, 0, 0, 1);
+        cairo_fill(cr);
+        cairo_destroy(cr);
+        cairo_surface_flush(shadow);
+
+        uint8_t*             data   = cairo_image_surface_get_data(shadow);
+        const int            stride = cairo_image_surface_get_stride(shadow);
+        const int            br     = std::max(1, (int)std::lround(3.5 * S));
+        std::vector<uint8_t> line;
+        for (int pass = 0; pass < 3; ++pass) {
+            boxBlur(data, pw, ph, 1, stride, br, line);
+            boxBlur(data, ph, pw, stride, 1, br, line);
+        }
+        cairo_surface_mark_dirty(shadow);
+    }
+
+    auto* surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pw, ph);
+    auto* cr   = cairo_create(surf);
+    cairo_set_source_rgba(cr, 0, 0, 0, 0.34);
+    cairo_mask_surface(cr, shadow, 0, 0);
+    cairo_surface_destroy(shadow);
+
+    cairo_scale(cr, S, S);
+    cairo_translate(cr, ICON_PAD, ICON_PAD);
+
+    roundedRect(cr, 0, 0, w, h, r);
+    setColor(cr, style.card);
+    cairo_fill(cr);
+
+    const double iw = cairo_image_surface_get_width(image), ih = cairo_image_surface_get_height(image);
+    if (iw > 0 && ih > 0) {
+        cairo_save(cr);
+        roundedRect(cr, 0, 0, w, h, r);
+        cairo_clip(cr);
+        cairo_scale(cr, w / iw, h / ih);
+        cairo_set_source_surface(cr, image, 0, 0);
+        cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+        cairo_paint(cr);
+        cairo_restore(cr);
+    }
+
+    roundedRect(cr, 0.5, 0.5, w - 1, h - 1, r - 0.5);
+    cairo_set_line_width(cr, 1);
+    setColor(cr, style.border);
+    cairo_stroke(cr);
+
+    cairo_destroy(cr);
+    cairo_surface_flush(surf);
+    return surf;
+}
+
 // The freedesktop thumbnail cache: md5 of the canonical file URI, largest flavour first. A
 // thumbnail older than the file is stale and skipped.
 static std::optional<std::string> cachedThumbnail(const std::string& path) {

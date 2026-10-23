@@ -1,0 +1,38 @@
+diff --git a/chrome/browser/ui/views/tabs/common/pinned_tab_container_view.cc b/chrome/browser/ui/views/tabs/common/pinned_tab_container_view.cc
+index 365ebd7f..07dbcfcf 100644
+--- a/chrome/browser/ui/views/tabs/common/pinned_tab_container_view.cc
++++ b/chrome/browser/ui/views/tabs/common/pinned_tab_container_view.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/tabs/common/pinned_tab_container_view.h"
+ 
++#include <algorithm>
++
+ #include "base/i18n/rtl.h"
+ #include "chrome/browser/ui/layout_constants.h"
+ #include "chrome/browser/ui/tabs/features.h"
+@@ -28,6 +30,9 @@
+ 
+ namespace {
+ constexpr int kTabPadding = 4;
++// Pinned tabs in the vertical tab strip form an essentials-style grid with at
++// most this many equal-width tiles per row; extra tabs wrap to new rows.
++constexpr int kMaxPinnedTabsPerRow = 4;
+ }  // namespace
+ 
+ PinnedTabContainerView::PinnedTabContainerView(
+@@ -418,11 +423,11 @@ views::ProposedLayout PinnedTabContainerView::CalculateVerticalLayout(
+                 collapse_state ==
+                     tabs::VerticalTabStripCollapseState::kCollapsed
+             ? 1
+-            : std::min(
+-                  children_on_row,
++            : std::clamp(
+                   static_cast<int>(std::floor((available_width - child_width) /
+                                               (child_width + kTabPadding)) +
+-                                   1));
++                                   1),
++                  1, std::min(children_on_row, kMaxPinnedTabsPerRow));
+ 
+     // Allocate extra space to the tabs.
+     available_width -=

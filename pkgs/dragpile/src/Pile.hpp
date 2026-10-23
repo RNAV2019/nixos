@@ -10,10 +10,13 @@
 #include <hyprland/src/helpers/memory/Memory.hpp>
 #include <hyprland/src/desktop/DesktopTypes.hpp>
 #include <hyprland/src/render/Texture.hpp>
+#include <hyprland/src/helpers/signal/Signal.hpp>
 
 #include <wayland-server-core.h>
 
 #include "Cards.hpp"
+
+class CWLSurfaceResource;
 
 // The pile of file cards that trails the cursor while files are dragged. All positions are
 // global layout coordinates and all angles are clockwise degrees, as Penpot reports them.
@@ -28,6 +31,9 @@ class CPile {
     void pending();
     // The list arrived with at least one local file.
     void begin(std::vector<std::string>&& paths);
+    // A drag whose client icon is worth keeping (a browser tab's preview): draw that icon as a
+    // single card on the pile's springs instead of a pile of files.
+    void beginIcon(SP<CWLSurfaceResource> icon);
     // The list held no local files (or never came): give the drag back to the client's icon.
     void abandon();
     // The drag ended. A drop sinks the pile into the cursor; a cancel sends it home first.
@@ -74,6 +80,9 @@ class CPile {
     CBox                    extents() const;
     void                    damage(const CBox& box);
     void                    reset();
+    void                    loadStyle();
+    void                    refreshIcon();
+    bool                    frontReady() const;
 
     eState                  m_state = STATE_IDLE;
     Clock::time_point       m_since;
@@ -85,6 +94,16 @@ class CPile {
     Vector2D                m_home;  // where the front card sat when the drag began
     bool                    m_flipX = false, m_flipY = false;
     SCardStyle              m_style;
+    Vector2D                m_cardSize; // logical, without padding
+    double                  m_pad = CARD_PAD;
+
+    // Icon-card mode: the client's drag icon is the only card.
+    bool                    m_iconMode = false;
+    WP<CWLSurfaceResource>  m_icon;
+    CHyprSignalListener     m_iconCommit;
+    bool                    m_iconRaw   = false; // no CPU copy of the icon: draw its texture as is
+    SP<Render::ITexture>    m_iconTex;           // the raw texture last drawn, kept for the ending
+    double                  m_tiltScale = 1;
 
     double                  m_scale = 0.6, m_scaleVel = 0;
     double                  m_alpha = 0;

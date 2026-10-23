@@ -8,6 +8,7 @@
 # touch the systemd/D-Bus activation environment, so it cannot disturb the live session.
 #
 # usage: run.sh <libdragpile.so> <scenario>...   (scenarios: see test/scenarios/*.txt)
+# DRAGPILE_OPTS adds plugin options, e.g. DRAGPILE_OPTS="tab_drags = false".
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -35,7 +36,7 @@ hl.config({
   animations = { enabled = false },
   debug = { disable_logs = false },
   general = { gaps_out = 0, gaps_in = 0, border_size = 0 },
-  plugin = { dragpile = { cursor = "default" } },
+  plugin = { dragpile = { cursor = "default"${DRAGPILE_OPTS:+, $DRAGPILE_OPTS} } },
 })
 EOF
 

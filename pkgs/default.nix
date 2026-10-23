@@ -8,6 +8,8 @@ final: _prev: {
   rose-pine-gtk-theme = final.callPackage ./rose-pine-gtk-theme {};
   # gtk4 with the user gtk.css reloaded live; grafted in by modules/system.
   gtk4-live-css = final.callPackage ./gtk4-live-css {};
+  # The launcher's emoji table, from nixpkgs' Unicode and CLDR data.
+  quickshell-emoji = final.callPackage ./quickshell-emoji {};
 
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};

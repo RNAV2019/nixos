@@ -62,6 +62,14 @@ eFileKind classify(const std::string& path);
 // otherwise carrying the kind's glyph. Returns an ARGB32 surface of (size + 2 * CARD_PAD) * scale.
 cairo_surface_t* renderCard(const SCardStyle& style, eFileKind kind, cairo_surface_t* thumb);
 
+// Transparent margin around the client-icon card, room for its soft shadow.
+constexpr double ICON_PAD = 16;
+
+// A client's drag icon as a card: its image stretched to (w, h) logical px under the pile's
+// rounded corners and hairline, over a soft drop shadow. Returns an ARGB32 surface of
+// (w + 2 * ICON_PAD, h + 2 * ICON_PAD) * scale.
+cairo_surface_t* renderIconCard(const SCardStyle& style, double w, double h, cairo_surface_t* image);
+
 // Builds cards off the compositor thread. Each job yields a glyph card at once and, if a
 // thumbnail can be had, a second result that replaces it. Results are signalled on an eventfd.
 class CCardWorker {

@@ -406,6 +406,17 @@ in {
           float = true;
           center = true;
         }
+
+        # Helium's profile picker ("Manage profiles"); browser windows are
+        # titled "<page> - Helium", so only the picker is exactly "Helium".
+        {
+          match = {
+            class = "^helium$";
+            initial_title = "^Helium$";
+          };
+          float = true;
+          center = true;
+        }
       ];
 
       # Quickshell panels animate themselves, so no compositor fade.
@@ -541,6 +552,10 @@ in {
 
   xdg.configFile."quickshell".source =
     config.lib.file.mkOutOfStoreSymlink "${repoDir}/home/quickshell";
+
+  # The launcher's emoji table, generated from nixpkgs' Unicode data. The config above is
+  # out of store, so it reads this from a fixed path; see Services/EmojiSearch.qml.
+  xdg.dataFile."quickshell/emoji.tsv".source = "${pkgs.quickshell-emoji}/share/quickshell/emoji.tsv";
 
   # The account picture, read by the lock screen. Out of store, so replacing
   # profile.jpg in this repo shows on the next lock without a rebuild.

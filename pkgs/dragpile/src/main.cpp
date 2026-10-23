@@ -195,6 +195,15 @@ static void hkInitiateDrag(CWLDataDeviceProtocol* self, WP<CWLDataSourceResource
     const auto src     = source.lock();
     const auto mimes   = src ? src->mimes() : std::vector<std::string>{};
     const bool hasUris = std::ranges::find(mimes, "text/uri-list") != mimes.end();
+    // Chromium drags a tab out of its strip as a system drag carrying only this type, with a
+    // preview of the tab as the icon. That icon becomes a single card on the pile's springs.
+    const bool isTab = std::ranges::find(mimes, "chromium/x-window-drag") != mimes.end();
+
+    if (src && isTab && icon && g_config.enabled->value() && g_config.tabDrags->value()) {
+        postEvent("dragstart", "0");
+        g_pPile->beginIcon(icon);
+        return;
+    }
 
     if (!src || !hasUris || !g_config.enabled->value()) {
         postEvent("dragstart", "0");
@@ -303,6 +312,7 @@ static void registerConfig() {
     addValue(c.enabled, makeShared<CBoolValue>("plugin:dragpile:enabled", "Draw a pile of cards for file drags", true));
     addValue(c.physics, makeShared<CBoolValue>("plugin:dragpile:physics", "Animate the pile with springs; off snaps it to the cursor", true));
     addValue(c.thumbnails, makeShared<CBoolValue>("plugin:dragpile:thumbnails", "Use thumbnails and image previews where available", true));
+    addValue(c.tabDrags, makeShared<CBoolValue>("plugin:dragpile:tab_drags", "Draw a browser tab drag's preview as a card on the pile's springs", true));
     addValue(c.cardSize, makeShared<CIntValue>("plugin:dragpile:card_size", "Card edge, in logical px", 46));
     addValue(c.cardRadius, makeShared<CIntValue>("plugin:dragpile:card_radius", "Card corner radius", 10));
     addValue(c.maxCards, makeShared<CIntValue>("plugin:dragpile:max_cards", "Most cards drawn; the badge carries the full count", 5));

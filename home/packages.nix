@@ -173,8 +173,12 @@ in {
 
     wl-clipboard
     cliphist
+    # Thumbnails for image clips in the launcher's clipboard history.
+    gdk-pixbuf
+    # The launcher's Shift+Return on an emoji types it into the focused window.
+    wtype
 
-    # The launcher's '=' mode: maths, units and currency.
+    # The launcher's calculator: maths, units and currency.
     libqalculate
 
     # GTK portal for libadwaita dark mode.

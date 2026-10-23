@@ -1,3 +1,7 @@
 zen-docked-sidebar.patch
 command-bar.patch
 wayland-tab-drag-split.patch
+zen-split-view.patch
+pinned-tab-grid.patch
+zen-resize-throttle.patch
+zen-sidebar-style.patch

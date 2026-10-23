@@ -5,18 +5,34 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// The launcher's '=' mode. Colours and integer bases are answered here in JS; clock and
-// calendar questions go to GNU date, and everything else (arithmetic, units, currency) to
-// qalc. Each result is a row: `name` is shown, `copy` goes to the clipboard.
+// The launcher's calculator, an Omnibox provider. Colours and integer bases are answered
+// here in JS; clock and calendar questions go to GNU date, and everything else (arithmetic,
+// units, currency) to qalc. Each result is a row: `name` is shown, `copy` goes to the
+// clipboard. Unscoped it sees every launcher query, so `looksCalculatory` keeps an app name
+// from spawning qalc per keystroke; a leading '=' scopes the launcher to it alone.
 Singleton {
   id: root
 
-  // The query with its '=' already stripped.
+  // The query, its '=' already stripped when scoped.
   property string query: ""
+  property bool scoped: false
+
+  readonly property string section: "Calculator"
+  readonly property string prefix: "="
+  readonly property string scopeGlyph: Icons.calculator
+  readonly property string hint: "Maths, units, currency, colours, times and dates"
 
   property var results: []
 
   readonly property string expr: query.trim()
+
+  // An answer to something that reads as maths leads the launcher; one to a word that only
+  // might be ("time", "eur to usd") sits under the apps.
+  readonly property int strongScore: 90
+  readonly property int weakScore: 30
+  property int score: weakScore
+
+  onScopedChanged: compute()
 
   // qalc runs on a private config so its mode never touches the user's own qalc.cfg:
   // no mixed units ("3 mi + 188 yd"), no prompts, nothing saved on exit.
@@ -32,10 +48,11 @@ Singleton {
     root.qalcFor = "";
     root.dateFor = "";
 
-    if (q.length === 0) {
+    if (q.length === 0 || (!root.scoped && !looksCalculatory(q))) {
       root.results = [];
       return;
     }
+    root.score = root.scoped || looksLikeMaths(q) ? root.strongScore : root.weakScore;
 
     hit = colourRows(q);
     if (hit) {
@@ -64,14 +81,29 @@ Singleton {
     qalc.run();
   }
 
+  // A cheap first look: digits, operators, colour literals, or the words a conversion or
+  // date question needs. Anything else is an app name being typed.
+  function looksCalculatory(q) {
+    var s = q.toLowerCase();
+    return /[\d+*\/^%×÷=√]/.test(s) || /^#|^(rgba?|hsla?|oklch)\(/.test(s) || /\s(to|in|as)\s/.test(s) || /^(now|time)$|\stime$|^time\s/.test(s) || /^(days?|weeks?)\s/.test(s);
+  }
+
+  // Leads with a number, a sign, a bracket or a colour, or converts a number.
+  function looksLikeMaths(q) {
+    return /^[-+(.\d#√]/.test(q) || /^(rgba?|hsla?|oklch)\(/i.test(q) || /^(days?|weeks?)\s/i.test(q) || /\d.*\s(in|to|as)\s/i.test(q);
+  }
+
   function row(id, name, desc, extra) {
     var r = {
       id: "calc:" + id,
       name: name,
       desc: desc,
       copy: name,
+      icon: "",
       glyph: "",
-      swatch: ""
+      swatch: "",
+      score: root.score,
+      matches: []
     };
     for (var k in extra)
       r[k] = extra[k];
@@ -166,8 +198,9 @@ Singleton {
     }
 
     // CSS names, read through Qt's own SVG colour table. A word Qt does not know
-    // throws or comes back invalid, and falls through to qalc.
-    if (/^[a-z]{3,}$/.test(s)) {
+    // throws or comes back invalid, and falls through to qalc. Scoped only: unscoped,
+    // "gold" or "linen" is likelier an app being typed.
+    if (root.scoped && /^[a-z]{3,}$/.test(s)) {
       try {
         var named = Qt.color(s);
         if (named && named.valid !== false)
@@ -777,5 +810,10 @@ Singleton {
     repeat: true
     triggeredOnStart: true
     onTriggered: root.refreshRates()
+  }
+
+  function activate(row, modifiers) {
+    Clipboard.copy(row.copy);
+    return false;
   }
 }

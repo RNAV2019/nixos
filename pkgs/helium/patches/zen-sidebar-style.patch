@@ -1,0 +1,711 @@
+diff --git a/chrome/browser/ui/layout_constants.cc b/chrome/browser/ui/layout_constants.cc
+index 2d138211..a8ea524b 100644
+--- a/chrome/browser/ui/layout_constants.cc
++++ b/chrome/browser/ui/layout_constants.cc
+@@ -152,10 +152,11 @@ int GetLayoutConstant(LayoutConstant constant) {
+     case LayoutConstant::kToolbarCornerRadius:
+     case LayoutConstant::kVerticalTabCornerRadius:
+       return 8;
++    // Helium: Zen-like sidebar rows, with taller tiles for the pinned grid.
+     case LayoutConstant::kVerticalTabHeight:
+-      return 30;
++      return 34;
+     case LayoutConstant::kVerticalTabPinnedHeight:
+-      return 30;
++      return 40;
+     case LayoutConstant::kVerticalTabMinWidth:
+       return 30;
+     case LayoutConstant::kVerticalTabStripHorizontalPadding:
+diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
+index 71cca3c8..6f383bd5 100644
+--- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
++++ b/chrome/browser/ui/tabs/tab_strip_prefs.cc
+@@ -32,12 +32,15 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
+   registry->RegisterIntegerPref(prefs::kVerticalTabsUncollapsedWidth,
+                                 kVerticalTabStripDefaultUncollapsedWidth);
+ 
+-  registry->RegisterIntegerPref(prefs::kHeliumLayout,
+-                                std::to_underlying(HeliumLayoutType::kClassic));
+-  registry->RegisterBooleanPref(prefs::kHeliumVerticalRightAligned, false);
++  // Helium (personal build): every profile, including new ones opened from
++  // the profile menu, starts in the frameless layout with vertical tabs on
++  // the right. Only the defaults change; explicitly set values still win.
++  registry->RegisterIntegerPref(
++      prefs::kHeliumLayout, std::to_underlying(HeliumLayoutType::kVertical));
++  registry->RegisterBooleanPref(prefs::kHeliumVerticalRightAligned, true);
+   registry->RegisterBooleanPref(prefs::kHeliumCommandBar, true);
+   registry->RegisterBooleanPref(prefs::kHeliumCommandBarAlways, false);
+-  registry->RegisterBooleanPref(prefs::kHeliumZenMode, false);
++  registry->RegisterBooleanPref(prefs::kHeliumZenMode, true);
+   // New windows show the zen sidebar; there is no other way to reveal it.
+   registry->RegisterBooleanPref(prefs::kHeliumZenModeSidebarPinned, true);
+   registry->RegisterBooleanPref(prefs::kHeliumZenModeTopChromePinned, false);
+diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
+index 42565f57..00bebc34 100644
+--- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
++++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.cc
+@@ -40,6 +40,7 @@
+ #include "chrome/browser/ui/view_ids.h"
+ #include "chrome/browser/ui/views/frame/custom_corners_background.h"
+ #include "chrome/browser/ui/views/frame/frame_separator.h"
++#include "chrome/browser/ui/views/frame/multi_contents_view.h"
+ #include "chrome/browser/ui/views/frame/safe_invoke/safe_invoke.h"
+ #include "chrome/browser/ui/views/frame/shadow_frame_view.h"
+ #include "chrome/browser/ui/views/frame/tab_strip_region_view.h"
+@@ -433,11 +434,13 @@ views::ProposedLayout VerticalTabStripRegionView::CalculateProposedLayout(
+   gfx::Rect available(layout.host_size);
+ 
+   available.Inset(interior_margin_);
+-  // The extra width from a zen overshoot sits along the window edge.
+-  if (zen_overshoot_ > 0) {
++  // The extra width from a zen overshoot sits along the window edge, as does
++  // the docked sidebar's window gap.
++  const int window_edge_inset = zen_overshoot_ + GetZenWindowEdgeGap();
++  if (window_edge_inset > 0) {
+     available.Inset(state_controller_->IsTabStripRightAligned()
+-                        ? gfx::Insets::TLBR(0, 0, 0, zen_overshoot_)
+-                        : gfx::Insets::TLBR(0, zen_overshoot_, 0, 0));
++                        ? gfx::Insets::TLBR(0, 0, 0, window_edge_inset)
++                        : gfx::Insets::TLBR(0, window_edge_inset, 0, 0));
+   }
+ 
+   // Just so that there's never a zero-size tabstrip.
+@@ -834,6 +837,24 @@ void VerticalTabStripRegionView::SetZenOvershootForLayout(int overshoot) {
+   InvalidateLayout(/*avoid_propagate_during_layout=*/true);
+ }
+ 
++int VerticalTabStripRegionView::GetZenWindowEdgeGap() const {
++  // The docked zen sidebar is flush with the window edge, while the page next
++  // to it keeps the rounded frame's gap on its own side. Leave the same gap
++  // along the window edge, so every row (controls, site pill, pinned grid,
++  // tabs, new tab button) sits as far from the window edge as from the page.
++  // A detached (floating) sidebar is inset on both sides already, and the
++  // collapsed strip has no width to spare.
++  const BrowserView* const browser = browser_view();
++  if (!browser || !browser->IsZenModeEnabledForLayout() ||
++      !browser->IsZenModeSideChromePinned() ||
++      floating_style_ == FloatingStyle::kDetached ||
++      state_controller_->GetCollapseState() !=
++          tabs::VerticalTabStripCollapseState::kExpanded) {
++    return 0;
++  }
++  return MultiContentsView::kSplitViewContentInset;
++}
++
+ void VerticalTabStripRegionView::UpdatePanelClips() {
+   auto* const bg = background()->AsA<CustomCornersBackground>();
+   if (organizer_panel_view_) {
+diff --git a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
+index c7bb7fd7..55a80a99 100644
+--- a/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
++++ b/chrome/browser/ui/views/frame/vertical_tab_strip_region_view.h
+@@ -237,6 +237,10 @@ class VerticalTabStripRegionView final
+   // Get whether the collapse/expand animation is running.
+   bool IsAnimatingSize() const;
+ 
++  // Extra inset of the content along the window edge while the zen sidebar is
++  // docked, matching the gap the page keeps on the other side.
++  int GetZenWindowEdgeGap() const;
++
+   bool IsCollapseButtonHovered() const;
+ 
+   // Returns the bounds within which tabs can be dragged in the vertical tab
+diff --git a/chrome/browser/ui/views/helium/frame_corner_radius.cc b/chrome/browser/ui/views/helium/frame_corner_radius.cc
+index 59b26f66..aa05f03f 100644
+--- a/chrome/browser/ui/views/helium/frame_corner_radius.cc
++++ b/chrome/browser/ui/views/helium/frame_corner_radius.cc
+@@ -13,7 +13,11 @@ int GetGenericFrameRadius() {
+ 
+ #if !BUILDFLAG(IS_MAC)
+ int GetSystemWindowRadius() {
+-  return 8;
++  // The compositor rounds the window, not Chrome: Hyprland clips every window
++  // to `decoration.rounding`, which is 12 in this build's desktop config.
++  // Matching it keeps the page's corners concentric with the window's, so the
++  // gap around the page is as wide at the corners as along the edges.
++  return 12;
+ }
+ #endif
+ 
+diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
+index 5e231912..82e0ebab 100644
+--- a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
++++ b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
+@@ -11,11 +11,16 @@
+ #include "base/check.h"
+ #include "base/functional/bind.h"
+ #include "base/functional/callback_helpers.h"
++#include "base/i18n/rtl.h"
+ #include "base/location.h"
++#include "base/numerics/safe_conversions.h"
++#include "chrome/app/chrome_command_ids.h"
+ #include "chrome/browser/bookmarks/bookmark_model_factory.h"
+ #include "chrome/browser/favicon/favicon_utils.h"
+ #include "chrome/browser/profiles/profile.h"
+ #include "chrome/browser/ui/bookmarks/bookmark_utils.h"
++#include "chrome/browser/ui/browser.h"
++#include "chrome/browser/ui/browser_commands.h"
+ #include "chrome/browser/ui/bubble_anchor_util.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/layout_constants.h"
+@@ -40,7 +45,9 @@
+ #include "ui/base/models/image_model.h"
+ #include "ui/base/ui_base_features.h"
+ #include "ui/color/color_provider.h"
++#include "ui/events/event.h"
+ #include "ui/gfx/geometry/insets.h"
++#include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/size.h"
+ #include "ui/gfx/text_constants.h"
+ #include "ui/views/accessibility/view_accessibility.h"
+@@ -51,6 +58,7 @@
+ #include "ui/views/layout/flex_layout_types.h"
+ #include "ui/views/layout/layout_manager_base.h"
+ #include "ui/views/layout/layout_types.h"
++#include "ui/views/style/typography.h"
+ #include "ui/views/view_class_properties.h"
+ #include "ui/views/view_utils.h"
+ #include "url/gurl.h"
+@@ -62,12 +70,17 @@ constexpr int kControlSpacing = 2;
+ // Space between the controls and the site pill below them, and between the
+ // pill and the tabs below it. The tab strip region adds a little more below.
+ constexpr int kSitePillTopMargin = 6;
+-constexpr int kSitePillBottomMargin = 8;
+-constexpr int kSitePillOutlineThickness = 1;
+-constexpr SkAlpha kSitePillFillAlpha = 0x12;
+-constexpr SkAlpha kSitePillOutlineAlpha = 0x24;
+-constexpr int kSitePillHorizontalPadding = 10;
+-constexpr int kSitePillImageLabelSpacing = 6;
++constexpr int kSitePillBottomMargin = 4;
++// Zen's address box: a little taller and rounder than the tab rows.
++constexpr int kSitePillHeight = 38;
++constexpr int kSitePillCornerRadius = 10;
++// The icon and host line up with the favicons and titles of the tabs (see
++// TabViewVerticalLayout).
++constexpr int kSitePillIconSize = 16;
++constexpr int kSitePillImageLabelSpacing = 7;
++// Opacity of the active tab color behind the pill, the same as behind pinned
++// tiles (see VerticalTabStyleViews).
++constexpr float kSitePillFillOpacity = 0.55f;
+ // The spacer between the leading and trailing controls only takes width once
+ // every control has its preferred width.
+ constexpr int kSpacerFlexOrder = 2;
+@@ -117,47 +130,48 @@ END_METADATA
+ // ZenSidebarSitePill:
+ 
+ ZenSidebarSitePill::ZenSidebarSitePill(BrowserView* browser_view)
+-    : views::LabelButton(base::BindRepeating(&ZenSidebarSitePill::OnPressed,
+-                                             base::Unretained(this))),
++    : views::LabelButton(
++          base::BindRepeating(&ZenSidebarSitePill::OnPressed,
++                              base::Unretained(this)),
++          std::u16string(),
++          // Regular weight, the same font as the tab titles below.
++          views::style::CONTEXT_LABEL),
+       browser_view_(browser_view) {
+-  // As tall and as round as the vertical tabs below it.
+-  SetMinSize(
+-      gfx::Size(0, GetLayoutConstant(LayoutConstant::kVerticalTabHeight)));
++  // Like Zen's address box: a little taller than the tab rows, with the icon
++  // and host lined up with the tabs' favicons and titles.
++  SetMinSize(gfx::Size(0, kSitePillHeight));
+   SetImageLabelSpacing(kSitePillImageLabelSpacing);
+   SetHorizontalAlignment(gfx::ALIGN_LEFT);
+   // Keep the end of the host, which carries the registrable domain.
+   SetElideBehavior(gfx::ELIDE_HEAD);
+   SetEnabledTextColors(kColorTabForegroundInactiveFrameActive);
++  SetBorder(views::CreateEmptyBorder(gfx::Insets::VH(
++      0, GetLayoutConstant(LayoutConstant::kTabHorizontalPadding))));
+   ConfigureInkDrop(this,
+                    std::make_unique<views::RoundRectHighlightPathGenerator>(
+                        gfx::Insets(), GetCornerRadius()));
+   GetViewAccessibility().SetName(
+-      l10n_util::GetStringUTF16(IDS_TOOLTIP_LOCATION_ICON));
++      l10n_util::GetStringUTF16(IDS_ACCNAME_LOCATION));
+ }
+ 
+ ZenSidebarSitePill::~ZenSidebarSitePill() = default;
+ 
+ // static
+ int ZenSidebarSitePill::GetCornerRadius() {
+-  return GetLayoutConstant(LayoutConstant::kVerticalTabCornerRadius);
++  return kSitePillCornerRadius;
+ }
+ 
+ void ZenSidebarSitePill::OnThemeChanged() {
+   views::LabelButton::OnThemeChanged();
+-  // A faint wash and hairline of the sidebar's text color: reads as a field,
+-  // not as a tab, and works on light and dark frames alike.
+-  const SkColor foreground =
+-      GetColorProvider()->GetColor(kColorTabForegroundInactiveFrameActive);
+-  const float radius = GetCornerRadius();
++  // No outline, only a translucent wash of the active tab color, the same as
++  // the pinned tiles below it (see VerticalTabStyleViews). The ink drop adds
++  // the hover highlight on top.
++  const SkColor surface =
++      GetColorProvider()->GetColor(kColorTabBackgroundActiveFrameActive);
+   SetBackground(views::CreateRoundedRectBackground(
+-      SkColorSetA(foreground, kSitePillFillAlpha), radius,
+-      kSitePillOutlineThickness));
+-  SetBorder(views::CreatePaddedBorder(
+-      views::CreateRoundedRectBorder(
+-          kSitePillOutlineThickness, radius,
+-          SkColorSetA(foreground, kSitePillOutlineAlpha)),
+-      gfx::Insets::VH(0, kSitePillHorizontalPadding -
+-                             kSitePillOutlineThickness)));
++      SkColorSetA(surface, base::ClampRound<SkAlpha>(SkColorGetA(surface) *
++                                                     kSitePillFillOpacity)),
++      GetCornerRadius()));
+ }
+ 
+ void ZenSidebarSitePill::Update() {
+@@ -170,9 +184,8 @@ void ZenSidebarSitePill::Update() {
+   const bool show_url = model->ShouldDisplayURL();
+   SetText(show_url ? model->GetURLForDisplay(/*trim_after_host_name=*/true)
+                    : std::u16string());
+-  SetTooltipText(show_url
+-                     ? model->GetURLForDisplay()
+-                     : l10n_util::GetStringUTF16(IDS_TOOLTIP_LOCATION_ICON));
++  SetTooltipText(show_url ? model->GetURLForDisplay()
++                          : l10n_util::GetStringUTF16(IDS_ACCNAME_LOCATION));
+ 
+   const bool dangerous =
+       model->GetSecurityLevel() == security_state::DANGEROUS;
+@@ -182,12 +195,35 @@ void ZenSidebarSitePill::Update() {
+           model->GetVectorIcon(),
+           dangerous ? kColorOmniboxSecurityChipDangerous
+                     : kColorTabForegroundInactiveFrameActive,
+-          GetLayoutConstant(LayoutConstant::kLocationBarIconSize)));
++          kSitePillIconSize));
+ }
+ 
+-void ZenSidebarSitePill::OnPressed() {
++void ZenSidebarSitePill::OnPressed(const ui::Event& event) {
++  // Clicking the security icon opens page info, like the location bar's icon.
+   // Page info anchors itself to this pill through
+   // bubble_anchor_util::GetPageInfoAnchorConfiguration().
++  bool show_page_info = false;
++  const views::View* const image = image_container_view();
++  if (event.IsLocatedEvent() && image && image->GetVisible() &&
++      !image->bounds().IsEmpty()) {
++    // The icon and the padding between it and the pill's edge, in the same
++    // (mirrored) coordinates as the event.
++    const gfx::Rect icon = image->GetMirroredBounds();
++    const float x = event.AsLocatedEvent()->x();
++    show_page_info = base::i18n::IsRTL()
++                         ? x >= icon.x() - kSitePillImageLabelSpacing / 2
++                         : x < icon.right() + kSitePillImageLabelSpacing / 2;
++  }
++
++  // Anywhere else edits the current page's address in the command bar, like
++  // Ctrl+L.
++  Browser* const browser = browser_view_->browser();
++  if (!show_page_info &&
++      chrome::IsCommandEnabled(browser, IDC_OPEN_COMMAND_BAR_EDIT)) {
++    chrome::ExecuteCommand(browser, IDC_OPEN_COMMAND_BAR_EDIT);
++    return;
++  }
++
+   ShowPageInfoDialog(browser_view_->GetActiveWebContents(), base::DoNothing(),
+                      bubble_anchor_util::Anchor::kLocationBar);
+ }
+diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
+index f1cf595e..e1e3b80b 100644
+--- a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
++++ b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
+@@ -32,9 +32,9 @@ enum class VerticalTabStripCollapseState;
+ }  // namespace tabs
+ 
+ // Shows the security state and host of the active tab in the sidebar while
+-// frameless (zen) mode hides the location bar. Pressing it opens page info,
+-// like the location bar's icon does. Shaped like a vertical tab, but styled as
+-// a field so it doesn't read as one.
++// frameless (zen) mode hides the location bar, styled like Zen's address box.
++// Pressing it edits the address in the command bar, like Ctrl+L; pressing its
++// security icon opens page info, like the location bar's icon does.
+ class ZenSidebarSitePill : public views::LabelButton {
+   METADATA_HEADER(ZenSidebarSitePill, views::LabelButton)
+ 
+@@ -48,13 +48,12 @@ class ZenSidebarSitePill : public views::LabelButton {
+   void Update();
+ 
+  private:
+-  // The same as the vertical tabs'.
+   static int GetCornerRadius();
+ 
+   // views::LabelButton:
+   void OnThemeChanged() override;
+ 
+-  void OnPressed();
++  void OnPressed(const ui::Event& event);
+ 
+   const raw_ptr<BrowserView> browser_view_;
+ };
+diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_view.cc b/chrome/browser/ui/views/tabs/common/tab_strip_view.cc
+index 54f967e7..ecf411c0 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_strip_view.cc
++++ b/chrome/browser/ui/views/tabs/common/tab_strip_view.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "chrome/browser/ui/views/tabs/common/tab_strip_view.h"
+ 
++#include <algorithm>
++#include <optional>
++
+ #include "base/callback_list.h"
+ #include "base/functional/bind.h"
+ #include "base/memory/raw_ptr.h"
+@@ -37,7 +40,10 @@
+ #include "components/tabs/public/tab_group.h"
+ #include "content/public/browser/navigation_controller.h"
+ #include "ui/base/metadata/metadata_impl_macros.h"
++#include "ui/color/color_provider.h"
+ #include "ui/compositor/layer.h"
++#include "ui/gfx/canvas.h"
++#include "ui/gfx/geometry/rect.h"
+ #include "ui/views/background.h"
+ #include "ui/views/controls/scroll_view.h"
+ #include "ui/views/layout/layout_types.h"
+@@ -45,6 +51,7 @@
+ #include "ui/views/view.h"
+ #include "ui/views/view_class_properties.h"
+ #include "ui/views/view_utils.h"
++#include "ui/views/widget/widget.h"
+ 
+ namespace {
+ 
+@@ -263,8 +270,58 @@ void TabStripView::OnMouseExited(const ui::MouseEvent& event) {
+   }
+ }
+ 
++void TabStripView::Layout(PassKey) {
++  LayoutSuperclass<views::View>(this);
++  // The pinned/unpinned separator is painted in the gap between the two
++  // scroll views, which may have moved.
++  const std::optional<gfx::Rect> separator_bounds = GetPinnedSeparatorBounds();
++  if (separator_bounds != pinned_separator_bounds_) {
++    pinned_separator_bounds_ = separator_bounds;
++    SchedulePaint();
++  }
++}
++
++void TabStripView::OnPaint(gfx::Canvas* canvas) {
++  views::View::OnPaint(canvas);
++  // Helium: like Zen, a hairline separates the pinned tabs from the others in
++  // the vertical tab strip. TabStripViewLayout leaves a gap for it.
++  const std::optional<gfx::Rect> separator_bounds = GetPinnedSeparatorBounds();
++  if (!separator_bounds) {
++    return;
++  }
++  const bool frame_active =
++      GetWidget() ? GetWidget()->ShouldPaintAsActive() : true;
++  canvas->FillRect(*separator_bounds,
++                   GetColorProvider()->GetColor(
++                       frame_active ? kColorTabDividerFrameActive
++                                    : kColorTabDividerFrameInactive));
++}
++
++std::optional<gfx::Rect> TabStripView::GetPinnedSeparatorBounds() const {
++  if (!IsVerticalOrientation(collection_node_) ||
++      !pinned_tabs_scroll_view_->GetVisible() ||
++      !unpinned_tabs_scroll_view_->GetVisible() ||
++      pinned_tabs_scroll_view_->height() <= 0 ||
++      unpinned_tabs_scroll_view_->height() <= 0) {
++    return std::nullopt;
++  }
++  constexpr int kThickness = TabStripViewLayout::kPinnedSeparatorThickness;
++  const int gap_top = pinned_tabs_scroll_view_->bounds().bottom();
++  const int gap_bottom = unpinned_tabs_scroll_view_->y();
++  if (gap_bottom - gap_top < kThickness) {
++    return std::nullopt;
++  }
++  const int inset =
++      GetLayoutConstant(LayoutConstant::kVerticalTabStripHorizontalPadding);
++  return gfx::Rect(inset, gap_top + (gap_bottom - gap_top - kThickness) / 2,
++                   std::max(0, width() - 2 * inset), kThickness);
++}
++
+ void TabStripView::OnWidgetActivationChanged(views::Widget* widget,
+                                              bool active) {
++  if (IsVerticalOrientation(collection_node_)) {
++    SchedulePaint();
++  }
+   if (TabHoverCardController* hover_card_controller =
+           collection_node_->GetController()->GetHoverCardController();
+       hover_card_controller) {
+diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_view.h b/chrome/browser/ui/views/tabs/common/tab_strip_view.h
+index 69194f20..ec571ca3 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_strip_view.h
++++ b/chrome/browser/ui/views/tabs/common/tab_strip_view.h
+@@ -5,11 +5,14 @@
+ #ifndef CHROME_BROWSER_UI_VIEWS_TABS_COMMON_TAB_STRIP_VIEW_H_
+ #define CHROME_BROWSER_UI_VIEWS_TABS_COMMON_TAB_STRIP_VIEW_H_
+ 
++#include <optional>
++
+ #include "base/memory/raw_ptr.h"
+ #include "base/scoped_observation.h"
+ #include "components/prefs/pref_change_registrar.h"
+ #include "components/tabs/public/tab_interface.h"
+ #include "ui/base/metadata/metadata_header_macros.h"
++#include "ui/gfx/geometry/rect.h"
+ #include "ui/views/view.h"
+ #include "ui/views/widget/widget_observer.h"
+ 
+@@ -67,6 +70,8 @@ class TabStripView final : public views::View,
+   void RemovedFromWidget() override;
+   void OnMouseEntered(const ui::MouseEvent& event) override;
+   void OnMouseExited(const ui::MouseEvent& event) override;
++  void Layout(PassKey) override;
++  void OnPaint(gfx::Canvas* canvas) override;
+ 
+   // views::WidgetObserver:
+   void OnWidgetActivationChanged(views::Widget* widget, bool active) override;
+@@ -120,6 +125,10 @@ class TabStripView final : public views::View,
+   // visible in the viewport (prioritizing the active tab view if not all fit).
+   void EnsureViewsVisibleInViewportPostLayout(views::ScrollView* scroll_view);
+ 
++  // Helium: where the line between pinned and unpinned tabs goes in the
++  // vertical tab strip, if both are shown.
++  std::optional<gfx::Rect> GetPinnedSeparatorBounds() const;
++
+   // Enables and disables overflow visuals on `scroll_view` respectively. Used
+   // in combination to avoid visual artifacts caused by repeatedly scrolling-in
+   // animating views.
+@@ -144,6 +153,8 @@ class TabStripView final : public views::View,
+   raw_ptr<views::ScrollView> pinned_tabs_scroll_view_ = nullptr;
+   raw_ptr<PinnedTabContainerView> pinned_tabs_container_view_ = nullptr;
+   raw_ptr<views::Separator> tabs_separator_ = nullptr;
++  // Helium: see GetPinnedSeparatorBounds().
++  std::optional<gfx::Rect> pinned_separator_bounds_;
+   raw_ptr<views::ScrollView> unpinned_tabs_scroll_view_ = nullptr;
+   raw_ptr<UnpinnedTabContainerView> unpinned_tabs_container_view_ = nullptr;
+   raw_ptr<TabScrollButtonContainer> tab_scroll_button_container_ = nullptr;
+diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.cc b/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.cc
+index 034c5bbd..ece88ec2 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.cc
++++ b/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.cc
+@@ -232,6 +232,10 @@ views::ProposedLayout TabStripViewLayout::CalculateVerticalLayout(
+ 
+   const int region_vertical_padding = GetLayoutConstant(
+       LayoutConstant::kVerticalTabStripCollapsedVerticalPadding);
++  // Helium: room for the separator TabStripView paints between pinned and
++  // unpinned tabs, with the usual padding on both sides of it.
++  const int pinned_unpinned_gap =
++      2 * region_vertical_padding + kPinnedSeparatorThickness;
+ 
+   int y = 0;
+ 
+@@ -251,7 +255,7 @@ views::ProposedLayout TabStripViewLayout::CalculateVerticalLayout(
+   if (size_bounds.height().is_bounded()) {
+     remaining_height = size_bounds.height().value();
+     if (pinned_preferred_height != 0 && unpinned_preferred_height != 0) {
+-      remaining_height -= region_vertical_padding;
++      remaining_height -= pinned_unpinned_gap;
+     }
+     // Clamp the remaining height to 0 if we have less space.
+     remaining_height = std::max(remaining_height, 0);
+@@ -282,7 +286,7 @@ views::ProposedLayout TabStripViewLayout::CalculateVerticalLayout(
+     y += pinned_container_bounds.height();
+     // Add padding only if there are pinned and unpinned tabs.
+     if (unpinned_preferred_height != 0) {
+-      y += region_vertical_padding;
++      y += pinned_unpinned_gap;
+     }
+   }
+ 
+diff --git a/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.h b/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.h
+index c2e402b0..a70b4baa 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.h
++++ b/chrome/browser/ui/views/tabs/common/tab_strip_view_layout.h
+@@ -21,6 +21,11 @@ class TabStripView;
+ // horizontal and vertical orientations.
+ class TabStripViewLayout : public views::LayoutManagerBase {
+  public:
++  // Helium: thickness of the line TabStripView paints between pinned and
++  // unpinned tabs in the vertical tab strip. The gap between the two is
++  // widened to fit it.
++  static constexpr int kPinnedSeparatorThickness = 1;
++
+   explicit TabStripViewLayout(TabStripOrientation orientation);
+   TabStripViewLayout(const TabStripViewLayout&) = delete;
+   TabStripViewLayout& operator=(const TabStripViewLayout&) = delete;
+diff --git a/chrome/browser/ui/views/tabs/common/tab_view.cc b/chrome/browser/ui/views/tabs/common/tab_view.cc
+index 24abdbfb..2b0aff90 100644
+--- a/chrome/browser/ui/views/tabs/common/tab_view.cc
++++ b/chrome/browser/ui/views/tabs/common/tab_view.cc
+@@ -1225,17 +1225,11 @@ void TabView::UpdateBorder() {
+   }
+ 
+   if (pinned_) {
+-    if (split_) {
+-      // Insets for border handled by the `SplitTabView`.
+-      SetBorder(views::CreateEmptyBorder(gfx::Insets(GetLayoutConstant(
+-          LayoutConstant::kVerticalTabPinnedBorderThickness))));
+-    } else {
+-      SetBorder(views::CreateRoundedRectBorder(
+-          GetLayoutConstant(LayoutConstant::kVerticalTabPinnedBorderThickness),
+-          GetLayoutConstant(LayoutConstant::kVerticalTabCornerRadius),
+-          IsFrameActive() ? kColorVerticalTabPinnedOutline
+-                          : kColorTabDividerFrameInactive));
+-    }
++    // Helium: pinned tiles are filled like Zen's essentials instead of
++    // outlined (see VerticalTabStyleViews), so keep only the outline's inset.
++    // Split pinned tabs have theirs drawn by the `SplitTabView`.
++    SetBorder(views::CreateEmptyBorder(gfx::Insets(
++        GetLayoutConstant(LayoutConstant::kVerticalTabPinnedBorderThickness))));
+   } else if (GetBorder()) {
+     SetBorder(nullptr);
+   }
+diff --git a/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.cc b/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.cc
+index 5cae698e..29977a88 100644
+--- a/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.cc
++++ b/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.cc
+@@ -4,9 +4,13 @@
+ 
+ #include "chrome/browser/ui/views/tabs/common/vertical_tab_style_views.h"
+ 
++#include <algorithm>
++#include <cmath>
+ #include <optional>
+ #include <string>
+ 
++#include "base/numerics/safe_conversions.h"
++#include "cc/paint/paint_flags.h"
+ #include "chrome/browser/ui/views/helium/native_frame_materials.h"
+ #include "chrome/browser/themes/theme_properties.h"
+ #include "chrome/browser/ui/layout_constants.h"
+@@ -20,13 +24,31 @@
+ #include "third_party/skia/include/core/SkPath.h"
+ #include "third_party/skia/include/core/SkRRect.h"
+ #include "ui/base/theme_provider.h"
++#include "ui/color/color_provider.h"
+ #include "ui/gfx/canvas.h"
+ #include "ui/gfx/color_utils.h"
++#include "ui/gfx/geometry/insets_f.h"
++#include "ui/gfx/geometry/rect_f.h"
+ #include "ui/gfx/geometry/skia_conversions.h"
+ #include "ui/gfx/scoped_canvas.h"
++#include "ui/gfx/shadow_value.h"
++#include "ui/gfx/skia_paint_util.h"
+ #include "ui/views/view_utils.h"
+ #include "ui/views/widget/widget.h"
+ 
++namespace {
++
++// Helium: opacity of the active tab color washed over hovered tabs, and over
++// pinned tiles at rest and while hovered. The sidebar site pill uses the same
++// pinned values (see zen_sidebar_toolbar.cc).
++constexpr float kHoverAlpha = 0.45f;
++constexpr float kPinnedRestAlpha = 0.55f;
++constexpr float kPinnedHoverAlpha = 0.8f;
++// Space left below each row for the active tab's shadow.
++constexpr float kShadowSpace = 1.0f;
++
++}  // namespace
++
+ VerticalTabStyleViews::VerticalTabStyleViews(
+     std::unique_ptr<TabStyleViewDelegate> delegate)
+     : delegate_(std::move(delegate)) {
+@@ -80,8 +102,7 @@ std::optional<SkPath> VerticalTabStyleViews::GetChildClipPath(
+ void VerticalTabStyleViews::PaintTab(gfx::Canvas* canvas) const {
+   if (helium::ShouldUseNativeFrameMaterials(
+           delegate_->GetBrowserWindowInterface())) {
+-    PaintTabBackgroundFill(canvas, GetSelectionState(),
+-                           delegate_->IsHoverAnimationActive(), std::nullopt);
++    PaintSidebarTabBackground(canvas);
+     return;
+   }
+ 
+@@ -101,9 +122,76 @@ void VerticalTabStyleViews::PaintTab(gfx::Canvas* canvas) const {
+     PaintTabBackgroundWithImages(canvas, active_tab_fill_id,
+                                  inactive_tab_fill_id);
+   } else {
+-    PaintTabBackgroundFill(canvas, GetSelectionState(),
+-                           delegate_->IsHoverAnimationActive(), std::nullopt);
++    PaintSidebarTabBackground(canvas);
++  }
++}
++
++void VerticalTabStyleViews::PaintSidebarTabBackground(
++    gfx::Canvas* canvas) const {
++  // Helium: Zen-style sidebar rows. The active tab is a raised surface in the
++  // theme's active tab color with a soft shadow; other tabs only show a wash of
++  // that color while hovered, and pinned tiles keep a faint wash at rest like
++  // Zen's essentials. Every fill comes from the active tab color, so it
++  // follows light, dark and custom themes.
++  const views::View* const view = delegate_->GetView();
++  const ui::ColorProvider* const color_provider = view->GetColorProvider();
++  if (!color_provider) {
++    return;
++  }
++  const bool frame_active =
++      view->GetWidget() ? view->GetWidget()->ShouldPaintAsActive() : true;
++  const TabStyle::TabSelectionState selection_state = GetSelectionState();
++  const float hover =
++      std::clamp(static_cast<float>(delegate_->GetHoverAnimationValue()), 0.0f,
++                 1.0f);
++
++  SkColor fill = SK_ColorTRANSPARENT;
++  bool raised = false;
++  switch (selection_state) {
++    case TabStyle::TabSelectionState::kActive:
++      fill = tab_style()->GetTabBackgroundColor(
++          selection_state, /*hovered=*/false, frame_active, color_provider);
++      raised = true;
++      break;
++    case TabStyle::TabSelectionState::kSelected:
++      fill = tab_style()->GetTabBackgroundColor(
++          selection_state, /*hovered=*/hover > 0.0f, frame_active,
++          color_provider);
++      break;
++    case TabStyle::TabSelectionState::kInactive: {
++      const SkColor surface = tab_style()->GetTabBackgroundColor(
++          TabStyle::TabSelectionState::kActive, /*hovered=*/false,
++          frame_active, color_provider);
++      const bool pinned = delegate_->IsPinned();
++      const float alpha =
++          std::lerp(pinned ? kPinnedRestAlpha : 0.0f,
++                    pinned ? kPinnedHoverAlpha : kHoverAlpha, hover);
++      fill = SkColorSetA(surface, base::ClampRound<SkAlpha>(
++                                      SkColorGetA(surface) * alpha));
++      break;
++    }
++  }
++  if (SkColorGetA(fill) == SK_AlphaTRANSPARENT) {
++    return;
++  }
++
++  // Keep room below every row for the active tab's shadow, so all rows are the
++  // same height whether or not they are raised.
++  gfx::RectF bounds(view->GetLocalBounds());
++  bounds.Inset(gfx::InsetsF::TLBR(0, 0, kShadowSpace, 0));
++
++  cc::PaintFlags flags;
++  flags.setAntiAlias(true);
++  flags.setStyle(cc::PaintFlags::kFill_Style);
++  flags.setColor(fill);
++  if (raised) {
++    // A dark fill needs a denser shadow to read against a dark frame.
++    const SkAlpha shadow_alpha = color_utils::IsDark(fill) ? 0x59 : 0x26;
++    flags.setLooper(gfx::CreateShadowDrawLooper(
++        {gfx::ShadowValue(gfx::Vector2d(0, 1), /*blur=*/2,
++                          SkColorSetA(SK_ColorBLACK, shadow_alpha))}));
+   }
++  canvas->DrawRoundRect(bounds, GetCornerRadius(), flags);
+ }
+ 
+ void VerticalTabStyleViews::PaintTabBackgroundWithImages(
+diff --git a/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.h b/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.h
+index acd097fa..48927a73 100644
+--- a/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.h
++++ b/chrome/browser/ui/views/tabs/common/vertical_tab_style_views.h
+@@ -45,6 +45,8 @@ class VerticalTabStyleViews : public TabStyleViews {
+  private:
+   SkScalar GetCornerRadius() const;
+   float GetCurrentActiveOpacity() const;
++  // Helium: paints the Zen-style row background for the current state.
++  void PaintSidebarTabBackground(gfx::Canvas* canvas) const;
+   void PaintTabBackgroundWithImages(
+       gfx::Canvas* canvas,
+       std::optional<int> active_tab_fill_id,

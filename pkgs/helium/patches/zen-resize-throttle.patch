@@ -1,0 +1,458 @@
+diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
+index 415d1d76..81a205d3 100644
+--- a/chrome/browser/ui/views/frame/browser_view.cc
++++ b/chrome/browser/ui/views/frame/browser_view.cc
+@@ -1800,6 +1800,16 @@ float BrowserView::GetSideChromeOvershoot() const {
+   return std::max(0.f, static_cast<float>(GetZenSidebarSlideValue()) - 1.f);
+ }
+ 
++float BrowserView::GetSideChromeRevealTarget() const {
++  if (!zen_mode_enabled_) {
++    return 1.f;
++  }
++  if (!ShouldDrawVerticalTabStrip()) {
++    return 0.f;
++  }
++  return static_cast<float>(zen_sidebar_slide_to_);
++}
++
+ bool BrowserView::IsZenModeSideChromePinned() const {
+   // The zen sidebar is always docked: Ctrl+S slides it in and out, pushing the
+   // page aside, and it never floats over the page.
+diff --git a/chrome/browser/ui/views/frame/browser_view.h b/chrome/browser/ui/views/frame/browser_view.h
+index 65dc92d0..8a958566 100644
+--- a/chrome/browser/ui/views/frame/browser_view.h
++++ b/chrome/browser/ui/views/frame/browser_view.h
+@@ -448,6 +448,9 @@ class BrowserView : public BrowserWindow,
+   // How far the zen sidebar springs past its shown position, as a fraction of
+   // its width. Zero unless the sidebar is overshooting while it slides in.
+   float GetSideChromeOvershoot() const;
++  // The reveal ratio the zen sidebar is sliding towards: 1 when it is being
++  // shown, 0 when it is being hidden.
++  float GetSideChromeRevealTarget() const;
+   bool IsZenModeSideChromePinned() const;
+   bool IsZenModeTopChromePinned() const;
+   // True while the sidebar slides in or out in zen mode.
+diff --git a/chrome/browser/ui/views/frame/contents_web_view.cc b/chrome/browser/ui/views/frame/contents_web_view.cc
+index e1d30f93..3b2ea647 100644
+--- a/chrome/browser/ui/views/frame/contents_web_view.cc
++++ b/chrome/browser/ui/views/frame/contents_web_view.cc
+@@ -4,6 +4,9 @@
+ 
+ #include "chrome/browser/ui/views/frame/contents_web_view.h"
+ 
++#include <algorithm>
++#include <cstdlib>
++
+ #include "base/debug/dump_without_crashing.h"
+ #include "build/build_config.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+@@ -31,6 +34,23 @@
+ DEFINE_CLASS_ELEMENT_IDENTIFIER_VALUE(ContentsWebView,
+                                       kContentsWebViewElementId);
+ 
++#if defined(USE_AURA)
++namespace {
++
++// How often the page's renderer is resized while the zen sidebar slides. A
++// heavy page takes several frames to lay out and paint at a new width, so
++// resizing it on every frame only keeps the renderer, and the raster work it
++// hands the GPU, saturated without showing more of its frames.
++constexpr base::TimeDelta kThrottledResizeInterval = base::Milliseconds(50);
++
++// The renderer isn't resized during the slide for width differences up to
++// this, e.g. rounding between the page's final width worked out ahead and the
++// view's, or the show spring settling around its shown position.
++constexpr int kThrottledResizeTolerance = 2;
++
++}  // namespace
++#endif  // defined(USE_AURA)
++
+ ContentsWebView::ContentsWebView(content::BrowserContext* browser_context)
+     : views::WebView(browser_context) {
+   // Draws the ContentsWebView background.
+@@ -102,6 +122,115 @@ void ContentsWebView::SetIsAnimatingBounds(bool is_animating,
+   }
+ }
+ 
++void ContentsWebView::SetThrottledResize(bool throttled,
++                                         std::optional<int> lead_width) {
++  if (lead_width) {
++    lead_width = std::max(0, *lead_width);
++  }
++  throttled_resize_lead_width_ = throttled ? lead_width : std::nullopt;
++  if (throttled_resize_ == throttled) {
++    return;
++  }
++  throttled_resize_ = throttled;
++
++  SetResizeDeadlineOverride(web_contents(), /*no_deadline=*/throttled);
++#if defined(USE_AURA)
++  // With fast resize the holder only moves and clips the page's native view;
++  // MaybeResizeThrottledRenderer() resizes it. Other platforms keep resizing
++  // it on every frame.
++  SetFastResize(throttled);
++
++  if (throttled) {
++    // The sidebar has hardly moved on the first frame, so the first resize
++    // waits an interval too.
++    last_throttled_resize_ = base::TimeTicks::Now();
++    // Between resizes the view can be wider than the page's last frame. Fill
++    // the gap with the page's own background colour, as the frame host does
++    // inside the page while it waits for a frame of the new size.
++    content::RenderWidgetHostView* const rwhv =
++        web_contents() ? web_contents()->GetRenderWidgetHostView() : nullptr;
++    const std::optional<SkColor> page_color =
++        rwhv ? rwhv->GetBackgroundColor() : std::nullopt;
++    if (background_visible_ && page_color &&
++        SkColorGetA(*page_color) == SK_AlphaOPAQUE) {
++      layer()->AsSolidColor()->SetColor(SkColor4f::FromColor(*page_color));
++    }
++    return;
++  }
++
++  if (GetWidget()) {
++    UpdateBackgroundColor();
++  }
++  // Fit the page to the view exactly, even if the view's bounds don't change
++  // again.
++  holder()->InvalidateLayout();
++#endif
++}
++
++void ContentsWebView::OnBoundsChanged(const gfx::Rect& previous_bounds) {
++  views::WebView::OnBoundsChanged(previous_bounds);
++  if (throttled_resize_) {
++    MaybeResizeThrottledRenderer();
++  }
++}
++
++void ContentsWebView::MaybeResizeThrottledRenderer() {
++#if defined(USE_AURA)
++  aura::Window* const native_view = holder()->native_view();
++  if (!native_view || holder()->size().IsEmpty()) {
++    return;
++  }
++  gfx::Size target_size = holder()->size();
++  target_size.Enlarge(throttled_resize_lead_width_.value_or(0), 0);
++  const gfx::Size current_size = native_view->bounds().size();
++  // Leave rounding differences, and the spring settling, to the exact resize
++  // at the end of the slide, which then has nothing left to do.
++  if (current_size.height() == target_size.height() &&
++      std::abs(current_size.width() - target_size.width()) <=
++          kThrottledResizeTolerance) {
++    return;
++  }
++  // Laying the page out ahead at its final width can't wait: the sidebar is
++  // already uncovering it.
++  const base::TimeTicks now = base::TimeTicks::Now();
++  if (!throttled_resize_lead_width_ &&
++      now - last_throttled_resize_ < kThrottledResizeInterval) {
++    return;
++  }
++  last_throttled_resize_ = now;
++  // The holder has just positioned the native view, and with fast resize it
++  // keeps this size and clips it to the view. The page's renderer follows the
++  // native view's size; the frame host shows its last frame unstretched, with
++  // the page's background colour beside it, until it draws at the new size.
++  native_view->SetBounds(
++      gfx::Rect(native_view->bounds().origin(), target_size));
++#endif
++}
++
++void ContentsWebView::SetResizeDeadlineOverride(
++    content::WebContents* web_contents,
++    bool no_deadline) {
++  // On Linux and Windows the frame host already embeds a resized surface with
++  // a zero deadline, so the browser's frame shows the page's last frame rather
++  // than waiting for one of the new size. Any surface it embeds without a size
++  // change still gets the caller's deadline, though, usually the default of a
++  // few frames: e.g. a surface id the renderer allocated reported back with
++  // its frame, or a resize with kUseDefaultDeadlineWhenAnimatingBounds. During
++  // the slide that would stall the browser's frame, and the sidebar with it,
++  // until the page has drawn. Clearing the override restores the usual
++  // deadlines once the sidebar is at rest.
++  content::RenderWidgetHostView* const rwhv =
++      web_contents ? web_contents->GetRenderWidgetHostView() : nullptr;
++  if (!rwhv) {
++    return;
++  }
++  if (no_deadline) {
++    rwhv->SetForceSpecifiedDeadline(0u);
++  } else {
++    rwhv->SetForceSpecifiedDeadline(std::nullopt);
++  }
++}
++
+ void ContentsWebView::UpdateIsBlockedByModal() {
+   bool is_blocked = false;
+   if (web_contents()) {
+@@ -146,6 +275,13 @@ void ContentsWebView::OnLetterboxingChanged() {
+ }
+ 
+ void ContentsWebView::SetWebContents(content::WebContents* web_contents) {
++  if (throttled_resize_ && web_contents != this->web_contents()) {
++    SetResizeDeadlineOverride(this->web_contents(), /*no_deadline=*/false);
++    SetResizeDeadlineOverride(web_contents, /*no_deadline=*/true);
++    // Size a page swapped in mid-slide right away; its native view may still
++    // have the size it had when it was last shown.
++    last_throttled_resize_ = base::TimeTicks();
++  }
+   views::WebView::SetWebContents(web_contents);
+   if (web_contents == nullptr) {
+     status_bubble_.reset();
+diff --git a/chrome/browser/ui/views/frame/contents_web_view.h b/chrome/browser/ui/views/frame/contents_web_view.h
+index 0dc0d4b8..54ebd149 100644
+--- a/chrome/browser/ui/views/frame/contents_web_view.h
++++ b/chrome/browser/ui/views/frame/contents_web_view.h
+@@ -6,8 +6,10 @@
+ #define CHROME_BROWSER_UI_VIEWS_FRAME_CONTENTS_WEB_VIEW_H_
+ 
+ #include <memory>
++#include <optional>
+ 
+ #include "base/memory/raw_ptr.h"
++#include "base/time/time.h"
+ #include "build/build_config.h"
+ #include "chrome/browser/ui/views/frame/web_contents_close_handler_delegate.h"
+ #include "chrome/common/buildflags.h"
+@@ -52,6 +54,17 @@ class ContentsWebView : public views::WebView,
+ 
+   void SetIsAnimatingBounds(bool is_animating, bool is_origin_changing);
+ 
++  // Called on every browser layout. While `throttled` (the zen sidebar is
++  // sliding), the page's renderer is resized at most every
++  // kThrottledResizeInterval rather than on every bounds change: in between,
++  // its last frame stays where it is, clipped by the view or backed by the
++  // page's own background colour, and never stretched. The browser's frames
++  // never wait for the page meanwhile. With a `lead_width`, the renderer is
++  // laid out that much wider than the view right away (the view clips it),
++  // which is the width the page settles at. The page is resized to fit the
++  // view exactly once `throttled` is cleared.
++  void SetThrottledResize(bool throttled, std::optional<int> lead_width);
++
+   // Update the blocked state based on the tab's modal dialog status.
+   void UpdateIsBlockedByModal();
+ 
+@@ -79,14 +92,28 @@ class ContentsWebView : public views::WebView,
+   void CloneWebContentsLayer() override;
+   void DestroyClonedLayer() override;
+ 
++ protected:
++  // views::WebView:
++  void OnBoundsChanged(const gfx::Rect& previous_bounds) override;
++
+  private:
+   void UpdateBackgroundColor();
++  // Resizes the renderer to the view (plus any lead width) if a throttled
++  // resize is due.
++  void MaybeResizeThrottledRenderer();
++  // Stops the browser's frames waiting for `web_contents`' renderer to draw at
++  // a new size, or restores the usual deadline.
++  void SetResizeDeadlineOverride(content::WebContents* web_contents,
++                                 bool no_deadline);
+   std::unique_ptr<StatusBubbleViews> status_bubble_;
+   std::unique_ptr<WebContentsCloseHandler> web_contents_close_handler_;
+ 
+   bool background_visible_ = true;
+   bool is_animating_bounds_ = false;
+   bool use_default_deadline_when_animating_ = false;
++  bool throttled_resize_ = false;
++  std::optional<int> throttled_resize_lead_width_;
++  base::TimeTicks last_throttled_resize_;
+ 
+   std::unique_ptr<ui::LayerTreeOwner> cloned_layer_tree_;
+ };
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+index 1f5580ae..ccccd077 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+@@ -63,6 +63,8 @@ class BrowserViewLayoutDelegate {
+   virtual float GetTopChromeRevealRatio() const { return 1.f; }
+   virtual float GetSideChromeRevealRatio() const { return 1.f; }
+   virtual float GetSideChromeOvershoot() const { return 0.f; }
++  // The reveal ratio the side chrome is sliding towards.
++  virtual float GetSideChromeRevealTarget() const { return 1.f; }
+   virtual bool IsZenModeSideChromePinned() const { return false; }
+   virtual bool IsZenModeTopChromePinned() const { return false; }
+   virtual bool IsZenModeSideChromeAnimating() const { return false; }
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+index 5179532b..92910aec 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+@@ -249,6 +249,10 @@ float BrowserViewLayoutDelegateImpl::GetSideChromeOvershoot() const {
+   return browser_view_->GetSideChromeOvershoot();
+ }
+ 
++float BrowserViewLayoutDelegateImpl::GetSideChromeRevealTarget() const {
++  return browser_view_->GetSideChromeRevealTarget();
++}
++
+ bool BrowserViewLayoutDelegateImpl::IsZenModeTopChromePinned() const {
+   return browser_view_->IsZenModeTopChromePinned();
+ }
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+index 3dc456c4..d9da8705 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.h
+@@ -47,6 +47,7 @@ class BrowserViewLayoutDelegateImpl : public BrowserViewLayoutDelegate {
+   float GetTopChromeRevealRatio() const override;
+   float GetSideChromeRevealRatio() const override;
+   float GetSideChromeOvershoot() const override;
++  float GetSideChromeRevealTarget() const override;
+   bool IsZenModeSideChromePinned() const override;
+   bool IsZenModeTopChromePinned() const override;
+   bool IsZenModeSideChromeAnimating() const override;
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+index fe495f97..e6df38e0 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+@@ -91,6 +91,8 @@ struct ZenModeLayoutState {
+   // How far the docked sidebar springs past its shown position, as a fraction
+   // of its width.
+   float side_chrome_overshoot = 0.0f;
++  // The reveal ratio the docked sidebar is sliding towards.
++  float side_chrome_target = 1.0f;
+   int vertical_tab_strip_padding = 0;
+   int vertical_tab_strip_top_padding = 0;
+ 
+@@ -154,6 +156,7 @@ ZenModeLayoutState GetZenModeLayoutState(
+                                 delegate.IsZenModeSideChromeAnimating();
+   if (state.docked_vertical_tab_strip) {
+     state.side_chrome_overshoot = delegate.GetSideChromeOvershoot();
++    state.side_chrome_target = delegate.GetSideChromeRevealTarget();
+   }
+ 
+   if (!state.floating_vertical_tab_strip) {
+@@ -949,6 +952,11 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+                         tabstrip_bounds.height() > 0);
+   }
+ 
++  // While the docked zen sidebar slides, how much wider than now the page will
++  // be once it settles, if its renderer should be laid out at that width
++  // already. See MultiContentsView::SetThrottledContentsResize().
++  std::optional<int> zen_contents_lead_width;
++
+   // This will be the area next to the vertical tab strip (if present) that will
+   // be targeted for the content area when animating. It allows other elements
+   // to "fly over" the contents.
+@@ -1011,6 +1019,13 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+           params.visual_client_area.y() + top_offset +
+               zen.vertical_tab_strip_top_padding,
+           vertical_tab_strip_width, vertical_tab_strip_height};
++      // How much of the window the docked sidebar covers once fully shown.
++      const int zen_shown_on_screen_width =
++          vertical_right_aligned
++              ? params.visual_client_area.right() -
++                    vertical_tab_strip_bounds.x()
++              : vertical_tab_strip_bounds.right() -
++                    params.visual_client_area.x();
+       if (zen.floating_vertical_tab_strip ||
+           (zen.docked_vertical_tab_strip && zen.side_chrome_ratio < 1.0f)) {
+         vertical_tab_strip_bounds = SlideBoundsFromSide(
+@@ -1067,6 +1082,26 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+           inset_amount =
+               std::clamp(on_screen_width - vertical_tab_strip_hover_width, 0,
+                          params.visual_client_area.width());
++
++          // Whenever the page is going to end up at least as wide as it is now
++          // (the sidebar is hiding, or springing past its shown position), lay
++          // its renderer out at that final width straight away. The sidebar
++          // then uncovers a page that is already laid out, the extra width
++          // being clipped until then, and the page doesn't reflow after the
++          // sidebar has stopped. While the page is still to shrink, the
++          // renderer follows its edge at a throttled rate instead, so no
++          // gutter opens beside the page.
++          if (zen.side_chrome_animating) {
++            const int final_inset = std::clamp(
++                (zen.side_chrome_target > 0.5f ? zen_shown_on_screen_width
++                                               : 0) -
++                    vertical_tab_strip_hover_width,
++                0, params.visual_client_area.width());
++            const int final_width_delta = inset_amount - final_inset;
++            if (final_width_delta >= 0) {
++              zen_contents_lead_width = final_width_delta;
++            }
++          }
+         }
+         params.InsetHorizontal(inset_amount,
+                                /*leading=*/!vertical_right_aligned);
+@@ -1450,6 +1485,11 @@ BrowserViewTabbedLayoutImpl::CalculateProposedLayout(
+       side_panel_is_animating || vertical_tab_strip_animation.current_motion ||
+           zen.side_chrome_animating,
+       is_origin_changing);
++  // The page edge follows the sliding zen sidebar every frame, but heavy pages
++  // can't reflow that often: resize their renderers at a lower rate and never
++  // let the browser's frames wait for them.
++  views().multi_contents_view->SetThrottledContentsResize(
++      zen.side_chrome_animating, zen_contents_lead_width);
+ 
+   // Lay out contents container. The contents container contains the multi-
+   // contents view when multi-contents are enabled. The checks here are to
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.cc b/chrome/browser/ui/views/frame/multi_contents_view.cc
+index 95af83bb..94b89672 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.cc
++++ b/chrome/browser/ui/views/frame/multi_contents_view.cc
+@@ -11,6 +11,7 @@
+ #include "base/check_deref.h"
+ #include "base/functional/bind.h"
+ #include "base/notreached.h"
++#include "base/numerics/safe_conversions.h"
+ #include "base/task/sequenced_task_runner.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
+@@ -675,6 +676,35 @@ void MultiContentsView::SetIsAnimatingContent(bool is_animating,
+   }
+ }
+ 
++void MultiContentsView::SetThrottledContentsResize(
++    bool throttled,
++    std::optional<int> lead_width) {
++  // The panes' current widths only split `lead_width` between them, so it
++  // doesn't matter that they are about to be laid out again.
++  const bool side_by_side =
++      IsInSplitView() &&
++      GetSplitLayout() == split_tabs::SplitTabLayout::kSideBySide;
++  int total_width = 0;
++  if (side_by_side) {
++    for (auto& contents_container_view : contents_container_views_) {
++      total_width += contents_container_view->width();
++    }
++  }
++  for (auto& contents_container_view : contents_container_views_) {
++    std::optional<int> pane_lead_width = lead_width;
++    if (pane_lead_width && side_by_side) {
++      pane_lead_width =
++          total_width > 0
++              ? base::ClampRound(static_cast<float>(*pane_lead_width) *
++                                 contents_container_view->width() /
++                                 total_width)
++              : 0;
++    }
++    contents_container_view->contents_view()->SetThrottledResize(
++        throttled, pane_lead_width);
++  }
++}
++
+ std::vector<views::View*> MultiContentsView::GetAccessiblePanes() {
+   std::vector<views::View*> accessible_panes;
+   for (auto& contents_container_view : contents_container_views_) {
+diff --git a/chrome/browser/ui/views/frame/multi_contents_view.h b/chrome/browser/ui/views/frame/multi_contents_view.h
+index aeef99af..7fbe97f9 100644
+--- a/chrome/browser/ui/views/frame/multi_contents_view.h
++++ b/chrome/browser/ui/views/frame/multi_contents_view.h
+@@ -186,6 +186,14 @@ class MultiContentsView
+ 
+   void SetIsAnimatingContent(bool is_animating, bool is_origin_changing);
+ 
++  // Throttles how often the pages' renderers are resized while the zen sidebar
++  // slides; see ContentsWebView::SetThrottledResize(). `lead_width` is how
++  // much wider than now the contents will be once the slide settles, if the
++  // renderers should be laid out at that width already. It is shared between
++  // side-by-side split panes in proportion to their widths.
++  void SetThrottledContentsResize(bool throttled,
++                                  std::optional<int> lead_width);
++
+   // Returns accessible panes to be used in BrowserView to create the order of
+   // pane traversal.
+   std::vector<views::View*> GetAccessiblePanes();

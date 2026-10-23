@@ -10,11 +10,38 @@ Item {
   // A computed answer draws a glyph or a colour swatch in place of an app icon.
   property string glyph: ""
   property string swatch: ""
-  // What Return does, hinted at the right edge of the selected row only.
-  property string action: ""
+  // An emoji is drawn as itself, in colour, on a neutral tile.
+  property string emoji: ""
+  // Indices into `name` the query matched, drawn in the match colour.
+  property var matches: []
   property bool current: false
 
-  signal activated
+  signal activated(int modifiers)
+
+  // The name as styled text: escaped, with each run of matched characters wrapped once.
+  readonly property string styledName: {
+    var hit = {};
+    for (var k = 0; k < matches.length; k++)
+      hit[matches[k]] = true;
+    var esc = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;"
+    };
+    var out = "";
+    var open = false;
+    for (var i = 0; i < name.length; i++) {
+      if (hit[i] && !open)
+        out += "<font color=\"" + Theme.launcherMatchColor + "\">";
+      else if (!hit[i] && open)
+        out += "</font>";
+      open = hit[i] === true;
+      var c = name.charAt(i);
+      out += esc[c] || c;
+    }
+    return open ? out + "</font>" : out;
+  }
 
   activeFocusOnTab: true
   Accessible.role: Accessible.Button
@@ -22,7 +49,7 @@ Item {
   Accessible.description: root.description
   Accessible.focusable: true
   Accessible.focused: root.activeFocus
-  Accessible.onPressAction: root.activated()
+  Accessible.onPressAction: root.activated(Qt.NoModifier)
 
   readonly property bool twoLine: description.length > 0
 
@@ -44,7 +71,7 @@ Item {
     width: Theme.launcherIconSize
     height: width
     radius: Theme.launcherIconRadius
-    color: root.swatch ? root.swatch : root.glyph ? Theme.withAlpha(Theme.accent, 0.18) : Theme.withAlpha(root.tint, 0.22)
+    color: root.swatch ? root.swatch : root.emoji ? Theme.launcherEmojiTile : root.glyph ? Theme.withAlpha(Theme.accent, 0.18) : Theme.withAlpha(root.tint, 0.22)
     // A hairline keeps a swatch near the surface colour from vanishing into it.
     border.width: root.swatch ? 1 : 0
     border.color: Theme.withAlpha(Theme.text, 0.18)
@@ -52,12 +79,20 @@ Item {
 
     Text {
       anchors.centerIn: parent
-      visible: !root.swatch
+      visible: !root.swatch && !root.emoji
       text: root.glyph ? root.glyph : root.name.length > 0 ? root.name.charAt(0).toUpperCase() : "?"
       color: root.glyph ? Theme.accent : root.tint
       font.family: root.glyph ? Theme.iconFont : Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
       font.weight: Theme.weightBold
+    }
+
+    Text {
+      anchors.centerIn: parent
+      visible: root.emoji.length > 0
+      text: root.emoji
+      font.family: Theme.emojiFont
+      font.pixelSize: Theme.launcherEmojiSize
     }
   }
 
@@ -84,8 +119,9 @@ Item {
 
     x: Theme.launcherTextLeft - Theme.launcherInset
     y: root.twoLine ? 5 : (parent.height - height) / 2
-    width: (hint.visible ? hint.x - Theme.launcherInset : parent.width) - x - Theme.launcherInset
-    text: root.name
+    width: parent.width - x - Theme.launcherInset
+    text: root.styledName
+    textFormat: Text.StyledText
     color: Theme.inkPrimary
     elide: Text.ElideRight
     font.family: Theme.uiFont
@@ -105,29 +141,19 @@ Item {
     font.pixelSize: Theme.launcherDescSize
   }
 
-  Text {
-    id: hint
-
-    x: parent.width - width - Theme.launcherInset
-    y: (parent.height - height) / 2
-    text: "↵ " + root.action
-    color: Theme.inkTertiary
-    visible: root.current && root.action.length > 0
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.launcherDescSize
-  }
-
   // A click still launches, but hover never moves the selection: the cursor is hidden.
   MouseArea {
     anchors.fill: parent
     activeFocusOnTab: true
     onPressed: root.forceActiveFocus()
-    onClicked: root.activated()
+    onClicked: function (mouse) {
+      root.activated(mouse.modifiers);
+    }
   }
 
   Keys.onPressed: function (event) {
     if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-      root.activated();
+      root.activated(event.modifiers);
       event.accepted = true;
     }
   }

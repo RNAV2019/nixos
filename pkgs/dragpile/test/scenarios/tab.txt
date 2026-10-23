@@ -1,0 +1,9 @@
+wait 300
+move 150 60 280
+wait 30
+wait 500
+icon
+wait 400
+move -220 50 250
+wait 500
+release

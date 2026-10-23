@@ -12,6 +12,12 @@ Singleton {
   readonly property string clock: "󰅐"
   readonly property string calendar: "󰃭"
   readonly property string numberBase: "󰐣"
+  // Its clipboard history (content-paste).
+  readonly property string clipboard: "󰆒"
+  // Its emoji and symbol picker (emoticon-outline).
+  readonly property string emoji: "󰇵"
+  // Its Claude chat (creation, the sparkles).
+  readonly property string assistant: "󰙴"
 
   readonly property string chevronLeft: "󰅁"
   readonly property string chevronRight: "󰅂"
@@ -23,6 +29,9 @@ Singleton {
   readonly property string reboot: "󰜉"
   readonly property string shutdown: "󰐥"
   readonly property string person: "󰀄"
+
+  // An image clip in the clipboard history.
+  readonly property string image: "󰋩"
 
   readonly property string bluetoothOn: ""
   readonly property string bluetoothOff: "󰂲"

@@ -7,10 +7,13 @@
 
 #include <hyprland/src/Compositor.hpp>
 #include <hyprland/src/output/Monitor.hpp>
+#include <hyprland/src/protocols/core/Compositor.hpp>
+#include <hyprland/src/protocols/types/Buffer.hpp>
 #include <hyprland/src/render/Renderer.hpp>
 #include <hyprland/src/render/pass/TexPassElement.hpp>
 #include <hyprland/src/state/MonitorState.hpp>
 
+#include <drm_fourcc.h>
 #include <pango/pangocairo.h>
 
 using namespace std::chrono_literals;
@@ -102,6 +105,13 @@ bool CPile::hidesClientIcon() const {
 }
 
 void CPile::reset() {
+    m_iconMode = false;
+    m_icon.reset();
+    m_iconCommit.reset();
+    m_iconRaw = false;
+    m_iconTex.reset();
+    m_tiltScale = 1;
+    m_pad       = CARD_PAD;
     m_cards.clear();
     m_badgeTex.reset();
     m_badgeCount = 0;
@@ -142,27 +152,8 @@ void CPile::begin(std::vector<std::string>&& paths) {
 
     m_drag++;
     m_count = paths.size();
-
-    double scale = 1;
-    for (const auto& m : State::monitorState()->monitors())
-        scale = std::max(scale, (double)m->m_scale);
-
-    m_style.size        = g_config.cardSize->value();
-    m_style.radius      = g_config.cardRadius->value();
-    m_style.scale       = scale;
-    m_style.glyphSize   = g_config.glyphSize->value();
-    m_style.glyphStroke = g_config.glyphStroke->value();
-    m_style.card        = color(g_config.colCard);
-    m_style.border      = color(g_config.colBorder);
-    m_style.thumbnails  = g_config.thumbnails->value();
-    m_style.maxDecodeBytes          = (int64_t)g_config.thumbnailMaxMb->value() << 20;
-    m_style.glyph.fill(color(g_config.colGlyph));
-    m_style.glyph[KIND_DIR]     = color(g_config.colGlyphFolder);
-    m_style.glyph[KIND_IMAGE]   = color(g_config.colGlyphImage);
-    m_style.glyph[KIND_PDF]     = color(g_config.colGlyphPdf);
-    m_style.glyph[KIND_ARCHIVE] = color(g_config.colGlyphArchive);
-    m_style.glyph[KIND_AUDIO]   = color(g_config.colGlyphAudio);
-    m_style.glyph[KIND_VIDEO]   = color(g_config.colGlyphVideo);
+    loadStyle();
+    m_cardSize = {m_style.size, m_style.size};
 
     const size_t visible = std::min(paths.size(), (size_t)std::max<int64_t>(1, g_config.maxCards->value()));
     const auto   cursor  = m_cursor();
@@ -196,6 +187,146 @@ void CPile::begin(std::vector<std::string>&& paths) {
     poke();
 }
 
+// Copies a wl_shm buffer into a cairo image, or gives up on formats cairo has no match for.
+static cairo_surface_t* copyShm(const SP<IHLBuffer>& buf) {
+    const auto attrs = buf->shm();
+    if (!attrs.success)
+        return nullptr;
+    const uint32_t f     = attrs.format;
+    const bool     swap  = f == DRM_FORMAT_ABGR8888 || f == DRM_FORMAT_XBGR8888;
+    const bool     alpha = f == DRM_FORMAT_ARGB8888 || f == DRM_FORMAT_ABGR8888;
+    if (!swap && !alpha && f != DRM_FORMAT_XRGB8888)
+        return nullptr;
+    const int w = attrs.size.x, h = attrs.size.y;
+    if (w <= 0 || h <= 0 || w > 4096 || h > 4096 || attrs.stride < w * 4)
+        return nullptr;
+
+    auto [data, fmt, len] = buf->beginDataPtr(0);
+    if (!data || len < (size_t)attrs.stride * h) {
+        buf->endDataPtr();
+        return nullptr;
+    }
+    auto*     img = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    uint8_t*  dst = cairo_image_surface_get_data(img);
+    const int ds  = cairo_image_surface_get_stride(img);
+    for (int y = 0; y < h; ++y) {
+        const auto* s = (const uint32_t*)(data + (size_t)y * attrs.stride);
+        auto*       d = (uint32_t*)(dst + (size_t)y * ds);
+        for (int x = 0; x < w; ++x) {
+            uint32_t px = s[x];
+            if (swap)
+                px = (px & 0xff00ff00) | ((px >> 16) & 0xff) | ((px & 0xff) << 16);
+            d[x] = alpha ? px : px | 0xff000000;
+        }
+    }
+    buf->endDataPtr();
+    cairo_surface_mark_dirty(img);
+    return img;
+}
+
+void CPile::beginIcon(SP<CWLSurfaceResource> icon) {
+    if (m_state != STATE_IDLE) {
+        damage(m_lastExtents);
+        reset();
+    }
+    m_worker->dropQueued();
+
+    m_drag++;
+    m_count = 1;
+    loadStyle();
+    m_iconMode = true;
+    m_icon     = icon;
+    m_pad      = ICON_PAD;
+
+    const auto cursor = m_cursor();
+    m_cardSize        = icon->m_current.size;
+    m_flipX = m_flipY = false;
+    updateFlip(cursor);
+    // The card lifts off from where the client put its icon, under its own hotspot, and
+    // springs out to the pile's place beside the pointer; a cancel sends it back there.
+    m_home = cursor + icon->m_current.offset + m_cardSize / 2.0;
+
+    m_cards.clear();
+    SCard c;
+    c.pos = m_home;
+    m_cards.emplace_back(std::move(c));
+
+    m_iconCommit = icon->m_events.commit.listen([this] { refreshIcon(); });
+    refreshIcon();
+
+    m_scale    = 0.94;
+    m_scaleVel = 0;
+    m_alpha    = 0;
+    m_lastStep.reset();
+    setState(STATE_LIVE);
+    poke();
+}
+
+// The icon committed (or the drag began): take its current contents as the card. A wl_shm
+// icon is copied and dressed as a pile card; anything else is drawn from its texture as is.
+void CPile::refreshIcon() {
+    const auto surf = m_icon.lock();
+    if (!surf || m_cards.empty())
+        return;
+
+    const Vector2D size = surf->m_current.size;
+    // Placeholder icons (Chromium sends a 1x1 one for some drags) are no card; keep what we had.
+    if (size.x < 8 || size.y < 8 || !surf->m_current.texture)
+        return;
+
+    if (size != m_cardSize && !m_lastExtents.empty())
+        damage(m_lastExtents);
+    m_cardSize = size;
+    // A swing that suits a 46 px card would throw a tab preview's corners about; ease it off
+    // for bigger cards.
+    m_tiltScale = std::clamp(std::sqrt(m_style.size / std::max(size.x, size.y)), 0.3, 1.0);
+
+    cairo_surface_t* image = nullptr;
+    if (const auto& buf = surf->m_current.buffer; buf && buf->isSynchronous())
+        image = copyShm(buf.m_buffer);
+
+    if (image) {
+        auto* card       = renderIconCard(m_style, size.x, size.y, image);
+        m_cards[0].tex   = g_pHyprRenderer->createTexture(card);
+        m_iconRaw        = false;
+        m_iconTex.reset();
+        cairo_surface_destroy(card);
+        cairo_surface_destroy(image);
+    } else {
+        m_cards[0].tex.reset();
+        m_iconRaw = true;
+        m_iconTex = surf->m_current.texture;
+    }
+    poke();
+}
+
+bool CPile::frontReady() const {
+    return !m_cards.empty() && (m_cards.front().tex || (m_iconRaw && m_iconTex));
+}
+
+void CPile::loadStyle() {
+    double scale = 1;
+    for (const auto& m : State::monitorState()->monitors())
+        scale = std::max(scale, (double)m->m_scale);
+
+    m_style.size        = g_config.cardSize->value();
+    m_style.radius      = g_config.cardRadius->value();
+    m_style.scale       = scale;
+    m_style.glyphSize   = g_config.glyphSize->value();
+    m_style.glyphStroke = g_config.glyphStroke->value();
+    m_style.card        = color(g_config.colCard);
+    m_style.border      = color(g_config.colBorder);
+    m_style.thumbnails  = g_config.thumbnails->value();
+    m_style.maxDecodeBytes          = (int64_t)g_config.thumbnailMaxMb->value() << 20;
+    m_style.glyph.fill(color(g_config.colGlyph));
+    m_style.glyph[KIND_DIR]     = color(g_config.colGlyphFolder);
+    m_style.glyph[KIND_IMAGE]   = color(g_config.colGlyphImage);
+    m_style.glyph[KIND_PDF]     = color(g_config.colGlyphPdf);
+    m_style.glyph[KIND_ARCHIVE] = color(g_config.colGlyphArchive);
+    m_style.glyph[KIND_AUDIO]   = color(g_config.colGlyphAudio);
+    m_style.glyph[KIND_VIDEO]   = color(g_config.colGlyphVideo);
+}
+
 void CPile::end(bool dropped) {
     if (m_state == STATE_PENDING || (m_state == STATE_LIVE && m_alpha <= 0)) {
         abandon();
@@ -203,6 +334,8 @@ void CPile::end(bool dropped) {
     }
     if (m_state != STATE_LIVE)
         return;
+    // The icon is going away with the drag; the card keeps its last look for the ending.
+    m_iconCommit.reset();
     setState(dropped ? STATE_DROPPED : STATE_CANCELLED);
     poke();
 }
@@ -223,8 +356,8 @@ void CPile::updateFlip(const Vector2D& cursor) {
     const double margin = 12, hysteresis = 32;
     const double right  = mon->m_position.x + mon->m_size.x - margin;
     const double bottom = mon->m_position.y + mon->m_size.y - margin;
-    const double reachX = cursor.x + g_config.offsetX->value() + m_style.size + 20;
-    const double reachY = cursor.y + g_config.offsetY->value() + m_style.size + 12;
+    const double reachX = cursor.x + g_config.offsetX->value() + m_cardSize.x + 20;
+    const double reachY = cursor.y + g_config.offsetY->value() + m_cardSize.y + 12;
 
     if (!m_flipX && reachX > right)
         m_flipX = true;
@@ -240,9 +373,8 @@ void CPile::updateFlip(const Vector2D& cursor) {
 Vector2D CPile::frontTarget(const Vector2D& cursor) {
     // Board 16d: the front card's top-left sits (9, 21.5) from the arrow's tip. Near the right
     // or bottom edge the pile swaps to the other side of the pointer instead of leaving the screen.
-    const double half = m_style.size / 2.0;
-    const double dx   = g_config.offsetX->value() + half;
-    const double dy   = g_config.offsetY->value() + half;
+    const double dx = g_config.offsetX->value() + m_cardSize.x / 2.0;
+    const double dy = g_config.offsetY->value() + m_cardSize.y / 2.0;
     return {cursor.x + (m_flipX ? -dx : dx), cursor.y + (m_flipY ? -dy : dy)};
 }
 
@@ -337,7 +469,7 @@ void CPile::integrate(double dt) {
     if (m_state == STATE_LIVE) {
         updateFlip(cursor);
         front = frontTarget(cursor);
-        if (m_alpha < 1 && m_cards.front().tex)
+        if (m_alpha < 1 && frontReady())
             m_alpha = std::min(1.0, m_alpha + dt / 0.09);
     } else if (m_state == STATE_DROPPED) {
         front       = cursor;
@@ -355,8 +487,8 @@ void CPile::integrate(double dt) {
     const double falloff = g_config.followFalloff->value();
     const double tk      = g_config.tiltStiffness->value();
     const double tz      = g_config.tiltDamping->value();
-    const double tMax    = g_config.tiltMax->value();
-    const double lean    = g_config.tiltLean->value();
+    const double tMax    = g_config.tiltMax->value() * m_tiltScale;
+    const double lean    = g_config.tiltLean->value() * m_tiltScale;
     const double stretch = g_config.maxStretch->value() * m_scale;
     const double sx = m_flipX ? -1 : 1, sy = m_flipY ? -1 : 1;
 
@@ -476,14 +608,18 @@ CBox CPile::extents() const {
         x1 = std::max(x1, c.x + half);
         y1 = std::max(y1, c.y + half);
     };
-    const double full = (m_style.size + 2 * CARD_PAD) * m_scale;
+    const Vector2D full = (m_cardSize + Vector2D{2 * m_pad, 2 * m_pad}) * m_scale;
     for (const auto& c : m_cards) {
-        const double a = c.ang * M_PI / 180.0;
-        add(c.pos, full / 2.0 * (std::abs(std::cos(a)) + std::abs(std::sin(a))));
+        const double a = c.ang * M_PI / 180.0, cs = std::abs(std::cos(a)), sn = std::abs(std::sin(a));
+        const double hx = (full.x * cs + full.y * sn) / 2.0, hy = (full.x * sn + full.y * cs) / 2.0;
+        x0 = std::min(x0, c.pos.x - hx);
+        y0 = std::min(y0, c.pos.y - hy);
+        x1 = std::max(x1, c.pos.x + hx);
+        y1 = std::max(y1, c.pos.y + hy);
     }
     if (!m_cards.empty() && m_badgeTex) {
         // The badge rides the front card's top-right corner; cover it generously.
-        add(m_cards.front().pos, full / 2.0 * 1.42 + std::max(m_badgeSize.x, m_badgeSize.y) * m_scale);
+        add(m_cards.front().pos, full.x / 2.0 * 1.42 + std::max(m_badgeSize.x, m_badgeSize.y) * m_scale);
     }
     if (x1 < x0)
         return {};
@@ -520,7 +656,7 @@ void CPile::render(PHLMONITOR monitor) {
     if (m_state == STATE_IDLE || m_alpha <= 0 || m_cards.empty())
         return;
 
-    const double full = (m_style.size + 2 * CARD_PAD) * m_scale;
+    const Vector2D full = (m_cardSize + Vector2D{2 * m_pad, 2 * m_pad}) * m_scale;
 
     auto         draw = [&](const SP<Render::ITexture>& tex, const Vector2D& centre, const Vector2D& size, double ang) {
         CBox box = CBox{centre.x - size.x / 2.0, centre.y - size.y / 2.0, size.x, size.y}.translate(-monitor->m_position).scale(monitor->m_scale);
@@ -538,8 +674,13 @@ void CPile::render(PHLMONITOR monitor) {
     for (size_t i = m_cards.size(); i-- > 0;) {
         const auto& c = m_cards[i];
         if (c.tex)
-            draw(c.tex, c.pos, {full, full}, c.ang);
+            draw(c.tex, c.pos, full, c.ang);
     }
+
+    // An icon with no CPU copy (a dmabuf) goes up bare: no plate, shadow or rounding, which the
+    // texture shader could not keep straight on a rotated box anyway.
+    if (m_iconMode && m_iconRaw && m_iconTex)
+        draw(m_iconTex, m_cards.front().pos, m_cardSize * m_scale, m_cards.front().ang);
 
     if (m_badgeTex && m_cards.front().tex) {
         // Board 16d: the badge's centre is the front card's top-right corner, 2 px down.
@@ -566,5 +707,10 @@ std::string CPile::describe() const {
         }
         paths += std::format("{}\"{}\"", paths.empty() ? "" : ",", esc);
     }
-    return std::format(R"({{"state":"{}","count":{},"visible":{},"settled":{},"paths":[{}]}})", NAMES[m_state], m_count, m_cards.size(), m_settled ? "true" : "false", paths);
+    const Vector2D front = m_cards.empty() ? Vector2D{} : m_cards.front().pos;
+    const double   ang   = m_cards.empty() ? 0 : m_cards.front().ang;
+    const Vector2D cur   = m_cursor ? m_cursor() : Vector2D{};
+    return std::format(R"({{"state":"{}","mode":"{}","count":{},"visible":{},"settled":{},"front":[{:.1f},{:.1f},{:.2f}],"card":[{:.0f},{:.0f}],"cursor":[{:.1f},{:.1f}],"raw":{},"paths":[{}]}})", NAMES[m_state],
+                       m_iconMode ? "icon" : "files", m_count, m_cards.size(), m_settled ? "true" : "false", front.x, front.y, ang, m_cardSize.x, m_cardSize.y,
+                       cur.x, cur.y, m_iconRaw ? "true" : "false", paths);
 }

@@ -210,10 +210,33 @@ index 86f19c40..cf5a4b10 100644
        size_t index,
        const AutocompleteMatch& match,
 diff --git a/chrome/browser/ui/omnibox/omnibox_edit_model.cc b/chrome/browser/ui/omnibox/omnibox_edit_model.cc
-index c6f2852f..8e3f13f9 100644
+index c6f2852f..43ba34f9 100644
 --- a/chrome/browser/ui/omnibox/omnibox_edit_model.cc
 +++ b/chrome/browser/ui/omnibox/omnibox_edit_model.cc
-@@ -2642,6 +2642,10 @@ void OmniboxEditModel::OpenMatch(
+@@ -1292,7 +1292,8 @@ void OmniboxEditModel::StartZeroSuggestRequest(
+   // Early exit if a query is already in progress or the popup is already open.
+   // This is what allows this method to be called multiple times in multiple
+   // code locations without harm.
+-  if (!autocomplete_controller()->done() || controller_->IsPopupOpen()) {
++  if (!restarting_zero_suggest_ &&
++      (!autocomplete_controller()->done() || controller_->IsPopupOpen())) {
+     return;
+   }
+ 
+@@ -1328,6 +1329,12 @@ void OmniboxEditModel::StartZeroSuggestRequest(
+   controller_->StartAutocomplete(input_);
+ }
+ 
++void OmniboxEditModel::RestartZeroSuggestRequest() {
++  controller_->StopAutocomplete(/*clear_result=*/false);
++  base::AutoReset<bool> restarting(&restarting_zero_suggest_, true);
++  StartZeroSuggestRequest(/*user_clobbered_permanent_text=*/true);
++}
++
+ void OmniboxEditModel::SetCaretVisibility(bool visible) {
+   // Caret visibility only matters if the omnibox has focus.
+   if (focus_state_ != OMNIBOX_FOCUS_NONE) {
+@@ -2642,6 +2649,10 @@ void OmniboxEditModel::OpenMatch(
      disposition = WindowOpenDisposition::SWITCH_TO_TAB;
    }
  
@@ -224,6 +247,33 @@ index c6f2852f..8e3f13f9 100644
    TRACE_EVENT("omnibox", "OmniboxEditModel::OpenMatch", "match", match,
                "disposition", disposition, "alternate_nav_url",
                alternate_nav_url, "pasted_text", pasted_text, "is_search",
+diff --git a/chrome/browser/ui/omnibox/omnibox_edit_model.h b/chrome/browser/ui/omnibox/omnibox_edit_model.h
+index 444860e6..dba438f1 100644
+--- a/chrome/browser/ui/omnibox/omnibox_edit_model.h
++++ b/chrome/browser/ui/omnibox/omnibox_edit_model.h
+@@ -390,6 +390,12 @@ class OmniboxEditModel {
+   // done.
+   void StartZeroSuggestRequest(bool user_clobbered_permanent_text = false);
+ 
++  // Helium: like StartZeroSuggestRequest(true), but also when a query is
++  // running or the popup is open, replacing its results in place. Used by the
++  // command bar to switch between new-tab and edit-current-tab suggestions
++  // without closing and reopening the popup.
++  void RestartZeroSuggestRequest();
++
+   // Sets the visibility of the caret in the omnibox, if it has focus. The
+   // visibility of the caret is reset to visible if either
+   //   - The user starts typing, or
+@@ -934,6 +940,9 @@ class OmniboxEditModel {
+   // presses escape.
+   bool in_revert_ = false;
+ 
++  // Helium: set while RestartZeroSuggestRequest() runs.
++  bool restarting_zero_suggest_ = false;
++
+   // Indicates if the upcoming autocomplete search is allowed to be treated as
+   // an exact keyword match.  If this is true then keyword mode will be
+   // triggered automatically if the input is "<keyword> <search string>".  We
 diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
 index cfc83d4a..71cca3c8 100644
 --- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
@@ -238,10 +288,10 @@ index cfc83d4a..71cca3c8 100644
    // New windows show the zen sidebar; there is no other way to reveal it.
    registry->RegisterBooleanPref(prefs::kHeliumZenModeSidebarPinned, true);
 diff --git a/chrome/browser/ui/views/frame/browser_view.cc b/chrome/browser/ui/views/frame/browser_view.cc
-index e3e67fb9..13295002 100644
+index b683e2e2..415d1d76 100644
 --- a/chrome/browser/ui/views/frame/browser_view.cc
 +++ b/chrome/browser/ui/views/frame/browser_view.cc
-@@ -196,6 +196,7 @@
+@@ -197,6 +197,7 @@
  #include "chrome/browser/ui/views/glic/glic_button_interface.h"
  #include "chrome/browser/ui/views/global_media_controls/media_toolbar_button_view.h"
  #include "chrome/browser/ui/views/hats/hats_next_web_dialog.h"
@@ -249,7 +299,7 @@ index e3e67fb9..13295002 100644
  #include "chrome/browser/ui/views/helium/zen_sidebar_toolbar.h"
  #include "chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.h"
  #include "chrome/browser/ui/views/infobars/infobar_container_view.h"
-@@ -1241,6 +1242,12 @@ BrowserView::BrowserView(BrowserWindowInterface* browser)
+@@ -1274,6 +1275,12 @@ BrowserView::BrowserView(BrowserWindowInterface* browser)
  }
  
  BrowserView::~BrowserView() {
@@ -262,7 +312,7 @@ index e3e67fb9..13295002 100644
    if (browser_shortcut_service_) {
      browser_shortcut_service_->RemoveObserver(this);
      browser_shortcut_service_ = nullptr;
-@@ -1286,6 +1293,7 @@ BrowserView::~BrowserView() {
+@@ -1319,6 +1326,7 @@ BrowserView::~BrowserView() {
    toolbar_ = nullptr;
    top_container_separator_ = nullptr;
    find_bar_host_view_ = nullptr;
@@ -270,7 +320,7 @@ index e3e67fb9..13295002 100644
    zen_bubble_anchor_view_ = nullptr;
    infobar_container_ = nullptr;
    multi_contents_view_ = nullptr;
-@@ -2578,6 +2586,10 @@ void BrowserView::OnActiveTabChanged(content::WebContents* old_contents,
+@@ -2648,6 +2656,10 @@ void BrowserView::OnActiveTabChanged(content::WebContents* old_contents,
                                       int reason) {
    DCHECK(new_contents);
    TRACE_EVENT0("ui", "BrowserView::OnActiveTabChanged");
@@ -281,7 +331,7 @@ index e3e67fb9..13295002 100644
    views::WebView* active_contents_view = GetActiveContentsWebView();
    bool tab_change_in_split_view =
        IsTabChangeInSplitView(old_contents, new_contents);
-@@ -2869,6 +2881,10 @@ void BrowserView::FullscreenStateChanging() {
+@@ -2939,6 +2951,10 @@ void BrowserView::FullscreenStateChanging() {
  }
  
  void BrowserView::FullscreenStateChanged() {
@@ -292,7 +342,7 @@ index e3e67fb9..13295002 100644
  #if BUILDFLAG(IS_CHROMEOS)
    const auto* frame_view =
        views::AsViewClass<BrowserFrameViewChromeOS>(GetFrameView());
-@@ -2968,6 +2984,11 @@ void BrowserView::SetFocusToLocationBar(bool is_user_initiated) {
+@@ -3038,6 +3054,11 @@ void BrowserView::SetFocusToLocationBar(bool is_user_initiated) {
      return;
    }
  #endif
@@ -304,7 +354,7 @@ index e3e67fb9..13295002 100644
    if (!IsLocationBarVisible()) {
      return;
    }
-@@ -2984,6 +3005,23 @@ void BrowserView::SetFocusToLocationBar(bool is_user_initiated) {
+@@ -3054,6 +3075,27 @@ void BrowserView::SetFocusToLocationBar(bool is_user_initiated) {
                                /*clear_focus_if_failed=*/true);
  }
  
@@ -325,10 +375,14 @@ index e3e67fb9..13295002 100644
 +  return command_bar_ && command_bar_->IsShowing();
 +}
 +
++void BrowserView::OpenCommandBarForNewTabButton() {
++  CommandBarView::OpenForNewTabButton(this);
++}
++
  void BrowserView::UpdateReloadStopState(bool is_loading, bool force) {
    ReloadControl::Mode mode =
        is_loading ? ReloadControl::Mode::kStop : ReloadControl::Mode::kReload;
-@@ -4798,6 +4836,10 @@ void BrowserView::OnWidgetDestroying(views::Widget* widget) {
+@@ -4868,6 +4910,10 @@ void BrowserView::OnWidgetDestroying(views::Widget* widget) {
  
  void BrowserView::OnWidgetActivationChanged(views::Widget* widget,
                                              bool active) {
@@ -339,7 +393,7 @@ index e3e67fb9..13295002 100644
    if (browser_->GetWindow()) {
      if (active) {
        if (restore_focus_on_activation_.has_value() &&
-@@ -5971,6 +6013,12 @@ bool BrowserView::AcceleratorPressed(const ui::Accelerator& accelerator) {
+@@ -6041,6 +6087,12 @@ bool BrowserView::AcceleratorPressed(const ui::Accelerator& accelerator) {
  
    UpdateAcceleratorMetrics(accelerator, command_id);
  
@@ -353,10 +407,10 @@ index e3e67fb9..13295002 100644
      views::ElementTrackerViews::GetInstance()->NotifyCustomEvent(
          browsing_data_important_sites_util::
 diff --git a/chrome/browser/ui/views/frame/browser_view.h b/chrome/browser/ui/views/frame/browser_view.h
-index 3b4124ad..f01c99af 100644
+index eb642593..65dc92d0 100644
 --- a/chrome/browser/ui/views/frame/browser_view.h
 +++ b/chrome/browser/ui/views/frame/browser_view.h
-@@ -83,6 +83,7 @@ class BookmarkBarController;
+@@ -85,6 +85,7 @@ class BookmarkBarController;
  class BookmarkBarView;
  class BrowserWindowInterface;
  class BrowserViewLayout;
@@ -364,7 +418,7 @@ index 3b4124ad..f01c99af 100644
  class ContentsContainerView;
  class ContentsWebView;
  class CustomFloatingCorner;
-@@ -315,6 +316,12 @@ class BrowserView : public BrowserWindow,
+@@ -317,6 +318,17 @@ class BrowserView : public BrowserWindow,
    // FindBarController is initialized.
    View* find_bar_host_view() { return find_bar_host_view_; }
  
@@ -374,10 +428,15 @@ index 3b4124ad..f01c99af 100644
 +  CommandBarView* command_bar() { return command_bar_; }
 +  bool IsCommandBarShowing() const;
 +
++  // Helium: called by the "New tab" buttons (vertical tab strip, tab strip,
++  // toolbar) after they created a tab. Opens the command bar in new-tab mode
++  // on it when the bar is enabled.
++  void OpenCommandBarForNewTabButton();
++
    // Accessor for the InfobarContainer.
    InfoBarContainerView* infobar_container() { return infobar_container_; }
  
-@@ -1311,6 +1318,10 @@ class BrowserView : public BrowserWindow,
+@@ -1324,6 +1336,10 @@ class BrowserView : public BrowserWindow,
    // NativeView.
    raw_ptr<View> find_bar_host_view_ = nullptr;
  
@@ -390,10 +449,10 @@ index 3b4124ad..f01c99af 100644
  
 diff --git a/chrome/browser/ui/views/helium/command_bar_view.cc b/chrome/browser/ui/views/helium/command_bar_view.cc
 new file mode 100644
-index 00000000..feda635f
+index 00000000..856f7b19
 --- /dev/null
 +++ b/chrome/browser/ui/views/helium/command_bar_view.cc
-@@ -0,0 +1,938 @@
+@@ -0,0 +1,1582 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -401,7 +460,10 @@ index 00000000..feda635f
 +#include "chrome/browser/ui/views/helium/command_bar_view.h"
 +
 +#include <algorithm>
++#include <optional>
 +#include <string>
++#include <utility>
++#include <vector>
 +
 +#include "base/auto_reset.h"
 +#include "base/functional/bind.h"
@@ -413,8 +475,10 @@ index 00000000..feda635f
 +#include "cc/paint/draw_looper.h"
 +#include "cc/paint/paint_flags.h"
 +#include "chrome/app/chrome_command_ids.h"
++#include "chrome/browser/favicon/favicon_service_factory.h"
 +#include "chrome/browser/profiles/profile.h"
 +#include "chrome/browser/search/search.h"
++#include "chrome/browser/search_engines/template_url_service_factory.h"
 +#include "chrome/browser/ui/browser_commands.h"
 +#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 +#include "chrome/browser/ui/color/chrome_color_id.h"
@@ -427,16 +491,30 @@ index 00000000..feda635f
 +#include "chrome/browser/ui/views/omnibox/omnibox_view_views.h"
 +#include "chrome/browser/ui/views/toolbar/toolbar_view.h"
 +#include "chrome/common/pref_names.h"
++#include "chrome/grit/generated_resources.h"
++#include "components/favicon/core/favicon_service.h"
++#include "components/favicon_base/favicon_types.h"
++#include "components/keyed_service/core/service_access_type.h"
 +#include "components/prefs/pref_service.h"
++#include "components/search_engines/search_terms_data.h"
++#include "components/search_engines/template_url.h"
++#include "components/search_engines/template_url_service.h"
 +#include "components/strings/grit/components_strings.h"
 +#include "content/public/browser/navigation_controller.h"
 +#include "content/public/browser/web_contents.h"
++#include "net/base/registry_controlled_domains/registry_controlled_domain.h"
++#include "skia/ext/image_operations.h"
++#include "third_party/skia/include/core/SkBitmap.h"
 +#include "third_party/skia/include/core/SkColor.h"
++#include "third_party/skia/include/core/SkM44.h"
++#include "third_party/skia/include/core/SkPath.h"
 +#include "third_party/skia/include/core/SkPoint.h"
++#include "third_party/skia/include/core/SkString.h"
 +#include "ui/accessibility/ax_enums.mojom.h"
 +#include "ui/base/ime/input_method.h"
 +#include "ui/base/l10n/l10n_util.h"
 +#include "ui/base/metadata/metadata_impl_macros.h"
++#include "ui/base/models/image_model.h"
 +#include "ui/base/window_open_disposition.h"
 +#include "ui/color/color_provider.h"
 +#include "ui/compositor/closure_animation_observer.h"
@@ -447,13 +525,20 @@ index 00000000..feda635f
 +#include "ui/gfx/animation/animation.h"
 +#include "ui/gfx/animation/tween.h"
 +#include "ui/gfx/canvas.h"
++#include "ui/gfx/color_analysis.h"
 +#include "ui/gfx/color_utils.h"
 +#include "ui/gfx/geometry/insets.h"
 +#include "ui/gfx/geometry/point_f.h"
++#include "ui/gfx/geometry/rect_conversions.h"
 +#include "ui/gfx/geometry/rect_f.h"
 +#include "ui/gfx/geometry/rounded_corners_f.h"
++#include "ui/gfx/geometry/skia_conversions.h"
 +#include "ui/gfx/geometry/transform.h"
 +#include "ui/gfx/geometry/transform_util.h"
++#include "ui/gfx/image/image.h"
++#include "ui/gfx/image/image_skia.h"
++#include "ui/gfx/image/image_skia_operations.h"
++#include "ui/gfx/range/range.h"
 +#include "ui/gfx/scoped_canvas.h"
 +#include "ui/views/accessibility/view_accessibility.h"
 +#include "ui/views/background.h"
@@ -471,7 +556,9 @@ index 00000000..feda635f
 +constexpr int kCardMinWidth = 480;
 +constexpr float kCardWidthFraction = 1.0f / 1.5f;
 +constexpr int kCardWindowMargin = 24;
-+constexpr int kZenReferenceHeight = 333;
++// Zen places the card's top edge at a quarter of the window height (226px in
++// an 892px window).
++constexpr float kCardTopFraction = 0.25f;
 +constexpr int kMinTop = 48;
 +constexpr int kCardCornerRadius = 16;
 +constexpr int kCardPadding = 8;
@@ -479,31 +566,143 @@ index 00000000..feda635f
 +constexpr int kInputSectionHeight = kCardPadding + kLocationBarHeight +
 +                                    kCardPadding;  // Zen's 62px input row.
 +
-+// Results.
-+constexpr int kResultRowHeight = 40;
++// Results. Navigation matches are two-line rows (title, then muted URL).
++constexpr int kResultRowHeight = 44;
++constexpr int kTwoLineResultRowHeight = 56;
 +constexpr gfx::Insets kResultRowInsets = gfx::Insets::TLBR(2, 8, 0, 8);
 +constexpr int kSelectionRadius = 10;
 +constexpr int kResultsBottomPadding = 8;
++// Keep at least this much room for results below the input row when placing
++// the card in short windows.
++constexpr int kMinResultsSpace = 3 * kTwoLineResultRowHeight;
++// Hairline divider between the input row and the results.
++constexpr int kDividerHorizontalInset = 14;
 +
-+// Zen's box-shadow: 0 30px 140px -15px. A CSS blur radius r is a Gaussian
-+// with sigma r / 2.
-+constexpr float kShadowSigma = 70.0f;
-+constexpr int kShadowOffsetY = 30;
-+constexpr int kShadowSpread = -15;
-+constexpr int kShadowExtent = 3 * 70;  // 3 sigma.
++// Shadow: a tight contact shadow under a soft, offset key shadow, close to
++// Zen's `0 30px 140px -15px` box-shadow but a little tighter.
++struct ShadowLayer {
++  float sigma;
++  float offset_y;
++  // Shrinks the shadow shape, like a negative CSS spread.
++  float inset;
++  SkAlpha dark_alpha;
++  SkAlpha light_alpha;
++};
++constexpr ShadowLayer kContactShadow = {/*sigma=*/2.0f, /*offset_y=*/1.0f,
++                                        /*inset=*/0.0f, /*dark_alpha=*/0x33,
++                                        /*light_alpha=*/0x14};
++constexpr ShadowLayer kKeyShadow = {/*sigma=*/28.0f, /*offset_y=*/14.0f,
++                                    /*inset=*/6.0f, /*dark_alpha=*/0x5C,
++                                    /*light_alpha=*/0x30};
++// 3 sigma of the key shadow (beyond which it is below half an alpha step),
++// less its inset, shifted by its offset.
++constexpr int kShadowExtent = 3 * 28 - 6;
 +constexpr gfx::Insets kShadowInsets =
-+    gfx::Insets::TLBR(kShadowExtent + kShadowSpread - kShadowOffsetY,
-+                      kShadowExtent + kShadowSpread,
-+                      kShadowExtent + kShadowSpread + kShadowOffsetY,
-+                      kShadowExtent + kShadowSpread);
++    gfx::Insets::TLBR(kShadowExtent - 14,
++                      kShadowExtent,
++                      kShadowExtent + 14,
++                      kShadowExtent);
 +
-+// Keyword (search) mode glow.
-+constexpr float kGlowSigma = 12.0f;
-+constexpr SkAlpha kGlowAlpha = 0x66;
++// Keyword (search) mode glow, in the keyword's site color. Deliberately faint.
++constexpr float kGlowSigma = 10.0f;
++constexpr SkAlpha kGlowAlpha = 0x22;
++
++// Why the shadow is a runtime shader rather than a blur mask filter:
++//
++// A blurred shadow is a wide, low-contrast ramp. Skia renders a blur mask
++// filter shadow into an 8-bit (A8) coverage mask; Ganesh's rrect blur either
++// uses a precomputed A8 nine-patch, or, when the card is too short for one
++// (ComputeBlurredRRectParams() wants it taller than 2 * (3 sigma + radius),
++// 188 px for sigma 18 at 1.33x, while the input row is 83 px), draws the rrect
++// into an A8 target that GaussianBlur() downscales by sigma / 4 (6x here),
++// blurs and stretches back with bilinear filtering. That coverage is then
++// multiplied by the shadow's peak alpha (0x4D) and written into the shadow
++// layer's RGBA8 tile, so the whole ramp has at most 77 distinct alpha values,
++// and the compositor
++// blends the tile over the page into an 8-bit framebuffer. Nothing in this
++// chain dithers: SkPaint::setDither() only affects shaders, and Skia's GPU
++// dither only perturbs premultiplied RGB (clamped to [0, a]), never alpha, so
++// it is a no-op for a black shadow in a transparent layer. In the flat tail of
++// the Gaussian one alpha step spans 5-10 device pixels, and on a smooth page
++// colour every step is a visible contour; as R, G and B round at different
++// places, the contours are even slightly coloured. Fractional scaling makes
++// it worse, as the same few steps spread over 1.33x as many pixels.
++//
++// The shader below instead evaluates the shadow analytically per device pixel
++// (a Gaussian-blurred rounded rect is approximated by the error function of
++// its signed distance, which is exact along the edges) in float, and adds
++// interleaved gradient noise of a few alpha steps before the value is
++// quantized into the tile. The noise turns each contour into a fine dither,
++// which survives the compositor's blend: an alpha step changes a page channel
++// by `page / 255` of a level, so +-1.25 alpha steps cover a whole output
++// level on any but very dark pages.
++constexpr char kShadowSkSL[] = R"(
++uniform float4 u_card;
++uniform float u_radius;
++uniform float4 u_layer0;
++uniform float4 u_layer1;
++uniform float4 u_color;
++uniform float u_scale;
++uniform float u_dither;
++
++float RRectDistance(float2 p, float inset) {
++  float2 center = 0.5 * (u_card.xy + u_card.zw);
++  float2 half_size = 0.5 * (u_card.zw - u_card.xy) - inset;
++  float radius = max(u_radius - inset, 0.0);
++  float2 q = abs(p - center) - half_size + radius;
++  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
++}
++
++float Erf(float x) {
++  float x2 = x * x;
++  float t = x2 * (1.2732395 + 0.147 * x2) / (1.0 + 0.147 * x2);
++  return sign(x) * sqrt(1.0 - exp(-t));
++}
++
++float LayerAlpha(float2 p, float4 layer) {
++  if (layer.w <= 0.0 || layer.x <= 0.0) {
++    return 0.0;
++  }
++  float d = RRectDistance(p - float2(0.0, layer.y), layer.z);
++  return layer.w * 0.5 * (1.0 - Erf(d / (1.4142136 * layer.x)));
++}
++
++half4 main(float2 p) {
++  float a0 = LayerAlpha(p, u_layer0);
++  float a1 = LayerAlpha(p, u_layer1);
++  float a = 1.0 - (1.0 - a0) * (1.0 - a1);
++  if (a < 0.25 / 255.0) {
++    return half4(0.0);
++  }
++  float2 pixel = floor(p * u_scale);
++  float noise =
++      fract(52.9829189 * fract(dot(pixel, float2(0.06711056, 0.00583715))));
++  a = clamp(a + (noise - 0.5) * u_dither, 0.0, 1.0);
++  return half4(half3(u_color.rgb * a), half(a));
++}
++)";
++
++// Peak-to-peak amplitude of the shadow's alpha dither, in alpha steps.
++constexpr float kShadowDitherSteps = 2.5f;
++
++// Keyword mode tints, as the fraction of the site color mixed into the card
++// surface: barely for the input section, a little more for the chip.
++constexpr float kInputTintDark = 0.10f;
++constexpr float kInputTintLight = 0.06f;
++constexpr float kChipTintDark = 0.30f;
++constexpr float kChipTintLight = 0.18f;
++// Size of the site favicon in the keyword chip.
++constexpr int kChipIconSize = 16;
++
++// Minimum WCAG contrast between text and the (tinted) surfaces.
++constexpr float kMinTextContrast = color_utils::kMinimumReadableContrastRatio;
 +
 +// Animations.
 +constexpr base::TimeDelta kOpenDuration = base::Milliseconds(150);
 +constexpr base::TimeDelta kCloseDuration = base::Milliseconds(100);
++// How long the window may be inactive before the bar closes, see
++// OnWindowDeactivated().
++constexpr base::TimeDelta kDeactivationGracePeriod = base::Milliseconds(250);
 +constexpr base::TimeDelta kGlowDuration = base::Milliseconds(120);
 +// Matches the omnibox popup's own fade.
 +constexpr base::TimeDelta kPopupFadeDuration = base::Milliseconds(82);
@@ -527,22 +726,129 @@ index 00000000..feda635f
 +  canvas->DrawRoundRect(outline, corner_radius * dsf - 0.5f, flags);
 +}
 +
-+// Paints only the blurred, offset copy of `rect` (no unmodified content).
-+void PaintShadow(gfx::Canvas* canvas,
-+                 const gfx::RectF& rect,
-+                 float corner_radius,
-+                 float offset_y,
-+                 float sigma,
-+                 SkColor color) {
++// Paints the shadow `layer` of `card` with a blur mask filter. Only used if
++// the runtime shader is unavailable; it bands, see kShadowSkSL.
++void PaintBlurShadow(gfx::Canvas* canvas,
++                     const gfx::RectF& card,
++                     float corner_radius,
++                     const SkV4& layer,
++                     SkColor color) {
++  const float sigma = layer.x;
++  const float alpha = layer.w;
++  if (sigma <= 0 || alpha <= 0) {
++    return;
++  }
++  gfx::RectF rect = card;
++  rect.Inset(layer.z);
++  const SkColor shadow_color =
++      SkColorSetA(color, base::ClampRound<SkAlpha>(alpha * 255));
 +  cc::DrawLooperBuilder looper_builder;
-+  looper_builder.AddShadow(SkPoint::Make(0, offset_y), sigma,
-+                           SkColor4f::FromColor(color),
++  looper_builder.AddShadow(SkPoint::Make(0, layer.y), sigma,
++                           SkColor4f::FromColor(shadow_color),
 +                           cc::DrawLooper::kOverrideAlphaFlag);
 +  cc::PaintFlags flags;
 +  flags.setAntiAlias(true);
-+  flags.setColor(color);
++  flags.setColor(shadow_color);
 +  flags.setLooper(looper_builder.Detach());
-+  canvas->DrawRoundRect(rect, corner_radius, flags);
++  canvas->DrawRoundRect(rect, std::max(0.0f, corner_radius - layer.z), flags);
++}
++
++// Paints up to two shadow layers of `card` (each `SkV4{sigma, offset_y,
++// inset, alpha}`, alpha 0 to skip) in `color` over `paint_bounds`, with the
++// dithered runtime shader. Falls back to PaintBlurShadow() if the shader
++// can't be created.
++void PaintShadow(gfx::Canvas* canvas,
++                 const gfx::Rect& paint_bounds,
++                 const gfx::RectF& card,
++                 float corner_radius,
++                 const SkV4& layer0,
++                 const SkV4& layer1,
++                 SkColor color,
++                 sk_sp<cc::PaintShader>& cached_shader) {
++  std::vector<cc::PaintShader::FloatUniform> float_uniforms = {
++      {.name = SkString("u_radius"), .value = corner_radius},
++      {.name = SkString("u_scale"), .value = canvas->image_scale()},
++      {.name = SkString("u_dither"), .value = kShadowDitherSteps / 255.0f},
++  };
++  std::vector<cc::PaintShader::Float4Uniform> float4_uniforms = {
++      {.name = SkString("u_card"),
++       .value = SkV4{card.x(), card.y(), card.right(), card.bottom()}},
++      {.name = SkString("u_layer0"), .value = layer0},
++      {.name = SkString("u_layer1"), .value = layer1},
++      {.name = SkString("u_color"),
++       .value = SkV4{SkColorGetR(color) / 255.0f, SkColorGetG(color) / 255.0f,
++                     SkColorGetB(color) / 255.0f, 1.0f}},
++  };
++  sk_sp<cc::PaintShader> shader = cc::PaintShader::MakeSkSLCommand(
++      kShadowSkSL, std::move(float_uniforms), /*float2_uniforms=*/{},
++      std::move(float4_uniforms), /*int_uniforms=*/{}, cached_shader);
++  if (!shader) {
++    PaintBlurShadow(canvas, card, corner_radius, layer0, color);
++    PaintBlurShadow(canvas, card, corner_radius, layer1, color);
++    return;
++  }
++  cached_shader = shader;
++  cc::PaintFlags flags;
++  flags.setShader(std::move(shader));
++  canvas->DrawRect(gfx::RectF(paint_bounds), flags);
++}
++
++SkV4 ToShadowParams(const ShadowLayer& layer, bool dark) {
++  return SkV4{layer.sigma, layer.offset_y, layer.inset,
++              (dark ? layer.dark_alpha : layer.light_alpha) / 255.0f};
++}
++
++// Moves `background` towards `toward` until `foreground` text on it reaches
++// the minimum readable contrast.
++SkColor EnsureTextContrast(SkColor background,
++                           SkColor foreground,
++                           SkColor toward) {
++  if (color_utils::GetContrastRatio(background, foreground) >=
++      kMinTextContrast) {
++    return background;
++  }
++  return color_utils::BlendForMinContrast(background, foreground, toward,
++                                          kMinTextContrast)
++      .color;
++}
++
++// Zen's card is a near-black solid surface; derive it from the omnibox
++// results background so light themes and custom themes still match.
++SkColor GetBaseSurfaceColor(const ui::ColorProvider* color_provider) {
++  const SkColor results_background =
++      color_provider->GetColor(kColorOmniboxResultsBackground);
++  return color_utils::IsDark(results_background)
++             ? color_utils::AlphaBlend(SK_ColorBLACK, results_background, 0.45f)
++             : results_background;
++}
++
++// Candidate page URLs whose favicon represents the site behind `turl`: the
++// search page's origin (any page on that host), then www.<domain> and
++// <domain>, so e.g. music.youtube.com falls back to youtube.com's icon.
++std::vector<GURL> GetFaviconCandidates(const TemplateURL& turl,
++                                       const SearchTermsData& search_terms) {
++  std::vector<GURL> candidates;
++  GURL search_url = turl.GenerateSearchURL(search_terms);
++  if (!search_url.is_valid() || !search_url.SchemeIsHTTPOrHTTPS()) {
++    search_url = turl.favicon_url();
++  }
++  if (!search_url.is_valid() || !search_url.SchemeIsHTTPOrHTTPS()) {
++    return candidates;
++  }
++  candidates.push_back(search_url.GetWithEmptyPath());
++  const std::string domain =
++      net::registry_controlled_domains::GetDomainAndRegistry(
++          search_url,
++          net::registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES);
++  if (!domain.empty()) {
++    for (const std::string& host : {"www." + domain, domain}) {
++      const GURL url("https://" + host + "/");
++      if (url.is_valid() && url.host() != search_url.host()) {
++        candidates.push_back(url);
++      }
++    }
++  }
++  return candidates;
 +}
 +
 +}  // namespace
@@ -578,6 +884,16 @@ index 00000000..feda635f
 +  SchedulePaint();
 +}
 +
++void CommandBarShadowView::SetGlowColor(SkColor color) {
++  if (glow_color_ == color) {
++    return;
++  }
++  glow_color_ = color;
++  if (glow_amount_ > 0) {
++    SchedulePaint();
++  }
++}
++
 +gfx::PointF CommandBarShadowView::GetCardTopCenter() const {
 +  return gfx::PointF(card_rect_.x() + card_rect_.width() / 2.0f,
 +                     card_rect_.y());
@@ -589,22 +905,20 @@ index 00000000..feda635f
 +    return;
 +  }
 +
-+  // Zen uses rgba(0, 0, 0, .8) on dark and .6 on light surfaces.
 +  const bool dark = color_utils::IsDark(
 +      color_provider->GetColor(kColorOmniboxResultsBackground));
-+  gfx::RectF shadow_rect(card_rect_);
-+  shadow_rect.Inset(-kShadowSpread);
-+  PaintShadow(canvas, shadow_rect,
-+              std::max(0, kCardCornerRadius + kShadowSpread), kShadowOffsetY,
-+              kShadowSigma, SkColorSetA(SK_ColorBLACK, dark ? 0xCC : 0x99));
++  const gfx::RectF card(card_rect_);
++  PaintShadow(canvas, GetLocalBounds(), card, kCardCornerRadius,
++              ToShadowParams(kContactShadow, dark),
++              ToShadowParams(kKeyShadow, dark), SK_ColorBLACK, cached_shader_);
 +
 +  if (glow_amount_ > 0) {
-+    const SkColor glow_color =
-+        color_provider->GetColor(kColorOmniboxKeywordSelected);
-+    PaintShadow(canvas, gfx::RectF(card_rect_), kCardCornerRadius,
-+                /*offset_y=*/0, kGlowSigma,
-+                SkColorSetA(glow_color, base::ClampRound<SkAlpha>(
-+                                            kGlowAlpha * glow_amount_)));
++    const SkColor glow_color = glow_color_.value_or(
++        color_provider->GetColor(kColorOmniboxKeywordSelected));
++    PaintShadow(canvas, GetLocalBounds(), card, kCardCornerRadius,
++                SkV4{kGlowSigma, /*offset_y=*/0, /*inset=*/0,
++                     static_cast<float>(kGlowAlpha / 255.0 * glow_amount_)},
++                SkV4{0, 0, 0, 0}, glow_color, cached_shader_);
 +  }
 +}
 +
@@ -671,6 +985,14 @@ index 00000000..feda635f
 +                                       int command_id) {
 +  switch (command_id) {
 +    case IDC_NEW_TAB:
++      // Ctrl+T again closes a bar opened with Ctrl+T. If focus somehow ended
++      // up outside the open bar, the shortcut brings it back instead.
++      if (browser_view->IsCommandBarShowing() &&
++          browser_view->command_bar()->mode() == Mode::kNewTab &&
++          browser_view->command_bar()->HasFocusWithin()) {
++        browser_view->command_bar()->Dismiss(DismissReason::kEscape);
++        return true;
++      }
 +      if (!chrome::IsCommandEnabled(browser_view->browser(), IDC_NEW_TAB) ||
 +          !IsAvailable(browser_view)) {
 +        return false;
@@ -681,6 +1003,14 @@ index 00000000..feda635f
 +    // Not checking whether the command is enabled: it is disabled while the
 +    // toolbar is hidden in browser fullscreen, where the bar still works.
 +    case IDC_FOCUS_LOCATION:
++      // Ctrl+L / Alt+D again closes a bar opened to edit the current tab
++      // (or refocuses it, as above).
++      if (browser_view->IsCommandBarShowing() &&
++          browser_view->command_bar()->mode() == Mode::kEditCurrentTab &&
++          browser_view->command_bar()->HasFocusWithin()) {
++        browser_view->command_bar()->Dismiss(DismissReason::kEscape);
++        return true;
++      }
 +      if (!IsAvailable(browser_view)) {
 +        return false;
 +      }
@@ -730,7 +1060,12 @@ index 00000000..feda635f
 +  if (!IsAvailable(browser_view)) {
 +    return false;
 +  }
-+  if (is_user_initiated || browser_view->IsCommandBarShowing()) {
++  if (browser_view->IsCommandBarShowing() && !is_user_initiated) {
++    // E.g. a loading new tab page asking for the omnibox: the bar already has
++    // focus, and switching its mode would clobber what is being typed.
++    return true;
++  }
++  if (is_user_initiated) {
 +    browser_view->GetOrCreateCommandBar()->Show(Mode::kEditCurrentTab);
 +    return true;
 +  }
@@ -748,6 +1083,18 @@ index 00000000..feda635f
 +    browser_view->GetOrCreateCommandBar()->Show(Mode::kEditCurrentTab);
 +  }
 +  return true;
++}
++
++// static
++void CommandBarView::OpenForNewTabButton(BrowserView* browser_view) {
++  // Only on the new tab page the button just opened (activating it already
++  // dismissed a bar that was open), so that accepting navigates that tab
++  // rather than opening another one.
++  if (!IsAvailable(browser_view) ||
++      !IsUntouchedNewTabPage(browser_view->GetActiveWebContents())) {
++    return;
++  }
++  browser_view->GetOrCreateCommandBar()->Show(Mode::kNewTab);
 +}
 +
 +// static
@@ -777,8 +1124,7 @@ index 00000000..feda635f
 +  layer()->SetName("CommandBarView");
 +  layer()->SetRoundedCornerRadius(gfx::RoundedCornersF(kCardCornerRadius));
 +  layer()->SetIsFastRoundedCorner(true);
-+  SetBackground(views::CreateRoundedRectBackground(
-+      kColorOmniboxResultsBackground, kCardCornerRadius));
++  // The solid surface is set (and re-tinted) by UpdateColors().
 +  views::SetCascadingColorProviderColor(this, views::kCascadingBackgroundColor,
 +                                        kColorOmniboxResultsBackground);
 +  SetVisible(false);
@@ -793,6 +1139,7 @@ index 00000000..feda635f
 +  popup_style_.non_result_section_height = kInputSectionHeight;
 +  popup_style_.bottom_padding = kResultsBottomPadding;
 +  popup_style_.row_height = kResultRowHeight;
++  popup_style_.two_line_row_height = kTwoLineResultRowHeight;
 +  popup_style_.row_insets = kResultRowInsets;
 +  popup_style_.selection_radius = kSelectionRadius;
 +
@@ -820,21 +1167,35 @@ index 00000000..feda635f
 +
 +  if (state_ == State::kOpen) {
 +    if (mode_ != mode) {
-+      // Ctrl+T while editing, or Ctrl+L while in new-tab mode.
++      // Ctrl+T while editing, or Ctrl+L while in new-tab mode: switch in
++      // place. The card stays open and the popup only swaps its suggestions.
 +      mode_ = mode;
-+      ApplyMode();
-+    } else if (mode_ == Mode::kEditCurrentTab) {
-+      // Ctrl+L again: select everything, like the toolbar omnibox does.
-+      location_bar->FocusLocation(/*is_user_initiated=*/true,
-+                                  /*clear_focus_if_failed=*/false);
++      ApplyMode(/*switching=*/true);
++      if (!HasFocusWithin()) {
++        location_bar->omnibox_view()->RequestFocus();
++      }
++    } else if (!HasFocusWithin()) {
++      // Open, but focus ended up elsewhere: give it back to the input.
++      location_bar->omnibox_view()->RequestFocus();
 +    }
 +    return;
 +  }
 +
 +  const bool reopening = state_ == State::kClosing;
++  // Set before the location bar is hosted, so everything it computes while
++  // being attached (page classification, URL, icons) already sees the final
++  // mode.
++  state_ = State::kOpen;
++  mode_ = mode;
++  accepting_ = false;
++  shrink_timer_.Stop();
++  popup_bounds_.reset();
++
 +  if (reopening) {
-+    // Still hosting the location bar; just cancel the pending dock.
++    // Still hosting the location bar; just cancel the pending dock and show
++    // the live location bar again.
 +    close_weak_factory_.InvalidateWeakPtrs();
++    UnfreezeLocationBar();
 +  } else {
 +    views::FocusManager* const focus_manager = GetFocusManager();
 +    views::View* const focused =
@@ -842,33 +1203,39 @@ index 00000000..feda635f
 +    restore_focus_tracker_.SetView(
 +        focused && !location_bar->Contains(focused) ? focused : nullptr);
 +
-+    // Close any popup of the toolbar omnibox; it reopens restyled.
 +    location_bar->omnibox_view()->RevertAll();
-+    // Visible (if still transparent) before it receives the location bar, so
-+    // a focused omnibox is never inside a hidden parent.
++    // Visible but fully transparent before it receives the location bar, so
++    // a focused omnibox is never inside a hidden parent, and nothing of the
++    // intermediate states below can reach the screen.
 +    layer()->SetOpacity(0.0f);
++    if (shadow_view_) {
++      shadow_view_->layer()->SetOpacity(0.0f);
++    }
 +    SetVisible(true);
 +    toolbar->DetachLocationBarForCommandBar(this);
 +    location_bar_was_visible_ = location_bar->GetVisible();
 +    location_bar->SetVisible(true);
++    keyword_.clear();
++    UpdateColors();
 +    location_bar->SetCommandBarHost(this);
 +  }
 +
-+  state_ = State::kOpen;
-+  mode_ = mode;
-+  accepting_ = false;
-+  shrink_timer_.Stop();
-+  popup_bounds_.reset();
-+
-+  SetVisible(true);
 +  if (shadow_view_) {
 +    shadow_view_->SetVisible(true);
 +  }
 +  // Synchronously, so the popup is placed against the final geometry.
 +  UpdateBounds();
-+  AnimateOpen(/*from_current=*/reopening);
 +
-+  ApplyMode();
++  // Put text, keyword, icon and suggestions into their final state before the
++  // first frame of the open animation (the card is still at opacity 0 and
++  // animations only start ticking on the next frame), so Ctrl+T never shows
++  // the current page's URL or page info icon, not even for a frame.
++  ApplyMode(/*switching=*/false);
++  location_bar->location_icon_view()->Update(
++      /*suppress_animations=*/true,
++      location_bar->GetOmniboxController()->IsPopupOpen());
++
++  AnimateOpen(/*from_current=*/reopening);
 +  StartObserving();
 +}
 +
@@ -878,6 +1245,12 @@ index 00000000..feda635f
 +  }
 +  state_ = State::kClosing;
 +  dismiss_reason_ = reason;
++  deactivation_timer_.Stop();
++  // Before anything below reverts the text. Changes that already happened in
++  // this task (e.g. the omnibox reverting on blur before the focus change that
++  // dismisses the bar) are not painted yet, so the frozen layer still shows
++  // the last frame.
++  FreezeLocationBar();
 +  StopObserving();
 +  shrink_timer_.Stop();
 +  glow_animation_.Hide();
@@ -905,21 +1278,29 @@ index 00000000..feda635f
 +  StopObserving();
 +  shrink_timer_.Stop();
 +  glow_animation_.Reset(0);
++  deactivation_timer_.Stop();
 +  if (shadow_view_) {
 +    shadow_view_->SetGlowAmount(0);
 +  }
 +
 +  ToolbarView* const toolbar = browser_view_->toolbar();
 +  LocationBarView* const location_bar = GetLocationBarView();
++  UnfreezeLocationBar();
 +
 +  // Move focus out of the location bar before it returns to a toolbar that may
 +  // be hidden, so neither the focused nor the stored (restored on window
-+  // activation) view is an invisible omnibox.
-+  if (views::FocusManager* const focus_manager = GetFocusManager()) {
-+    views::View* target = nullptr;
++  // activation) view is an invisible omnibox. Otherwise FocusManager advances
++  // focus to the next view in traversal order once the omnibox is hidden,
++  // which in frameless mode is the sidebar's site pill.
++  views::FocusManager* const focus_manager = GetFocusManager();
++  views::View* target = nullptr;
++  bool focus_was_in_bar = false;
++  if (focus_manager) {
 +    if (dismiss_reason_ == DismissReason::kEscape) {
 +      views::View* const previous = restore_focus_tracker_.view();
-+      if (previous && !Contains(previous) && previous->IsFocusable()) {
++      if (previous && !Contains(previous) &&
++          !(location_bar && location_bar->Contains(previous)) &&
++          previous->IsFocusable()) {
 +        target = previous;
 +      }
 +    }
@@ -927,15 +1308,18 @@ index 00000000..feda635f
 +      target = browser_view_->GetActiveContentsWebView();
 +    }
 +    views::View* const focused = focus_manager->GetFocusedView();
++    focus_was_in_bar = !focused || Contains(focused);
 +    if (focused && Contains(focused)) {
 +      if (target && target->IsFocusable()) {
 +        target->RequestFocus();
-+      } else {
++      }
++      views::View* const now_focused = focus_manager->GetFocusedView();
++      if (now_focused && Contains(now_focused)) {
 +        focus_manager->ClearFocus();
 +      }
 +    }
 +    views::View* const stored = focus_manager->GetStoredFocusView();
-+    if (stored && Contains(stored)) {
++    if ((stored && Contains(stored)) || (!stored && focus_was_in_bar)) {
 +      focus_manager->SetStoredFocusView(target);
 +    }
 +  }
@@ -956,6 +1340,39 @@ index 00000000..feda635f
 +  SetVisible(false);
 +  if (shadow_view_) {
 +    shadow_view_->SetVisible(false);
++  }
++
++  // Hiding and reparenting the location bar must not leave focus on whatever
++  // FocusManager advanced to (e.g. the sidebar's site pill): if focus was in
++  // the bar, it belongs to `target`. Also check once more after the current
++  // task, in case the reattach triggers a deferred focus advance.
++  if (focus_manager && focus_was_in_bar && target) {
++    dock_focus_target_.SetView(target);
++    EnsureDockFocus();
++    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++        FROM_HERE, base::BindOnce(&CommandBarView::EnsureDockFocus,
++                                  weak_factory_.GetWeakPtr()));
++  }
++}
++
++void CommandBarView::EnsureDockFocus() {
++  views::View* const target = dock_focus_target_.view();
++  views::FocusManager* const focus_manager = GetFocusManager();
++  if (state_ != State::kHidden || !target || !focus_manager || !GetWidget() ||
++      GetWidget()->IsClosed() || !GetWidget()->IsActive()) {
++    return;
++  }
++  views::View* const focused = focus_manager->GetFocusedView();
++  if (focused == target || !target->IsFocusable()) {
++    return;
++  }
++  // Only override focus that nobody chose: none, or what FocusManager picked
++  // by traversal/restoration.
++  const auto reason = focus_manager->focus_change_reason();
++  if (!focused ||
++      reason == views::FocusManager::FocusChangeReason::kFocusTraversal ||
++      reason == views::FocusManager::FocusChangeReason::kFocusRestore) {
++    target->RequestFocus();
 +  }
 +}
 +
@@ -979,6 +1396,21 @@ index 00000000..feda635f
 +  if (state_ != State::kOpen || views::MenuController::GetActiveInstance()) {
 +    return;
 +  }
++  // On Wayland the window can lose and regain activation (keyboard focus)
++  // around popup surface changes and virtual keyboard devices. Only close if
++  // the window is still inactive a moment later.
++  deactivation_timer_.Start(
++      FROM_HERE, kDeactivationGracePeriod,
++      base::BindOnce(&CommandBarView::OnDeactivationGracePeriodEnded,
++                     base::Unretained(this)));
++}
++
++void CommandBarView::OnDeactivationGracePeriodEnded() {
++  if (state_ != State::kOpen || !GetWidget() || GetWidget()->IsActive() ||
++      views::MenuController::GetActiveInstance()) {
++    return;
++  }
++  VLOG(1) << "Command bar: dismissed, window deactivated";
 +  Dismiss(DismissReason::kDeactivated);
 +}
 +
@@ -1016,15 +1448,19 @@ index 00000000..feda635f
 +                     base::Unretained(this)));
 +}
 +
-+void CommandBarView::OnKeywordModeChanged(bool active) {
-+  if (state_ != State::kOpen) {
++void CommandBarView::OnKeywordModeChanged(const std::u16string& keyword) {
++  // Called on every location bar layout; only act on changes.
++  if (state_ != State::kOpen || keyword == keyword_) {
 +    return;
 +  }
-+  if (active) {
-+    glow_animation_.Show();
-+  } else {
++  keyword_ = keyword;
++  if (keyword_.empty()) {
 +    glow_animation_.Hide();
++  } else {
++    glow_animation_.Show();
 +  }
++  // Called from inside LocationBarView::Layout(); recoloring only repaints.
++  UpdateColors();
 +}
 +
 +WindowOpenDisposition CommandBarView::AdjustOpenDisposition(
@@ -1036,18 +1472,22 @@ index 00000000..feda635f
 +  accepting_ = true;
 +  // Background tabs (middle click) keep the bar open, like Arc. Everything
 +  // else closes it once OpenMatch() has returned.
++  const bool dismiss = disposition != WindowOpenDisposition::NEW_BACKGROUND_TAB;
 +  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
-+      FROM_HERE,
-+      base::BindOnce(
-+          &CommandBarView::OnAcceptFinished, weak_factory_.GetWeakPtr(),
-+          disposition != WindowOpenDisposition::NEW_BACKGROUND_TAB));
++      FROM_HERE, base::BindOnce(&CommandBarView::OnAcceptFinished,
++                                weak_factory_.GetWeakPtr(), dismiss));
++  if (dismiss) {
++    // Keep showing the accepted text: OpenMatch() reverts the omnibox to the
++    // current (or new) page's URL right away, before the bar starts closing.
++    FreezeLocationBar();
++  }
 +
 +  // In new-tab mode, plain accepts open a new foreground tab. Alt+Enter and
 +  // Shift+Enter already ask for a new tab/window, and switch-to-tab matches
 +  // switch. An untouched NTP is reused rather than left behind.
 +  if (mode_ == Mode::kNewTab &&
 +      disposition == WindowOpenDisposition::CURRENT_TAB &&
-+      !IsActiveTabUntouchedNewTabPage()) {
++      !IsUntouchedNewTabPage(browser_view_->GetActiveWebContents())) {
 +    return WindowOpenDisposition::NEW_FOREGROUND_TAB;
 +  }
 +  return disposition;
@@ -1063,15 +1503,50 @@ index 00000000..feda635f
 +
 +void CommandBarView::OnPaint(gfx::Canvas* canvas) {
 +  views::View::OnPaint(canvas);
-+  if (const ui::ColorProvider* color_provider = GetColorProvider()) {
-+    PaintHairlineOutline(
-+        canvas, GetLocalBounds(), kCardCornerRadius,
-+        SkColorSetA(color_provider->GetColor(kColorOmniboxText), 0x1A));
++  const ui::ColorProvider* const color_provider = GetColorProvider();
++  if (!color_provider) {
++    return;
 +  }
++  const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
++
++  // The keyword tint only covers the input section; the results (painted by
++  // the transparent popup frame above the card) stay on the base surface.
++  if (input_surface_color_ != base_surface_color_) {
++    const float radius = kCardCornerRadius;
++    const bool has_results = height() > kInputSectionHeight;
++    const float bottom_radius = has_results ? 0.0f : radius;
++    cc::PaintFlags flags;
++    flags.setAntiAlias(true);
++    flags.setColor(input_surface_color_);
++    const gfx::Rect input_section(0, 0, width(),
++                                  std::min(height(), kInputSectionHeight));
++    canvas->DrawPath(
++        SkPath::RRect(gfx::RoundedRectToSkRRect(
++            input_section, gfx::RoundedCornersF(radius, radius, bottom_radius,
++                                                bottom_radius))),
++        flags);
++  }
++
++  // Thin divider under the input row while results are shown. The popup frame
++  // above the card is transparent, so the card paints it.
++  if (height() > kInputSectionHeight + 1) {
++    gfx::ScopedCanvas scoped_canvas(canvas);
++    const float dsf = canvas->UndoDeviceScaleFactor();
++    gfx::RectF divider(kDividerHorizontalInset, kInputSectionHeight - 1,
++                       width() - 2 * kDividerHorizontalInset, 1);
++    divider.Scale(dsf);
++    divider.set_height(1);
++    canvas->FillRect(gfx::ToEnclosingRect(divider),
++                     SkColorSetA(text_color, 0x1A));
++  }
++
++  PaintHairlineOutline(canvas, GetLocalBounds(), kCardCornerRadius,
++                       SkColorSetA(text_color, 0x1A));
 +}
 +
 +void CommandBarView::OnThemeChanged() {
 +  views::View::OnThemeChanged();
++  UpdateColors();
 +  SchedulePaint();
 +}
 +
@@ -1107,7 +1582,58 @@ index 00000000..feda635f
 +  if (!focused_now && views::MenuController::GetActiveInstance()) {
 +    return;
 +  }
++  views::FocusManager* const focus_manager = GetFocusManager();
++  using FocusChangeReason = views::FocusManager::FocusChangeReason;
++  const FocusChangeReason reason =
++      focus_manager ? focus_manager->focus_change_reason()
++                    : FocusChangeReason::kDirectFocusChange;
++  // Not a decision to leave the bar:
++  // - focus cleared (nullptr), e.g. FocusManager::StoreFocusedView() while
++  //   the native window loses keyboard focus for a moment (window
++  //   deactivation is handled separately, with a grace period);
++  // - focus traversal or restoration, e.g. FocusManager::AdvanceFocus() /
++  //   AdvanceFocusIfNecessary() / RestoreFocusedView() picking the next view
++  //   in traversal order (the sidebar's site pill). Tab itself never
++  //   traverses out of the bar (see OmniboxViewViews).
++  // Take the focus back instead of closing.
++  if (!focused_now ||
++      reason == views::FocusManager::FocusChangeReason::kFocusTraversal ||
++      reason == views::FocusManager::FocusChangeReason::kFocusRestore) {
++    VLOG(1) << "Command bar: reclaiming focus lost to "
++            << (focused_now ? "a view by traversal or restore" : "nullptr");
++    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++        FROM_HERE, base::BindOnce(&CommandBarView::ReclaimFocus,
++                                  weak_factory_.GetWeakPtr()));
++    return;
++  }
++  VLOG(1) << "Command bar: dismissed, focus moved to "
++          << focused_now->GetClassName();
 +  Dismiss(DismissReason::kFocusLost);
++}
++
++void CommandBarView::ReclaimFocus() {
++  if (state_ != State::kOpen || !GetWidget() || !GetWidget()->IsActive()) {
++    // An inactive window restores its stored focus view (the omnibox) when
++    // it is reactivated.
++    return;
++  }
++  views::FocusManager* const focus_manager = GetFocusManager();
++  views::View* const focused =
++      focus_manager ? focus_manager->GetFocusedView() : nullptr;
++  if (focused && Contains(focused)) {
++    return;
++  }
++  if (LocationBarView* const location_bar = GetLocationBarView()) {
++    // Not FocusLocation(): that would select all and restart suggestions.
++    location_bar->omnibox_view()->RequestFocus();
++  }
++}
++
++bool CommandBarView::HasFocusWithin() {
++  views::FocusManager* const focus_manager = GetFocusManager();
++  views::View* const focused =
++      focus_manager ? focus_manager->GetFocusedView() : nullptr;
++  return focused && Contains(focused);
 +}
 +
 +void CommandBarView::OnEvent(const ui::Event& event) {
@@ -1138,27 +1664,41 @@ index 00000000..feda635f
 +  return toolbar ? toolbar->location_bar_view() : nullptr;
 +}
 +
-+void CommandBarView::ApplyMode() {
++void CommandBarView::ApplyMode(bool switching) {
 +  LocationBarView* const location_bar = GetLocationBarView();
 +  if (!location_bar) {
 +    return;
 +  }
 +  OmniboxViewViews* const omnibox_view = location_bar->omnibox_view();
-+  omnibox_view->RevertAll();
++  OmniboxEditModel* const edit_model =
++      location_bar->GetOmniboxController()->edit_model();
 +
 +  if (mode_ == Mode::kNewTab) {
-+    // Focus without on-focus suggestions for the current page, clear the text
-+    // and ask for new tab page suggestions instead (`IsCommandBarNewTabMode()`
-+    // makes the omnibox client describe the context as an NTP).
-+    location_bar->FocusLocation(/*is_user_initiated=*/false,
-+                                /*clear_focus_if_failed=*/false);
++    if (!switching) {
++      omnibox_view->RevertAll();
++      // Focus without on-focus suggestions for the current page.
++      location_bar->FocusLocation(/*is_user_initiated=*/false,
++                                  /*clear_focus_if_failed=*/false);
++    }
++    // Clear the text and ask for new tab page suggestions instead
++    // (`IsCommandBarNewTabMode()` makes the omnibox client describe the
++    // context as an NTP). Restarting replaces the open popup's suggestions in
++    // place rather than closing and reopening it.
 +    omnibox_view->SetUserText(std::u16string(), /*update_popup=*/false);
-+    location_bar->GetOmniboxController()->edit_model()->StartZeroSuggestRequest(
-+        /*user_clobbered_permanent_text=*/true);
++    edit_model->RestartZeroSuggestRequest();
 +  } else {
-+    // The stock Ctrl+L path: unelide, select all, on-focus suggestions.
++    // The stock Ctrl+L path (unelide to the full URL, on-focus suggestions),
++    // but with the caret after the URL instead of the URL selected, so typing
++    // edits it rather than replacing it.
++    omnibox_view->RevertAll();
 +    location_bar->FocusLocation(/*is_user_initiated=*/true,
 +                                /*clear_focus_if_failed=*/false);
++    const size_t text_length = omnibox_view->GetText().length();
++    omnibox_view->SetSelectionBounds(gfx::Range(text_length, text_length));
++    if (switching) {
++      // FocusLocation() doesn't query while the popup is open.
++      edit_model->RestartZeroSuggestRequest();
++    }
 +  }
 +}
 +
@@ -1171,8 +1711,13 @@ index 00000000..feda635f
 +      std::clamp(base::ClampRound(window_width * kCardWidthFraction),
 +                 min_width, kCardMaxWidth);
 +  const int x = (window_width - width) / 2;
-+  const int y =
-+      std::max(kMinTop, window_height / 2 - kZenReferenceHeight / 2);
++  // A quarter of the way down (Zen), but low enough in short windows to leave
++  // room for a few results, and never above `kMinTop`. The popup's maximum
++  // height (see UpdateBounds()) keeps the rest on screen.
++  const int preferred_y = base::ClampRound(window_height * kCardTopFraction);
++  const int lowest_y =
++      window_height - kCardWindowMargin - kInputSectionHeight - kMinResultsSpace;
++  const int y = std::max(kMinTop, std::min(preferred_y, lowest_y));
 +  return gfx::Rect(x, y, width, kInputSectionHeight);
 +}
 +
@@ -1215,6 +1760,164 @@ index 00000000..feda635f
 +  location_bar->SetBoundsRect(
 +      gfx::Rect(kCardPadding, kCardPadding,
 +                std::max(0, width() - 2 * kCardPadding), kLocationBarHeight));
++}
++
++void CommandBarView::UpdateColors() {
++  const ui::ColorProvider* const color_provider = GetColorProvider();
++  if (!color_provider) {
++    return;
++  }
++  base_surface_color_ = GetBaseSurfaceColor(color_provider);
++  const bool dark = color_utils::IsDark(base_surface_color_);
++  const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
++  const SkColor contrast_direction = dark ? SK_ColorBLACK : SK_ColorWHITE;
++
++  std::optional<SkColor> chip_background;
++  std::optional<SkColor> chip_foreground;
++  ui::ImageModel chip_icon;
++  input_surface_color_ = base_surface_color_;
++  if (!keyword_.empty()) {
++    const KeywordSite& site = GetKeywordSite(keyword_);
++    const SkColor site_color = site.color.value_or(
++        color_provider->GetColor(kColorOmniboxKeywordSelected));
++
++    // Only a hint of the site color: the input section takes a faint tint,
++    // the chip a muted one with the regular text color on it.
++    input_surface_color_ = EnsureTextContrast(
++        color_utils::AlphaBlend(site_color, base_surface_color_,
++                                dark ? kInputTintDark : kInputTintLight),
++        text_color, contrast_direction);
++    chip_foreground = text_color;
++    chip_background = EnsureTextContrast(
++        color_utils::AlphaBlend(site_color, base_surface_color_,
++                                dark ? kChipTintDark : kChipTintLight),
++        text_color, contrast_direction);
++    if (!site.icon.isNull()) {
++      chip_icon = ui::ImageModel::FromImageSkia(site.icon);
++    }
++
++    if (shadow_view_) {
++      shadow_view_->SetGlowColor(site_color);
++    }
++  }
++
++  SetBackground(views::CreateRoundedRectBackground(
++      base_surface_color_, static_cast<float>(kCardCornerRadius)));
++  if (LocationBarView* const location_bar = GetLocationBarView()) {
++    location_bar->SetCommandBarSurfaceColor(input_surface_color_);
++    location_bar->SetCommandBarKeywordChip(chip_background, chip_foreground,
++                                           chip_icon);
++  }
++  SchedulePaint();
++}
++
++const CommandBarView::KeywordSite& CommandBarView::GetKeywordSite(
++    const std::u16string& keyword) {
++  if (const auto it = keyword_sites_.find(keyword);
++      it != keyword_sites_.end()) {
++    return it->second;
++  }
++  // Add the entry right away so the lookup only runs once per keyword; a found
++  // favicon fills it in. (std::map references stay valid across inserts.)
++  const KeywordSite& site = keyword_sites_[keyword];
++
++  Profile* const profile = browser_view_->browser()->GetProfile();
++  TemplateURLService* const template_url_service =
++      TemplateURLServiceFactory::GetForProfile(profile);
++  const TemplateURL* const turl =
++      template_url_service
++          ? template_url_service->GetTemplateURLForKeyword(keyword)
++          : nullptr;
++  if (turl) {
++    FetchKeywordFavicon(
++        keyword,
++        GetFaviconCandidates(*turl, template_url_service->search_terms_data()));
++  }
++  return site;
++}
++
++void CommandBarView::FetchKeywordFavicon(const std::u16string& keyword,
++                                         std::vector<GURL> candidates) {
++  if (candidates.empty()) {
++    return;
++  }
++  favicon::FaviconService* const favicon_service =
++      FaviconServiceFactory::GetForProfile(
++          browser_view_->browser()->GetProfile(),
++          ServiceAccessType::EXPLICIT_ACCESS);
++  if (!favicon_service) {
++    return;
++  }
++  const GURL page_url = candidates.front();
++  candidates.erase(candidates.begin());
++  // Any favicon stored for a page on the host will do; prefer a large one,
++  // which gives a steadier dominant color and a sharp chip icon.
++  favicon_service->GetRawFaviconForPageURL(
++      page_url,
++      {favicon_base::IconType::kFavicon, favicon_base::IconType::kTouchIcon,
++       favicon_base::IconType::kTouchPrecomposedIcon,
++       favicon_base::IconType::kWebManifestIcon},
++      /*desired_size_in_pixel=*/32, /*fallback_to_host=*/true,
++      base::BindOnce(&CommandBarView::OnKeywordFaviconFetched,
++                     weak_factory_.GetWeakPtr(), keyword,
++                     std::move(candidates)),
++      &favicon_tracker_);
++}
++
++void CommandBarView::OnKeywordFaviconFetched(
++    const std::u16string& keyword,
++    std::vector<GURL> remaining_candidates,
++    const favicon_base::FaviconRawBitmapResult& result) {
++  SkBitmap bitmap;
++  if (result.is_valid()) {
++    bitmap = gfx::Image::CreateFrom1xPNGBytes(result.bitmap_data).AsBitmap();
++  }
++  if (bitmap.drawsNothing()) {
++    FetchKeywordFavicon(keyword, std::move(remaining_candidates));
++    return;
++  }
++  KeywordSite& site = keyword_sites_[keyword];
++  // K-means over the favicon, skipping near-black and near-white pixels, e.g.
++  // YouTube's red rather than its white play triangle.
++  site.color = SkColorSetA(color_utils::CalculateKMeanColorOfBitmap(bitmap),
++                           SK_AlphaOPAQUE);
++  // Resized from the full bitmap for each scale factor, so it stays sharp at
++  // fractional scales.
++  site.icon = gfx::ImageSkiaOperations::CreateResizedImage(
++      gfx::ImageSkia::CreateFrom1xBitmap(bitmap),
++      skia::ImageOperations::RESIZE_BEST,
++      gfx::Size(kChipIconSize, kChipIconSize));
++  if (state_ == State::kOpen && keyword == keyword_) {
++    UpdateColors();
++  }
++}
++
++void CommandBarView::FreezeLocationBar() {
++  LocationBarView* const location_bar = GetLocationBarView();
++  if (frozen_location_bar_layer_ || !location_bar ||
++      location_bar->parent() != this || !location_bar->layer()) {
++    return;
++  }
++  // RecreateLayer() gives the view a clone of its layer (stacked below the
++  // old one, with all child layers moved over) and returns the old layer
++  // without its delegate. Without a delegate, a textured layer never commits
++  // damage again, so it keeps showing its last recorded frame for the rest of
++  // the fade, which its parent (this card's layer) applies to it.
++  frozen_location_bar_layer_ = location_bar->RecreateLayer();
++  // Also hide the live layer, in case anything restacks the card's layers.
++  location_bar->layer()->SetOpacity(0.0f);
++}
++
++void CommandBarView::UnfreezeLocationBar() {
++  if (!frozen_location_bar_layer_) {
++    return;
++  }
++  // Destroying the layer removes it from its parent.
++  frozen_location_bar_layer_.reset();
++  if (LocationBarView* const location_bar = GetLocationBarView();
++      location_bar && location_bar->layer()) {
++    location_bar->layer()->SetOpacity(1.0f);
++  }
 +}
 +
 +void CommandBarView::StartObserving() {
@@ -1319,8 +2022,8 @@ index 00000000..feda635f
 +  UpdateBounds();
 +}
 +
-+bool CommandBarView::IsActiveTabUntouchedNewTabPage() {
-+  content::WebContents* const contents = browser_view_->GetActiveWebContents();
++// static
++bool CommandBarView::IsUntouchedNewTabPage(content::WebContents* contents) {
 +  if (!contents) {
 +    return false;
 +  }
@@ -1334,10 +2037,10 @@ index 00000000..feda635f
 +END_METADATA
 diff --git a/chrome/browser/ui/views/helium/command_bar_view.h b/chrome/browser/ui/views/helium/command_bar_view.h
 new file mode 100644
-index 00000000..e30217ab
+index 00000000..acb24e06
 --- /dev/null
 +++ b/chrome/browser/ui/views/helium/command_bar_view.h
-@@ -0,0 +1,260 @@
+@@ -0,0 +1,365 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -1345,27 +2048,48 @@ index 00000000..e30217ab
 +#ifndef CHROME_BROWSER_UI_VIEWS_HELIUM_COMMAND_BAR_VIEW_H_
 +#define CHROME_BROWSER_UI_VIEWS_HELIUM_COMMAND_BAR_VIEW_H_
 +
++#include <map>
 +#include <memory>
 +#include <optional>
++#include <string>
++#include <vector>
 +
 +#include "base/memory/raw_ptr.h"
 +#include "base/memory/weak_ptr.h"
 +#include "base/scoped_multi_source_observation.h"
++#include "base/task/cancelable_task_tracker.h"
++#include "base/time/time.h"
 +#include "base/timer/timer.h"
++#include "cc/paint/paint_shader.h"
 +#include "chrome/browser/ui/views/location_bar/location_bar_view.h"
 +#include "chrome/browser/ui/views/omnibox/omnibox_popup_style.h"
++#include "third_party/skia/include/core/SkColor.h"
 +#include "ui/base/metadata/metadata_header_macros.h"
 +#include "ui/events/event_observer.h"
 +#include "ui/gfx/animation/animation_delegate.h"
 +#include "ui/gfx/animation/slide_animation.h"
 +#include "ui/gfx/geometry/point_f.h"
 +#include "ui/gfx/geometry/rect.h"
++#include "ui/gfx/image/image_skia.h"
 +#include "ui/views/focus/focus_manager.h"
 +#include "ui/views/view.h"
 +#include "ui/views/view_observer.h"
 +#include "ui/views/view_tracker.h"
++#include "url/gurl.h"
 +
 +class BrowserView;
++
++namespace content {
++class WebContents;
++}  // namespace content
++
++namespace favicon_base {
++struct FaviconRawBitmapResult;
++}  // namespace favicon_base
++
++namespace ui {
++class Layer;
++}  // namespace ui
 +
 +namespace views {
 +class EventMonitor;
@@ -1375,6 +2099,10 @@ index 00000000..e30217ab
 +// card. It is a sibling below the card rather than part of it: its bounds
 +// extend far beyond the card, and it must never take events, so that clicks
 +// on the page around the card still reach the page.
++//
++// The shadow is evaluated per pixel by a runtime shader that dithers its alpha
++// before it is quantized; see the comment above kShadowSkSL in the .cc file
++// for why a blur mask filter shadow bands.
 +class CommandBarShadowView : public views::View {
 +  METADATA_HEADER(CommandBarShadowView, views::View)
 +
@@ -1390,6 +2118,9 @@ index 00000000..e30217ab
 +  // Keyword mode glow strength, 0 to 1.
 +  void SetGlowAmount(double amount);
 +
++  // Keyword mode glow color (the keyword's site color).
++  void SetGlowColor(SkColor color);
++
 +  // Returns the pivot for the open animation (the top centre of the card), in
 +  // this view's coordinates.
 +  gfx::PointF GetCardTopCenter() const;
@@ -1402,6 +2133,9 @@ index 00000000..e30217ab
 +  // The card rect in this view's coordinates.
 +  gfx::Rect card_rect_;
 +  double glow_amount_ = 0;
++  std::optional<SkColor> glow_color_;
++  // Lets the shader reuse its compiled runtime effect across paints.
++  sk_sp<cc::PaintShader> cached_shader_;
 +};
 +
 +// Arc/Zen-style floating command bar. While open, the toolbar's own
@@ -1453,14 +2187,22 @@ index 00000000..e30217ab
 +  static bool IsAvailable(BrowserView* browser_view, bool ignore_prefs = false);
 +
 +  // Routes the keyboard shortcut for `command_id` (new tab, focus location,
-+  // focus search, next pane) to the command bar. Only the keyboard path is
-+  // routed: the app menu's "New tab" and the tab strip's "+" still create a
-+  // tab directly. Returns true if handled.
++  // focus search, next pane) to the command bar. Pressing the shortcut of the
++  // open mode again closes the bar; the other mode's shortcut switches mode in
++  // place. The app menu's "New tab" still creates a tab directly (see also
++  // OpenForNewTabButton()). Returns true if handled.
 +  static bool HandleAccelerator(BrowserView* browser_view, int command_id);
 +
 +  // Handles BrowserView::SetFocusToLocationBar(). Returns true if handled.
 +  static bool HandleFocusLocationRequest(BrowserView* browser_view,
 +                                         bool is_user_initiated);
++
++  // Called after a "New tab" button (vertical tab strip, tab strip or
++  // toolbar) created a tab: opens the command bar in new-tab mode on it.
++  // Accepting a match then navigates that untouched new tab page (see
++  // AdjustOpenDisposition()). Unlike Ctrl+T, the tab stays if the bar is
++  // dismissed.
++  static void OpenForNewTabButton(BrowserView* browser_view);
 +
 +  // Executes IDC_OPEN_COMMAND_BAR_NEW_TAB and IDC_OPEN_COMMAND_BAR_EDIT, which
 +  // work regardless of the command bar prefs.
@@ -1482,6 +2224,9 @@ index 00000000..e30217ab
 +  void DockNow();
 +
 +  bool IsShowing() const { return state_ == State::kOpen; }
++
++  // Whether keyboard focus is inside the bar.
++  bool HasFocusWithin();
 +  Mode mode() const { return mode_; }
 +
 +  // Called by BrowserView before the active tab changes.
@@ -1496,7 +2241,7 @@ index 00000000..e30217ab
 +  const OmniboxPopupStyle& GetPopupStyle() const override;
 +  void OnPopupBoundsChanged(
 +      const std::optional<gfx::Rect>& screen_bounds) override;
-+  void OnKeywordModeChanged(bool active) override;
++  void OnKeywordModeChanged(const std::u16string& keyword) override;
 +  WindowOpenDisposition AdjustOpenDisposition(
 +      WindowOpenDisposition disposition) override;
 +  void RequestDismiss() override;
@@ -1535,8 +2280,32 @@ index 00000000..e30217ab
 +  static bool IsLocationBarShownInToolbar(BrowserView* browser_view);
 +
 +  // Puts the omnibox into the state for `mode_` (empty input and new-tab
-+  // suggestions, or the selected current URL).
-+  void ApplyMode();
++  // suggestions, or the selected current URL). `switching` is true when the
++  // open bar changes mode in place: the popup then stays open and only its
++  // suggestions are replaced.
++  void ApplyMode(bool switching);
++
++  // Recomputes the surface, chip and glow colors for the theme and the
++  // selected keyword, and pushes them to the card and the location bar.
++  void UpdateColors();
++
++  // What the bar knows about the site behind a keyword, from its favicon.
++  struct KeywordSite {
++    // The favicon's dominant color; std::nullopt until (or unless) a usable
++    // favicon was found.
++    std::optional<SkColor> color;
++    // The favicon, shown in the keyword chip. Empty if there is none.
++    gfx::ImageSkia icon;
++  };
++
++  // Looks up (or starts fetching) the favicon and site color for `keyword`.
++  const KeywordSite& GetKeywordSite(const std::u16string& keyword);
++  void FetchKeywordFavicon(const std::u16string& keyword,
++                           std::vector<GURL> candidates);
++  void OnKeywordFaviconFetched(
++      const std::u16string& keyword,
++      std::vector<GURL> remaining_candidates,
++      const favicon_base::FaviconRawBitmapResult& result);
 +
 +  // Bounds of the card's input section, in BrowserView coordinates.
 +  gfx::Rect GetInputSectionBounds() const;
@@ -1555,12 +2324,33 @@ index 00000000..e30217ab
 +  void OnCloseAnimationEnded();
 +  void DockAfterClose();
 +
++  // Closes the bar if the window is still inactive after the grace period
++  // that follows a deactivation.
++  void OnDeactivationGracePeriodEnded();
++
++  // Moves focus back into the input after it was cleared, or moved out by
++  // focus traversal / restoration rather than by the user.
++  void ReclaimFocus();
++
++  // After docking, puts focus on the restore target if FocusManager moved it
++  // elsewhere by traversal (e.g. to the sidebar's site pill).
++  void EnsureDockFocus();
++
 +  void OnAcceptFinished(bool dismiss);
 +  void ShrinkToInputSection();
 +
-+  // Whether the active tab is a new tab page without history, which a new-tab
++  // Freezes what the location bar shows for the close animation. As soon as
++  // the bar closes, the edit model reverts the text (to the elided display
++  // URL), and blur, tab changes and navigations change it further. The
++  // location bar's current layer is detached and kept on top, still showing
++  // its last painted frame (a layer without delegate never repaints), while
++  // the live layer that replaces it stays hidden until UnfreezeLocationBar().
++  void FreezeLocationBar();
++  void UnfreezeLocationBar();
++
++  // Whether `contents` is a new tab page without history, which a new-tab
 +  // accept reuses instead of opening yet another tab.
-+  bool IsActiveTabUntouchedNewTabPage();
++  static bool IsUntouchedNewTabPage(content::WebContents* contents);
 +
 +  const raw_ptr<BrowserView> browser_view_;
 +  raw_ptr<CommandBarShadowView> shadow_view_;
@@ -1574,15 +2364,33 @@ index 00000000..e30217ab
 +
 +  OmniboxPopupStyle popup_style_;
 +
++  // Card surface: `base_surface_color_` for the theme. In keyword mode the
++  // input section (`input_surface_color_`) takes a faint tint of the site
++  // color of the selected keyword (`keyword_`); the results stay untinted.
++  SkColor base_surface_color_ = SK_ColorBLACK;
++  SkColor input_surface_color_ = SK_ColorBLACK;
++  std::u16string keyword_;
++  // Favicons and site colors per keyword, filled in asynchronously.
++  std::map<std::u16string, KeywordSite> keyword_sites_;
++  base::CancelableTaskTracker favicon_tracker_;
++
++  // The location bar's layer as it was when the close animation started, see
++  // FreezeLocationBar().
++  std::unique_ptr<ui::Layer> frozen_location_bar_layer_;
++
 +  // Popup frame bounds in screen coordinates while the popup is open.
 +  std::optional<gfx::Rect> popup_bounds_;
 +  // Delays shrinking the card until the popup has faded out.
 +  base::OneShotTimer shrink_timer_;
++  // Grace period after a window deactivation, see OnWindowDeactivated().
++  base::OneShotTimer deactivation_timer_;
 +  bool updating_bounds_ = false;
 +  bool bounds_dirty_ = false;
 +
 +  // The view focused before the bar opened, restored on Escape.
 +  views::ViewTracker restore_focus_tracker_;
++  // Where focus went when the bar docked, see EnsureDockFocus().
++  views::ViewTracker dock_focus_target_;
 +
 +  // Registered while open.
 +  raw_ptr<views::FocusManager> focus_manager_ = nullptr;
@@ -1599,10 +2407,18 @@ index 00000000..e30217ab
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_HELIUM_COMMAND_BAR_VIEW_H_
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.cc b/chrome/browser/ui/views/location_bar/location_bar_view.cc
-index bcf4a110..67ac4e5e 100644
+index bcf4a110..68a91f0e 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.cc
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.cc
-@@ -268,6 +268,12 @@ LocationBarView::LocationBarView(BrowserWindowInterface* browser,
+@@ -118,6 +118,7 @@
+ #include "components/search_engines/template_url_service.h"
+ #include "components/security_state/core/security_state.h"
+ #include "components/startup_metric_utils/common/startup_metric_utils.h"
++#include "components/vector_icons/vector_icons.h"
+ #include "content/public/browser/navigation_controller.h"
+ #include "content/public/browser/navigation_entry.h"
+ #include "content/public/browser/render_widget_host_view.h"
+@@ -268,6 +269,12 @@ LocationBarView::LocationBarView(BrowserWindowInterface* browser,
              return false;
            }
  
@@ -1615,7 +2431,7 @@ index bcf4a110..67ac4e5e 100644
            // Show focus ring when the Omnibox is visibly focused and the popup
            // is closed.
            return v->GetOmniboxController()->edit_model()->is_caret_visible() &&
-@@ -699,6 +705,53 @@ const OmniboxController* LocationBarView::GetOmniboxController() const {
+@@ -699,6 +706,82 @@ const OmniboxController* LocationBarView::GetOmniboxController() const {
    return omnibox_controller_.get();
  }
  
@@ -1639,7 +2455,36 @@ index bcf4a110..67ac4e5e 100644
 +  RefreshPageActionContainerViewAndIconsVisibility(
 +      /*should_hide_page_actions=*/ShouldHidePageActionIcons());
 +  RefreshBackground();
++  // The command bar shows the keyword as a compact pill ("YouTube Music")
++  // in place of the search icon.
++  selected_keyword_view_->SetCommandBarStyle(command_bar_host_ != nullptr);
++  if (!command_bar_host_) {
++    selected_keyword_view_->SetCommandBarChip(std::nullopt, std::nullopt,
++                                              ui::ImageModel());
++  }
++  // The search icon replaces the page info icon while hosted; don't animate
++  // the security chip label in or out.
++  location_icon_view_->Update(/*suppress_animations=*/true,
++                              GetOmniboxController()->IsPopupOpen());
 +  InvalidateLayout();
++}
++
++void LocationBarView::SetCommandBarSurfaceColor(SkColor color) {
++  if (command_bar_surface_color_ == color) {
++    return;
++  }
++  command_bar_surface_color_ = color;
++  if (command_bar_host_ && IsInitialized() && GetWidget()) {
++    RefreshBackground();
++    SchedulePaint();
++  }
++}
++
++void LocationBarView::SetCommandBarKeywordChip(
++    std::optional<SkColor> background,
++    std::optional<SkColor> foreground,
++    const ui::ImageModel& icon) {
++  selected_keyword_view_->SetCommandBarChip(background, foreground, icon);
 +}
 +
 +bool LocationBarView::IsCommandBarNewTabMode() const {
@@ -1669,18 +2514,39 @@ index bcf4a110..67ac4e5e 100644
  void LocationBarView::AddedToWidget() {
    if (GetFocusManager()) {
      CHECK(!focus_manager_);
-@@ -1093,6 +1146,10 @@ void LocationBarView::Layout(PassKey) {
+@@ -924,7 +1007,18 @@ void LocationBarView::Layout(PassKey) {
+     }
+   }
+ 
+-  if (ShouldShowKeywordBubble()) {
++  if (ShouldShowKeywordBubble() && command_bar_host_) {
++    // Helium's command bar: like Zen, the keyword is a single compact pill
++    // (site icon and name) in place of the search icon, vertically centered.
++    constexpr int kCommandBarKeywordChipHeight = 28;
++    const int chip_height = std::min(kCommandBarKeywordChipHeight, height());
++    location_icon_view_->SetVisible(false);
++    leading_decorations.AddDecoration(
++        (height() - chip_height) / 2, chip_height, false,
++        kLeadingDecorationMaxFraction, leading_intra_padding, icon_left,
++        selected_keyword_view_);
++    selected_keyword_view_->SetKeyword(keyword);
++  } else if (ShouldShowKeywordBubble()) {
+     location_icon_view_->SetVisible(false);
+     leading_decorations.AddDecoration(
+         vertical_padding, location_height, false, kLeadingDecorationMaxFraction,
+@@ -1093,6 +1187,11 @@ void LocationBarView::Layout(PassKey) {
    loading_progress_view_->SetBoundsRect(GetLocalBounds());
  
    LayoutSuperclass<View>(this);
 +
 +  if (command_bar_host_) {
-+    command_bar_host_->OnKeywordModeChanged(ShouldShowKeywordBubble());
++    command_bar_host_->OnKeywordModeChanged(
++        ShouldShowKeywordBubble() ? keyword : std::u16string());
 +  }
  }
  
  void LocationBarView::OnThemeChanged() {
-@@ -1362,6 +1419,11 @@ bool LocationBarView::ShouldHidePageActionIcons() const {
+@@ -1362,6 +1461,11 @@ bool LocationBarView::ShouldHidePageActionIcons() const {
      return false;
    }
  
@@ -1692,21 +2558,23 @@ index bcf4a110..67ac4e5e 100644
    // When the user is typing in the omnibox, the page action icons are no longer
    // associated with the current omnibox text, so hide them.
    if (GetOmniboxController()->edit_model()->user_input_in_progress()) {
-@@ -1501,6 +1563,13 @@ void LocationBarView::RefreshBackground() {
+@@ -1501,6 +1605,15 @@ void LocationBarView::RefreshBackground() {
      border_color = color_provider->GetColor(kColorLocationBarBorderOnMismatch);
    }
  
 +  if (command_bar_host_) {
 +    // The command bar card paints the surface; keep the field flush with it.
 +    background_color_ =
-+        color_provider->GetColor(kColorOmniboxResultsBackground);
++        SkColorGetA(command_bar_surface_color_) == SK_AlphaTRANSPARENT
++            ? color_provider->GetColor(kColorOmniboxResultsBackground)
++            : command_bar_surface_color_;
 +    border_color = SK_ColorTRANSPARENT;
 +  }
 +
    if (is_popup_mode_) {
      SetBackground(views::CreateSolidBackground(background_color_));
    } else {
-@@ -1672,6 +1741,10 @@ void LocationBarView::FocusSearch() {
+@@ -1672,6 +1785,10 @@ void LocationBarView::FocusSearch() {
  void LocationBarView::UpdateFocusBehavior(bool toolbar_visible) {
    const bool is_ready = IsFullWebUiOmniboxReady();
    is_toolbar_visible_ = toolbar_visible;
@@ -1717,7 +2585,7 @@ index bcf4a110..67ac4e5e 100644
  
    if (is_full_webui_omnibox_) {
      // Route focus to `LocationBarView` (which forwards focus to WebUI) once
-@@ -1698,6 +1771,11 @@ void LocationBarView::UpdateContentSettingsIcons() {
+@@ -1698,6 +1815,11 @@ void LocationBarView::UpdateContentSettingsIcons() {
  }
  
  void LocationBarView::SaveStateToContents(WebContents* contents) {
@@ -1729,8 +2597,37 @@ index bcf4a110..67ac4e5e 100644
    if (is_full_webui_omnibox_) {
      omnibox_popup_view_->SaveStateToTab(contents);
    } else {
+@@ -2207,6 +2329,11 @@ bool LocationBarView::ShouldChipOverrideLocationIcon() {
+ }
+ 
+ bool LocationBarView::IsEditingOrEmpty() const {
++  // Helium's command bar is always an editing surface: no security chip text
++  // and no page info on the (search) icon.
++  if (command_bar_host_) {
++    return true;
++  }
+   return omnibox_view_ && omnibox_view_->IsEditingOrEmpty();
+ }
+ 
+@@ -2400,6 +2527,16 @@ ui::ImageModel LocationBarView::GetLocationIcon(
+     return GetOmniboxController()->edit_model()->GetAddContextIcon(dip_size);
+   }
+ 
++  // Helium's command bar always shows a search icon, like Arc and Zen. Being a
++  // synchronous vector icon, it never briefly falls back to the page info icon
++  // while a search engine favicon is fetched.
++  if (command_bar_host_) {
++    return ui::ImageModel::FromVectorIcon(
++        features::IsRoundedIconsEnabled() ? vector_icons::kSearchIcon
++                                          : vector_icons::kSearchOldIcon,
++        kColorOmniboxResultsIcon, dip_size);
++  }
++
+   return omnibox_view_
+              ? omnibox_view_->GetIcon(
+                    dip_size, location_icon_view_->GetForegroundColor(),
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.h b/chrome/browser/ui/views/location_bar/location_bar_view.h
-index 41369b45..c07968c4 100644
+index 41369b45..8477d546 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.h
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.h
 @@ -8,6 +8,7 @@
@@ -1741,7 +2638,15 @@ index 41369b45..c07968c4 100644
  #include <string>
  #include <string_view>
  #include <vector>
-@@ -61,6 +62,7 @@ class OmniboxContextMenu;
+@@ -33,6 +34,7 @@
+ #include "third_party/metrics_proto/omnibox_event.pb.h"
+ #include "third_party/skia/include/core/SkColor.h"
+ #include "ui/base/metadata/metadata_header_macros.h"
++#include "ui/base/models/image_model.h"
+ #include "ui/base/mojom/menu_source_type.mojom-forward.h"
+ #include "ui/base/pointer/touch_ui_controller.h"
+ #include "ui/gfx/animation/slide_animation.h"
+@@ -61,6 +63,7 @@ class OmniboxContextMenu;
  enum class OmniboxPart;
  class OmniboxPopupAimPresenter;
  class OmniboxPopupFileSelector;
@@ -1749,7 +2654,7 @@ index 41369b45..c07968c4 100644
  class OmniboxPopupUI;
  class OmniboxPopupView;
  class OmniboxViewViews;
-@@ -128,6 +130,40 @@ class LocationBarView
+@@ -128,6 +131,42 @@ class LocationBarView
      virtual ~Delegate() = default;
    };
  
@@ -1772,8 +2677,10 @@ index 41369b45..c07968c4 100644
 +    virtual void OnPopupBoundsChanged(
 +        const std::optional<gfx::Rect>& screen_bounds) = 0;
 +
-+    // Called when keyword (search) mode is entered or left.
-+    virtual void OnKeywordModeChanged(bool active) = 0;
++    // Called whenever the location bar lays out with the keyword that is
++    // selected (keyword/search mode, e.g. "!ytm"), or with an empty string
++    // when no keyword is selected. Must be cheap: called on every layout.
++    virtual void OnKeywordModeChanged(const std::u16string& keyword) = 0;
 +
 +    // Called when a match is about to be opened with `disposition`. Returns
 +    // the disposition to actually use.
@@ -1790,7 +2697,7 @@ index 41369b45..c07968c4 100644
    LocationBarView(BrowserWindowInterface* browser,
                    Profile* profile,
                    CommandUpdater* command_updater,
-@@ -192,6 +228,11 @@ class LocationBarView
+@@ -192,6 +231,22 @@ class LocationBarView
  
    const OmniboxController* GetOmniboxController() const;
  
@@ -1799,10 +2706,21 @@ index 41369b45..c07968c4 100644
 +  void SetCommandBarHost(CommandBarHost* host);
 +  CommandBarHost* command_bar_host() const { return command_bar_host_; }
 +
++  // Helium: the command bar's surface color, which the location bar paints
++  // behind the input so it stays flush with the (possibly tinted) card.
++  void SetCommandBarSurfaceColor(SkColor color);
++
++  // Helium: colors (site-tinted) and icon (the site favicon) of the selected
++  // keyword chip while hosted by the command bar. std::nullopt colors use the
++  // default chip colors, an empty `icon` the keyword's own icon.
++  void SetCommandBarKeywordChip(std::optional<SkColor> background,
++                                std::optional<SkColor> foreground,
++                                const ui::ImageModel& icon);
++
  
    PermissionChipView* chip_view() { return chip_view_; }
    PermissionDashboardView* permission_dashboard_view() {
-@@ -210,6 +251,9 @@ class LocationBarView
+@@ -210,6 +265,9 @@ class LocationBarView
    ChipController* GetChipController() override;
    PermissionDashboardController* GetPermissionDashboardController() override;
    void UpdateWithoutTabRestore() override;
@@ -1812,7 +2730,7 @@ index 41369b45..c07968c4 100644
    LocationBarModel* GetLocationBarModel() override;
    content::WebContents* GetWebContents() override;
    std::optional<bubble_anchor_util::AnchorConfiguration> GetChipAnchor()
-@@ -360,6 +404,9 @@ class LocationBarView
+@@ -360,6 +418,9 @@ class LocationBarView
    // Updates the background on a theme change, or dropdown state change.
    void RefreshBackground();
  
@@ -1822,16 +2740,247 @@ index 41369b45..c07968c4 100644
    // Updates the visibility state of the content setting icons to reflect what
    // is blocked or actively in use on the current page. Returns true if the
    // visibility of at least one of the views in `content_setting_views_`
-@@ -653,6 +700,9 @@ class LocationBarView
+@@ -653,6 +714,10 @@ class LocationBarView
    // behavior.
    bool is_toolbar_visible_ = true;
  
 +  // Helium: the floating command bar hosting this location bar, if any.
 +  raw_ptr<CommandBarHost> command_bar_host_ = nullptr;
++  SkColor command_bar_surface_color_ = SK_ColorTRANSPARENT;
 +
    void OnMiddleClickPaste(base::TimeTicks event_timestamp, std::u16string text);
  
    base::WeakPtrFactory<LocationBarView> weak_factory_{this};
+diff --git a/chrome/browser/ui/views/location_bar/selected_keyword_view.cc b/chrome/browser/ui/views/location_bar/selected_keyword_view.cc
+index a8be3a32..6bd959f0 100644
+--- a/chrome/browser/ui/views/location_bar/selected_keyword_view.cc
++++ b/chrome/browser/ui/views/location_bar/selected_keyword_view.cc
+@@ -26,6 +26,7 @@
+ #include "ui/base/metadata/metadata_impl_macros.h"
+ #include "ui/base/theme_provider.h"
+ #include "ui/base/ui_base_features.h"
++#include "ui/gfx/font.h"
+ #include "ui/gfx/font_list.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/size.h"
+@@ -35,6 +36,7 @@
+ #include "ui/gfx/paint_vector_icon.h"
+ #include "ui/gfx/text_constants.h"
+ #include "ui/views/accessibility/view_accessibility.h"
++#include "ui/views/border.h"
+ #include "ui/views/property_effects.h"
+ 
+ namespace {
+@@ -172,13 +174,98 @@ void SelectedKeywordView::OnBoundsChanged(const gfx::Rect& previous_bounds) {
+ }
+ 
+ SkColor SelectedKeywordView::GetForegroundColor() const {
++  if (command_bar_foreground_) {
++    return *command_bar_foreground_;
++  }
+   return GetColorProvider()->GetColor(kForegroundColorId);
+ }
+ 
++SkColor SelectedKeywordView::GetBackgroundColor() const {
++  if (command_bar_background_) {
++    return *command_bar_background_;
++  }
++  return IconLabelBubbleView::GetBackgroundColor();
++}
++
++void SelectedKeywordView::SetCommandBarStyle(bool command_bar_style) {
++  if (command_bar_style_ == command_bar_style) {
++    return;
++  }
++  command_bar_style_ = command_bar_style;
++
++  // A slightly heavier label, like Zen's search mode pill.
++  if (command_bar_style) {
++    default_font_list_ = label()->font_list();
++  }
++  const gfx::FontList font_list =
++      command_bar_style
++          ? default_font_list_->DeriveWithWeight(gfx::Font::Weight::MEDIUM)
++          : default_font_list_.value_or(label()->font_list());
++  SetFontList(font_list);
++  full_label_.SetFontList(font_list);
++  partial_label_.SetFontList(font_list);
++
++  // The pill is purely informational in the command bar (Backspace removes
++  // it); clicks go to the input behind it, and it gets no hover highlight.
++  SetCanProcessEventsWithinSubtree(!command_bar_style);
++  SetExpandedLabelAdditionalInsets(command_bar_style ? views::Inset1D()
++                                                     : views::Inset1D(2, 0));
++  SetBackgroundVisibility(command_bar_style ? BackgroundVisibility::kAlways
++                                            : BackgroundVisibility::kNever);
++  UpdateBorder();
++  UpdateIcon();
++  SetLabelForCurrentWidth();
++  PreferredSizeChanged();
++}
++
++void SelectedKeywordView::SetCommandBarChip(std::optional<SkColor> background,
++                                            std::optional<SkColor> foreground,
++                                            const ui::ImageModel& icon) {
++  if (command_bar_background_ == background &&
++      command_bar_foreground_ == foreground && command_bar_icon_ == icon) {
++    return;
++  }
++  command_bar_background_ = background;
++  command_bar_foreground_ = foreground;
++  command_bar_icon_ = icon;
++  if (!GetWidget()) {
++    return;
++  }
++  UpdateBackground();
++  UpdateIcon();
++  SchedulePaint();
++}
++
++gfx::RoundedCornersF SelectedKeywordView::GetCornerRadii() const {
++  // The radius of the command bar card's inner elements (the result row
++  // selection), which the 28 DIP pill is laid out at.
++  constexpr float kCommandBarChipRadius = 10.0f;
++  return command_bar_style_ ? gfx::RoundedCornersF(kCommandBarChipRadius)
++                            : IconLabelBubbleView::GetCornerRadii();
++}
++
++bool SelectedKeywordView::ShouldShowSeparator() const {
++  // The command bar pill has no separator line after the label.
++  return !command_bar_style_ && IconLabelBubbleView::ShouldShowSeparator();
++}
++
++void SelectedKeywordView::UpdateBorder() {
++  if (!command_bar_style_) {
++    IconLabelBubbleView::UpdateBorder();
++    return;
++  }
++  // The location bar gives the command bar pill exactly its visible height,
++  // so only horizontal padding: 8 before the icon, 10 after the label.
++  SetBorder(views::CreateEmptyBorder(gfx::Insets::TLBR(0, 8, 0, 10)));
++}
++
+ gfx::Size SelectedKeywordView::CalculatePreferredSize(
+     const views::SizeBounds& available_size) const {
+   // Height will be ignored by the LocationBarView.
+-  return GetSizeForLabelWidth(full_label_.GetPreferredSize().width());
++  // Helium's command bar chip only ever shows the short name.
++  return GetSizeForLabelWidth(command_bar_style_
++                                  ? partial_label_.GetPreferredSize().width()
++                                  : full_label_.GetPreferredSize().width());
+ }
+ 
+ gfx::Size SelectedKeywordView::GetMinimumSize() const {
+@@ -222,6 +309,11 @@ const std::u16string& SelectedKeywordView::GetKeyword() const {
+ }
+ 
+ int SelectedKeywordView::GetExtraInternalSpacing() const {
++  // Helium: a 6 DIP gap between the icon and the name in the command bar
++  // pill.
++  if (command_bar_style_) {
++    return -1;
++  }
+   // Align the label text with the suggestion text.
+   return 2;
+ }
+@@ -231,14 +323,28 @@ void SelectedKeywordView::SetLabelForCurrentWidth() {
+   // the partial label. Otherwise there will be empty space displayed next to
+   // the partial label.
+   bool use_full_label =
++      !command_bar_style_ &&
+       width() >
+-      GetSizeForLabelWidth(partial_label_.GetPreferredSize().width()).width();
++          GetSizeForLabelWidth(partial_label_.GetPreferredSize().width())
++              .width();
+   SetLabel(use_full_label ? full_label_.GetText() : partial_label_.GetText());
+ }
+ 
+ void SelectedKeywordView::UpdateIcon() {
+-  IconLabelBubbleView::SetImageModel(
+-      GetKeywordIcon(keyword_, omnibox_controller_, profile_));
++  // Helium: the command bar pill shows the site's favicon when it has one.
++  if (command_bar_style_ && !command_bar_icon_.IsEmpty()) {
++    IconLabelBubbleView::SetImageModel(command_bar_icon_);
++    return;
++  }
++  ui::ImageModel icon = GetKeywordIcon(keyword_, omnibox_controller_, profile_);
++  // Recolor the (vector) keyword icon to the site-tinted chip text color.
++  if (command_bar_foreground_ && icon.IsVectorIcon() &&
++      icon.GetVectorIcon().vector_icon()) {
++    icon = ui::ImageModel::FromVectorIcon(
++        *icon.GetVectorIcon().vector_icon(), *command_bar_foreground_,
++        GetLayoutConstant(LayoutConstant::kLocationBarIconSize));
++  }
++  IconLabelBubbleView::SetImageModel(icon);
+ }
+ 
+ BEGIN_METADATA(SelectedKeywordView)
+diff --git a/chrome/browser/ui/views/location_bar/selected_keyword_view.h b/chrome/browser/ui/views/location_bar/selected_keyword_view.h
+index 91783ab2..de8ea7c6 100644
+--- a/chrome/browser/ui/views/location_bar/selected_keyword_view.h
++++ b/chrome/browser/ui/views/location_bar/selected_keyword_view.h
+@@ -5,6 +5,7 @@
+ #ifndef CHROME_BROWSER_UI_VIEWS_LOCATION_BAR_SELECTED_KEYWORD_VIEW_H_
+ #define CHROME_BROWSER_UI_VIEWS_LOCATION_BAR_SELECTED_KEYWORD_VIEW_H_
+ 
++#include <optional>
+ #include <string>
+ 
+ #include "base/memory/raw_ptr.h"
+@@ -12,6 +13,9 @@
+ #include "components/omnibox/browser/searchbox_utils.h"
+ #include "third_party/skia/include/core/SkColor.h"
+ #include "ui/base/metadata/metadata_header_macros.h"
++#include "ui/base/models/image_model.h"
++#include "ui/gfx/font_list.h"
++#include "ui/gfx/geometry/rounded_corners_f.h"
+ #include "ui/views/controls/label.h"
+ 
+ class OmniboxController;
+@@ -62,12 +66,28 @@ class SelectedKeywordView : public IconLabelBubbleView {
+   void SetKeyword(const std::u16string& keyword);
+   const std::u16string& GetKeyword() const;
+ 
++  // Helium: in the floating command bar the chip is a compact pill with the
++  // site icon and the short name ("YouTube Music"): no separator, even
++  // padding, the radius of the card's inner elements, and no events.
++  void SetCommandBarStyle(bool command_bar_style);
++
++  // Helium: site-tinted chip colors in the command bar, or std::nullopt for
++  // the default colors, and the site favicon, or an empty model for the
++  // keyword's own icon (e.g. a search icon).
++  void SetCommandBarChip(std::optional<SkColor> background,
++                         std::optional<SkColor> foreground,
++                         const ui::ImageModel& icon);
++  gfx::RoundedCornersF GetCornerRadii() const override;
++
+   using IconLabelBubbleView::label;
+ 
+  private:
+   // IconLabelBubbleView:
+   void OnBoundsChanged(const gfx::Rect& previous_bounds) override;
+   int GetExtraInternalSpacing() const override;
++  SkColor GetBackgroundColor() const override;
++  bool ShouldShowSeparator() const override;
++  void UpdateBorder() override;
+ 
+   void SetLabelForCurrentWidth();
+ 
+@@ -90,6 +110,14 @@ class SelectedKeywordView : public IconLabelBubbleView {
+   // enough room to display the complete description.
+   views::Label full_label_;
+   views::Label partial_label_;
++
++  // Helium command bar state, see SetCommandBarStyle()/SetCommandBarChip().
++  bool command_bar_style_ = false;
++  std::optional<SkColor> command_bar_background_;
++  std::optional<SkColor> command_bar_foreground_;
++  ui::ImageModel command_bar_icon_;
++  // The label font outside of the command bar, restored when leaving it.
++  std::optional<gfx::FontList> default_font_list_;
+ };
+ 
+ #endif  // CHROME_BROWSER_UI_VIEWS_LOCATION_BAR_SELECTED_KEYWORD_VIEW_H_
 diff --git a/chrome/browser/ui/views/omnibox/BUILD.gn b/chrome/browser/ui/views/omnibox/BUILD.gn
 index 6d685e13..f330ef9f 100644
 --- a/chrome/browser/ui/views/omnibox/BUILD.gn
@@ -1845,7 +2994,7 @@ index 6d685e13..f330ef9f 100644
      "omnibox_popup_view_browser_view.h",
      "omnibox_popup_view_full_webui.h",
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.cc b/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.cc
-index 0c91a5a6..c9b8935c 100644
+index 0c91a5a6..22ac964d 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.cc
 +++ b/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.cc
 @@ -10,7 +10,9 @@
@@ -1868,12 +3017,98 @@ index 0c91a5a6..c9b8935c 100644
    icon_view_ = AddChildView(std::make_unique<views::ImageView>());
    answer_image_view_ = AddChildView(std::make_unique<views::ImageView>());
    answer_image_view_->SetCanProcessEventsWithinSubtree(false);
-@@ -525,10 +528,10 @@ gfx::Size OmniboxMatchCellView::CalculatePreferredSize(
+@@ -314,6 +317,51 @@ void OmniboxMatchCellView::OnMatchUpdate(const OmniboxResultView* result_view,
+     description_view_->SetTextWithStyling(match.description,
+                                           match.description_class);
+   }
++
++  // Helium: navigation matches normally put the URL in `contents` and the
++  // title in `description`; swapped matches are already title-first. Tell
++  // them apart by which side is classified as a URL.
++  const auto has_url_class = [](const ACMatchClassifications& classes) {
++    return std::ranges::any_of(classes, [](const ACMatchClassification& c) {
++      return (c.style & ACMatchClassification::URL) != 0;
++    });
++  };
++  command_bar_title_is_contents_ = !has_url_class(match.contents_class) &&
++                                   has_url_class(match.description_class);
++  ApplyCommandBarTextColors();
++}
++
++void OmniboxMatchCellView::ApplyCommandBarTextColors() {
++  if (!IsCommandBarTwoLineRow() || !GetColorProvider()) {
++    return;
++  }
++  const bool selected =
++      result_view_->GetThemeState() == OmniboxPartState::SELECTED;
++  CommandBarUrlView()->ApplyTextColor(selected
++                                          ? kColorOmniboxResultsTextDimmedSelected
++                                          : kColorOmniboxResultsTextDimmed);
++}
++
++bool OmniboxMatchCellView::IsCommandBarTwoLineRow() const {
++  const OmniboxPopupViewViews* const popup_view =
++      result_view_ ? result_view_->popup_view() : nullptr;
++  const OmniboxPopupStyle* const command_bar_style =
++      popup_view ? popup_view->GetCommandBarStyle() : nullptr;
++  return command_bar_style && command_bar_style->two_line_row_height > 0 &&
++         layout_style_ == LayoutStyle::DEFAULT_NON_SEARCH_SUGGESTION &&
++         !content_view_->GetText().empty() &&
++         description_view_->GetVisible() &&
++         !description_view_->GetText().empty();
++}
++
++OmniboxTextView* OmniboxMatchCellView::CommandBarTitleView() const {
++  return command_bar_title_is_contents_ ? content_view_.get()
++                                        : description_view_.get();
++}
++
++OmniboxTextView* OmniboxMatchCellView::CommandBarUrlView() const {
++  return command_bar_title_is_contents_ ? description_view_.get()
++                                        : content_view_.get();
+ }
+ 
+ void OmniboxMatchCellView::OnSecondaryTextVisibilityChanged() {
+@@ -439,6 +487,25 @@ void OmniboxMatchCellView::Layout(PassKey) {
+     return;
+   }
+ 
++  if (IsCommandBarTwoLineRow()) {
++    // Helium command bar: title on the first line, muted URL on the second,
++    // vertically centered as a block (Arc/Zen style).
++    OmniboxTextView* const title_view = CommandBarTitleView();
++    OmniboxTextView* const url_view = CommandBarUrlView();
++    const int title_height = title_view->GetLineHeight();
++    const int url_height = url_view->GetLineHeight();
++    const int top =
++        y + std::max(0, (row_height - title_height - url_height) / 2);
++    title_view->SetBounds(x, top, text_width, title_height);
++    url_view->SetBounds(x, top + title_height, text_width, url_height);
++    separator_view_->SetSize(gfx::Size());
++    iph_link_view_->SetSize(gfx::Size());
++    if (tail_suggest_ellipse_view_->GetVisible()) {
++      tail_suggest_ellipse_view_->SetSize(gfx::Size());
++    }
++    return;
++  }
++
+   int content_width = content_view_->GetPreferredSize().width();
+   int description_width = description_view_->GetVisible()
+                               ? description_view_->GetPreferredSize().width()
+@@ -525,10 +592,18 @@ gfx::Size OmniboxMatchCellView::CalculatePreferredSize(
    } else if (layout_style_ == LayoutStyle::IPH_SUGGESTION ||
               layout_style_ == LayoutStyle::TOOLBELT) {
      // IPH and toolbelt suggestions have extra height.
 -    height = kRowHeight;
 +    height = GetOneLineRowHeight();
++  } else if (IsCommandBarTwoLineRow()) {
++    // Helium command bar: title and URL on separate lines.
++    const OmniboxPopupStyle* const command_bar_style =
++        result_view_->popup_view()->GetCommandBarStyle();
++    height = command_bar_style->two_line_row_height;
++    width = GetInsets().width() + GetTextIndent() +
++            std::max(content_view_->GetPreferredSize().width(),
++                     description_view_->GetPreferredSize().width());
    } else {
      // The height for traditional 1-line matches.
 -    height = kRowHeight;
@@ -1881,7 +3116,7 @@ index 0c91a5a6..c9b8935c 100644
    }
  
    return gfx::Size(width, height);
-@@ -538,6 +541,14 @@ gfx::Size OmniboxMatchCellView::GetMinimumSize() const {
+@@ -538,6 +613,14 @@ gfx::Size OmniboxMatchCellView::GetMinimumSize() const {
    return gfx::Size(GetTextIndent(), GetPreferredSize().height());
  }
  
@@ -1897,15 +3132,37 @@ index 0c91a5a6..c9b8935c 100644
    // Image indent ignores the `OmniboxMatchCellView::GetInsets()`.
  
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.h b/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.h
-index 52398123..643f7e60 100644
+index 52398123..eab95d3c 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.h
 +++ b/chrome/browser/ui/views/omnibox/omnibox_match_cell_view.h
-@@ -128,8 +128,14 @@ class OmniboxMatchCellView : public views::View {
+@@ -83,6 +83,11 @@ class OmniboxMatchCellView : public views::View {
+   // Notifies the view that the visibility of the secondary text has changed.
+   void OnSecondaryTextVisibilityChanged();
+ 
++  // Helium: in the command bar's two-line rows, mutes the URL line (which the
++  // match classification would otherwise paint in URL colors). No-op
++  // elsewhere.
++  void ApplyCommandBarTextColors();
++
+   // Set's the `icon_view_` image, possibly with a rounded square background.
+   void SetIcon(const gfx::ImageSkia& image, const AutocompleteMatch& match);
+ 
+@@ -128,8 +133,24 @@ class OmniboxMatchCellView : public views::View {
  
    void SetTailSuggestCommonPrefixWidth(const std::u16string& common_prefix);
  
 +  // Height of a one-line match; taller in Helium's command bar.
 +  int GetOneLineRowHeight() const;
++
++  // Helium: whether this match is shown as a two-line command bar row, title
++  // above URL, and which text views hold the title and the URL.
++  bool IsCommandBarTwoLineRow() const;
++  OmniboxTextView* CommandBarTitleView() const;
++  OmniboxTextView* CommandBarUrlView() const;
++
++  // Helium: true if `content_view_` holds the page title (and
++  // `description_view_` the URL), i.e. the match was already title-first.
++  bool command_bar_title_is_contents_ = false;
 +
    LayoutStyle layout_style_ = LayoutStyle::DEFAULT_NON_SEARCH_SUGGESTION;
  
@@ -1917,10 +3174,10 @@ index 52398123..643f7e60 100644
    raw_ptr<views::ImageView> icon_view_;
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_popup_style.h b/chrome/browser/ui/views/omnibox/omnibox_popup_style.h
 new file mode 100644
-index 00000000..b3f7298e
+index 00000000..d3bbac55
 --- /dev/null
 +++ b/chrome/browser/ui/views/omnibox/omnibox_popup_style.h
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,49 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -1933,7 +3190,10 @@ index 00000000..b3f7298e
 +// Geometry overrides for the classic omnibox popup while its location bar is
 +// hosted by the floating command bar. The popup frame then sits exactly on top
 +// of the command bar card, so that the input row and the results read as a
-+// single surface. The card paints the shadow, so the frame paints none.
++// single surface. The card paints the surface, outline, input/results divider
++// and shadow. The (translucent) popup frame paints none of them, so the card
++// shows through it and can be re-tinted, e.g. in keyword mode, without
++// touching the popup. Only the rows paint their hover/selection highlights.
 +struct OmniboxPopupStyle {
 +  // Corner radius of the popup frame. Matches the card.
 +  int corner_radius = 0;
@@ -1954,6 +3214,10 @@ index 00000000..b3f7298e
 +
 +  // Height of a standard one-line result row.
 +  int row_height = 0;
++
++  // Height of a two-line row (title above a muted URL), used for navigation
++  // matches that have both. 0 keeps every row on one line.
++  int two_line_row_height = 0;
 +
 +  // Insets of each result row inside the frame.
 +  gfx::Insets row_insets;
@@ -2136,7 +3400,7 @@ index f8698d29..28594c92 100644
    OmniboxHeaderView* header_view_at(size_t i);
  
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_result_view.cc b/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
-index 1a1d6565..ff361c8e 100644
+index 1a1d6565..947b812f 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
 +++ b/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
 @@ -21,6 +21,7 @@
@@ -2147,7 +3411,15 @@ index 1a1d6565..ff361c8e 100644
  #include "chrome/browser/ui/views/omnibox/omnibox_popup_view_views.h"
  #include "chrome/browser/ui/views/omnibox/omnibox_suggestion_button_row_view.h"
  #include "chrome/browser/ui/views/omnibox/omnibox_text_view.h"
-@@ -325,7 +326,8 @@ OmniboxResultView::~OmniboxResultView() = default;
+@@ -41,6 +42,7 @@
+ #include "ui/base/ui_base_features.h"
+ #include "ui/base/window_open_disposition.h"
+ #include "ui/color/color_id.h"
++#include "ui/color/color_provider.h"
+ #include "ui/events/event.h"
+ #include "ui/gfx/canvas.h"
+ #include "ui/gfx/geometry/rounded_corners_f.h"
+@@ -325,7 +327,8 @@ OmniboxResultView::~OmniboxResultView() = default;
  // static
  std::unique_ptr<views::Background> OmniboxResultView::GetPopupCellBackground(
      const views::View* view,
@@ -2157,7 +3429,7 @@ index 1a1d6565..ff361c8e 100644
    DCHECK(view);
  
    // TODO(tapted): Consider using background()->SetNativeControlColor() and
-@@ -343,7 +345,7 @@ std::unique_ptr<views::Background> OmniboxResultView::GetPopupCellBackground(
+@@ -343,7 +346,7 @@ std::unique_ptr<views::Background> OmniboxResultView::GetPopupCellBackground(
  
    return views::CreateRoundedRectBackground(
        GetOmniboxBackgroundColorId(part_state),
@@ -2166,21 +3438,47 @@ index 1a1d6565..ff361c8e 100644
  }
  
  void OmniboxResultView::SetMatch(const AutocompleteMatch& match) {
-@@ -456,7 +458,13 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
+@@ -456,7 +459,29 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
    }
  
    const OmniboxPartState state = GetThemeState();
 -  SetBackground(GetPopupCellBackground(this, state));
 +  const OmniboxPopupStyle* const command_bar_style =
 +      popup_view_->GetCommandBarStyle();
-+  SetBackground(GetPopupCellBackground(
-+      this, state,
-+      command_bar_style ? std::make_optional<float>(
-+                              command_bar_style->selection_radius)
-+                        : std::nullopt));
++  const ui::ColorProvider* const color_provider = GetColorProvider();
++  if (command_bar_style && color_provider &&
++      (state == OmniboxPartState::HOVERED ||
++       state == OmniboxPartState::SELECTED)) {
++    // Helium's command bar: the popup frame is transparent over the (possibly
++    // keyword-tinted) card, so highlight rows with a translucent wash of the
++    // text color rather than the opaque theme highlight colors.
++    const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
++    SetBackground(views::CreateRoundedRectBackground(
++        SkColorSetA(text_color,
++                    state == OmniboxPartState::SELECTED ? 0x1F : 0x10),
++        static_cast<float>(command_bar_style->selection_radius)));
++  } else if (command_bar_style && state == OmniboxPartState::NORMAL) {
++    SetBackground(nullptr);
++  } else {
++    SetBackground(GetPopupCellBackground(
++        this, state,
++        command_bar_style ? std::make_optional<float>(
++                                command_bar_style->selection_radius)
++                          : std::nullopt));
++  }
  
    // Reapply the dim color to account for the highlight state.
    const bool selected = (state == OmniboxPartState::SELECTED);
+@@ -494,6 +519,9 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
+     suggestion_view_->content()->ReapplyStyling();
+     suggestion_view_->description()->ReapplyStyling();
+   }
++  // Re-mute the URL line of two-line command bar rows, which restyling (and
++  // selection changes) would otherwise turn back into URL colors.
++  suggestion_view_->ApplyCommandBarTextColors();
+ 
+   button_row_->SetThemeState(GetThemeState());
+ 
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_result_view.h b/chrome/browser/ui/views/omnibox/omnibox_result_view.h
 index a1bbc217..9914d395 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_result_view.h
@@ -2231,11 +3529,73 @@ index 880b331f..d409ac1c 100644
    return gfx::Insets::TLBR(2, 4, 0, 4);
  }
  
+diff --git a/chrome/browser/ui/views/omnibox/omnibox_suggestion_button_row_view.cc b/chrome/browser/ui/views/omnibox/omnibox_suggestion_button_row_view.cc
+index 1f881539..ebad2cd6 100644
+--- a/chrome/browser/ui/views/omnibox/omnibox_suggestion_button_row_view.cc
++++ b/chrome/browser/ui/views/omnibox/omnibox_suggestion_button_row_view.cc
+@@ -577,7 +577,10 @@ void OmniboxSuggestionButtonRowView::UpdateFromModel() {
+       std::ranges::any_of(action_buttons_, [](const auto& action_button) {
+         return action_button->GetVisible();
+       });
+-  SetVisible(is_any_child_visible);
++  // Helium's command bar shows no button chips ("Switch to this tab", keyword
++  // buttons, ...) under its rows. Their selection states stay reachable from
++  // the keyboard, e.g. Tab still enters keyword mode.
++  SetVisible(is_any_child_visible && !popup_view_->GetCommandBarStyle());
+ }
+ 
+ void OmniboxSuggestionButtonRowView::SelectionStateChanged() {
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_view_views.cc b/chrome/browser/ui/views/omnibox/omnibox_view_views.cc
-index d6ec826c..5b96076e 100644
+index d6ec826c..4b08e851 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_view_views.cc
 +++ b/chrome/browser/ui/views/omnibox/omnibox_view_views.cc
-@@ -2162,6 +2162,12 @@ bool OmniboxViewViews::HandleKeyEvent(views::Textfield* textfield,
+@@ -1035,6 +1035,16 @@ bool OmniboxViewViews::HandleEarlyTabActions(const ui::KeyEvent& event) {
+   if (controller()->IsPopupOpen()) {
+     controller()->edit_model()->OnTabPressed(event.IsShiftDown());
+     return true;
++  } else if (location_bar_view_ && location_bar_view_->command_bar_host()) {
++    // Helium's command bar with no popup (e.g. "!yt" before any suggestions
++    // arrived): Tab accepts an available keyword (bang), and is otherwise
++    // swallowed so focus never leaves the bar.
++    OmniboxEditModel* const edit_model = controller()->edit_model();
++    if (!event.IsShiftDown() && edit_model->is_keyword_hint() &&
++        !edit_model->keyword().empty()) {
++      edit_model->AcceptKeyword(metrics::OmniboxEventProto::TAB);
++    }
++    return true;
+   } else {
+     // When the popup is open, focus on the AI Mode page action icon is handled
+     // by `OmniboxPopupSelection` and `OmniboxEditModel`. And normally, when the
+@@ -1687,6 +1697,13 @@ void OmniboxViewViews::OnGestureEvent(ui::GestureEvent* event) {
+ 
+ bool OmniboxViewViews::SkipDefaultKeyEventProcessing(
+     const ui::KeyEvent& event) {
++  // Helium: Tab and Shift+Tab never traverse focus out of the floating command
++  // bar (which would close it); HandleEarlyTabActions() handles them.
++  if (views::FocusManager::IsTabTraversalKeyEvent(event) &&
++      location_bar_view_ && location_bar_view_->command_bar_host()) {
++    return true;
++  }
++
+   if (views::FocusManager::IsTabTraversalKeyEvent(event)) {
+     // There are three cases where <tab> traversal should be handled by the
+     // omnibox:
+@@ -2038,6 +2055,14 @@ bool OmniboxViewViews::ShouldShowPlaceholderText() const {
+     return false;
+   }
+ 
++  // Helium's command bar always shows the placeholder ("Search Google or type
++  // a URL", or the keyword's placeholder) in its empty, focused input, like
++  // Arc and Zen.
++  if (location_bar_view_ && location_bar_view_->command_bar_host()) {
++    return !controller()->edit_model()->is_keyword_selected() ||
++           !controller()->edit_model()->keyword_placeholder().empty();
++  }
++
+   return omnibox::ShouldShowPlaceholderText(
+       location_bar_view_,
+       /*in_popup_state_transition=*/location_bar_view_ &&
+@@ -2162,6 +2187,12 @@ bool OmniboxViewViews::HandleKeyEvent(views::Textfield* textfield,
        return true;
      }
      case ui::VKEY_ESCAPE:
@@ -2248,93 +3608,59 @@ index d6ec826c..5b96076e 100644
        return controller()->edit_model()->OnEscapeKeyPressed();
  
      case ui::VKEY_CONTROL:
+@@ -2230,6 +2261,18 @@ bool OmniboxViewViews::HandleKeyEvent(views::Textfield* textfield,
+       break;
+ 
+     case ui::VKEY_BACK:
++      // Helium's command bar: Backspace in an empty keyword (bang) query
++      // removes the keyword pill and leaves the input empty, rather than
++      // turning the keyword back into text ("!ytm "). The empty input then
++      // shows the bar's on-focus suggestions again.
++      if (location_bar_view_ && location_bar_view_->command_bar_host() &&
++          controller()->edit_model()->is_keyword_selected() &&
++          GetText().empty()) {
++        controller()->edit_model()->ClearKeyword();
++        SetUserText(std::u16string(), /*update_popup=*/false);
++        controller()->edit_model()->RestartZeroSuggestRequest();
++        return true;
++      }
+       // No extra handling is needed in keyword search mode, if there is a
+       // non-empty selection, or if the cursor is not leading the text.
+       if (controller()->edit_model()->is_keyword_hint() ||
 diff --git a/chrome/browser/ui/views/omnibox/rounded_omnibox_results_frame.cc b/chrome/browser/ui/views/omnibox/rounded_omnibox_results_frame.cc
-index 2304e752..3b967f62 100644
+index 2304e752..bf5fdfe4 100644
 --- a/chrome/browser/ui/views/omnibox/rounded_omnibox_results_frame.cc
 +++ b/chrome/browser/ui/views/omnibox/rounded_omnibox_results_frame.cc
-@@ -10,6 +10,7 @@
- #include "base/functional/bind.h"
- #include "base/memory/raw_ptr.h"
- #include "build/build_config.h"
-+#include "cc/paint/paint_flags.h"
- #include "chrome/browser/themes/theme_service.h"
- #include "chrome/browser/ui/color/chrome_color_id.h"
- #include "chrome/browser/ui/layout_constants.h"
-@@ -23,8 +24,14 @@
- #include "ui/base/metadata/metadata_header_macros.h"
- #include "ui/base/metadata/metadata_impl_macros.h"
- #include "ui/base/pointer/touch_ui_controller.h"
-+#include "ui/color/color_provider.h"
- #include "ui/compositor/layer.h"
-+#include "ui/gfx/canvas.h"
-+#include "ui/gfx/geometry/rect_conversions.h"
-+#include "ui/gfx/geometry/rect_f.h"
- #include "ui/gfx/geometry/rounded_corners_f.h"
-+#include "ui/gfx/scoped_canvas.h"
-+#include "ui/views/border.h"
- #include "ui/views/bubble/bubble_border.h"
- #include "ui/views/layout/layout_provider.h"
- #include "ui/views/metadata/view_factory.h"
-@@ -225,6 +232,58 @@ END_METADATA
- BEGIN_VIEW_BUILDER(/* no export*/, TopBackgroundView, views::View)
- END_VIEW_BUILDER
+@@ -157,11 +157,18 @@ class TopBackgroundView : public views::View {
+   METADATA_HEADER(TopBackgroundView, views::View)
  
-+// Hairline outline and input/results divider of the popup frame while it is
-+// merged with Helium's command bar card. The card paints the same outline, so
-+// the surface keeps one silhouette whether or not results are shown.
-+class CommandBarFrameBorder : public views::Border {
-+ public:
-+  CommandBarFrameBorder(int corner_radius, int divider_y)
-+      : corner_radius_(corner_radius), divider_y_(divider_y) {}
-+  CommandBarFrameBorder(const CommandBarFrameBorder&) = delete;
-+  CommandBarFrameBorder& operator=(const CommandBarFrameBorder&) = delete;
-+  ~CommandBarFrameBorder() override = default;
-+
-+  // views::Border:
-+  void Paint(const views::View& view, gfx::Canvas* canvas) override {
-+    const ui::ColorProvider* color_provider = view.GetColorProvider();
-+    if (!color_provider) {
+  public:
+-  explicit TopBackgroundView(const LocationBar* location_bar)
+-      : location_bar_(location_bar) {}
++  // `paint_edge` is false for Helium's command bar, where the whole frame is
++  // transparent and the card underneath paints the surface.
++  explicit TopBackgroundView(const LocationBar* location_bar,
++                             bool paint_edge = true)
++      : location_bar_(location_bar), paint_edge_(paint_edge) {}
+ 
+   void OnThemeChanged() override {
+     views::View::OnThemeChanged();
++    if (!paint_edge_) {
++      SetBackground(nullptr);
 +      return;
 +    }
-+    const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
-+
-+    gfx::ScopedCanvas scoped_canvas(canvas);
-+    const float dsf = canvas->UndoDeviceScaleFactor();
-+
-+    // Divider between the input section and the results.
-+    constexpr int kDividerHorizontalInset = 14;
-+    if (view.height() > divider_y_ + 1) {
-+      gfx::RectF divider(kDividerHorizontalInset, divider_y_ - 1,
-+                         view.width() - 2 * kDividerHorizontalInset, 1);
-+      divider.Scale(dsf);
-+      divider.set_height(1);
-+      canvas->FillRect(gfx::ToEnclosingRect(divider),
-+                       SkColorSetA(text_color, 0x14));
-+    }
-+
-+    // One physical pixel outline.
-+    gfx::RectF outline(view.GetLocalBounds());
-+    outline.Scale(dsf);
-+    outline.Inset(0.5f);
-+    cc::PaintFlags flags;
-+    flags.setAntiAlias(true);
-+    flags.setStyle(cc::PaintFlags::kStroke_Style);
-+    flags.setStrokeWidth(1);
-+    flags.setColor(SkColorSetA(text_color, 0x1A));
-+    canvas->DrawRoundRect(outline, corner_radius_ * dsf - 0.5f, flags);
-+  }
-+  gfx::Insets GetInsets() const override { return gfx::Insets(); }
-+  gfx::Size GetMinimumSize() const override { return gfx::Size(); }
-+
-+ private:
-+  const int corner_radius_;
-+  const int divider_y_;
-+};
-+
- }  // namespace
+     const SkColor background_color =
+         GetColorProvider()->GetColor(kColorOmniboxResultsBackground);
  
- DEFINE_VIEW_BUILDER(/* no export */, TopBackgroundView)
-@@ -232,9 +291,14 @@ DEFINE_VIEW_BUILDER(/* no export */, TopBackgroundView)
+@@ -217,6 +224,7 @@ class TopBackgroundView : public views::View {
+ 
+  private:
+   raw_ptr<const LocationBar> location_bar_;
++  const bool paint_edge_;
+ };
+ 
+ BEGIN_METADATA(TopBackgroundView)
+@@ -232,9 +240,14 @@ DEFINE_VIEW_BUILDER(/* no export */, TopBackgroundView)
  RoundedOmniboxResultsFrame::RoundedOmniboxResultsFrame(
      views::View* contents,
      LocationBar* location_bar,
@@ -2351,21 +3677,37 @@ index 2304e752..3b967f62 100644
    auto* webui_content = GetOmniboxPopupWebUIBaseContent();
    // When the page paints the popup's shadow, this frame must not paint a
    // background, rounded corners or a shadow: the renderer draws all of them,
-@@ -278,7 +342,12 @@ RoundedOmniboxResultsFrame::RoundedOmniboxResultsFrame(
+@@ -245,7 +258,9 @@ RoundedOmniboxResultsFrame::RoundedOmniboxResultsFrame(
+       webui_content && webui_content->ShouldSizeWebViewToPreferredHeight();
+   // Skipped entirely when the WebUI paints the background itself.
+   std::unique_ptr<views::Background> background;
+-  if (!draw_shadow_in_webui_) {
++  // Also skipped for Helium's command bar: the frame is transparent so the
++  // card below it (in the browser widget) paints the surface.
++  if (!draw_shadow_in_webui_ && !command_bar_style_) {
+     background = views::CreateSolidBackground(kColorOmniboxResultsBackground);
+   }
+   // Host the contents in its own View to simplify layout and customization.
+@@ -272,13 +287,16 @@ RoundedOmniboxResultsFrame::RoundedOmniboxResultsFrame(
+               },
+               corner_radius, masks_to_bounds, draw_shadow_in_webui_))
+           .AddChild(views::Builder<TopBackgroundView>(
+-                        std::make_unique<TopBackgroundView>(location_bar))
++                        std::make_unique<TopBackgroundView>(
++                            location_bar,
++                            /*paint_edge=*/!command_bar_style_.has_value()))
+                         .CopyAddressTo(&top_background_));
+ 
    auto contents_host = std::move(contents_host_builder).Build();
    contents_host->AddChildViewRaw(contents_.get());
  
 -  if (!draw_shadow_in_webui_) {
-+  if (command_bar_style_) {
-+    // The command bar card paints the shadow; only outline the surface.
-+    contents_host->SetBorder(std::make_unique<CommandBarFrameBorder>(
-+        command_bar_style_->corner_radius,
-+        command_bar_style_->non_result_section_height));
-+  } else if (!draw_shadow_in_webui_) {
++  // The command bar card paints the outline, divider and shadow.
++  if (!command_bar_style_ && !draw_shadow_in_webui_) {
      SetElevation(kDefaultElevation);
    }
  
-@@ -381,8 +450,8 @@ void RoundedOmniboxResultsFrame::Layout(PassKey) {
+@@ -381,8 +399,8 @@ void RoundedOmniboxResultsFrame::Layout(PassKey) {
  
    if (top_background_->GetVisible()) {
      gfx::Rect top_bounds(contents_host_->GetContentsBounds());
@@ -2376,7 +3718,7 @@ index 2304e752..3b967f62 100644
      top_background_->SetBoundsRect(top_bounds);
    }
  
-@@ -472,7 +541,17 @@ void RoundedOmniboxResultsFrame::OnMouseEvent(ui::MouseEvent* event) {
+@@ -472,7 +490,17 @@ void RoundedOmniboxResultsFrame::OnMouseEvent(ui::MouseEvent* event) {
  // Insets used to position |contents_| within |contents_host_|.
  gfx::Insets RoundedOmniboxResultsFrame::GetContentInsets() {
    return gfx::Insets::TLBR(
@@ -2449,11 +3791,64 @@ index f8610629..123ea727 100644
  };
  
  #endif  // CHROME_BROWSER_UI_VIEWS_OMNIBOX_ROUNDED_OMNIBOX_RESULTS_FRAME_H_
+diff --git a/chrome/browser/ui/views/tabs/shared/new_tab_button.cc b/chrome/browser/ui/views/tabs/shared/new_tab_button.cc
+index 863c7c99..78faf289 100644
+--- a/chrome/browser/ui/views/tabs/shared/new_tab_button.cc
++++ b/chrome/browser/ui/views/tabs/shared/new_tab_button.cc
+@@ -12,6 +12,7 @@
+ #include "chrome/browser/ui/browser_element_identifiers.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/ui_features.h"
++#include "chrome/browser/ui/views/frame/browser_view.h"
+ #include "chrome/browser/ui/views/tabs/shared/new_tab_button_menu_model.h"
+ #include "ui/actions/actions.h"
+ #include "ui/base/metadata/metadata_impl_macros.h"
+@@ -133,6 +134,13 @@ void NewTabButton::NotifyClick(const ui::Event& event) {
+   }
+ #endif
+   TabStripFlatEdgeButton::NotifyClick(event);
++  // Helium: with the command bar enabled, "New tab" also opens it in new-tab
++  // mode on the tab the click just created, so that accepting a match
++  // navigates that tab.
++  if (BrowserView* const browser_view =
++          BrowserView::GetBrowserViewForBrowser(browser_)) {
++    browser_view->OpenCommandBarForNewTabButton();
++  }
+ }
+ 
+ BEGIN_METADATA(NewTabButton)
+diff --git a/chrome/browser/ui/views/tabs/tab_strip.cc b/chrome/browser/ui/views/tabs/tab_strip.cc
+index dec89ab8..8026948c 100644
+--- a/chrome/browser/ui/views/tabs/tab_strip.cc
++++ b/chrome/browser/ui/views/tabs/tab_strip.cc
+@@ -1233,6 +1233,11 @@ void TabStrip::NewTabButtonPressed(const ui::Event& event) {
+     }
+   }
+   controller_->CreateNewTab(NewTabTypes::kNewTabButton);
++  // Helium: with the command bar enabled, "+" also opens it on the new tab.
++  if (BrowserView* const browser_view =
++          BrowserView::GetBrowserViewForBrowser(browser)) {
++    browser_view->OpenCommandBarForNewTabButton();
++  }
+ }
+ 
+ // static
 diff --git a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
-index 498e089d..a1ac9674 100644
+index 498e089d..26b84e41 100644
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
-@@ -1861,6 +1861,9 @@ void ToolbarView::ChildVisibilityChanged(views::View* child) {
+@@ -1815,6 +1815,10 @@ void ToolbarView::OnThemeChanged() {
+ 
+ void ToolbarView::NewTabButtonPressed(const ui::Event& event) {
+   chrome::NewTab(browser_, NewTabTypes::kNewTabButton);
++  // Helium: with the command bar enabled, this also opens it on the new tab.
++  if (browser_view_) {
++    browser_view_->OpenCommandBarForNewTabButton();
++  }
+ }
+ 
+ void ToolbarView::VerticalTabsCollapseButtonPressed(const ui::Event& event) {
+@@ -1861,6 +1865,9 @@ void ToolbarView::ChildVisibilityChanged(views::View* child) {
  // the location bar gets focus, not the first control in the toolbar - and
  // also so that it selects all content in the location bar.
  views::View* ToolbarView::GetDefaultFocusableChild() {
@@ -2463,7 +3858,7 @@ index 498e089d..a1ac9674 100644
    return location_bar_view_;
  }
  
-@@ -2254,6 +2257,56 @@ void ToolbarView::AttachTabStripRegionView(TabStripRegionView* view) {
+@@ -2254,6 +2261,61 @@ void ToolbarView::AttachTabStripRegionView(TabStripRegionView* view) {
    InvalidateLayout();
  }
  
@@ -2488,7 +3883,12 @@ index 498e089d..a1ac9674 100644
 +          location_bar_view_->GetProperty(views::kMarginsKey)) {
 +    location_bar_placeholder_->SetProperty(views::kMarginsKey, *margins);
 +  }
-+  location_bar_placeholder_->SetPreferredSize(location_bar_view_->size());
++  // Zero width: a plain View's minimum size is its preferred size, and a
++  // wide minimum here would raise the toolbar's minimum width, which the
++  // browser layout uses to cap the vertical tab strip. The copied flex rule
++  // still lets the placeholder fill the slot.
++  location_bar_placeholder_->SetPreferredSize(
++      gfx::Size(0, location_bar_view_->height()));
 +  location_bar_placeholder_->SetVisible(true);
 +
 +  // Same-widget reparent: focus, layers and observers move along without
