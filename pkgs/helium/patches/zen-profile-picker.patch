@@ -1,0 +1,27 @@
+diff --git a/chrome/browser/ui/views/profiles/profile_picker_widget.cc b/chrome/browser/ui/views/profiles/profile_picker_widget.cc
+index bf31502d..79fe3da6 100644
+--- a/chrome/browser/ui/views/profiles/profile_picker_widget.cc
++++ b/chrome/browser/ui/views/profiles/profile_picker_widget.cc
+@@ -11,18 +11,16 @@
+ #include "chrome/browser/ui/views/profiles/profile_picker_view.h"
+ #include "content/public/browser/web_contents.h"
+ 
+-#if BUILDFLAG(IS_LINUX)
+-#include "chrome/browser/shell_integration_linux.h"
+-#endif
+-
+ ProfilePickerWidget::ProfilePickerWidget(ProfilePickerView* profile_picker_view)
+     : profile_picker_view_(profile_picker_view) {
+   views::Widget::InitParams params(
+       views::Widget::InitParams::NATIVE_WIDGET_OWNS_WIDGET);
+   params.delegate = profile_picker_view;
+ #if BUILDFLAG(IS_LINUX)
+-  params.wm_class_name = shell_integration_linux::GetProgramClassName();
+-  params.wm_class_class = shell_integration_linux::GetProgramClassClass();
++  // A distinct class/app_id lets window rules target the picker (and its
++  // profile creation steps) without also matching browser windows.
++  params.wm_class_name = "helium-profile-picker";
++  params.wm_class_class = "helium-profile-picker";
+   params.wayland_app_id = params.wm_class_class;
+ #endif
+   Init(std::move(params));

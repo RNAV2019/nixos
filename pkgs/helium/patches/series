@@ -5,3 +5,5 @@ zen-split-view.patch
 pinned-tab-grid.patch
 zen-resize-throttle.patch
 zen-sidebar-style.patch
+zen-profile-picker.patch
+zen-settings.patch

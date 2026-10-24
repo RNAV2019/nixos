@@ -120,8 +120,47 @@ index da782256..99fad486 100644
    if (!drop_target_parent_view_->GetWidget() ||
        !drop_target_parent_view_->GetWidget()->IsMaximized()) {
      return false;
+diff --git a/chrome/browser/ui/views/tabs/dragging/drag_session_data.h b/chrome/browser/ui/views/tabs/dragging/drag_session_data.h
+index 1ff33f75..9af452b9 100644
+--- a/chrome/browser/ui/views/tabs/dragging/drag_session_data.h
++++ b/chrome/browser/ui/views/tabs/dragging/drag_session_data.h
+@@ -10,6 +10,7 @@
+ #include <vector>
+ 
+ #include "base/memory/raw_ptr.h"
++#include "base/memory/weak_ptr.h"
+ #include "chrome/browser/ui/views/tabs/tab_slot_view.h"
+ #include "components/tab_groups/tab_group_id.h"
+ #include "components/tab_groups/tab_group_visual_data.h"
+@@ -20,6 +21,7 @@ class WebContents;
+ }
+ 
+ class TabSlotView;
++class TabStripModel;
+ class TabDragContext;
+ 
+ // Stores the data associated with a group header that is being dragged.
+@@ -108,6 +110,18 @@ struct DragSessionData final {
+   // When the drag session started.
+   base::TimeTicks drag_start_time;
+ 
++  // Helium: whether the dragged tab was the one its window showed when the
++  // drag began, i.e. dropping it on the page of that window is dropping the
++  // shown tab on itself.
++  bool source_tab_was_active = false;
++  // The tab strip model the drag began in. Only compared, never dereferenced
++  // (the window may close during the drag).
++  raw_ptr<const TabStripModel, DanglingUntriaged> source_model =
++      nullptr;
++  // When `source_tab_was_active`, the most recently active other tab of the
++  // source tab strip at the start of the drag, if any.
++  base::WeakPtr<content::WebContents> previous_active_contents;
++
+   std::optional<tab_groups::TabGroupId> group_header_id() const {
+     return group_header_drag_data_.has_value()
+                ? std::make_optional(group_header_drag_data_.value().group)
 diff --git a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
-index 8966c0a6..787fbb45 100644
+index 8966c0a6..114bd0aa 100644
 --- a/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 +++ b/chrome/browser/ui/views/tabs/dragging/tab_drag_controller.cc
 @@ -398,6 +398,50 @@ const int TabDragController::kTouchVerticalDetachMagnetism = 50;
@@ -175,7 +214,54 @@ index 8966c0a6..787fbb45 100644
  TabDragController::TabDragController()
      : source_context_(nullptr),
        attached_context_(nullptr),
-@@ -669,6 +713,8 @@ bool TabDragController::IsSystemDnDSessionRunning() {
+@@ -578,6 +622,46 @@ TabDragController::Liveness TabDragController::Init(
+   }
+   ref->initial_selection_model_ = std::move(initial_selection_model);
+ 
++  // Helium: when the dragged tab is the one the window shows, the split drop
++  // target can't split it with "the shown tab" (it leaves the window while
++  // dragged); remember which tab to offer instead. Pressing the tab already
++  // made it the active one, so look at the selection from before the press:
++  // an empty one means it was just the dragged tab (the vertical tab strip
++  // passes the whole previous selection instead).
++  if (content::WebContents* const dragged_contents =
++          ref->drag_data_.source_dragged_contents();
++      dragged_contents && ref->drag_data_.tab_drag_data_.size() == 1u) {
++    ref->drag_data_.source_model = tab_strip_model;
++    const int dragged_index =
++        tab_strip_model->GetIndexOfWebContents(dragged_contents);
++    ref->drag_data_.source_tab_was_active =
++        ref->initial_selection_model_.empty()
++            ? tab_strip_model->GetActiveWebContents() == dragged_contents
++            : dragged_index != TabStripModel::kNoTab &&
++                  ref->initial_selection_model_.active() ==
++                      static_cast<size_t>(dragged_index);
++    VLOG(1) << "split self-drop: was_active="
++            << ref->drag_data_.source_tab_was_active << " initial_empty="
++            << ref->initial_selection_model_.empty();
++    if (ref->drag_data_.source_tab_was_active) {
++      tabs::TabInterface* previous = nullptr;
++      for (int i = 0; i < tab_strip_model->count(); ++i) {
++        tabs::TabInterface* const tab = tab_strip_model->GetTabAtIndex(i);
++        if (tab->GetContents() == dragged_contents) {
++          continue;
++        }
++        if (!previous ||
++            tab->GetLastActiveTime() > previous->GetLastActiveTime()) {
++          previous = tab;
++        }
++      }
++      if (previous) {
++        ref->drag_data_.previous_active_contents =
++            previous->GetContents()->GetWeakPtr();
++      }
++    }
++  }
++
+   ref->window_finder_ = std::make_unique<WindowFinder>();
+ 
+   // Start listening for tabs to be closed or replaced in `source_context_`, in
+@@ -669,6 +753,8 @@ bool TabDragController::IsSystemDnDSessionRunning() {
  void TabDragController::OnSystemDnDUpdated(const ui::DropTargetEvent& event) {
    CHECK(IsSystemDnDSessionRunning());
    VLOG(2) << __func__ << " event=" << event.ToString();
@@ -184,7 +270,7 @@ index 8966c0a6..787fbb45 100644
    // It is important to use the event's root location instead of its location.
    // The latter may have been transformed to be relative to a child window, e.g.
    // Aura's clipping window. But we need the location relative to the browser
-@@ -700,6 +746,13 @@ void TabDragController::OnSystemDnDEnded() {
+@@ -700,6 +786,13 @@ void TabDragController::OnSystemDnDEnded() {
    g_tab_drag_controller->EndDrag(EndDragReason::kComplete);
  }
  
@@ -198,7 +284,7 @@ index 8966c0a6..787fbb45 100644
  // static
  TabDragContext* TabDragController::GetSourceContext() {
    return g_tab_drag_controller ? g_tab_drag_controller->source_context_.get()
-@@ -1088,6 +1141,14 @@ TabDragController::Liveness TabDragController::ContinueDragging(
+@@ -1088,6 +1181,14 @@ TabDragController::Liveness TabDragController::ContinueDragging(
      }
    }
  
@@ -213,7 +299,7 @@ index 8966c0a6..787fbb45 100644
    if (target_context != attached_context_) {
      is_dragging_new_browser_ = false;
      did_restore_window_ = false;
-@@ -1363,6 +1424,7 @@ TabDragController::Liveness TabDragController::StartSystemDnDSessionIfNecessary(
+@@ -1363,6 +1464,7 @@ TabDragController::Liveness TabDragController::StartSystemDnDSessionIfNecessary(
    if (client) {
      drag_drop_client_observation_.Observe(client);
    }
@@ -221,7 +307,7 @@ index 8966c0a6..787fbb45 100644
  #endif  // defined(USE_AURA)
  
    base::WeakPtr<TabDragController> ref(weak_factory_.GetWeakPtr());
-@@ -1406,6 +1468,34 @@ void TabDragController::HideAttachedContext() {
+@@ -1406,6 +1508,34 @@ void TabDragController::HideAttachedContext() {
  #endif  // defined(USE_AURA)
  }
  
@@ -256,7 +342,7 @@ index 8966c0a6..787fbb45 100644
  std::tuple<TabDragController::Liveness, TabDragContext*, TabDragTarget*>
  TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
    TRACE_EVENT1("views", "TabDragController::GetTargetTabStripForPoint",
-@@ -1419,6 +1509,15 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
+@@ -1419,6 +1549,15 @@ TabDragController::GetDragTargetForPoint(gfx::Point point_in_screen) {
      return std::tuple(Liveness::kDeleted, nullptr, nullptr);
    }
  
@@ -272,7 +358,7 @@ index 8966c0a6..787fbb45 100644
    if (local_window && CanAttachTo(local_window)) {
      BrowserView* browser_view =
          BrowserView::GetBrowserViewForNativeWindow(local_window);
-@@ -2111,12 +2210,19 @@ void TabDragController::EndDragImpl(EndDragType type) {
+@@ -2111,12 +2250,19 @@ void TabDragController::EndDragImpl(EndDragType type) {
            }
  #endif  // defined(USE_AURA)
  

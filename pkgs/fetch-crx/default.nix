@@ -31,5 +31,8 @@ in
       header_len=$(od -A n -t u4 -j 8 -N 4 "$crx" | tr -d ' ')
       dd if="$crx" of=payload.zip bs=1 skip=$((12 + header_len)) status=none
       ${lib.getExe' unzip "unzip"} -q payload.zip -d $out
+      # The Web Store's signed hashes: an unpacked extension may not carry them
+      # (reloading it fails), and they no longer match the edited manifest.json.
+      rm -rf $out/_metadata
       ${crx-key-inject}/bin/crx-key-inject "$crx" ${id} $out
     ''

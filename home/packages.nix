@@ -26,17 +26,17 @@
   helium-extensions = {
     bitwarden = {
       id = "nngceckbapebfimnlniiiahkandclblb";
-      version = "2026.8.0";
+      version = "2026.10.0";
       hash = "sha256-8v63/EbSVQvvm2mvHMNYrqJrkKlHZF+d4W7BTZKW72k=";
     };
     better-lyrics = {
       id = "effdbpeggelllpfkjppbokhmmiinhlmg";
-      version = "2.3.3";
-      hash = "sha256-hPeaaZ4l5oTahB5Ad2eMI+9DXNqcCRI+ocW5pYk1hk4=";
+      version = "3.0.1";
+      hash = "sha256-y6iVlaqsxg8otRGlV5+gW88PIkwHlABzH9Ehn6l3NGM=";
     };
     better-lyrics-shaders = {
       id = "mffpncjphfmkppebdoaehdlnagnlpfai";
-      version = "1.2.0";
+      version = "1.5.0";
       hash = "sha256-WES3hJ0iXlYTkf3uzWIhtBwZaVJh5PX6xgTGmPbK4Ko=";
     };
   };
@@ -53,6 +53,21 @@
   # Drop the wrapper's --disable-background-networking (auto-update stays off via
   # its own flags) and add the extensions.
   helium = (helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default).overrideAttrs (old: {
+    # Helium with ../pkgs/helium/patches (zen sidebar, command bar, split view, ...),
+    # built on the Windows PC; too big for the repo, so it is added to the store by hand.
+    version = "0.20.1.1-zen";
+    src = pkgs.requireFile {
+      name = "helium-zen-0.20.1.1";
+      hashMode = "recursive";
+      hash = "sha256-2JZ4SHvBbbNZUGIiYmwQj9t3Sf+7vCxoS/7NXpVL0C4=";
+      message = ''
+        Build Helium 0.20.1.1 with pkgs/helium/patches applied (out/Default on the build
+        PC), copy helium, the .pak files, locales/ and the rest of a release dir into a
+        directory named helium-zen-0.20.1.1, then run
+          nix-store --add-fixed --recursive sha256 helium-zen-0.20.1.1
+        and update the hash here.
+      '';
+    };
     postFixup =
       (old.postFixup or "")
       + ''

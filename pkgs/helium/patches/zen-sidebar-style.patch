@@ -17,7 +17,7 @@ index 2d138211..a8ea524b 100644
        return 30;
      case LayoutConstant::kVerticalTabStripHorizontalPadding:
 diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
-index 71cca3c8..6f383bd5 100644
+index 05f86617..38f9aa83 100644
 --- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
 +++ b/chrome/browser/ui/tabs/tab_strip_prefs.cc
 @@ -32,12 +32,15 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
@@ -128,7 +128,7 @@ index 59b26f66..aa05f03f 100644
  #endif
  
 diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
-index 5e231912..59b6924d 100644
+index 5e231912..d4413e50 100644
 --- a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
 +++ b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.cc
 @@ -11,11 +11,17 @@
@@ -310,6 +310,18 @@ index 5e231912..59b6924d 100644
    ShowPageInfoDialog(browser_view_->GetActiveWebContents(), base::DoNothing(),
                       bubble_anchor_util::Anchor::kLocationBar);
  }
+@@ -290,6 +327,11 @@ ZenSidebarToolbarRow::ZenSidebarToolbarRow(
+   SetCrossAxisAlignment(views::LayoutAlignment::kStretch);
+   // Shown by ZenSidebarToolbarController while it hosts toolbar controls.
+   SetVisible(false);
++  if (kind == Kind::kBottom) {
++    // The row hugs the window's bottom edge; bubbles anchored to its controls
++    // must open upwards or Wayland clips them.
++    SetProperty(views::kBubblesOpenUpwardsKey, true);
++  }
+   // The controls come from the toolbar; don't expose them as part of the
+   // tab list that contains this row.
+   GetViewAccessibility().SetRole(ax::mojom::Role::kToolbar);
 diff --git a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h b/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
 index f1cf595e..e1e3b80b 100644
 --- a/chrome/browser/ui/views/helium/zen_sidebar_toolbar.h
@@ -710,3 +722,98 @@ index acd097fa..48927a73 100644
    void PaintTabBackgroundWithImages(
        gfx::Canvas* canvas,
        std::optional<int> active_tab_fill_id,
+diff --git a/ui/views/bubble/bubble_dialog_delegate_view.cc b/ui/views/bubble/bubble_dialog_delegate_view.cc
+index 7902e7a1..691036aa 100644
+--- a/ui/views/bubble/bubble_dialog_delegate_view.cc
++++ b/ui/views/bubble/bubble_dialog_delegate_view.cc
+@@ -816,6 +816,7 @@ void BubbleDialogDelegate::SetArrowWithoutResizing(BubbleBorder::Arrow arrow) {
+   if (base::i18n::IsRTL()) {
+     arrow = BubbleBorder::horizontal_mirror(arrow);
+   }
++  arrow = MaybeOpenUpwards(arrow);
+   if (arrow_ == arrow) {
+     return;
+   }
+@@ -828,6 +829,21 @@ void BubbleDialogDelegate::SetArrowWithoutResizing(BubbleBorder::Arrow arrow) {
+   }
+ }
+ 
++BubbleBorder::Arrow BubbleDialogDelegate::MaybeOpenUpwards(
++    BubbleBorder::Arrow arrow) const {
++  if (!BubbleBorder::has_arrow(arrow) ||
++      !BubbleBorder::is_arrow_on_horizontal(arrow) ||
++      !BubbleBorder::is_arrow_on_top(arrow)) {
++    return arrow;
++  }
++  for (const View* view = GetAnchorView(); view; view = view->parent()) {
++    if (view->GetProperty(kBubblesOpenUpwardsKey)) {
++      return BubbleBorder::vertical_mirror(arrow);
++    }
++  }
++  return arrow;
++}
++
+ gfx::Rect BubbleDialogDelegate::GetAnchorRect() const {
+   // TODO(tluk) eliminate the need for GetAnchorRect() to return an empty rect
+   // if neither an |anchor_rect_| or an anchor view have been set.
+@@ -1168,6 +1184,15 @@ void BubbleDialogDelegate::SetAnchorView(View* anchor_view) {
+     // dangerous for us to update our anchor bounds at that
+     // point. (It's safe to skip this, since if we were to update the
+     // bounds when |anchor_view| is NULL, the bubble won't move.)
++    // The arrow may have been set before the anchor; flip it now if the
++    // anchor turns out to sit at the bottom of its window.
++    const BubbleBorder::Arrow open_upwards_arrow = MaybeOpenUpwards(arrow_);
++    if (open_upwards_arrow != arrow_) {
++      arrow_ = open_upwards_arrow;
++      if (GetBubbleFrameView()) {
++        GetBubbleFrameView()->SetArrow(arrow_);
++      }
++    }
+     OnAnchorBoundsChanged();
+ 
+     SetAnchoredDialogKey();
+diff --git a/ui/views/bubble/bubble_dialog_delegate_view.h b/ui/views/bubble/bubble_dialog_delegate_view.h
+index e8bd0160..320844d1 100644
+--- a/ui/views/bubble/bubble_dialog_delegate_view.h
++++ b/ui/views/bubble/bubble_dialog_delegate_view.h
+@@ -652,6 +652,10 @@ class VIEWS_EXPORT BubbleDialogDelegate : public DialogDelegate {
+   virtual void OnWidgetVisibilityChanged(Widget* widget, bool visible) {}
+ 
+  private:
++  // Returns `arrow` flipped to the bottom side if the anchor view lies within
++  // a view marked with `kBubblesOpenUpwardsKey`.
++  BubbleBorder::Arrow MaybeOpenUpwards(BubbleBorder::Arrow arrow) const;
++
+   static Widget* CreateBubbleInternal(
+       BubbleDialogDelegate* delegate,
+       Widget::InitParams::Ownership ownership,
+diff --git a/ui/views/view_class_properties.cc b/ui/views/view_class_properties.cc
+index 84b69995..319beb4e 100644
+--- a/ui/views/view_class_properties.cc
++++ b/ui/views/view_class_properties.cc
+@@ -42,6 +42,7 @@ DEFINE_UI_CLASS_PROPERTY_KEY(views::DialogDelegate*,
+                              kAnchoredDialogKey,
+                              nullptr)
+ DEFINE_UI_CLASS_PROPERTY_KEY(views::Widget*, kWidgetForAnchoringKey, nullptr)
++DEFINE_UI_CLASS_PROPERTY_KEY(bool, kBubblesOpenUpwardsKey, false)
+ DEFINE_OWNED_UI_CLASS_PROPERTY_KEY(BoxLayoutFlexSpecification,
+                                    kBoxLayoutFlexKey)
+ DEFINE_OWNED_UI_CLASS_PROPERTY_KEY(views::HighlightPathGenerator,
+diff --git a/ui/views/view_class_properties.h b/ui/views/view_class_properties.h
+index 10eaa09f..385e6e4b 100644
+--- a/ui/views/view_class_properties.h
++++ b/ui/views/view_class_properties.h
+@@ -63,6 +63,13 @@ VIEWS_EXPORT extern const ui::ClassProperty<DialogDelegate*>* const
+ VIEWS_EXPORT extern const ui::ClassProperty<Widget*>* const
+     kWidgetForAnchoringKey;
+ 
++// Set on a view (or an ancestor of the anchor view) that sits at the bottom
++// edge of its window, such as Helium's bottom sidebar row. Bubbles anchored
++// within it flip a top-side arrow to the bottom side so they open upwards,
++// where Wayland can't offscreen-adjust them.
++VIEWS_EXPORT extern const ui::ClassProperty<bool>* const
++    kBubblesOpenUpwardsKey;
++
+ // A property to store how a view should flex when placed in a layout.
+ // Only supported by BoxLayout.
+ VIEWS_EXPORT extern const ui::ClassProperty<BoxLayoutFlexSpecification*>* const

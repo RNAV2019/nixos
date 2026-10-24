@@ -119,7 +119,17 @@ FrostedSurface {
     anchors.fill: parent
     enabled: !root.suppressed && !root.expanded
 
-    onEntered: {
+    // Only file drags arm the well; other drags (e.g. a browser tab) have nothing to send.
+    function hasFiles(urls) {
+      for (var i = 0; i < urls.length; i++)
+        if (String(urls[i]).startsWith("file:"))
+          return true;
+      return false;
+    }
+
+    onEntered: function (drag) {
+      if (!hasFiles(drag.urls))
+        return;
       dragArm.restart();
       dragGrace.stop();
     }
@@ -131,15 +141,16 @@ FrostedSurface {
     }
 
     // The panel is asked for while the well is still up, so it grows out of the well's own
-    // shape; the island only unwinds after, under the panel.
+    // shape; the island only unwinds after, under the panel. Any drop ends the drag, so the
+    // well always unwinds, even when there was nothing to send.
     onDropped: function (drop) {
-      if (!drop.hasUrls)
-        return;
       dragArm.stop();
       dragGrace.stop();
-      Nearby.requestSend(Nearby.pathsFromUrls(drop.urls));
+      if (hasFiles(drop.urls)) {
+        Nearby.requestSend(Nearby.pathsFromUrls(drop.urls));
+        drop.acceptProposedAction();
+      }
       root.dropArmed = false;
-      drop.acceptProposedAction();
     }
   }
 

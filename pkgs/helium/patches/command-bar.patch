@@ -274,6 +274,20 @@ index 444860e6..dba438f1 100644
    // Indicates if the upcoming autocomplete search is allowed to be treated as
    // an exact keyword match.  If this is true then keyword mode will be
    // triggered automatically if the input is "<keyword> <search string>".  We
+diff --git a/chrome/browser/ui/omnibox/omnibox_popup_view.h b/chrome/browser/ui/omnibox/omnibox_popup_view.h
+index 2e188c45..90d76e1c 100644
+--- a/chrome/browser/ui/omnibox/omnibox_popup_view.h
++++ b/chrome/browser/ui/omnibox/omnibox_popup_view.h
+@@ -74,6 +74,9 @@ class OmniboxPopupView {
+   // Informs the popup of user intent to open its current selection.
+   virtual void OpenCurrentSelection(WindowOpenDisposition disposition) {}
+ 
++  // Helium: re-applies the command bar's row colors (keyword mode tint).
++  virtual void RefreshCommandBarStyle() {}
++
+   // Saves state to the given tab.
+   virtual void SaveStateToTab(content::WebContents* contents) {}
+ 
 diff --git a/chrome/browser/ui/tabs/tab_strip_prefs.cc b/chrome/browser/ui/tabs/tab_strip_prefs.cc
 index cfc83d4a..71cca3c8 100644
 --- a/chrome/browser/ui/tabs/tab_strip_prefs.cc
@@ -449,10 +463,10 @@ index eb642593..65dc92d0 100644
  
 diff --git a/chrome/browser/ui/views/helium/command_bar_view.cc b/chrome/browser/ui/views/helium/command_bar_view.cc
 new file mode 100644
-index 00000000..856f7b19
+index 00000000..8a4906b4
 --- /dev/null
 +++ b/chrome/browser/ui/views/helium/command_bar_view.cc
-@@ -0,0 +1,1582 @@
+@@ -0,0 +1,1653 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -477,6 +491,8 @@ index 00000000..856f7b19
 +#include "chrome/app/chrome_command_ids.h"
 +#include "chrome/browser/favicon/favicon_service_factory.h"
 +#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/themes/theme_service.h"
++#include "chrome/browser/themes/theme_service_factory.h"
 +#include "chrome/browser/search/search.h"
 +#include "chrome/browser/search_engines/template_url_service_factory.h"
 +#include "chrome/browser/ui/browser_commands.h"
@@ -691,6 +707,13 @@ index 00000000..856f7b19
 +constexpr float kInputTintLight = 0.06f;
 +constexpr float kChipTintDark = 0.30f;
 +constexpr float kChipTintLight = 0.18f;
++// The selected and hovered rows take their own tints.
++constexpr float kSelectedRowTintDark = 0.18f;
++constexpr float kSelectedRowTintLight = 0.12f;
++constexpr float kHoveredRowTintDark = 0.10f;
++constexpr float kHoveredRowTintLight = 0.07f;
++// Fraction of the site color mixed into the text color for the row icons.
++constexpr float kRowIconTint = 0.55f;
 +// Size of the site favicon in the keyword chip.
 +constexpr int kChipIconSize = 16;
 +
@@ -814,7 +837,14 @@ index 00000000..856f7b19
 +
 +// Zen's card is a near-black solid surface; derive it from the omnibox
 +// results background so light themes and custom themes still match.
-+SkColor GetBaseSurfaceColor(const ui::ColorProvider* color_provider) {
++// With a custom theme (e.g. the theme switcher's), the card takes the theme's
++// toolbar color like the rest of the browser chrome; otherwise a deepened
++// results background.
++SkColor GetBaseSurfaceColor(const ui::ColorProvider* color_provider,
++                            bool custom_theme) {
++  if (custom_theme) {
++    return color_provider->GetColor(kColorToolbar);
++  }
 +  const SkColor results_background =
 +      color_provider->GetColor(kColorOmniboxResultsBackground);
 +  return color_utils::IsDark(results_background)
@@ -1087,14 +1117,15 @@ index 00000000..856f7b19
 +
 +// static
 +void CommandBarView::OpenForNewTabButton(BrowserView* browser_view) {
-+  // Only on the new tab page the button just opened (activating it already
-+  // dismissed a bar that was open), so that accepting navigates that tab
-+  // rather than opening another one.
-+  if (!IsAvailable(browser_view) ||
-+      !IsUntouchedNewTabPage(browser_view->GetActiveWebContents())) {
++  // Edit mode on the tab the button just created (activating it already
++  // dismissed a bar that was open): accepting navigates that tab rather than
++  // opening another one. This works even when search::IsNTPOrRelatedURL() does
++  // not recognise Helium's NTP.
++  if (!IsAvailable(browser_view)) {
 +    return;
 +  }
-+  browser_view->GetOrCreateCommandBar()->Show(Mode::kNewTab);
++  browser_view->GetOrCreateCommandBar()->Show(
++      Mode::kEditCurrentTab, /*fresh_tab=*/true);
 +}
 +
 +// static
@@ -1158,7 +1189,7 @@ index 00000000..856f7b19
 +  StopObserving();
 +}
 +
-+void CommandBarView::Show(Mode mode) {
++void CommandBarView::Show(Mode mode, bool fresh_tab) {
 +  ToolbarView* const toolbar = browser_view_->toolbar();
 +  LocationBarView* const location_bar = GetLocationBarView();
 +  if (!toolbar || !location_bar || !GetWidget()) {
@@ -1170,6 +1201,7 @@ index 00000000..856f7b19
 +      // Ctrl+T while editing, or Ctrl+L while in new-tab mode: switch in
 +      // place. The card stays open and the popup only swaps its suggestions.
 +      mode_ = mode;
++      fresh_tab_ = fresh_tab;
 +      ApplyMode(/*switching=*/true);
 +      if (!HasFocusWithin()) {
 +        location_bar->omnibox_view()->RequestFocus();
@@ -1187,6 +1219,7 @@ index 00000000..856f7b19
 +  // mode.
 +  state_ = State::kOpen;
 +  mode_ = mode;
++  fresh_tab_ = fresh_tab;
 +  accepting_ = false;
 +  shrink_timer_.Stop();
 +  popup_bounds_.reset();
@@ -1509,11 +1542,22 @@ index 00000000..856f7b19
 +  }
 +  const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
 +
-+  // The keyword tint only covers the input section; the results (painted by
-+  // the transparent popup frame above the card) stay on the base surface.
++  // The keyword tints: a fainter one under the results (painted by the
++  // transparent popup frame above the card), a stronger one for the input
++  // section.
++  const float radius = kCardCornerRadius;
++  const bool has_results = height() > kInputSectionHeight;
++  if (results_surface_color_ != base_surface_color_) {
++    cc::PaintFlags results_flags;
++    results_flags.setAntiAlias(true);
++    results_flags.setColor(results_surface_color_);
++    canvas->DrawPath(
++        SkPath::RRect(gfx::RoundedRectToSkRRect(
++            GetLocalBounds(), gfx::RoundedCornersF(radius, radius, radius,
++                                                   radius))),
++        results_flags);
++  }
 +  if (input_surface_color_ != base_surface_color_) {
-+    const float radius = kCardCornerRadius;
-+    const bool has_results = height() > kInputSectionHeight;
 +    const float bottom_radius = has_results ? 0.0f : radius;
 +    cc::PaintFlags flags;
 +    flags.setAntiAlias(true);
@@ -1694,6 +1738,13 @@ index 00000000..856f7b19
 +    location_bar->FocusLocation(/*is_user_initiated=*/true,
 +                                /*clear_focus_if_failed=*/false);
 +    const size_t text_length = omnibox_view->GetText().length();
++    if (fresh_tab_) {
++      // The new tab page's URL is not something to edit: start empty with
++      // the new tab suggestions, like new-tab mode but navigating this tab.
++      omnibox_view->SetUserText(std::u16string(), /*update_popup=*/false);
++      edit_model->RestartZeroSuggestRequest();
++      return;
++    }
 +    omnibox_view->SetSelectionBounds(gfx::Range(text_length, text_length));
 +    if (switching) {
 +      // FocusLocation() doesn't query while the popup is open.
@@ -1767,7 +1818,11 @@ index 00000000..856f7b19
 +  if (!color_provider) {
 +    return;
 +  }
-+  base_surface_color_ = GetBaseSurfaceColor(color_provider);
++  const ThemeService* const theme_service =
++      ThemeServiceFactory::GetForProfile(browser_view_->browser()->GetProfile());
++  base_surface_color_ = GetBaseSurfaceColor(
++      color_provider, theme_service && !theme_service->UsingDefaultTheme() &&
++                          !theme_service->UsingSystemTheme());
 +  const bool dark = color_utils::IsDark(base_surface_color_);
 +  const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
 +  const SkColor contrast_direction = dark ? SK_ColorBLACK : SK_ColorWHITE;
@@ -1776,6 +1831,10 @@ index 00000000..856f7b19
 +  std::optional<SkColor> chip_foreground;
 +  ui::ImageModel chip_icon;
 +  input_surface_color_ = base_surface_color_;
++  results_surface_color_ = base_surface_color_;
++  popup_style_.selected_row_color.reset();
++  popup_style_.hovered_row_color.reset();
++  popup_style_.icon_color.reset();
 +  if (!keyword_.empty()) {
 +    const KeywordSite& site = GetKeywordSite(keyword_);
 +    const SkColor site_color = site.color.value_or(
@@ -1787,6 +1846,21 @@ index 00000000..856f7b19
 +        color_utils::AlphaBlend(site_color, base_surface_color_,
 +                                dark ? kInputTintDark : kInputTintLight),
 +        text_color, contrast_direction);
++    // The results share the input's tint, so the card reads as one surface.
++    results_surface_color_ = input_surface_color_;
++    popup_style_.selected_row_color = EnsureTextContrast(
++        color_utils::AlphaBlend(
++            site_color, results_surface_color_,
++            dark ? kSelectedRowTintDark : kSelectedRowTintLight),
++        text_color, contrast_direction);
++    popup_style_.hovered_row_color = EnsureTextContrast(
++        color_utils::AlphaBlend(
++            site_color, results_surface_color_,
++            dark ? kHoveredRowTintDark : kHoveredRowTintLight),
++        text_color, contrast_direction);
++    popup_style_.icon_color = color_utils::AlphaBlend(
++        site_color, color_provider->GetColor(kColorOmniboxResultsIcon),
++        kRowIconTint);
 +    chip_foreground = text_color;
 +    chip_background = EnsureTextContrast(
 +        color_utils::AlphaBlend(site_color, base_surface_color_,
@@ -1808,7 +1882,18 @@ index 00000000..856f7b19
 +    location_bar->SetCommandBarKeywordChip(chip_background, chip_foreground,
 +                                           chip_icon);
 +  }
++  // Also re-filters the rows for the keyword, so not from inside the location
++  // bar's layout, which calls this.
++  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
++      FROM_HERE, base::BindOnce(&CommandBarView::RefreshPopupStyle,
++                                weak_factory_.GetWeakPtr()));
 +  SchedulePaint();
++}
++
++void CommandBarView::RefreshPopupStyle() {
++  if (LocationBarView* const location_bar = GetLocationBarView()) {
++    location_bar->RefreshCommandBarPopupStyle();
++  }
 +}
 +
 +const CommandBarView::KeywordSite& CommandBarView::GetKeywordSite(
@@ -2037,10 +2122,10 @@ index 00000000..856f7b19
 +END_METADATA
 diff --git a/chrome/browser/ui/views/helium/command_bar_view.h b/chrome/browser/ui/views/helium/command_bar_view.h
 new file mode 100644
-index 00000000..acb24e06
+index 00000000..e052ae92
 --- /dev/null
 +++ b/chrome/browser/ui/views/helium/command_bar_view.h
-@@ -0,0 +1,365 @@
+@@ -0,0 +1,375 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -2198,10 +2283,10 @@ index 00000000..acb24e06
 +                                         bool is_user_initiated);
 +
 +  // Called after a "New tab" button (vertical tab strip, tab strip or
-+  // toolbar) created a tab: opens the command bar in new-tab mode on it.
-+  // Accepting a match then navigates that untouched new tab page (see
-+  // AdjustOpenDisposition()). Unlike Ctrl+T, the tab stays if the bar is
-+  // dismissed.
++  // toolbar) created a tab: opens the command bar in edit mode on it,
++  // with an empty input. Accepting a match navigates that new tab, which stays
++  // as is if the bar is dismissed (unlike Ctrl+T, which creates nothing until
++  // a match is accepted).
 +  static void OpenForNewTabButton(BrowserView* browser_view);
 +
 +  // Executes IDC_OPEN_COMMAND_BAR_NEW_TAB and IDC_OPEN_COMMAND_BAR_EDIT, which
@@ -2214,7 +2299,9 @@ index 00000000..acb24e06
 +  ~CommandBarView() override;
 +
 +  // Opens the command bar in `mode`, or switches the open bar to `mode`.
-+  void Show(Mode mode);
++  // `fresh_tab` (edit mode only) is for a tab the "New tab" button just
++  // created: the input starts empty and accepting navigates that tab.
++  void Show(Mode mode, bool fresh_tab = false);
 +
 +  // Starts closing the command bar. The location bar returns to the toolbar
 +  // once the close animation ends.
@@ -2288,6 +2375,8 @@ index 00000000..acb24e06
 +  // Recomputes the surface, chip and glow colors for the theme and the
 +  // selected keyword, and pushes them to the card and the location bar.
 +  void UpdateColors();
++  // Restyles (and re-filters) the open popup's rows after UpdateColors().
++  void RefreshPopupStyle();
 +
 +  // What the bar knows about the site behind a keyword, from its favicon.
 +  struct KeywordSite {
@@ -2357,6 +2446,9 @@ index 00000000..acb24e06
 +
 +  State state_ = State::kHidden;
 +  Mode mode_ = Mode::kEditCurrentTab;
++  // Edit mode opened by a "New tab" button: the tab is a fresh new tab page,
++  // so the input starts empty rather than showing its URL.
++  bool fresh_tab_ = false;
 +  DismissReason dismiss_reason_ = DismissReason::kEscape;
 +  bool accepting_ = false;
 +  // Restored when the location bar returns to the toolbar.
@@ -2366,9 +2458,12 @@ index 00000000..acb24e06
 +
 +  // Card surface: `base_surface_color_` for the theme. In keyword mode the
 +  // input section (`input_surface_color_`) takes a faint tint of the site
-+  // color of the selected keyword (`keyword_`); the results stay untinted.
++  // color of the selected keyword (`keyword_`), the results (`results_surface_color_`)
++  // and their rows (see `popup_style_`) a fainter one.
 +  SkColor base_surface_color_ = SK_ColorBLACK;
 +  SkColor input_surface_color_ = SK_ColorBLACK;
++  // Under the results: the base surface, or a fainter keyword tint.
++  SkColor results_surface_color_ = SK_ColorBLACK;
 +  std::u16string keyword_;
 +  // Favicons and site colors per keyword, filled in asynchronously.
 +  std::map<std::u16string, KeywordSite> keyword_sites_;
@@ -2407,7 +2502,7 @@ index 00000000..acb24e06
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_HELIUM_COMMAND_BAR_VIEW_H_
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.cc b/chrome/browser/ui/views/location_bar/location_bar_view.cc
-index bcf4a110..68a91f0e 100644
+index bcf4a110..e0e543da 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.cc
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.cc
 @@ -118,6 +118,7 @@
@@ -2431,7 +2526,7 @@ index bcf4a110..68a91f0e 100644
            // Show focus ring when the Omnibox is visibly focused and the popup
            // is closed.
            return v->GetOmniboxController()->edit_model()->is_caret_visible() &&
-@@ -699,6 +706,82 @@ const OmniboxController* LocationBarView::GetOmniboxController() const {
+@@ -699,6 +706,88 @@ const OmniboxController* LocationBarView::GetOmniboxController() const {
    return omnibox_controller_.get();
  }
  
@@ -2487,6 +2582,12 @@ index bcf4a110..68a91f0e 100644
 +  selected_keyword_view_->SetCommandBarChip(background, foreground, icon);
 +}
 +
++void LocationBarView::RefreshCommandBarPopupStyle() {
++  if (omnibox_popup_view_) {
++    omnibox_popup_view_->RefreshCommandBarStyle();
++  }
++}
++
 +bool LocationBarView::IsCommandBarNewTabMode() const {
 +  return command_bar_host_ && command_bar_host_->IsCommandBarNewTabMode();
 +}
@@ -2514,7 +2615,7 @@ index bcf4a110..68a91f0e 100644
  void LocationBarView::AddedToWidget() {
    if (GetFocusManager()) {
      CHECK(!focus_manager_);
-@@ -924,7 +1007,18 @@ void LocationBarView::Layout(PassKey) {
+@@ -924,7 +1013,18 @@ void LocationBarView::Layout(PassKey) {
      }
    }
  
@@ -2534,7 +2635,7 @@ index bcf4a110..68a91f0e 100644
      location_icon_view_->SetVisible(false);
      leading_decorations.AddDecoration(
          vertical_padding, location_height, false, kLeadingDecorationMaxFraction,
-@@ -1093,6 +1187,11 @@ void LocationBarView::Layout(PassKey) {
+@@ -1093,6 +1193,11 @@ void LocationBarView::Layout(PassKey) {
    loading_progress_view_->SetBoundsRect(GetLocalBounds());
  
    LayoutSuperclass<View>(this);
@@ -2546,7 +2647,7 @@ index bcf4a110..68a91f0e 100644
  }
  
  void LocationBarView::OnThemeChanged() {
-@@ -1362,6 +1461,11 @@ bool LocationBarView::ShouldHidePageActionIcons() const {
+@@ -1362,6 +1467,11 @@ bool LocationBarView::ShouldHidePageActionIcons() const {
      return false;
    }
  
@@ -2558,7 +2659,7 @@ index bcf4a110..68a91f0e 100644
    // When the user is typing in the omnibox, the page action icons are no longer
    // associated with the current omnibox text, so hide them.
    if (GetOmniboxController()->edit_model()->user_input_in_progress()) {
-@@ -1501,6 +1605,15 @@ void LocationBarView::RefreshBackground() {
+@@ -1501,6 +1611,15 @@ void LocationBarView::RefreshBackground() {
      border_color = color_provider->GetColor(kColorLocationBarBorderOnMismatch);
    }
  
@@ -2574,7 +2675,7 @@ index bcf4a110..68a91f0e 100644
    if (is_popup_mode_) {
      SetBackground(views::CreateSolidBackground(background_color_));
    } else {
-@@ -1672,6 +1785,10 @@ void LocationBarView::FocusSearch() {
+@@ -1672,6 +1791,10 @@ void LocationBarView::FocusSearch() {
  void LocationBarView::UpdateFocusBehavior(bool toolbar_visible) {
    const bool is_ready = IsFullWebUiOmniboxReady();
    is_toolbar_visible_ = toolbar_visible;
@@ -2585,7 +2686,7 @@ index bcf4a110..68a91f0e 100644
  
    if (is_full_webui_omnibox_) {
      // Route focus to `LocationBarView` (which forwards focus to WebUI) once
-@@ -1698,6 +1815,11 @@ void LocationBarView::UpdateContentSettingsIcons() {
+@@ -1698,6 +1821,11 @@ void LocationBarView::UpdateContentSettingsIcons() {
  }
  
  void LocationBarView::SaveStateToContents(WebContents* contents) {
@@ -2597,7 +2698,7 @@ index bcf4a110..68a91f0e 100644
    if (is_full_webui_omnibox_) {
      omnibox_popup_view_->SaveStateToTab(contents);
    } else {
-@@ -2207,6 +2329,11 @@ bool LocationBarView::ShouldChipOverrideLocationIcon() {
+@@ -2207,6 +2335,11 @@ bool LocationBarView::ShouldChipOverrideLocationIcon() {
  }
  
  bool LocationBarView::IsEditingOrEmpty() const {
@@ -2609,7 +2710,7 @@ index bcf4a110..68a91f0e 100644
    return omnibox_view_ && omnibox_view_->IsEditingOrEmpty();
  }
  
-@@ -2400,6 +2527,16 @@ ui::ImageModel LocationBarView::GetLocationIcon(
+@@ -2400,6 +2533,16 @@ ui::ImageModel LocationBarView::GetLocationIcon(
      return GetOmniboxController()->edit_model()->GetAddContextIcon(dip_size);
    }
  
@@ -2627,7 +2728,7 @@ index bcf4a110..68a91f0e 100644
               ? omnibox_view_->GetIcon(
                     dip_size, location_icon_view_->GetForegroundColor(),
 diff --git a/chrome/browser/ui/views/location_bar/location_bar_view.h b/chrome/browser/ui/views/location_bar/location_bar_view.h
-index 41369b45..8477d546 100644
+index 41369b45..cf3a8140 100644
 --- a/chrome/browser/ui/views/location_bar/location_bar_view.h
 +++ b/chrome/browser/ui/views/location_bar/location_bar_view.h
 @@ -8,6 +8,7 @@
@@ -2697,7 +2798,7 @@ index 41369b45..8477d546 100644
    LocationBarView(BrowserWindowInterface* browser,
                    Profile* profile,
                    CommandUpdater* command_updater,
-@@ -192,6 +231,22 @@ class LocationBarView
+@@ -192,6 +231,25 @@ class LocationBarView
  
    const OmniboxController* GetOmniboxController() const;
  
@@ -2717,10 +2818,13 @@ index 41369b45..8477d546 100644
 +                                std::optional<SkColor> foreground,
 +                                const ui::ImageModel& icon);
 +
++  // Helium: re-applies the command bar's popup row colors (keyword tint).
++  void RefreshCommandBarPopupStyle();
++
  
    PermissionChipView* chip_view() { return chip_view_; }
    PermissionDashboardView* permission_dashboard_view() {
-@@ -210,6 +265,9 @@ class LocationBarView
+@@ -210,6 +268,9 @@ class LocationBarView
    ChipController* GetChipController() override;
    PermissionDashboardController* GetPermissionDashboardController() override;
    void UpdateWithoutTabRestore() override;
@@ -2730,7 +2834,7 @@ index 41369b45..8477d546 100644
    LocationBarModel* GetLocationBarModel() override;
    content::WebContents* GetWebContents() override;
    std::optional<bubble_anchor_util::AnchorConfiguration> GetChipAnchor()
-@@ -360,6 +418,9 @@ class LocationBarView
+@@ -360,6 +421,9 @@ class LocationBarView
    // Updates the background on a theme change, or dropdown state change.
    void RefreshBackground();
  
@@ -2740,7 +2844,7 @@ index 41369b45..8477d546 100644
    // Updates the visibility state of the content setting icons to reflect what
    // is blocked or actively in use on the current page. Returns true if the
    // visibility of at least one of the views in `content_setting_views_`
-@@ -653,6 +714,10 @@ class LocationBarView
+@@ -653,6 +717,10 @@ class LocationBarView
    // behavior.
    bool is_toolbar_visible_ = true;
  
@@ -3174,10 +3278,10 @@ index 52398123..eab95d3c 100644
    raw_ptr<views::ImageView> icon_view_;
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_popup_style.h b/chrome/browser/ui/views/omnibox/omnibox_popup_style.h
 new file mode 100644
-index 00000000..d3bbac55
+index 00000000..5e4a11ea
 --- /dev/null
 +++ b/chrome/browser/ui/views/omnibox/omnibox_popup_style.h
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,58 @@
 +// Copyright 2026 The Helium Authors
 +// You can use, redistribute, and/or modify this source code under
 +// the terms of the GPL-3.0 license that can be found in the LICENSE file.
@@ -3185,6 +3289,9 @@ index 00000000..d3bbac55
 +#ifndef CHROME_BROWSER_UI_VIEWS_OMNIBOX_OMNIBOX_POPUP_STYLE_H_
 +#define CHROME_BROWSER_UI_VIEWS_OMNIBOX_OMNIBOX_POPUP_STYLE_H_
 +
++#include <optional>
++
++#include "third_party/skia/include/core/SkColor.h"
 +#include "ui/gfx/geometry/insets.h"
 +
 +// Geometry overrides for the classic omnibox popup while its location bar is
@@ -3224,11 +3331,17 @@ index 00000000..d3bbac55
 +
 +  // Corner radius of the hovered and selected row backgrounds.
 +  int selection_radius = 0;
++
++  // Keyword mode: colors derived from the keyword's site color, so the rows
++  // match the tinted card. std::nullopt uses the neutral defaults.
++  std::optional<SkColor> selected_row_color;
++  std::optional<SkColor> hovered_row_color;
++  std::optional<SkColor> icon_color;
 +};
 +
 +#endif  // CHROME_BROWSER_UI_VIEWS_OMNIBOX_OMNIBOX_POPUP_STYLE_H_
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.cc b/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.cc
-index c1b4def1..7ab55c92 100644
+index c1b4def1..33fe509f 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.cc
 +++ b/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.cc
 @@ -4,6 +4,7 @@
@@ -3239,7 +3352,7 @@ index c1b4def1..7ab55c92 100644
  #include <memory>
  #include <numeric>
  #include <optional>
-@@ -26,6 +27,7 @@
+@@ -26,12 +27,15 @@
  #include "chrome/browser/ui/views/frame/browser_view.h"
  #include "chrome/browser/ui/views/location_bar/location_bar_view.h"
  #include "chrome/browser/ui/views/omnibox/omnibox_header_view.h"
@@ -3247,7 +3360,15 @@ index c1b4def1..7ab55c92 100644
  #include "chrome/browser/ui/views/omnibox/omnibox_result_view.h"
  #include "chrome/browser/ui/views/omnibox/omnibox_row_grouped_view.h"
  #include "chrome/browser/ui/views/omnibox/omnibox_row_view.h"
-@@ -134,7 +136,8 @@ class OmniboxPopupViewViews::PopupWidget final : public ThemeCopyingWidget {
+ #include "chrome/browser/ui/views/omnibox/omnibox_view_views.h"
+ #include "chrome/browser/ui/views/omnibox/rounded_omnibox_results_frame.h"
+ #include "chrome/browser/ui/views/theme_copying_widget.h"
++#include "components/omnibox/browser/autocomplete_match.h"
++#include "components/omnibox/browser/autocomplete_match_type.h"
+ #include "components/omnibox/common/omnibox_feature_configs.h"
+ #include "components/omnibox/common/omnibox_metrics_utils.h"
+ #include "components/viz/common/frame_timing_details.h"
+@@ -134,7 +138,8 @@ class OmniboxPopupViewViews::PopupWidget final : public ThemeCopyingWidget {
  
    void SetPopupContentsView(OmniboxPopupViewViews* contents) {
      SetContentsView(std::make_unique<RoundedOmniboxResultsFrame>(
@@ -3257,7 +3378,7 @@ index c1b4def1..7ab55c92 100644
    }
  
    void SetTargetBounds(const gfx::Rect& bounds) {
-@@ -325,7 +328,24 @@ OmniboxPopupSelection OmniboxPopupViewViews::GetSelection() const {
+@@ -325,7 +330,64 @@ OmniboxPopupSelection OmniboxPopupViewViews::GetSelection() const {
  
  void OmniboxPopupViewViews::UpdatePopupBounds() {
    if (widget_) {
@@ -3274,16 +3395,56 @@ index c1b4def1..7ab55c92 100644
 +  return host ? &host->GetPopupStyle() : nullptr;
 +}
 +
++void OmniboxPopupViewViews::RefreshCommandBarStyle() {
++  // The rows only have colors while the popup is shown; they are styled when
++  // it opens.
++  if (!IsOpen()) {
++    return;
++  }
++  // Entering or leaving keyword mode changes which rows are hidden
++  // (ShouldHideInCommandBar()) without necessarily changing the results.
++  UpdatePopupAppearance();
++  if (!IsOpen()) {
++    return;
++  }
++  for (size_t i = 0; i < row_views_.size(); ++i) {
++    if (OmniboxResultView* const result_view = result_view_at(i);
++        result_view && result_view->GetColorProvider()) {
++      result_view->ApplyThemeAndRefreshIcons();
++    }
++  }
++}
++
++bool OmniboxPopupViewViews::ShouldHideInCommandBar(
++    const AutocompleteMatch& match) const {
++  // Keyword mode in the command bar shows the keyword's own suggestions;
++  // searches with other engines (e.g. "!ytm - Google Search", or suggestions
++  // for the bang's text) are noise there. Past searches stay.
++  const OmniboxEditModel* const edit_model = controller()->edit_model();
++  return GetCommandBarStyle() && edit_model->is_keyword_selected() &&
++         AutocompleteMatch::IsSearchType(match.type) &&
++         match.type != omnibox::AutocompleteMatchType::kSearchHistory &&
++         match.keyword != edit_model->keyword();
++}
++
 +void OmniboxPopupViewViews::NotifyCommandBarPopupBounds(
 +    const std::optional<gfx::Rect>& bounds) {
++  // With every row hidden (e.g. keyword mode before anything is typed) the
++  // command bar shows just its input, without an empty results section.
++  const bool has_rows =
++      std::ranges::any_of(row_views_, [](const OmniboxRowView* row) {
++        return row->GetVisible() && row->result_view()->GetVisible();
++      });
++  const std::optional<gfx::Rect> visible_bounds =
++      has_rows || !GetCommandBarStyle() ? bounds : std::nullopt;
 +  if (LocationBarView::CommandBarHost* const host =
 +          location_bar_view_ ? location_bar_view_->command_bar_host()
 +                             : nullptr) {
-+    host->OnPopupBoundsChanged(bounds);
++    host->OnPopupBoundsChanged(visible_bounds);
    }
  }
  
-@@ -364,6 +384,7 @@ void OmniboxPopupViewViews::UpdatePopupAppearance() {
+@@ -364,6 +426,7 @@ void OmniboxPopupViewViews::UpdatePopupAppearance() {
        widget_->CloseAnimated();  // This will eventually delete the popup.
        widget_->RemoveObserver(&widget_observer_helper_);
        widget_.reset();
@@ -3291,7 +3452,7 @@ index c1b4def1..7ab55c92 100644
  
        // Update the popup state manager that the classic popup is closing.
        // Do this AFTER widget operations. `LocationBarView` is subscribed to
-@@ -466,7 +487,9 @@ void OmniboxPopupViewViews::UpdatePopupAppearance() {
+@@ -466,7 +529,9 @@ void OmniboxPopupViewViews::UpdatePopupAppearance() {
    }
  
    UpdateContextualSuggestionsGroup(grouped_matches_start_index);
@@ -3302,7 +3463,7 @@ index c1b4def1..7ab55c92 100644
  
    if (!was_open) {
      widget_->ShowAnimated();
-@@ -621,6 +644,7 @@ void OmniboxPopupViewViews::OnWidgetDestroying(views::Widget* widget) {
+@@ -621,6 +686,7 @@ void OmniboxPopupViewViews::OnWidgetDestroying(views::Widget* widget) {
      widget_->RemoveObserver(&widget_observer_helper_);
      widget_ = nullptr;
    }
@@ -3310,7 +3471,7 @@ index c1b4def1..7ab55c92 100644
    // Drop metrics callbacks when the widget is destroyed.
    metrics_weak_factory_.InvalidateWeakPtrs();
  
-@@ -719,6 +743,7 @@ void OmniboxPopupViewViews::FireAXEventsForNewActiveDescendant(
+@@ -719,6 +785,7 @@ void OmniboxPopupViewViews::FireAXEventsForNewActiveDescendant(
  }
  
  gfx::Rect OmniboxPopupViewViews::GetTargetBounds() const {
@@ -3318,7 +3479,7 @@ index c1b4def1..7ab55c92 100644
    const size_t result_size =
        controller()->autocomplete_controller()->result().size();
    auto children_span = base::span(children()).first(result_size);
-@@ -738,20 +763,35 @@ gfx::Rect OmniboxPopupViewViews::GetTargetBounds() const {
+@@ -738,20 +805,35 @@ gfx::Rect OmniboxPopupViewViews::GetTargetBounds() const {
    // added if the results section has no height (result set is empty or all
    // results are hidden). See https://crbug.com/40128770 for additional context.
    if (popup_height != 0) {
@@ -3357,8 +3518,18 @@ index c1b4def1..7ab55c92 100644
    if (omnibox::IsWebUIOmniboxPopupEnabled() &&
        !location_bar_view_->is_full_webui_omnibox() &&
        !omnibox::IsAimPopupFeatureEnabled() &&
+@@ -881,7 +963,8 @@ std::u16string OmniboxPopupViewViews::UpdateRowView(
+   OmniboxResultView* const result_view = row_view->result_view();
+   result_view->SetMatch(match);
+   result_view->UpdateAccessibilityProperties();
+-  result_view->SetVisible(!controller()->IsSuggestionHidden(match));
++  result_view->SetVisible(!controller()->IsSuggestionHidden(match) &&
++                          !ShouldHideInCommandBar(match));
+ 
+   const SkBitmap* bitmap =
+       controller()->edit_model()->GetPopupRichSuggestionBitmap(
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.h b/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.h
-index f8698d29..28594c92 100644
+index f8698d29..640850d6 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.h
 +++ b/chrome/browser/ui/views/omnibox/omnibox_popup_view_views.h
 @@ -7,6 +7,7 @@
@@ -3377,7 +3548,7 @@ index f8698d29..28594c92 100644
  
  // A view representing the contents of the autocomplete popup.
  class OmniboxPopupViewViews : public views::View,
-@@ -69,6 +71,10 @@ class OmniboxPopupViewViews : public views::View,
+@@ -69,6 +71,14 @@ class OmniboxPopupViewViews : public views::View,
  
    void UpdatePopupBounds();
  
@@ -3385,13 +3556,20 @@ index f8698d29..28594c92 100644
 +  // Helium's command bar, or nullptr when it is in the toolbar.
 +  const OmniboxPopupStyle* GetCommandBarStyle() const;
 +
++  // Re-applies the command bar style's colors to the rows, e.g. when keyword
++  // mode starts or ends.
++  void RefreshCommandBarStyle() override;
++
    // OmniboxPopupView:
    void InvalidateLine(size_t line) override;
    void UpdatePopupAppearance() override;
-@@ -115,6 +121,10 @@ class OmniboxPopupViewViews : public views::View,
+@@ -115,6 +125,13 @@ class OmniboxPopupViewViews : public views::View,
    // of |location_bar_view_|.
    gfx::Rect GetTargetBounds() const;
  
++  // Whether the command bar hides `match` while in keyword mode.
++  bool ShouldHideInCommandBar(const AutocompleteMatch& match) const;
++
 +  // Tells the command bar hosting the location bar, if any, where the popup
 +  // is. `bounds` is std::nullopt once the popup closes.
 +  void NotifyCommandBarPopupBounds(const std::optional<gfx::Rect>& bounds);
@@ -3400,7 +3578,7 @@ index f8698d29..28594c92 100644
    OmniboxHeaderView* header_view_at(size_t i);
  
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_result_view.cc b/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
-index 1a1d6565..947b812f 100644
+index 1a1d6565..b21ab36b 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
 +++ b/chrome/browser/ui/views/omnibox/omnibox_result_view.cc
 @@ -21,6 +21,7 @@
@@ -3438,7 +3616,7 @@ index 1a1d6565..947b812f 100644
  }
  
  void OmniboxResultView::SetMatch(const AutocompleteMatch& match) {
-@@ -456,7 +459,29 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
+@@ -456,7 +459,33 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
    }
  
    const OmniboxPartState state = GetThemeState();
@@ -3453,9 +3631,13 @@ index 1a1d6565..947b812f 100644
 +    // keyword-tinted) card, so highlight rows with a translucent wash of the
 +    // text color rather than the opaque theme highlight colors.
 +    const SkColor text_color = color_provider->GetColor(kColorOmniboxText);
++    const std::optional<SkColor>& tinted_color =
++        state == OmniboxPartState::SELECTED
++            ? command_bar_style->selected_row_color
++            : command_bar_style->hovered_row_color;
 +    SetBackground(views::CreateRoundedRectBackground(
-+        SkColorSetA(text_color,
-+                    state == OmniboxPartState::SELECTED ? 0x1F : 0x10),
++        tinted_color.value_or(SkColorSetA(
++            text_color, state == OmniboxPartState::SELECTED ? 0x1F : 0x10)),
 +        static_cast<float>(command_bar_style->selection_radius)));
 +  } else if (command_bar_style && state == OmniboxPartState::NORMAL) {
 +    SetBackground(nullptr);
@@ -3469,7 +3651,7 @@ index 1a1d6565..947b812f 100644
  
    // Reapply the dim color to account for the highlight state.
    const bool selected = (state == OmniboxPartState::SELECTED);
-@@ -494,6 +519,9 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
+@@ -494,6 +523,9 @@ void OmniboxResultView::ApplyThemeAndRefreshIcons(bool force_reapply_styles) {
      suggestion_view_->content()->ReapplyStyling();
      suggestion_view_->description()->ReapplyStyling();
    }
@@ -3479,6 +3661,19 @@ index 1a1d6565..947b812f 100644
  
    button_row_->SetThemeState(GetThemeState());
  
+@@ -671,6 +703,12 @@ gfx::Image OmniboxResultView::GetIcon() const {
+   } else {
+     vector_icon_color_id = GetMatchSelected() ? kColorOmniboxResultsIconSelected
+                                               : kColorOmniboxResultsIcon;
++    // Helium: keyword mode tints the icons of the command bar's rows.
++    if (const OmniboxPopupStyle* const command_bar_style =
++            popup_view_->GetCommandBarStyle();
++        command_bar_style && command_bar_style->icon_color) {
++      return popup_view_->GetMatchIcon(match_, *command_bar_style->icon_color);
++    }
+   }
+ 
+   return popup_view_->GetMatchIcon(
 diff --git a/chrome/browser/ui/views/omnibox/omnibox_result_view.h b/chrome/browser/ui/views/omnibox/omnibox_result_view.h
 index a1bbc217..9914d395 100644
 --- a/chrome/browser/ui/views/omnibox/omnibox_result_view.h

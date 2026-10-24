@@ -407,13 +407,10 @@ in {
           center = true;
         }
 
-        # Helium's profile picker ("Manage profiles"); browser windows are
-        # titled "<page> - Helium", so only the picker is exactly "Helium".
+        # Helium's profile picker ("Manage profiles"), which the zen patches
+        # give its own class.
         {
-          match = {
-            class = "^helium$";
-            initial_title = "^Helium$";
-          };
+          match.class = "^helium-profile-picker$";
           float = true;
           center = true;
         }
