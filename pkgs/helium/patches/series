@@ -7,3 +7,4 @@ zen-resize-throttle.patch
 zen-sidebar-style.patch
 zen-profile-picker.patch
 zen-settings.patch
+theme-switch-no-infobar.patch

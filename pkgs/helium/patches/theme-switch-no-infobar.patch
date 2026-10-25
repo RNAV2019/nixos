@@ -1,0 +1,17 @@
+diff --git a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
+index 404b10a..570a622 100644
+--- a/chrome/browser/themes/theme_service.cc
++++ b/chrome/browser/themes/theme_service.cc
+@@ -1173,8 +1173,10 @@ void ThemeService::OnThemeBuiltFromExtension(
+     can_revert_theme = DisableExtension(previous_theme_id.value());
+   }
+ 
+-  // Offer to revert to the old theme.
+-  if (can_revert_theme && !suppress_infobar && extension->is_theme()) {
++  // Offer to revert to the old theme. Not for unpacked themes: the helium
++  // launcher reloads one on every desktop theme switch.
++  if (can_revert_theme && !suppress_infobar && extension->is_theme() &&
++      !extensions::Manifest::IsUnpackedLocation(extension->location())) {
+     if (infobars::IsInfoBarMigrated(
+             infobars::InfoBarDelegate::THEME_INSTALLED_INFOBAR_DELEGATE)) {
+       ShowThemeInstalledInfoBar(profile_, extension->name(), extension->id(),

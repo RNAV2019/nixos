@@ -448,7 +448,7 @@ in {
                 hl.exec_cmd("for _ in $(seq 1 50); do ${pkgs.awww}/bin/awww img -o " .. mon.name
                   .. [[ "$HOME/.local/share/wallpaper/current" && break; sleep 0.1; done]])
 
-                if not mon.name:match("^eDP") then mon:set_workspace(5) end
+                if not mon.name:match("^eDP") then mon:set_workspace({ workspace = "5" }) end
               end'')
           ];
         }

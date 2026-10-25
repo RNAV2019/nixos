@@ -168,6 +168,9 @@ in {
 
     localsend
     tigervnc
+    # adb over the network to the Chromecast; scrcpy mirrors and drives it.
+    android-tools
+    scrcpy
 
     awww
     anki
