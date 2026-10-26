@@ -170,7 +170,7 @@ Scope {
       id: window
 
       key: "osd"
-      rank: 3
+      rank: 4
 
       readonly property bool outputBlocked: Bus.islandOpenFor(window.screenName)
 

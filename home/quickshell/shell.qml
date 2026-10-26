@@ -5,6 +5,7 @@ import qs.Bar
 import qs.Calendar
 import qs.Commons
 import qs.Control
+import qs.Dictation
 import qs.Launcher
 import qs.Lock
 import qs.Nearby
@@ -24,6 +25,7 @@ ShellRoot {
 
   Bar {}
   CalendarPanel {}
+  DictationPill {}
   ControlCenter {}
   Launcher {}
   NearbyPanel {}

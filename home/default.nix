@@ -21,6 +21,7 @@
     ./claude.nix
     ./opencode.nix
     ./sonora.nix
+    ./dictation.nix
   ];
 
   home.username = user;

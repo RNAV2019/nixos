@@ -4,6 +4,8 @@
   pkgs,
   lib,
   helium,
+  # The --load-extension directories baked into helium's wrapper.
+  extensions ? [],
   stateDir,
 }: let
   palettes = import ./palettes.nix;
@@ -96,7 +98,7 @@
 
   launcher = pkgs.writeShellApplication {
     name = "helium";
-    runtimeInputs = [pkgs.coreutils pkgs.inotify-tools];
+    runtimeInputs = [pkgs.coreutils pkgs.gnugrep pkgs.inotify-tools];
     text = ''
       state="${stateDir}"
       browser="${helium}/bin/helium"
@@ -111,6 +113,8 @@
       ${lib.concatMapStrings (id: "    ${id}) echo ${keys.${id}.id} ;;\n") ids}    esac
       }
       themeIds=(${lib.concatMapStringsSep " " (id: keys.${id}.id) ids})
+      extensions=(${lib.escapeShellArgs extensions})
+      loaded="''${XDG_STATE_HOME:-$HOME/.local/state}/helium/loaded-extensions"
 
       # DevTools pipe on fds 3/4, NUL-terminated JSON. FIFOs opened read-write so the browser
       # never sees EOF if the launcher dies; setup failure falls back to plain Helium.
@@ -164,6 +168,21 @@
         done
       }
 
+      # Chromium keeps starting a --load-extension service worker from its script cache when
+      # the extension's directory changes under it, so a bumped CRX ran the old code against
+      # the new files (Bitwarden 2026.8 asking for a WASM file 2026.10 no longer ships).
+      # Loading each new directory once over the pipe is an in-place update: the worker is
+      # registered afresh and the extension keeps its storage.
+      reloadChanged() {
+        local dir
+        for dir in "''${extensions[@]}"; do
+          grep -qxF "$dir" "$loaded" 2>/dev/null && continue
+          call Extensions.loadUnpacked "{\"path\":\"$dir\"}" || return 1
+        done
+        mkdir -p "''${loaded%/*}"
+        printf '%s\n' "''${extensions[@]}" >"$loaded"
+      }
+
       mkdir -p "$state"
       coproc watch { exec inotifywait -q -m -e close_write,moved_to --format %f "$state"; }
       # Kept apart from the array, which bash unsets when the watcher exits.
@@ -172,6 +191,11 @@
       # The extension system comes up a little after the browser does.
       for _ in $(seq 40); do
         apply && break
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.25
+      done
+      for _ in $(seq 20); do
+        reloadChanged && break
         kill -0 "$pid" 2>/dev/null || break
         sleep 0.25
       done

@@ -1,5 +1,5 @@
 # Packages built in this repo, as an overlay so modules can use pkgs.<name>.
-final: _prev: {
+final: prev: {
   # Desktop session
   lock-session = final.callPackage ./lock-session {};
   start-desktop = final.callPackage ./start-desktop {};
@@ -10,6 +10,8 @@ final: _prev: {
   gtk4-live-css = final.callPackage ./gtk4-live-css {};
   # The launcher's emoji table, from nixpkgs' Unicode and CLDR data.
   quickshell-emoji = final.callPackage ./quickshell-emoji {};
+  # Offline dictation: nixpkgs' build, given its typing tools.
+  handy = final.callPackage ./handy {inherit (prev) handy;};
 
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};

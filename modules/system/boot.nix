@@ -45,11 +45,9 @@
     "udev.log_priority=3"
     "vt.global_cursor_default=0"
   ];
+  # The initrd is always systemd now (scripted stage 1 is gone from nixpkgs), which the
+  # shutdown/reboot Plymouth splash needs.
   boot.consoleLogLevel = 0;
-  boot.initrd.verbose = false;
-
-  # Required for the shutdown/reboot Plymouth splash.
-  boot.initrd.systemd.enable = true;
 
   boot.plymouth = {
     enable = true;

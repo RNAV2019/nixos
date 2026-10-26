@@ -1,0 +1,232 @@
+diff --git a/src-tauri/src/actions.rs b/src-tauri/src/actions.rs
+index cce7cfe..28f620f 100644
+--- a/src-tauri/src/actions.rs
++++ b/src-tauri/src/actions.rs
+@@ -457,7 +457,10 @@ impl ShortcutAction for TranscribeAction {
+         match settings.overlay_style {
+             OverlayStyle::Live if model_supports_streaming => utils::show_streaming_overlay(app),
+             OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
+-            OverlayStyle::None => {} // show_overlay_state no-ops on None anyway
++            // The window stays hidden on None, but show_overlay_state still tells the
++            // shell bridge which state this session is in.
++            OverlayStyle::None if model_supports_streaming => utils::show_streaming_overlay(app),
++            OverlayStyle::None => show_recording_overlay(app),
+         }
+         // Everything above runs before capture can begin, so each span here is
+         // added keypress->capture latency.
+diff --git a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
+index 898770b..9d54b5e 100644
+--- a/src-tauri/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -19,6 +19,7 @@ mod paste_tx;
+ pub mod portable;
+ mod secure_input;
+ mod settings;
++mod shell_bridge;
+ mod shortcut;
+ mod signal_handle;
+ mod transcription_coordinator;
+@@ -1025,6 +1026,8 @@ pub fn run(cli_args: CliArgs) {
+                 settings.overlay_style != settings::OverlayStyle::None,
+             );
+ 
++            shell_bridge::init();
++
+             // Pre-warm GPU/accelerator enumeration on a background thread. The first
+             // device listing opens the GPU, which on macOS loads ggml's Metal library
+             // and compiles it when the system shader cache does not have it yet, so it
+diff --git a/src-tauri/src/managers/transcription.rs b/src-tauri/src/managers/transcription.rs
+index 32de0c5..17082da 100644
+--- a/src-tauri/src/managers/transcription.rs
++++ b/src-tauri/src/managers/transcription.rs
+@@ -1165,6 +1165,10 @@ impl TranscriptionManager {
+ 
+     /// Emit a working-phase event to the streaming overlay (spinner + label).
+     pub fn emit_stream_working(&self, kind: StreamWorkKind) {
++        crate::shell_bridge::working(match kind {
++            StreamWorkKind::Transcribing => "transcribing",
++            StreamWorkKind::Polishing => "polishing",
++        });
+         let _ = StreamPhaseEvent {
+             phase: StreamPhase::Working,
+             kind: Some(kind),
+@@ -1173,6 +1177,7 @@ impl TranscriptionManager {
+     }
+ 
+     fn emit_stream_text(&self, committed: &str, tentative: &str) {
++        crate::shell_bridge::text(committed, tentative);
+         let _ = StreamTextEvent {
+             committed: committed.to_string(),
+             tentative: tentative.to_string(),
+diff --git a/src-tauri/src/overlay.rs b/src-tauri/src/overlay.rs
+index 292acce..34b2f12 100644
+--- a/src-tauri/src/overlay.rs
++++ b/src-tauri/src/overlay.rs
+@@ -486,6 +486,8 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
+ }
+ 
+ fn show_overlay_state(app_handle: &AppHandle, state: &str) {
++    crate::shell_bridge::state(state);
++
+     // Whether the overlay shows at all is governed by overlay_style; position
+     // only chooses Top vs Bottom placement. Checked here (off the main thread)
+     // so the common overlay-disabled case never pays for a main-thread hop.
+@@ -597,6 +599,8 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
+ /// first sample chunk. Audio feedback uses the same backend readiness signal,
+ /// but this targeted event is skipped when overlays are disabled.
+ pub fn emit_recording_ready(app_handle: &AppHandle) {
++    crate::shell_bridge::ready();
++
+     if !OVERLAY_ENABLED.load(Ordering::Relaxed) {
+         return;
+     }
+@@ -687,6 +691,8 @@ static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
+ 
+ /// Hides the recording overlay window with fade-out animation
+ pub fn hide_recording_overlay(app_handle: &AppHandle) {
++    crate::shell_bridge::hide();
++
+     // Always hide the overlay regardless of settings - if setting was changed while recording,
+     // we still want to hide it properly
+     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+@@ -728,6 +734,8 @@ pub fn update_overlay_enabled_cache(enabled: bool) {
+ }
+ 
+ pub fn emit_levels(app_handle: &AppHandle, levels: &[f32]) {
++    crate::shell_bridge::levels(levels);
++
+     // Skip emission when the overlay is disabled. The recording_overlay
+     // window is created at boot regardless of overlay_style, so without this
+     // guard a hidden overlay's WebKit subprocess still
+diff --git a/src-tauri/src/shell_bridge.rs b/src-tauri/src/shell_bridge.rs
+new file mode 100644
+index 0000000..1bedbfd
+--- /dev/null
++++ b/src-tauri/src/shell_bridge.rs
+@@ -0,0 +1,126 @@
++//! Mirrors the recording overlay's events onto a Unix socket, so a desktop shell can draw
++//! its own overlay instead of Handy's window. Each event is one JSON object per line; a
++//! client that connects mid-session is sent the current state first. Works whatever
++//! `overlay_style` is set to.
++//!
++//! Socket: `$XDG_RUNTIME_DIR/handy/overlay.sock`.
++
++use serde_json::{json, Value};
++use std::io::Write;
++use std::os::unix::net::{UnixListener, UnixStream};
++use std::path::PathBuf;
++use std::sync::atomic::{AtomicU64, Ordering};
++use std::sync::Mutex;
++use std::time::{Duration, SystemTime, UNIX_EPOCH};
++
++static CLIENTS: Mutex<Vec<UnixStream>> = Mutex::new(Vec::new());
++// The last state and readiness, replayed to a client that connects mid-session.
++static SNAPSHOT: Mutex<Vec<String>> = Mutex::new(Vec::new());
++static LAST_LEVELS: AtomicU64 = AtomicU64::new(0);
++
++const LEVEL_INTERVAL_MS: u64 = 33;
++
++fn socket_path() -> Option<PathBuf> {
++    std::env::var_os("XDG_RUNTIME_DIR").map(|dir| PathBuf::from(dir).join("handy").join("overlay.sock"))
++}
++
++pub fn init() {
++    let Some(path) = socket_path() else {
++        log::warn!("shell bridge: XDG_RUNTIME_DIR unset, not serving overlay events");
++        return;
++    };
++    if let Some(dir) = path.parent() {
++        let _ = std::fs::create_dir_all(dir);
++    }
++    // Another running instance owns a socket that answers; only a dead one is replaced.
++    if UnixStream::connect(&path).is_ok() {
++        log::warn!("shell bridge: {} is already served", path.display());
++        return;
++    }
++    let _ = std::fs::remove_file(&path);
++    let listener = match UnixListener::bind(&path) {
++        Ok(listener) => listener,
++        Err(e) => {
++            log::warn!("shell bridge: cannot bind {}: {e}", path.display());
++            return;
++        }
++    };
++    log::info!("shell bridge: serving overlay events on {}", path.display());
++    std::thread::spawn(move || {
++        for stream in listener.incoming().flatten() {
++            // A shell that stops reading is dropped rather than stalling the audio path.
++            let _ = stream.set_write_timeout(Some(Duration::from_millis(50)));
++            let mut stream = stream;
++            let replay = SNAPSHOT.lock().map(|s| s.clone()).unwrap_or_default();
++            if replay.iter().all(|line| stream.write_all(line.as_bytes()).is_ok()) {
++                if let Ok(mut clients) = CLIENTS.lock() {
++                    clients.push(stream);
++                }
++            }
++        }
++    });
++}
++
++fn publish(value: Value) -> String {
++    let mut line = value.to_string();
++    line.push('\n');
++    if let Ok(mut clients) = CLIENTS.lock() {
++        clients.retain_mut(|c| c.write_all(line.as_bytes()).is_ok());
++    }
++    line
++}
++
++/// "recording", "streaming", "transcribing" or "processing".
++pub fn state(state: &str) {
++    let line = publish(json!({ "event": "state", "state": state }));
++    if let Ok(mut snapshot) = SNAPSHOT.lock() {
++        // Recording begins a session: its readiness is not known yet.
++        if state == "recording" || state == "streaming" {
++            snapshot.clear();
++        } else {
++            snapshot.retain(|l| !l.contains("\"event\":\"state\""));
++        }
++        snapshot.insert(0, line);
++    }
++}
++
++pub fn hide() {
++    publish(json!({ "event": "hide" }));
++    if let Ok(mut snapshot) = SNAPSHOT.lock() {
++        snapshot.clear();
++    }
++}
++
++/// The microphone has delivered its first samples.
++pub fn ready() {
++    let line = publish(json!({ "event": "ready" }));
++    if let Ok(mut snapshot) = SNAPSHOT.lock() {
++        snapshot.push(line);
++    }
++}
++
++/// 16 spectrum buckets, 0..1, throttled to about 30 a second.
++pub fn levels(levels: &[f32]) {
++    let now = SystemTime::now()
++        .duration_since(UNIX_EPOCH)
++        .unwrap_or_default()
++        .as_millis() as u64;
++    if now.saturating_sub(LAST_LEVELS.load(Ordering::Relaxed)) < LEVEL_INTERVAL_MS {
++        return;
++    }
++    LAST_LEVELS.store(now, Ordering::Relaxed);
++    let has_clients = CLIENTS.lock().map(|c| !c.is_empty()).unwrap_or(false);
++    if has_clients {
++        publish(json!({ "event": "levels", "levels": levels }));
++    }
++}
++
++/// Live text: `committed` no longer changes, `tentative` may still be rewritten.
++pub fn text(committed: &str, tentative: &str) {
++    publish(json!({ "event": "text", "committed": committed, "tentative": tentative }));
++}
++
++/// The stream is finalizing ("transcribing") or post-processing ("polishing").
++pub fn working(kind: &str) {
++    publish(json!({ "event": "working", "kind": kind }));
++}

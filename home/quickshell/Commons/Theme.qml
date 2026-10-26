@@ -406,6 +406,32 @@ Singleton {
   readonly property int sharingProgressRadius: 24
   readonly property int sharingConfirmDwell: 2500
 
+  // The dictation pill, Handy's recording overlay drawn by the island: an OSD-sized row
+  // (mic, the level bars, the time and an ×) that opens into a card once live text arrives,
+  // the row staying on top and the transcript flowing under it.
+  readonly property int dictationWidth: 278
+  readonly property int dictationHeight: 48
+  readonly property int dictationRadius: 24
+  readonly property int dictationLiveWidth: 420
+  readonly property int dictationGlyphLeft: 20
+  readonly property int dictationGlyphSize: 18
+  // Handy's lowest 9 spectrum buckets, mirrored about the middle bar.
+  readonly property int dictationBuckets: 9
+  readonly property real dictationBarWidth: 3
+  readonly property real dictationBarGap: 3.5
+  readonly property real dictationBarMin: 3
+  readonly property real dictationBarMax: 20
+  readonly property int dictationCancelRight: 20
+  readonly property int dictationCancelSize: 12
+  readonly property int dictationTimeRight: 44
+  readonly property int dictationTextInset: 20
+  readonly property int dictationTextTop: 44
+  readonly property int dictationTextSize: 13
+  readonly property int dictationTextLineHeight: 19
+  readonly property int dictationTextLines: 4
+  readonly property int dictationTextBottom: 14
+  readonly property int dictationSpinnerSize: 16
+
   // The control centre: the same 520 px column the launcher grows into, carrying a tile grid,
   // two sliders, the media card and notifications. Source frames: 520 x 716 at 1920 px.
   readonly property int controlWidth: panelColumnWidth

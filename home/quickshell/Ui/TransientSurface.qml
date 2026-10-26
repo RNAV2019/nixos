@@ -4,21 +4,22 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 
-// One transient island surface: the OSD, a notification toast, the sharing pill. They arrive
-// unasked and go on their own, so nothing toggles them: the owner binds `wanted`, and the
-// window grows out of the island, hands it over and comes back by itself. The window, the
+// One transient island surface: the OSD, a notification toast, the sharing pill, the dictation
+// pill. They come and go on their own, so nothing toggles them: the owner binds `wanted`, and
+// the window grows out of the island, hands it over and comes back by itself. The window, the
 // still and the presentation handshake follow Ui/IslandSurface.qml; see the notes there.
 //
-// The three take turns by `rank` (Bus.transientWants): the highest wanting an output has the
-// island, and one outranked waits rather than being knocked out. When the higher one lets go,
-// the waiting one takes over from it as a handover, growing out of the shape it leaves, rather
-// than the first shrinking to the pill and the second growing back out of it.
+// They take turns by `rank` (Bus.transientWants): OSD 4, dictation 3, a sharing request 2, a
+// toast 1, sharing progress 0. The highest wanting an output has the island, and one outranked
+// waits rather than being knocked out. When the higher one lets go, the waiting one takes over
+// from it as a handover, growing out of the shape it leaves, rather than the first shrinking to
+// the pill and the second growing back out of it.
 PanelWindow {
   id: win
 
   required property var modelData
 
-  // Identity on the bus and in the layer-shell namespace: "osd", "notify", "sharing".
+  // Identity on the bus and in the layer-shell namespace: "osd", "notify", "sharing", "dictation".
   property string key: ""
   property string layerNamespace: "quickshell-" + win.key
   property int rank: 0

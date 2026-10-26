@@ -8,7 +8,7 @@
   agents = llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
 
   # Ahead of llm-agents until it catches up; the guard drops this once it does.
-  claude-code-version = "2.1.308";
+  claude-code-version = "2.1.310";
   claude-code =
     if pkgs.lib.versionOlder agents.claude-code.version claude-code-version
     then
@@ -16,7 +16,7 @@
         version = claude-code-version;
         src = pkgs.fetchurl {
           url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${claude-code-version}/linux-x64/claude";
-          hash = "sha256-NWcz8YX6mI5r86qaVVJp/dFnmCouKoDTyKeAN7uSrVg=";
+          hash = "sha256-tzZ2QwrxL5cxanmLg3H4HWQPkKWL3LjzzlaoNbtH31Y=";
         };
       }
     else agents.claude-code;
@@ -36,8 +36,8 @@
     };
     better-lyrics-shaders = {
       id = "mffpncjphfmkppebdoaehdlnagnlpfai";
-      version = "1.5.0";
-      hash = "sha256-WES3hJ0iXlYTkf3uzWIhtBwZaVJh5PX6xgTGmPbK4Ko=";
+      version = "1.5.1";
+      hash = "sha256-zizbSfpoBI+Hn+PhHdi4qz/wZH4ZaOCn0e9vlknfYP4=";
     };
   };
 
@@ -79,6 +79,7 @@
   # The same Helium, launched so that it follows the desktop theme live; see themes/helium.nix.
   helium-themed = import ./themes/helium.nix {
     inherit pkgs helium;
+    extensions = helium-extension-dirs;
     inherit (pkgs) lib;
     stateDir = "${config.home.homeDirectory}/.local/state/theme";
   };

@@ -359,6 +359,11 @@ in {
 
           (bind "ALT + N" (exec "qs ipc call nearby toggle"))
 
+          # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER
+          # first skips the release, which leaves it recording as if tapped.
+          (bind "${mod} + D" (exec "dictate press"))
+          (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
+
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
           (bind "XF86AudioNext" (exec "playerctl next"))

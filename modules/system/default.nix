@@ -50,7 +50,7 @@ in {
   nixpkgs.config.allowUnfree = true;
 
   # Ventoy ships unauditable binary blobs (NixOS/nixpkgs#404663). Pinned so a bump fails loudly.
-  nixpkgs.config.permittedInsecurePackages = ["ventoy-1.1.17"];
+  nixpkgs.config.permittedInsecurePackages = ["ventoy-1.1.18"];
 
   networking.networkmanager.enable = true;
   # NixOS defaults to WARN, which hides DHCP and connectivity state changes.

@@ -133,7 +133,8 @@ Singleton {
   // The two that arrive unasked, as against everything else, which is up until dismissed.
   // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
   // island through owners, only through a transient screen, so a real panel covers it.
-  readonly property var transientKeys: ["osd", "notify", "sharing"]
+  // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
+  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation"]
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;
