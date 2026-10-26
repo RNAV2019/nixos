@@ -35,10 +35,21 @@
     update_checks_enabled = false;
     show_whats_new_on_update = false;
 
-    # Handy's own shortcut can only grab through XWayland, where the default
-    # Ctrl+Space would be stolen from X11 apps; a key nobody presses keeps it
-    # harmless (an empty binding resets to the default).
+    # Handy's own shortcuts can only grab through XWayland, where the defaults
+    # (Ctrl+Space, Ctrl+Shift+Space) would be stolen from X11 apps; keys nobody
+    # presses keep them harmless (an empty binding resets to the default).
     bindings.transcribe.current_binding = "ctrl+alt+shift+f12";
+    bindings.transcribe_with_post_process.current_binding = "ctrl+alt+shift+f11";
+
+    # SUPER+SHIFT+D's dictation is cleaned up by an OpenRouter model with Handy's
+    # stock prompt (punctuation, numbers as digits, fillers out, no rewording);
+    # SUPER+D's never is. The key is merged in from sops at start; see seedSettings.
+    # Mercury 3 was the one cheap model clean on every test case at under a second;
+    # DeepSeek V4 Flash, gen-commit's model, dropped or ignored whole transcripts.
+    post_process_enabled = true;
+    post_process_provider_id = "openrouter";
+    post_process_models.openrouter = "inception/mercury-3";
+    post_process_selected_prompt_id = "default_improve_transcriptions";
 
     # Handed to dictate-type below. The overlay can take focus from the window
     # being typed into, and the island's mic mark already shows a recording.
@@ -50,12 +61,14 @@
   # Types the transcript with wtype, except into Ghostty. wtype gives the nth
   # distinct character keycode n, and Ghostty reads some of those as the physical
   # key (the 15th as Tab, the 29th as Ctrl), so there it pastes instead and then
-  # puts the clipboard back. --sensitive keeps both out of cliphist.
+  # puts the clipboard back. --sensitive keeps both out of cliphist. The
+  # post-processing model sometimes answers with a leading space, so that goes.
   dictateType = pkgs.writeShellApplication {
     name = "dictate-type";
     runtimeInputs = with pkgs; [coreutils hyprland jq wl-clipboard wtype];
     text = ''
       text=$1
+      text=''${text#"''${text%%[![:space:]]*}"}
       if ! hyprctl activewindow -j | jq -e '.class // "" | startswith("com.mitchellh.ghostty")' >/dev/null; then
         exec wtype -- "$text"
       fi
@@ -82,6 +95,11 @@
 
   dataDir = "${config.xdg.dataHome}/com.pais.handy";
 
+  # gen-commit's OpenRouter key, decrypted by sops-nix (modules/system/secrets.nix).
+  openrouterKey = "${config.xdg.configHome}/gen-commit/api-key";
+
+  # Handy keeps API keys in its store in plain text, so the key is read at start
+  # rather than written into the Nix store, and the store is kept private.
   seedSettings = pkgs.writeShellApplication {
     name = "handy-seed-settings";
     runtimeInputs = [pkgs.coreutils pkgs.jq];
@@ -89,16 +107,26 @@
       store=${dataDir}/settings_store.json
       mkdir -p ${dataDir}
       [[ -s $store ]] || echo '{"settings": {}}' >"$store"
-      jq --slurpfile s ${pkgs.writeText "handy-settings.json" (builtins.toJSON settings)} \
-        '.settings *= $s[0]' "$store" >"$store.tmp"
+      key=""
+      if [[ -r ${openrouterKey} ]]; then
+        key=$(<${openrouterKey})
+      else
+        echo "handy-seed-settings: ${openrouterKey} not readable, post-processing has no key" >&2
+      fi
+      umask 077
+      jq --slurpfile s ${pkgs.writeText "handy-settings.json" (builtins.toJSON settings)} --arg key "$key" \
+        '.settings *= $s[0] | if $key != "" then .settings.post_process_api_keys.openrouter = $key else . end' \
+        "$store" >"$store.tmp"
       mv "$store.tmp" "$store"
     '';
   };
 
-  # Tap to start and tap again to stop, or hold and talk and let go. A press always
-  # toggles; a release after a hold stops only if Handy is capturing, so a press that
-  # stopped a recording doesn't start another on release, and nothing can drift out
-  # of step with Handy's own state.
+  # Tap to start and tap again to stop, or hold and talk and let go. --post-process
+  # picks Handy's cleaned-up action for press and release alike, since Handy only
+  # stops a recording from the action that started it. A press always toggles; a
+  # release after a hold stops only if Handy is capturing, so a press that stopped a
+  # recording doesn't start another on release, and nothing can drift out of step
+  # with Handy's own state.
   dictate = pkgs.writeShellApplication {
     name = "dictate";
     runtimeInputs = with pkgs; [coreutils handy jq pipewire];
@@ -114,21 +142,26 @@
             and .info.state == "running")' >/dev/null
       }
 
+      toggle=--toggle-transcription
+      if [[ ''${2:-} == --post-process ]]; then
+        toggle=--toggle-post-process
+      fi
+
       case "''${1:-}" in
         press)
           date +%s%3N >"$stamp"
-          handy --toggle-transcription
+          handy "$toggle"
           ;;
         release)
           [[ -f $stamp ]] || exit 0
           held=$(($(date +%s%3N) - $(<"$stamp")))
           rm -f "$stamp"
           if ((held >= hold_ms)) && capturing; then
-            handy --toggle-transcription
+            handy "$toggle"
           fi
           ;;
         *)
-          echo "usage: dictate press|release" >&2
+          echo "usage: dictate press|release [--post-process]" >&2
           exit 2
           ;;
       esac

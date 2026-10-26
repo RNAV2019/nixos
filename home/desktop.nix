@@ -363,6 +363,9 @@ in {
           # first skips the release, which leaves it recording as if tapped.
           (bind "${mod} + D" (exec "dictate press"))
           (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
+          # The same, cleaned up by a model before it is typed; see home/dictation.nix.
+          (bind "${mod} + SHIFT + D" (exec "dictate press --post-process"))
+          (bindWith {release = true;} "${mod} + SHIFT + D" (exec "dictate release --post-process"))
 
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))

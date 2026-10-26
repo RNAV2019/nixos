@@ -23,7 +23,10 @@ Item {
     height: 24
     transformOrigin: Item.TopLeft
     scale: root.size / 24
-    antialiasing: true
+    // The default geometry renderer only antialiases with multisampling, which the
+    // island's clipContent layers don't have, so icons inside one came out stair-stepped.
+    // The curve renderer computes its own edge coverage, in or out of a layer.
+    preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
       // The item's scale carries the geometry; the path is drawn at 24 units.
