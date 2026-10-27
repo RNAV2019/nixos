@@ -73,6 +73,25 @@
     ];
   };
 
+  # Fish stays the login shell; nu is there to run on demand.
+  programs.nushell = {
+    enable = true;
+    # Pick up home.sessionVariables (EDITOR, PATH additions) like fish does.
+    loadSessionVariables = true;
+    settings = {
+      show_banner = false;
+    };
+    # Nu's own ls/find return tables, so only alias what it lacks.
+    shellAliases = {
+      la = "ls -a";
+      lt = "eza --tree --level=2 --long --icons --git";
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
+      nix-clean = "sudo nix-collect-garbage -d";
+      cx = "claude --dangerously-skip-permissions";
+      top = "btop";
+    };
+  };
+
   # Match spaceship-prompt.
   programs.starship = {
     enable = true;

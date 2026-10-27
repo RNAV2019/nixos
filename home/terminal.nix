@@ -35,9 +35,6 @@
 
     mouse-scroll-multiplier = 0.95
 
-    # Work around Hyprland latency.
-    async-backend = epoll
-
     resize-overlay = never
   '';
 
