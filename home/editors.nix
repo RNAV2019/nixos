@@ -139,10 +139,17 @@ in {
 
   programs.helix = {
     enable = true;
-    package = helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
-      grammarOverlays = grammarFixes;
-      includeGrammarIf = grammar: builtins.elem grammar.name grammars;
-    };
+    package =
+      (helix-steel.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
+        grammarOverlays = grammarFixes;
+        includeGrammarIf = grammar: builtins.elem grammar.name grammars;
+      })
+      .overrideAttrs {
+        # The fork dropped steel from helix-term's default features (2026-10), which
+        # silently builds a plain Helix that never runs init.scm. cargoBuildFeatures is what
+        # the build hook reads; buildFeatures is only copied into it before overrideAttrs.
+        cargoBuildFeatures = ["helix-term/steel"];
+      };
 
     settings = {
       # themes/current.toml links to the active theme's file; see theme.nix.
