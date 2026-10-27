@@ -214,6 +214,7 @@
 
   starshipFragment = p:
     lib.recursiveUpdate config.programs.starship.settings {
+      shell.style = "bold fg:${p.iris}";
       git_status = {
         conflicted = "[!](bold fg:${p.love})";
         ahead = "[⇡\${count}](bold fg:${p.foam})";

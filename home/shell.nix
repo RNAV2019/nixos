@@ -107,12 +107,23 @@
         "$git_status"
         "$cmd_duration"
         "$line_break"
+        "$shell"
         "$character"
       ];
 
       fill = {
         symbol = " ";
         style = "";
+      };
+
+      # Badge non-fish shells; fish, the default, shows nothing.
+      shell = {
+        disabled = false;
+        fish_indicator = "";
+        # The space lives here: $indicator is a meta variable, so a `( )` group would hide it.
+        nu_indicator = "nu ";
+        style = "bold purple";
+        format = "[$indicator]($style)";
       };
 
       character = {
