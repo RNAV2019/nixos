@@ -20,6 +20,8 @@ Singleton {
   readonly property string plus: "M5 12h14M12 5v14"
   readonly property string x: "M18 6L6 18M6 6l12 12"
   readonly property string check: "M20 6L9 17l-5-5"
+  // The notification reply row sends with the plane (a group's chevron is chevronDown, turned over).
+  readonly property string send: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zM21.854 2.147l-10.94 10.939"
   // The island's privacy marks, Lucide video and mic.
   readonly property string camera: "M16 13l5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
   readonly property string microphone: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3"
