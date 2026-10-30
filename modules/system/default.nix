@@ -19,6 +19,7 @@ in {
     ./secrets.nix
     ./wifi.nix
     ./backups.nix
+    ./face-unlock.nix
   ];
 
   time.timeZone = "Europe/London";

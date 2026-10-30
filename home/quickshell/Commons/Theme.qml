@@ -731,6 +731,61 @@ Singleton {
   readonly property int lockIn: 350
   readonly property int lockOut: 350
 
+  // The glance row under the clock: a battery chip and the next event, two flat pills 12 apart.
+  // The event chip takes the rest of the pill's width; either one alone keeps its own.
+  readonly property int lockGlanceTop: 304
+  readonly property int lockGlanceHeight: 36
+  readonly property int lockGlanceGap: 12
+  readonly property int lockGlanceInset: 14
+  readonly property int lockGlanceGlyph: 16
+  readonly property real lockGlanceTextSize: 12.5
+  readonly property real lockGlanceTimeSize: 11.5
+  readonly property int lockBatteryChipWidth: 76
+  readonly property int lockEventChipWidth: lockPillWidth - lockBatteryChipWidth - lockGlanceGap
+  readonly property int lockEventSpineWidth: 3
+  readonly property int lockEventSpineHeight: 16
+  readonly property int lockEventTextLeft: 27
+
+  // The now-playing card sits one gap above the pill. Offsets are from the card's top-left.
+  readonly property int lockMediaWidth: lockPillWidth
+  readonly property int lockMediaHeight: 100
+  readonly property int lockMediaRadius: 26
+  readonly property int lockMediaGap: 40
+  readonly property int lockMediaTop: lockPillTop - lockMediaGap - lockMediaHeight
+  readonly property int lockMediaInset: 14
+  readonly property int lockMediaTextLeft: 74
+  readonly property int lockMediaTitleTop: 17
+  readonly property int lockMediaArtistTop: 35
+  readonly property int lockMediaTitleSize: 13
+  readonly property int lockMediaArtistSize: 11
+  readonly property int lockMediaButton: 32
+  readonly property int lockMediaButtonGap: 6
+  readonly property int lockMediaButtonTop: 22
+  readonly property int lockMediaGlyph: 14
+  readonly property int lockMediaTrackInset: 52
+  readonly property int lockMediaTrackY: 78
+  readonly property int lockMediaTrackHeight: 4
+  readonly property real lockMediaTimeSize: 10.5
+  readonly property real lockMediaTimeTop: 73.5
+
+  // Face unlock. The ring is drawn around the avatar while the camera looks, and the pill
+  // reverts to its plain placeholder a moment after a miss. Howdy has no retry cap of its own.
+  readonly property int lockScanRing: 50
+  readonly property int lockScanRingStroke: 2
+  readonly property int lockScanSweep: 110
+  readonly property real lockScanRingAlpha: 0.35
+  readonly property int lockScanGlyph: 20
+  readonly property int lockScanLineWidth: 16
+  readonly property real lockScanLineHeight: 1.75
+  readonly property int lockScanLine: 1200
+  readonly property int lockFaceNoticeMs: 2500
+  readonly property int lockFaceHold: 270
+  readonly property int lockFaceMaxMisses: 3
+  // An attempt that ends sooner than this never looked (lid shut, no camera): no notice.
+  readonly property int lockFaceMinLookMs: 400
+  // Howdy's own timeout is 5 s; this only catches a conversation that never answers.
+  readonly property int lockFaceHardTimeoutMs: 12000
+
   // The Nearby panel (boards 16a-16h). The 520 column carries two segmented tracks over
   // a send body (the Choose files button or the staged rows, then the devices) or a receive
   // body (radar, consent card and arrivals); heights are the boards' measured stacks.
