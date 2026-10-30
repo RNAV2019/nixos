@@ -25,6 +25,12 @@ final: prev: {
   showcase = final.callPackage ./showcase {};
   claude-statusline = final.callPackage ./claude-statusline {};
   claude-usage = final.callPackage ./claude-usage {};
+  # Claude Code hooks that tell the island a session needs the user, and raise its terminal.
+  claude-island = final.callPackage ./claude-island {};
+  # nixos-rebuild with nom, a saved diff and progress for the island.
+  rebuild = final.callPackage ./rebuild {};
+  # The island's view of udisks2: removable filesystems, mount, eject.
+  island-usb = final.callPackage ./island-usb {};
   t3code-nightly = final.callPackage ./t3code-nightly {};
 
   # Helium extensions

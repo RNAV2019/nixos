@@ -862,6 +862,8 @@ Singleton {
   readonly property real momentTitleSize: 12.5
   readonly property real momentSubtitleSize: 10.5
   readonly property real activityRowTitleSize: 12.5
+  // The detail lines of the Claude, rebuild and USB cards (derivation, command, space).
+  readonly property real activityDetailSize: 11.5
   readonly property int momentDwell: 8000
   readonly property int momentPluggedDwell: osdDwell + 900
 

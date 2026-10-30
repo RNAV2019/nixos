@@ -27,5 +27,11 @@ Scope {
     id: plugged
   }
 
+  ClaudeSource {}
+
+  RebuildSource {}
+
+  UsbSource {}
+
   DemoSource {}
 }
