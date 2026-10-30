@@ -160,6 +160,40 @@ shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 </details>
 
 <details>
+<summary><b>Face unlock</b></summary>
+
+The lock screen can also open with [Howdy](https://github.com/boltgolt/howdy) and the laptop's
+IR camera. It is an extra way in, never a replacement: the password field stays live and
+focused, and works exactly as before whatever the camera does. The face runs as a second PAM
+conversation on its own service, `quickshell-face`. Howdy is on no other service: `login`,
+`sudo`, polkit and `quickshell-password` don't know about it
+([`modules/system/face-unlock.nix`](modules/system/face-unlock.nix)).
+
+Until a face is enrolled nothing happens: no scan, no ring, no error. To enrol, after a rebuild:
+
+```bash
+sudo linux-enable-ir-emitter configure   # once; follow the prompts until the IR light flickers
+sudo howdy add                           # look at the IR camera; repeat in other light for better odds
+sudo howdy test                          # optional: shows what the camera sees
+```
+
+`linux-enable-ir-emitter` is installed but its boot/resume service is not enabled. If the
+emitter turns off after suspend, set `services.linux-enable-ir-emitter.enable = true` (device
+`video2`) once it is configured.
+
+The lock scans when it appears and again on wake from suspend. **Esc** on an empty field
+scans again, up to three misses per lock (a wake starts the count afresh). A face match
+unlocks exactly as the password does; typing the first character stops the scan. The IR
+camera's path, the certainty (3.0, lower is stricter) and the 5 second timeout are in
+`face-unlock.nix`.
+
+To turn it off, either delete the model (`sudo howdy clear`), or remove
+`./face-unlock.nix` from the imports in `modules/system/default.nix` and rebuild. Without the
+`quickshell-face` service the shell skips the scan silently.
+
+</details>
+
+<details>
 <summary><b>Backups</b></summary>
 
 Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
