@@ -32,6 +32,8 @@ final: prev: {
   rebuild = final.callPackage ./rebuild {};
   # The island's view of udisks2: removable filesystems, mount, eject.
   island-usb = final.callPackage ./island-usb {};
+  # The shell's interface sounds, synthesised with sox (Services/Sounds.qml plays them).
+  quickshell-sounds = final.callPackage ./quickshell-sounds {};
   t3code-nightly = final.callPackage ./t3code-nightly {};
 
   # Helium extensions

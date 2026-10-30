@@ -773,6 +773,10 @@ in {
   # out of store, so it reads this from a fixed path; see Services/EmojiSearch.qml.
   xdg.dataFile."quickshell/emoji.tsv".source = "${pkgs.quickshell-emoji}/share/quickshell/emoji.tsv";
 
+  # The interface sounds, synthesised with sox. Read from a fixed path like the table above;
+  # see Services/Sounds.qml.
+  xdg.dataFile."quickshell/sounds".source = "${pkgs.quickshell-sounds}/share/quickshell/sounds";
+
   # The account picture, read by the lock screen. Out of store, so replacing
   # profile.jpg in this repo shows on the next lock without a rebuild.
   home.file.".face" = {

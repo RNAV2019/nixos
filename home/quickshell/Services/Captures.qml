@@ -51,6 +51,9 @@ Singleton {
   // Raised when something needs saying that is not a capture: a failed grim, say.
   signal failed(string reason)
 
+  // Raised as each capture lands on the stack; `kind` is "screenshot" or "recording".
+  signal added(string kind)
+
   readonly property var screenshots: items.filter(function (i) {
     return i.kind === "screenshot";
   })
@@ -201,6 +204,7 @@ Singleton {
     root.viewIndex = 0;
     root.trayWanted = true;
     root.revision++;
+    root.added(item.kind);
   }
 
   function dismiss() {

@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Control
+import qs.Services
 import qs.Ui
 
 // PipeWire pushes every node update, so enumeration and tracking are gated on this view being
@@ -257,6 +258,39 @@ ControlSubView {
           color: Theme.muted
           font.family: Theme.monoFont
           font.pixelSize: Theme.sectionSize
+        }
+      }
+    }
+  }
+
+  SectionLabel {
+    width: parent.width
+    title: "Sounds"
+    height: Theme.controlSectionHeight + 8
+  }
+
+  DeviceRow {
+    width: parent.width
+    label: "Interface sounds"
+    sublabel: "Clicks and chimes from the shell"
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: "Interface sounds"
+    Accessible.checkable: true
+    Accessible.checked: Sounds.enabled
+    onClicked: Sounds.enabled = !Sounds.enabled
+
+    // The row's trailing slot ends 8 px in; the extra 8 puts the switch on the row inset.
+    Item {
+      width: switchBox.width + 8
+      height: switchBox.height
+
+      Switch {
+        id: switchBox
+
+        checked: Sounds.enabled
+        accessibleName: "Interface sounds"
+        onToggled: function (v) {
+          Sounds.enabled = v;
         }
       }
     }
