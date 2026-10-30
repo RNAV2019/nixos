@@ -16,6 +16,9 @@ Rectangle {
 
   signal dismissed
 
+  // Dragged sideways and let go far enough, a card dismisses itself.
+  property bool swipeable: true
+
   readonly property string iconSource: NotificationStore.iconFor(image, appIcon, desktopEntry, appName)
   readonly property bool iconTinted: NotificationStore.iconTinted(desktopEntry, appName)
 
@@ -27,6 +30,11 @@ Rectangle {
   border.color: urgent ? Theme.withAlpha(Theme.dangerFill, 0.7) : Theme.withAlpha(Theme.separator, 0.8)
 
   readonly property color accentColour: urgent ? Theme.urgent : NotificationStore.avatarColour(appName, iconTinted)
+
+  opacity: swipe.fade
+  transform: Translate {
+    x: swipe.offset
+  }
 
   Rectangle {
     id: avatar
@@ -116,5 +124,15 @@ Rectangle {
     activeFocusOnTab: true
 
     onClicked: root.dismissed()
+  }
+
+  SwipeDismiss {
+    id: swipe
+
+    anchors.fill: parent
+    enabled: root.swipeable
+    span: root.width
+    // Gone from sight, so what the card stands for can go too.
+    onGone: root.dismissed()
   }
 }

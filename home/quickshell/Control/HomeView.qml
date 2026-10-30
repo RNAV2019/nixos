@@ -87,7 +87,14 @@ Item {
 
   readonly property int count: NotificationStore.history.count
 
-  readonly property int listHeight: count > 0 ? Math.min(Theme.controlNotifMaxHeight, Math.ceil(list.implicitHeight)) : 44
+  // Grouped by application, so the headers take height and the cap is higher; past it the list
+  // scrolls inside itself, and the panel stops growing.
+  readonly property int listHeight: count > 0 ? Math.min(Theme.controlNotifGroupedMaxHeight, Math.ceil(list.contentHeight)) : 44
+
+  // Groups go back to their default, one open, whenever the panel opens afresh.
+  function resetNotifications() {
+    list.reset();
+  }
 
   readonly property int contentHeight: listTop + listHeight + Theme.controlPadBottom
 
@@ -335,34 +342,20 @@ Item {
     height: root.listHeight
     visible: root.count > 0
 
-    Column {
+    NotificationList {
       id: list
 
       width: notifications.width
-      spacing: Theme.controlNotifGap
-
-      Repeater {
-        model: NotificationStore.history
-
-        // Rows are snapshots that never change, so a one-shot read is enough.
-        NotificationCard {
-          id: card
-
-          required property int index
-
-          readonly property var row: NotificationStore.history.get(index)
-
-          width: list.width
-          appName: row ? row.appName : ""
-          summary: row ? row.summary : ""
-          body: row ? row.body : ""
-          image: row ? row.image : ""
-          appIcon: row ? row.appIcon : ""
-          desktopEntry: row ? row.desktopEntry : ""
-          urgent: row ? row.urgent : false
-          onDismissed: NotificationStore.dismiss(card.index)
-        }
-      }
     }
+  }
+
+  // The list fades out at the bottom while there is more under it.
+  ScrollFade {
+    x: notifications.x
+    y: notifications.y + notifications.height - height
+    width: notifications.width
+    contentHeight: notifications.contentHeight
+    contentY: notifications.contentY
+    viewHeight: notifications.height
   }
 }

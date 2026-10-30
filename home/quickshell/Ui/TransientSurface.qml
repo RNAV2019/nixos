@@ -35,6 +35,14 @@ PanelWindow {
   // Whether the card takes the pointer while open. Off, the window is click-through throughout.
   property bool cardInput: true
 
+  // Whether the card takes the keyboard. Never by default; a card with a field in it asks to
+  // have it on demand, which is the compositor handing it focus when the field is clicked.
+  property int keyboardFocus: WlrKeyboardFocus.None
+
+  // The card swiped aside and faded, for a surface that can be dismissed by hand.
+  property real cardOffset: 0
+  property real cardOpacity: 1
+
   property bool open: false
   property alias origin: origin
   property alias surface: surface
@@ -224,8 +232,7 @@ PanelWindow {
 
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.namespace: win.layerNamespace
-  // A transient never takes the keyboard.
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: win.keyboardFocus
 
   anchors {
     top: true
@@ -318,7 +325,8 @@ PanelWindow {
       }
     }
 
-    x: snap((win.width - width) / 2 + origin.offsetX)
+    x: snap((win.width - width) / 2 + origin.offsetX + win.cardOffset)
+    opacity: win.cardOpacity
     y: snap(Theme.barMarginTop + origin.offsetY)
 
     clipContent: true
