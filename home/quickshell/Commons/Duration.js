@@ -1,7 +1,7 @@
 .pragma library
 
 // Durations as people type and read them, for the timer and the Pomodoro: "90s", "10m",
-// "1h30m", a bare "25" (minutes), "5:00" (m:ss) or "1:30:00" (h:mm:ss). All in milliseconds.
+// "1h30m", "1h30", a bare "25" (minutes), "5:00" (m:ss) or "1:30:00" (h:mm:ss). All in milliseconds.
 
 var UNIT = /^\s*(?:(\d+(?:\.\d+)?)\s*h(?:ours?|rs?)?)?\s*(?:(\d+(?:\.\d+)?)\s*m(?:in(?:ute)?s?)?)?\s*(?:(\d+(?:\.\d+)?)\s*s(?:ec(?:ond)?s?)?)?\s*$/i;
 
@@ -17,6 +17,10 @@ function parse(spec) {
     var secs = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
     return secs * 1000;
   }
+  // "1h30" is an hour and a half: what trails an hour with no unit is minutes.
+  var hm = /^(\d+)\s*h(?:ours?|rs?)?\s*(\d+)$/i.exec(text);
+  if (hm)
+    return (parseInt(hm[1], 10) * 3600 + parseInt(hm[2], 10) * 60) * 1000;
   var m = UNIT.exec(text);
   if (!m || (m[1] === undefined && m[2] === undefined && m[3] === undefined))
     return 0;
