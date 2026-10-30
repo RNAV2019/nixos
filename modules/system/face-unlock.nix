@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{...}: {
   # Face unlock for the Quickshell lock screen, and nothing else.
   #
   # Howdy's NixOS module defaults security.pam.howdy.enable to services.howdy.enable, and
@@ -41,7 +41,13 @@
     };
   };
 
-  # Finds and enables the IR emitter. Needs a one-off `sudo linux-enable-ir-emitter configure`
-  # (see README), so it is installed but its boot/resume service is not enabled.
-  environment.systemPackages = [pkgs.linux-enable-ir-emitter];
+  # Turns the IR emitter on at boot and after every resume, using the configuration that
+  # `sudo linux-enable-ir-emitter configure --no-gui` saves (see README). Until that has run
+  # once, the service only logs that the camera is unconfigured. The unit also owns
+  # /var/lib and /var/log/linux-enable-ir-emitter, where configure saves and logs.
+  services.linux-enable-ir-emitter = {
+    enable = true;
+    # The IR camera's capture node ("Integrated Camera: Integrated I"); video3 is its metadata.
+    device = "video2";
+  };
 }

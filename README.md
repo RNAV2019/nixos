@@ -208,14 +208,18 @@ conversation on its own service, `quickshell-face`. Howdy is on no other service
 Until a face is enrolled nothing happens: no scan, no ring, no error. To enrol, after a rebuild:
 
 ```bash
-sudo linux-enable-ir-emitter configure   # once; follow the prompts until the IR light flickers
-sudo howdy add                           # look at the IR camera; repeat in other light for better odds
-sudo howdy test                          # optional: shows what the camera sees
+sudo linux-enable-ir-emitter configure --no-gui   # once; answer the prompts by watching the IR light
+sudo howdy add                                    # look at the IR camera; repeat in other light for better odds
 ```
 
-`linux-enable-ir-emitter` is installed but its boot/resume service is not enabled. If the
-emitter turns off after suspend, set `services.linux-enable-ir-emitter.enable = true` (device
-`video2`) once it is configured.
+`--no-gui` matters: without it the tool opens an OpenCV preview window, which a root process
+can't put on the Wayland session, so it aborts at the first question. Answer "yes" only once the
+IR light visibly flickers (a phone camera shows it). `howdy test` opens the same kind of window
+and fails the same way under `sudo`.
+
+The emitter's service (`services.linux-enable-ir-emitter`, device `video2`) re-applies the saved
+configuration at boot and after every resume; until `configure` has run it only logs that the
+camera is unconfigured.
 
 The lock scans when it appears and again on wake from suspend. **Esc** on an empty field
 scans again, up to three misses per lock (a wake starts the count afresh). A face match
@@ -339,4 +343,4 @@ The full list is the cheatsheet (hold `Super`), or [`home/desktop.nix`](home/des
 | Three fingers, swipe left or right | Switch workspace, following the finger. Stays on the monitor's own workspaces, so workspace 5 remains the external monitor's |
 | Three fingers, swipe up | Toggle the Overview |
 
-Workspaces slide sideways to match the swipe, and special workspaces slide vertically. The swipe distance and feel are tuned under `gestures` in [`home/desktop.nix`](home/desktop.nix).
+Workspace switches are instant, with no slide; the swipe just switches. The swipe distance and feel are tuned under `gestures` in [`home/desktop.nix`](home/desktop.nix).

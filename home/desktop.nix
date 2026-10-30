@@ -506,49 +506,42 @@ in {
           speed = 1.39;
           bezier = "almostLinear";
         }
-        # Workspaces slide sideways, the way the swipe gesture drags them. In and Out
-        # share a speed so the pair stays in step; special workspaces slide up instead.
+        # Workspace switches are instant, by choice; a swipe still switches, it just doesn't slide.
         {
           leaf = "workspaces";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slide";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "workspacesIn";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slide";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "workspacesOut";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slide";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "specialWorkspace";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slidevert";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "specialWorkspaceIn";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slidevert";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "specialWorkspaceOut";
-          enabled = true;
-          speed = 4.79;
-          bezier = "easeOutQuint";
-          style = "slidevert";
+          enabled = false;
+          speed = 1;
+          bezier = "default";
         }
         {
           leaf = "zoomFactor";
