@@ -12,8 +12,14 @@ Singleton {
   id: root
 
   readonly property int defaultTimeout: 5000
-  readonly property int maxPopups: 3
+  // The toast in front and the ones queued behind it; each one past the front is a "+1".
+  readonly property int maxPopups: 6
   readonly property int maxHistory: 50
+
+  // Raised once for every notification that is announced, a toast on its way, never for one
+  // Peace holds back to the list. `urgent` is a critical one. The hook for anything that should
+  // sound when one arrives.
+  signal notified(bool urgent)
 
   // Peace mode. Toasts other than critical ones are suppressed, but everything still lands in the list.
   property bool peace: false
@@ -49,11 +55,15 @@ Singleton {
 
   readonly property var history: historyModel
 
+  // Counts every change to the list, so a view that groups it knows when to look again.
+  property int revision: 0
+
   property int _seq: 0
 
   function _snapshot(n) {
     return {
       key: ++root._seq,
+      arrived: Date.now(),
       appName: n.appName ? String(n.appName) : "Notification",
       summary: n.summary ? String(n.summary) : "",
       body: n.body ? String(n.body) : "",
@@ -131,12 +141,97 @@ Singleton {
   }
 
   function dismiss(index) {
-    if (index >= 0 && index < historyModel.count)
+    if (index >= 0 && index < historyModel.count) {
       historyModel.remove(index);
+      root.revision++;
+    }
+  }
+
+  // By the row's own key, which still names it after the list has shifted under a view.
+  function dismissKey(key) {
+    for (var i = 0; i < historyModel.count; i++) {
+      if (String(historyModel.get(i).key) === String(key)) {
+        root.dismiss(i);
+        return;
+      }
+    }
+  }
+
+  // Every row from one application.
+  function clearApp(appName) {
+    var removed = false;
+    for (var i = historyModel.count - 1; i >= 0; i--) {
+      if (historyModel.get(i).appName === appName) {
+        historyModel.remove(i);
+        removed = true;
+      }
+    }
+    if (removed)
+      root.revision++;
   }
 
   function clear() {
     historyModel.clear();
+    root.revision++;
+  }
+
+  // The list bucketed by application, as plain rows for a keyed list: the application whose
+  // notification came last first, each with its count and its newest entry's text.
+  function groupRows() {
+    var order = [];
+    var seen = {};
+    for (var i = 0; i < historyModel.count; i++) {
+      var n = historyModel.get(i);
+      if (!Object.prototype.hasOwnProperty.call(seen, n.appName)) {
+        seen[n.appName] = order.length;
+        order.push({
+          key: n.appName,
+          appName: n.appName,
+          count: 0,
+          summary: n.summary,
+          body: n.body,
+          image: n.image,
+          appIcon: n.appIcon,
+          desktopEntry: n.desktopEntry,
+          urgent: n.urgent,
+          arrived: n.arrived
+        });
+      }
+      order[seen[n.appName]].count++;
+    }
+    return order;
+  }
+
+  // One application's notifications, newest first, the same way.
+  function entryRows(appName) {
+    var rows = [];
+    for (var i = 0; i < historyModel.count; i++) {
+      var n = historyModel.get(i);
+      if (n.appName === appName)
+        rows.push({
+          key: String(n.key),
+          appName: n.appName,
+          summary: n.summary,
+          body: n.body,
+          image: n.image,
+          appIcon: n.appIcon,
+          desktopEntry: n.desktopEntry,
+          urgent: n.urgent,
+          arrived: n.arrived
+        });
+    }
+    return rows;
+  }
+
+  // "now", "5 min ago", "2 h ago" for a row's arrival; read `clock` to have it follow the minute.
+  function ago(arrived, clock) {
+    var mins = Math.floor((Date.now() - arrived) / 60000);
+    if (mins < 1)
+      return "now";
+    if (mins < 60)
+      return mins + " min ago";
+    var hours = Math.floor(mins / 60);
+    return hours < 24 ? hours + " h ago" : Math.floor(hours / 24) + " d ago";
   }
 
   NotificationServer {
@@ -147,17 +242,21 @@ Singleton {
     imageSupported: true
     bodySupported: true
     bodyMarkupSupported: true
+    // Advertised, so a chat app offers its reply box; the toast shows one for those that do.
+    inlineReplySupported: true
 
     onNotification: function (notification) {
       historyModel.insert(0, root._snapshot(notification));
       while (historyModel.count > root.maxHistory)
         historyModel.remove(historyModel.count - 1);
+      root.revision++;
 
       // Critical ones and the battery's own warnings (see Battery.qml) still break through peace.
       if (root.peace && notification.urgency !== NotificationUrgency.Critical && notification.appName !== "Battery")
         return;
 
       notification.tracked = true;
+      root.notified(notification.urgency === NotificationUrgency.Critical);
 
       // One toast per application: a second arrival replaces the first.
       var next = root.popups.slice();

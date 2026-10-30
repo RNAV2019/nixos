@@ -377,6 +377,67 @@ Singleton {
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
+  // Toasts waiting behind the card: back layers peeking under it, and a "+N" chip in the action row.
+  readonly property int notifQueueInset: 14
+  readonly property int notifQueuePeek: 8
+  readonly property int notifQueueLayers: 2
+  readonly property int notifChipWidth: 32
+  readonly property int notifChipHeight: 22
+  readonly property int notifChipSize: 11
+
+  // Swiping a card away: the share of its width that dismisses it, the share it fades over, and
+  // the fling speed (px/ms) that dismisses it from any distance.
+  readonly property real notifSwipeThreshold: 0.4
+  readonly property real notifSwipeFade: 0.6
+  readonly property real notifSwipeVelocity: 1.2
+  // How far past its own width a dismissed card travels.
+  readonly property int notifSwipeExit: 40
+
+  // The reply row that takes the action row's place for a sender that accepts replies.
+  readonly property int notifReplyHeight: 36
+  readonly property int notifReplyRadius: 18
+  readonly property int notifReplyGap: 10
+  readonly property real notifReplyFocusRing: 1.5
+  readonly property int notifReplyTextInset: 18
+
+  // The polkit authentication prompt: the island grown into a 420 px card. Everything sits on
+  // a 20 px inset, so the message, the details plate, the pill and the buttons share both edges.
+  readonly property int authWidth: 420
+  readonly property int authInset: 20
+  readonly property int authDisc: 40
+  readonly property int authGlyph: 18
+  readonly property int authAppSize: 11
+  readonly property int authTitleSize: 15
+  readonly property int authTextLeft: 72
+  readonly property int authMessageTop: 76
+  readonly property int authMessageSize: 13
+  readonly property int authMessageCodeSize: 12
+  readonly property int authMessageLeading: 18
+  readonly property int authMessageLines: 3
+  readonly property int authBlockGap: 12
+  readonly property int authDetailsHeight: 32
+  readonly property int authDetailsRadius: 12
+  readonly property int authDetailsRowHeight: 20
+  readonly property int authDetailsPad: 8
+  readonly property real authDetailsBorderAlpha: 0.7
+  readonly property int authDetailsChevron: 16
+  readonly property int authDetailsIdLeft: 54
+  readonly property int authDetailsLabelLeft: 32
+  readonly property int authDetailsValueLeft: 96
+  readonly property int authDetailsSize: 11
+  readonly property int authIdentityHeight: 28
+  readonly property int authPillGap: 12
+  readonly property int authActionTop: 16
+  readonly property int authActionHeight: 36
+  readonly property int authActionRadius: 18
+  readonly property int authActionGap: 10
+  readonly property int authCancelWidth: 80
+  readonly property int authAuthenticateWidth: 112
+  readonly property int authPadBottom: 20
+  readonly property int authCaptionSize: 11
+  readonly property int authCaptionHeight: 13
+  readonly property int authSpinnerRight: 40
+
   // The power menu: three tiles on one row. Lock acts on first press; the two that end the
   // session arm first, turning love and relabelling Confirm.
   readonly property int powerHeight: 112
@@ -589,10 +650,19 @@ Singleton {
   readonly property int controlNotifTextLeft: 52
   readonly property int controlNotifTitleSize: 14
   readonly property int controlNotifBodySize: 12
+  readonly property int controlNotifRowTitleSize: 13
   readonly property int controlPadBottom: 10
   // Past this the list scrolls rather than the panel growing further: about two cards, so the
   // panel tops out near 58% of a 1350 px screen rather than two-thirds.
   readonly property int controlNotifMaxHeight: 180
+  // Grouped by application the headers eat height, so the list takes more before it scrolls.
+  readonly property int controlNotifGroupedMaxHeight: 360
+  readonly property int controlNotifGroupHeader: 44
+  readonly property int controlNotifGroupCollapsed: 56
+  readonly property int controlNotifEntryHeight: 52
+  readonly property int controlNotifChipHeight: 18
+  readonly property int controlNotifSliver: 6
+  readonly property int controlNotifFade: 22
 
   // Sub-views. A 46 px pill on a 52 px pitch, under an 11 px section label.
   readonly property int controlRowHeight: 46

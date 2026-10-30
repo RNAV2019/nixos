@@ -194,6 +194,31 @@ To turn it off, either delete the model (`sudo howdy clear`), or remove
 </details>
 
 <details>
+<summary><b>Polkit prompts</b></summary>
+
+The shell is the session's polkit agent (`PolkitAgent` in
+[`Services/Polkit.qml`](home/quickshell/Services/Polkit.qml), `security.polkit.enable` in
+`modules/system/default.nix` only runs `polkitd`). Anything that asks for admin rights through
+polkit (`pkexec`, Nautilus' admin actions, fwupd, NetworkManager) grows an
+[authentication prompt](home/quickshell/Auth/AuthPrompt.qml) out of the island: who is asking,
+polkit's message, the action id (open it for the program and the account that will approve), your
+picture and name, and a password field. **Enter** authenticates, **Esc** cancels, **Tab** walks
+the plate, the buttons and, with several administrators, an account chooser. A wrong password
+shakes the pill and keeps "Sorry, that didn't work" up until the next keystroke. The prompt
+holds the keyboard exclusively, goes away on approval, Cancel, polkitd withdrawing the request or
+the session locking, and steps aside (then returns) when another panel takes the island.
+
+The Quickshell the flake pins hands over the action id, message and accounts but not polkit's
+`details` map, so the program is read back out of the message and the caller isn't shown.
+
+Rehearse every state without a real request: `qs ipc call authpreview ask pkexec` (also `plain`,
+`code`, `info`, `identities`, `long`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
+per session, so don't start a second shell to test it: `nix build .#checks.x86_64-linux.polkit-agent -L`
+runs the real agent against a real `polkitd` and PAM in a VM of its own.
+
+</details>
+
+<details>
 <summary><b>Backups</b></summary>
 
 Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
@@ -241,7 +266,17 @@ a GIF it has no palette banding.
 | `PrtSc` | Screenshot region | `Super + PrtSc` | Colour picker |
 | `Alt + PrtSc` | Screenshot output | `Super + Ctrl + PrtSc` | Screenshot all screens |
 | `Alt + S` | Screen tools | | |
+| `Super + Scroll` | Zoom the screen, 1× to 4× | `Super + 0` | Reset zoom |
 
 Every capture is saved to `~/Pictures/screenshots`, copied, and shown in a tray that grows out of the island: hover it for Annotate (satty), Copy, Send (Nearby) and Delete, or drag the picture out as a file. `Alt + S` opens the screen tools: region, window and screen grabs, text recognition (tesseract), QR decoding (zbar) and a colour picker with a history. In the tools, `R W S T Q C` pick a tool, `Enter` runs it and `Esc` closes.
 
 The full list is in [`home/desktop.nix`](home/desktop.nix).
+
+## Touchpad gestures
+
+| Gesture | Action |
+|---|---|
+| Three fingers, swipe left or right | Switch workspace, following the finger. Stays on the monitor's own workspaces, so workspace 5 remains the external monitor's |
+| Three fingers, swipe up | Toggle the Overview |
+
+Workspaces slide sideways to match the swipe, and special workspaces slide vertically. The swipe distance and feel are tuned under `gestures` in [`home/desktop.nix`](home/desktop.nix).

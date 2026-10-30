@@ -20,13 +20,23 @@ Singleton {
   readonly property string plus: "M5 12h14M12 5v14"
   readonly property string x: "M18 6L6 18M6 6l12 12"
   readonly property string check: "M20 6L9 17l-5-5"
+  // The notification reply row sends with the plane (a group's chevron is chevronDown, turned over).
+  readonly property string send: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zM21.854 2.147l-10.94 10.939"
   // The island's privacy marks, Lucide video and mic.
   readonly property string camera: "M16 13l5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5M4 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
   readonly property string microphone: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3"
 
+  // The polkit prompt's requester disc and details chevrons (Lucide lock, chevron-right/down).
+  readonly property string lock: "M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4"
+  readonly property string chevronRight: "M9 18l6-6-6-6"
+  readonly property string chevronDown: "M6 9l6 6 6-6"
+
   // The lock screen's glance row, transport and face scan.
   readonly property string battery: "M16 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM22 11v2M6 11v2M10 11v2"
   readonly property string batteryCharging: "M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1M11 7l-3 5h4l-3 5M22 11v2"
+  // The control centre's charge tile: Fast, and the limiting mode.
+  readonly property string zap: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+  readonly property string leaf: "M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10ZM2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"
   readonly property string skipBack: "M19 20L9 12l10-8v16zM5 19V5"
   readonly property string skipForward: "M5 4l10 8-10 8V4zM19 5v14"
   readonly property string pause: "M14 4h4v16h-4zM6 4h4v16H6z"
