@@ -502,27 +502,6 @@ in {
   # video's window. Fullscreen controls are unchanged.
   xdg.configFile."mpv/script-opts/osc.conf".text = "scalewindowed=1.4\n";
 
-  # The colours are included from the active theme; see theme.nix.
-  programs.fuzzel = {
-    enable = true;
-    settings = {
-      main = {
-        font = "JetBrainsMono Nerd Font:size=12";
-        width = 28;
-        lines = 8;
-        horizontal-pad = 14;
-        vertical-pad = 8;
-        inner-pad = 4;
-        placeholder = "Launch...";
-        icons-enabled = "no";
-      };
-      border = {
-        width = 1;
-        radius = 8;
-      };
-    };
-  };
-
   services.hypridle = {
     enable = true;
     settings = {
