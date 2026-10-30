@@ -4,7 +4,7 @@ interfaces phone-bridge and the phone card use, driven from outside, and logging
   mock-kdeconnectd CALLS_LOG        owns org.kde.kdeconnect until killed
   Control: org.mock.Control /control Apply(s json), ops:
     {"op": "device", "id", "name", "type", "reachable", "paired", "pairRequested", "links",
-     "verification", "battery": {"charge", "charging"} | null}
+     "verification", "addresses", "battery": {"charge", "charging"} | null}
     {"op": "remove", "id"}
     {"op": "notify", "dev", "id", "app", "title", "text", "dismissable", "silent"}
     {"op": "unnotify", "dev", "id"}

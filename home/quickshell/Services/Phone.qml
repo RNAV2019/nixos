@@ -34,24 +34,23 @@ Singleton {
   property var devices: []
 
   // The one shown last stays the phone while it is paired and reachable, so a second device
-  // appearing does not take the satellite from it.
-  property string _held: ""
+  // appearing does not take the satellite from it. Chosen when a picture arrives.
+  property var phone: null
 
-  readonly property var phone: {
+  function _pick(devices) {
+    var held = root.phone !== null ? root.phone.id : "";
     var pick = null;
-    for (var i = 0; i < root.devices.length; i++) {
-      var d = root.devices[i];
+    for (var i = 0; i < devices.length; i++) {
+      var d = devices[i];
       if (!d.paired || !d.reachable || (d.type !== "smartphone" && d.type !== "tablet"))
         continue;
-      if (d.id === root._held)
+      if (d.id === held)
         return d;
       if (pick === null || (pick.type === "tablet" && d.type === "smartphone"))
         pick = d;
     }
     return pick;
   }
-
-  onPhoneChanged: root._held = phone !== null ? phone.id : ""
 
   readonly property bool connected: phone !== null
   readonly property string deviceId: phone ? phone.id : ""
@@ -76,7 +75,9 @@ Singleton {
 
   function _apply(state) {
     root.daemon = state.daemon === true;
-    root.devices = state.devices || [];
+    var devices = state.devices || [];
+    root.phone = root._pick(devices);
+    root.devices = devices;
     var next = root.phone !== null ? root.phone.notifications : [];
     if (JSON.stringify(next) !== JSON.stringify(root.notifications))
       root.notifications = next;
