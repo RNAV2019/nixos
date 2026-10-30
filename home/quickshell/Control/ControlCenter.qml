@@ -57,7 +57,7 @@ Variants {
 
     onOpening: {
       view = "";
-      home.keyboardIndex = recorderOut && Bus.ownerOf("recorder") !== "" ? 6 : 0;
+      home.keyboardIndex = recorderOut && Bus.ownerOf("recorder") !== "" ? 7 : 0;
       recorderOut = false;
       // Nothing pushes a colour-temperature change, so ask now, while it is about to be seen.
       NightLight.refresh();
