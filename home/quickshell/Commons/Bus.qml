@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -64,7 +64,7 @@ Singleton {
   signal clockRefreshed
 
   // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
-  // "theme", "recorder", "calendar", "session", "profiles", "osd", "notify".
+  // "theme", "recorder", "calendar", "session", "profiles", "auth", "osd", "notify".
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 

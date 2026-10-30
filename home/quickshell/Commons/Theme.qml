@@ -400,6 +400,44 @@ Singleton {
   readonly property real notifReplyFocusRing: 1.5
   readonly property int notifReplyTextInset: 18
 
+  // The polkit authentication prompt: the island grown into a 420 px card. Everything sits on
+  // a 20 px inset, so the message, the details plate, the pill and the buttons share both edges.
+  readonly property int authWidth: 420
+  readonly property int authInset: 20
+  readonly property int authDisc: 40
+  readonly property int authGlyph: 18
+  readonly property int authAppSize: 11
+  readonly property int authTitleSize: 15
+  readonly property int authTextLeft: 72
+  readonly property int authMessageTop: 76
+  readonly property int authMessageSize: 13
+  readonly property int authMessageCodeSize: 12
+  readonly property int authMessageLeading: 18
+  readonly property int authMessageLines: 3
+  readonly property int authBlockGap: 12
+  readonly property int authDetailsHeight: 32
+  readonly property int authDetailsRadius: 12
+  readonly property int authDetailsRowHeight: 20
+  readonly property int authDetailsPad: 8
+  readonly property real authDetailsBorderAlpha: 0.7
+  readonly property int authDetailsChevron: 16
+  readonly property int authDetailsIdLeft: 54
+  readonly property int authDetailsLabelLeft: 32
+  readonly property int authDetailsValueLeft: 96
+  readonly property int authDetailsSize: 11
+  readonly property int authIdentityHeight: 28
+  readonly property int authPillGap: 12
+  readonly property int authActionTop: 16
+  readonly property int authActionHeight: 36
+  readonly property int authActionRadius: 18
+  readonly property int authActionGap: 10
+  readonly property int authCancelWidth: 80
+  readonly property int authAuthenticateWidth: 112
+  readonly property int authPadBottom: 20
+  readonly property int authCaptionSize: 11
+  readonly property int authCaptionHeight: 13
+  readonly property int authSpinnerRight: 40
+
   // The power menu: three tiles on one row. Lock acts on first press; the two that end the
   // session arm first, turning love and relabelling Confirm.
   readonly property int powerHeight: 112

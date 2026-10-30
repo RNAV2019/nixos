@@ -8,6 +8,9 @@ import Quickshell.Hyprland
 Singleton {
   id: root
 
+  // The focused output's name, or empty when Hyprland names none.
+  readonly property string focusedName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+
   function isFocused(screen) {
     return screen !== null && Hyprland.focusedMonitor !== null && Hyprland.focusedMonitor.name === screen.name;
   }
