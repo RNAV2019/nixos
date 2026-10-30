@@ -18,29 +18,61 @@ ControlSubView {
     return /^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/.test(name);
   }
 
-  readonly property var connected: {
-    if (!active || !adapter)
-      return [];
-    return Util.filterDevices(adapter.devices.values, function (d) {
-      return d.connected;
-    });
+  // One flat list, so a device that pairs or connects glides to its new section instead of
+  // being rebuilt in another list: the section headings are rows too. Keyed by address.
+  readonly property var snapshot: {
+    var entries = [];
+    var byKey = {};
+    if (active && adapter) {
+      var connected = [];
+      var paired = [];
+      var discovered = [];
+      var known = adapter.devices.values;
+      for (var i = 0; i < known.length; i++) {
+        var d = known[i];
+        if (d.connected)
+          connected.push(d);
+        else if (d.paired)
+          paired.push(d);
+        else if (d.name && !isMacName(d.name))
+          discovered.push(d);
+      }
+      var add = function (section, title, note, group) {
+        if (title !== "")
+          entries.push(entryFor("~" + section, "header", section, title, note, null));
+        for (var j = 0; j < group.length; j++) {
+          byKey[group[j].address] = group[j];
+          entries.push(entryFor(group[j].address, "device", section, "", "", group[j]));
+        }
+      };
+      if (connected.length > 0)
+        add("connected", "Connected", "", connected);
+      if (paired.length > 0)
+        add("paired", "Paired", "", paired);
+      add("available", adapter.enabled ? "Available" : "", discovered.length === 0 ? "Scanning…" : "", discovered);
+    }
+    return {
+      "entries": entries,
+      "byKey": byKey
+    };
   }
 
-  readonly property var paired: {
-    if (!active || !adapter)
-      return [];
-    return Util.filterDevices(adapter.devices.values, function (d) {
-      return d.paired && !d.connected;
-    });
+  function entryFor(key, kind, section, title, note, device) {
+    return {
+      "key": key,
+      "kind": kind,
+      "section": section,
+      "title": title,
+      "note": note,
+      "name": device ? device.name : "",
+      "glyph": device ? glyphFor(device) : "",
+      "sub": device ? stateOf(device) : "",
+      "pairing": device ? device.pairing : false
+    };
   }
 
-  readonly property var discovered: {
-    if (!active || !adapter)
-      return [];
-    return Util.filterDevices(adapter.devices.values, function (d) {
-      return !d.paired && d.name && !root.isMacName(d.name);
-    });
-  }
+  onSnapshotChanged: devices.sync(snapshot.entries, snapshot.byKey)
+  Component.onCompleted: devices.sync(snapshot.entries, snapshot.byKey)
 
   onActiveChanged: {
     if (adapter)
@@ -128,101 +160,85 @@ ControlSubView {
     topPadding: 10
   }
 
-  SectionLabel {
+  KeyedList {
+    id: devices
+
     width: parent.width
-    visible: root.connected.length > 0
-    title: "Connected"
-  }
+    animated: root.active
 
-  Repeater {
-    model: root.connected
+    delegate: Item {
+      id: slot
 
-    DeviceRow {
-      id: connectedRow
+      required property string key
+      required property string kind
+      required property string section
+      required property string title
+      required property string note
+      required property string name
+      required property string glyph
+      required property string sub
+      required property bool pairing
 
-      required property var modelData
+      readonly property bool isHeader: kind === "header"
+      readonly property bool isConnected: section === "connected"
+      readonly property bool isPaired: section === "paired"
 
-      width: parent.width
-      glyph: root.glyphFor(modelData)
-      label: modelData.name
-      sublabel: root.stateOf(modelData)
-      selected: true
-      onClicked: modelData.disconnect()
+      width: devices.width
+      height: isHeader ? Theme.controlSectionHeight : Theme.controlRowHeight
 
-      PillButton {
-        label: "Disconnect"
-        onAccent: true
-        onClicked: connectedRow.modelData.disconnect()
+      function activate() {
+        var device = devices.objectFor(key);
+        if (!device)
+          return;
+        if (isConnected)
+          device.disconnect();
+        else if (isPaired)
+          device.connect();
+        else if (pairing)
+          device.cancelPair();
+        else
+          device.pair();
       }
 
-      PillButton {
-        label: "Forget"
-        onAccent: true
-        onClicked: connectedRow.modelData.forget()
-      }
-    }
-  }
-
-  SectionLabel {
-    width: parent.width
-    visible: root.paired.length > 0
-    title: "Paired"
-  }
-
-  Repeater {
-    model: root.paired
-
-    DeviceRow {
-      id: pairedRow
-
-      required property var modelData
-
-      width: parent.width
-      glyph: root.glyphFor(modelData)
-      label: modelData.name
-      sublabel: root.stateOf(modelData)
-      onClicked: modelData.connect()
-
-      PillButton {
-        label: "Connect"
-        onClicked: pairedRow.modelData.connect()
+      SectionLabel {
+        anchors.fill: parent
+        visible: slot.isHeader
+        title: slot.title
+        note: slot.note
       }
 
-      PillButton {
-        id: forget
+      DeviceRow {
+        id: deviceRow
 
-        label: "Forget"
-        destructive: true
-        // Revealed by the row, then held by itself; see PillButton.revealed.
-        revealed: pairedRow.hovered || forget.hovered
-        onClicked: pairedRow.modelData.forget()
-      }
-    }
-  }
+        anchors.fill: parent
+        visible: !slot.isHeader
+        glyph: slot.glyph
+        label: slot.name
+        sublabel: slot.sub
+        selected: slot.isConnected
+        onClicked: slot.activate()
 
-  SectionLabel {
-    width: parent.width
-    visible: root.adapter !== null && root.adapter.enabled
-    title: "Available"
-    note: root.discovered.length === 0 ? "Scanning…" : ""
-  }
+        PillButton {
+          label: slot.isConnected ? "Disconnect" : slot.isPaired ? "Connect" : slot.pairing ? "Cancel" : "Pair"
+          onAccent: slot.isConnected
+          onClicked: slot.activate()
+        }
 
-  Repeater {
-    model: root.discovered
+        PillButton {
+          id: forget
 
-    DeviceRow {
-      id: newRow
-
-      required property var modelData
-
-      width: parent.width
-      glyph: root.glyphFor(modelData)
-      label: modelData.name
-      onClicked: modelData.pairing ? modelData.cancelPair() : modelData.pair()
-
-      PillButton {
-        label: newRow.modelData.pairing ? "Cancel" : "Pair"
-        onClicked: newRow.modelData.pairing ? newRow.modelData.cancelPair() : newRow.modelData.pair()
+          visible: slot.isConnected || slot.isPaired
+          label: "Forget"
+          onAccent: slot.isConnected
+          destructive: slot.isPaired
+          // A paired row's is revealed by the row, then held by itself; see PillButton.revealed.
+          revealed: slot.isConnected || deviceRow.hovered || forget.hovered
+          onClicked: {
+            var device = devices.objectFor(slot.key);
+            if (device)
+              device.forget();
+          }
+        }
       }
     }
   }
