@@ -12,6 +12,10 @@ final: prev: {
   quickshell-emoji = final.callPackage ./quickshell-emoji {};
   # Offline dictation: nixpkgs' build, given its typing tools.
   handy = final.callPackage ./handy {inherit (prev) handy;};
+  # The screen-share portal, telling the share picker which app is asking.
+  xdg-desktop-portal-hyprland = final.callPackage ./xdg-desktop-portal-hyprland {inherit (prev) xdg-desktop-portal-hyprland;};
+  # The picker xdph runs: the shell's surface, or the stock one without it.
+  share-picker = final.callPackage ./share-picker {};
 
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};

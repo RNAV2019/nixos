@@ -43,4 +43,14 @@ DTSTAMP:20260901T000000Z
 UID:messy@google.com
 SUMMARY:Lunch\nwith	tabs
 END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260917T140000Z
+DTEND:20260917T150000Z
+DTSTAMP:20260901T000000Z
+UID:meeting@google.com
+SUMMARY:Design review
+LOCATION:Room 2.04
+DESCRIPTION:Agenda\nJoin: https://meet.example.com/abc-defg-hij
+URL:https://zoom.example.com/j/123456789
+END:VEVENT
 END:VCALENDAR

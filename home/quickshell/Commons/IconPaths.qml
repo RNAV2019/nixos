@@ -20,6 +20,8 @@ Singleton {
   readonly property string plus: "M5 12h14M12 5v14"
   readonly property string x: "M18 6L6 18M6 6l12 12"
   readonly property string check: "M20 6L9 17l-5-5"
+  // The share picker's Share button, Lucide screen-share (its sources are the tools' monitor, app-window and crop).
+  readonly property string screenShare: "M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3M8 21h8M12 17v4M17 8l5-5M17 3h5v5"
   // The notification reply row sends with the plane (a group's chevron is chevronDown, turned over).
   readonly property string send: "M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zM21.854 2.147l-10.94 10.939"
   // The island's privacy marks, Lucide video and mic.
@@ -107,4 +109,9 @@ Singleton {
   readonly property string terminal: "M12 19h8M4 17l6-6-6-6"
   readonly property string folderOpen: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
   readonly property string loaderCircle: "M21 12a9 9 0 1 1-6.219-8.56"
+  // Lucide, for the event card and moments, the sign-in moment and the launcher's timer rows.
+  readonly property string calendarClock: "M16 14v2.2l1.6 1M16 2v4M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5M3 10h5M8 2v4M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0z"
+  readonly property string mapPin: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+  readonly property string wifi: "M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"
+  readonly property string repeat: "M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"
 }

@@ -39,6 +39,11 @@ Variants {
     openHeight: win.shown ? win.shown.height : Theme.momentHeight
     openRadius: win.shown ? win.shown.radius : Theme.momentRadius
 
+    // Swiped aside to dismiss, for the ones that stay until answered (a sign-in page, a reminder
+    // with nothing to press); a moment with buttons can be swiped too.
+    cardOffset: swipe.offset
+    cardOpacity: swipe.fade
+
     // What is drawn: `shown` once the island is showing it. A second moment arriving while one
     // is up crossfades, the shape springing to its size meanwhile.
     property var drawn: null
@@ -118,6 +123,20 @@ Variants {
 
       HoverHandler {
         id: hover
+      }
+
+      // First, under the buttons: it only watches for a drag.
+      SwipeDismiss {
+        id: swipe
+
+        anchors.fill: parent
+        span: stage.width
+        enabled: win.open && win.drawn !== null
+
+        onCommitted: if (win.drawn !== null)
+          Activities.dismissMoment(win.drawn.id)
+
+        onGone: swipe.reset()
       }
 
       Loader {

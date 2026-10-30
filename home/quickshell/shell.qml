@@ -20,6 +20,7 @@ import qs.Power
 import qs.Recorder
 import qs.Services
 import qs.Session
+import qs.SharePicker
 import qs.Theme
 import qs.Wallpaper
 
@@ -52,6 +53,7 @@ ShellRoot {
   RecorderPicker {}
   ScreenToolsPanel {}
   SessionMenu {}
+  SharePickerPanel {}
   WallpaperPicker {}
   ThemePicker {}
   Lock {
@@ -59,12 +61,12 @@ ShellRoot {
   }
   LockPreview {}
 
-  // The island surfaces with the same toggle/close pair; the recorder, theme, session, nearby
-  // and screen tools targets stay handwritten below, since they differ, the cheatsheet is
+  // The island surfaces with the same toggle/close pair; the recorder, theme, session, nearby,
+  // screen tools and share picker targets stay handwritten below, since they differ, the cheatsheet is
   // shown by holding Super, and the auth prompt takes no toggle: polkitd opens it, and only
   // an answer closes it.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "screentools" && k !== "auth" && k !== "cheatsheet")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "screentools" && k !== "auth" && k !== "cheatsheet" && k !== "sharepicker")
 
     IpcHandler {
       required property string modelData
@@ -233,6 +235,24 @@ ShellRoot {
     }
   }
 
+  // The screen-share picker is asked by pkgs/share-picker, which xdph runs for a request, not
+  // toggled. `ask` returns at once; the answer goes back through the FIFO it names.
+  IpcHandler {
+    target: "sharepicker"
+
+    function ask(fifo: string, request: string): string {
+      return SharePicker.ask(fifo, request);
+    }
+
+    function pending(fifo: string): bool {
+      return SharePicker.pending(fifo);
+    }
+
+    function cancel(fifo: string): void {
+      SharePicker.cancel(fifo);
+    }
+  }
+
   // Route the keys through here so the OSD flashes on every press, not just on changes.
   IpcHandler {
     target: "brightness"
@@ -364,6 +384,13 @@ ShellRoot {
     // The charger as a state change the watcher sees for itself: 1 in, 0 out, -1 the real battery.
     function charger(state: int): void {
       activitySources.plugged.fake = state;
+    }
+
+    // NetworkManager's connectivity verdict as the sign-in watcher sees it: "portal", "limited",
+    // "none" or "full"; "" goes back to the real one. `network` is the SSID the moment names.
+    function wifi(state: string, network: string): void {
+      activitySources.wifi.fakeNetwork = network;
+      activitySources.wifi.fake = state;
     }
 
     // A moment with a title, for looking at how they queue.
