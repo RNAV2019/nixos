@@ -1,5 +1,9 @@
 # Packages built in this repo; see pkgs/default.nix.
-{pkgs, ...}: {
+{
+  pkgs,
+  repoDir,
+  ...
+}: {
   home.packages = with pkgs; [
     # nixpkgs is at 5.1 now; the old pin was dropped for binary-cache hits.
     ani-cli
@@ -7,7 +11,11 @@
     start-desktop
     gen-commit
     ical-agenda
+    phone-bridge
     forward-dev
     t3code
+    # Replaces the `rebuild` alias: nom, the diff, and progress on the island.
+    (rebuild.override {inherit repoDir;})
+    island-usb
   ];
 }

@@ -23,6 +23,8 @@ COLUMNS = [
     "title",
     "calendar",
     "location",
+    "description",
+    "url",
 ]
 
 # On-disk feed cache lifetime; --refresh bypasses it.
@@ -142,6 +144,13 @@ def local(moment):
     return moment.astimezone()
 
 
+def meeting_url(component):
+    """The event's own link: its URL, else the conference Google attaches."""
+    return one_line(
+        component.get("URL") or component.get("X-GOOGLE-CONFERENCE")
+    )
+
+
 def render(component, name):
     start = component.get("DTSTART").dt
     end_field = component.get("DTEND")
@@ -168,6 +177,8 @@ def render(component, name):
         "title": one_line(component.get("SUMMARY")),
         "calendar": name,
         "location": one_line(component.get("LOCATION")),
+        "description": one_line(component.get("DESCRIPTION")),
+        "url": meeting_url(component),
     }
 
 

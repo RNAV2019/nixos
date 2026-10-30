@@ -19,6 +19,7 @@ in {
     ./secrets.nix
     ./wifi.nix
     ./backups.nix
+    ./face-unlock.nix
   ];
 
   time.timeZone = "Europe/London";
@@ -59,6 +60,13 @@ in {
   # known networks on. "wpa_supplicant" restores the old stack unchanged; wifi.nix
   # writes iwd's network files only while this is "iwd".
   networking.networkmanager.wifi.backend = "iwd";
+  # Without a probe NetworkManager never reports "portal", so the shell could not offer the
+  # sign-in page on a hotel or campus network that redirects every request to a login.
+  networking.networkmanager.settings.connectivity = {
+    uri = "http://nmcheck.gnome.org/check_network_status.txt";
+    response = "NetworkManager is online";
+    interval = 300;
+  };
 
   # LocalSend (discovery + transfer on port 53317)
   networking.firewall.allowedTCPPorts = [53317];
@@ -122,6 +130,13 @@ in {
   ];
 
   programs.uwsm.enable = true;
+
+  # The phone on the island (Services/Phone.qml). The daemon starts with the session through the
+  # package's XDG autostart entry and its D-Bus service file; it has no tray icon of its own
+  # (kdeconnect-indicator is a separate program nothing starts). The module opens TCP and UDP
+  # 1714-1764 and loads uinput. Phone notifications arrive as ordinary desktop notifications,
+  # which the shell turns into toasts.
+  programs.kdeconnect.enable = true;
 
   # Quickshell locks the autologin session before desktop helpers start.
   services.greetd = {
@@ -200,7 +215,8 @@ in {
     };
   };
 
-  # Wayland privilege prompts.
+  # Wayland privilege prompts. This only runs polkitd; the agent that asks for the password is
+  # the Quickshell shell (home/quickshell/Services/Polkit.qml), so nothing else may start one.
   security.polkit.enable = true;
 
   # GTK/libadwaita color-scheme support.

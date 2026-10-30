@@ -32,6 +32,16 @@
     '';
   };
 
+  # Tells the Quickshell island when an interactive session needs the user (pkgs/claude-island).
+  # It acts only for `claude` run by hand in a terminal, does nothing without the shell, and
+  # always exits 0, so a hook can never hold a session up.
+  islandHook = {
+    type = "command";
+    command = "${lib.getExe pkgs.claude-island} hook";
+    timeout = 3;
+  };
+  onEvent = matcher: [({hooks = [islandHook];} // lib.optionalAttrs (matcher != null) {inherit matcher;})];
+
   settings = {
     model = "opus";
     theme = "dark";
@@ -42,6 +52,20 @@
     skipDangerousModePermissionPrompt = true;
 
     env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = "96000";
+
+    hooks = {
+      # The window the user types the prompt in is the session's terminal.
+      SessionStart = onEvent null;
+      UserPromptSubmit = onEvent null;
+      SessionEnd = onEvent null;
+      # A permission prompt as it opens (the Notification for it comes a few seconds later,
+      # and carries no command), a question to answer, and the end of a turn.
+      PermissionRequest = onEvent null;
+      Notification = onEvent "permission_prompt|elicitation_dialog";
+      Stop = onEvent null;
+      # The prompt was answered; the hook returns at once unless one was open.
+      PostToolUse = onEvent null;
+    };
 
     statusLine = {
       type = "command";
@@ -65,7 +89,7 @@
 
   settingsFile = (pkgs.formats.json {}).generate "claude-settings.json" settings;
 in {
-  home.packages = [pkgs.claude-statusline pkgs.claude-usage];
+  home.packages = [pkgs.claude-statusline pkgs.claude-usage pkgs.claude-island];
 
   # A writable copy, since Claude Code edits settings.json itself; rebuilds reset it.
   home.activation.claudeSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''

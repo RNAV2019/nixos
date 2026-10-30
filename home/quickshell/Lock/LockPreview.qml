@@ -18,6 +18,12 @@ Scope {
   property bool capsLock: false
   // Sticky, like the real flow: the pill stays up until the preview is taken down.
   property bool inputStarted: false
+  // Face state and the widgets, as the preview pretends them.
+  property string faceState: "idle"
+  property bool forceBattery: false
+  property real forceLevel: 0.82
+  property bool forceCharging: false
+  property bool forcePaused: false
 
   LockReveal {
     id: reveal
@@ -56,6 +62,11 @@ Scope {
         busy: root.busy
         forceCapsLock: root.capsLock
         inputStarted: root.inputStarted
+        faceState: root.faceState
+        forceBattery: root.forceBattery
+        forceLevel: root.forceLevel
+        forceCharging: root.forceCharging
+        forcePaused: root.forcePaused
         ground: reveal.ground
         clockAlpha: reveal.clockAlpha
         loginAlpha: reveal.loginAlpha
@@ -76,6 +87,10 @@ Scope {
       busy = false;
       capsLock = false;
       inputStarted = false;
+      faceState = "idle";
+      forceBattery = false;
+      forceCharging = false;
+      forcePaused = false;
     }
   }
 
@@ -128,6 +143,22 @@ Scope {
 
     function caps(on: bool): void {
       root.capsLock = on;
+    }
+
+    // idle, scanning, recognised or missed.
+    function face(state: string): void {
+      root.faceState = state;
+    }
+
+    // A battery for a machine without one; level is 0 to 100.
+    function battery(on: bool, level: int, charging: bool): void {
+      root.forceBattery = on;
+      root.forceLevel = level / 100;
+      root.forceCharging = charging;
+    }
+
+    function paused(on: bool): void {
+      root.forcePaused = on;
     }
   }
 }

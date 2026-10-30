@@ -176,6 +176,20 @@ Singleton {
 
   readonly property int barHeight: 36
   readonly property int barMarginTop: 8
+
+  // OLED burn-in care (Services/OledCare.qml). The island pill and the workspaces pill never
+  // move, so on the OLED panel they would print into it: every few minutes each takes the next
+  // step of a slow orbit, and when nobody is about they fade to a low glow.
+  readonly property int oledShiftInterval: 180000
+  // Furthest a pill strays from its nominal spot on either axis, in logical px. The bar window
+  // reaches this much above and below its pills so the offset never clips.
+  readonly property int oledShiftMax: 2
+  // A step is crossed this slowly so it is never seen to move.
+  readonly property int oledShiftTravel: 12000
+  readonly property int oledIdleDelay: 180000
+  readonly property real oledDimOpacity: 0.35
+  readonly property int oledDimDuration: 1500
+  readonly property int oledRestoreDuration: 150
   readonly property int panelSideMargin: 24
 
   function panelWidth(screen, desired) {
@@ -363,6 +377,67 @@ Singleton {
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
+  // Toasts waiting behind the card: back layers peeking under it, and a "+N" chip in the action row.
+  readonly property int notifQueueInset: 14
+  readonly property int notifQueuePeek: 8
+  readonly property int notifQueueLayers: 2
+  readonly property int notifChipWidth: 32
+  readonly property int notifChipHeight: 22
+  readonly property int notifChipSize: 11
+
+  // Swiping a card away: the share of its width that dismisses it, the share it fades over, and
+  // the fling speed (px/ms) that dismisses it from any distance.
+  readonly property real notifSwipeThreshold: 0.4
+  readonly property real notifSwipeFade: 0.6
+  readonly property real notifSwipeVelocity: 1.2
+  // How far past its own width a dismissed card travels.
+  readonly property int notifSwipeExit: 40
+
+  // The reply row that takes the action row's place for a sender that accepts replies.
+  readonly property int notifReplyHeight: 36
+  readonly property int notifReplyRadius: 18
+  readonly property int notifReplyGap: 10
+  readonly property real notifReplyFocusRing: 1.5
+  readonly property int notifReplyTextInset: 18
+
+  // The polkit authentication prompt: the island grown into a 420 px card. Everything sits on
+  // a 20 px inset, so the message, the details plate, the pill and the buttons share both edges.
+  readonly property int authWidth: 420
+  readonly property int authInset: 20
+  readonly property int authDisc: 40
+  readonly property int authGlyph: 18
+  readonly property int authAppSize: 11
+  readonly property int authTitleSize: 15
+  readonly property int authTextLeft: 72
+  readonly property int authMessageTop: 76
+  readonly property int authMessageSize: 13
+  readonly property int authMessageCodeSize: 12
+  readonly property int authMessageLeading: 18
+  readonly property int authMessageLines: 3
+  readonly property int authBlockGap: 12
+  readonly property int authDetailsHeight: 32
+  readonly property int authDetailsRadius: 12
+  readonly property int authDetailsRowHeight: 20
+  readonly property int authDetailsPad: 8
+  readonly property real authDetailsBorderAlpha: 0.7
+  readonly property int authDetailsChevron: 16
+  readonly property int authDetailsIdLeft: 54
+  readonly property int authDetailsLabelLeft: 32
+  readonly property int authDetailsValueLeft: 96
+  readonly property int authDetailsSize: 11
+  readonly property int authIdentityHeight: 28
+  readonly property int authPillGap: 12
+  readonly property int authActionTop: 16
+  readonly property int authActionHeight: 36
+  readonly property int authActionRadius: 18
+  readonly property int authActionGap: 10
+  readonly property int authCancelWidth: 80
+  readonly property int authAuthenticateWidth: 112
+  readonly property int authPadBottom: 20
+  readonly property int authCaptionSize: 11
+  readonly property int authCaptionHeight: 13
+  readonly property int authSpinnerRight: 40
+
   // The power menu: three tiles on one row. Lock acts on first press; the two that end the
   // session arm first, turning love and relabelling Confirm.
   readonly property int powerHeight: 112
@@ -379,6 +454,86 @@ Singleton {
   readonly property int powerLabelSize: 12
   readonly property real powerTileFillAlpha: 0.9
   readonly property real powerTileBorderAlpha: 0.7
+
+  // The screenshot tray: a thumbnail card that grows out of the island after a capture. The
+  // card is 308 wide; a stack of captures is 16 taller, for the layers peeking out below.
+  readonly property int trayWidth: 308
+  readonly property int trayInset: 12
+  readonly property int trayThumbWidth: 284
+  readonly property int trayThumbHeight: 160
+  readonly property int trayThumbRadius: 14
+  readonly property int trayMetaGap: 10
+  readonly property int trayMetaHeight: 52
+  readonly property int trayHeight: trayInset + trayThumbHeight + trayMetaGap + trayMetaHeight + trayInset
+  readonly property int trayStackInset: 10
+  readonly property int trayStackPeek: 8
+  readonly property int trayStackHeight: trayHeight + trayStackPeek * 2
+  readonly property int trayTile: 28
+  readonly property int trayTileRadius: 8
+  readonly property int trayTileGlyph: 15
+  readonly property int trayTitleSize: 13
+  readonly property int trayDescSize: 11
+  readonly property int trayTagHeight: 22
+  readonly property int trayTagSize: 10
+  readonly property int trayActionWidth: 65
+  readonly property int trayActionHeight: 52
+  readonly property int trayActionGap: 8
+  readonly property int trayActionRadius: 14
+  readonly property int trayActionGlyph: 18
+  readonly property int trayActionLabelSize: 11
+  readonly property int trayChipHeight: 22
+  readonly property int trayBadge: 22
+  readonly property int trayDismiss: 22
+  readonly property int trayClearWidth: 48
+  // Counted down in 100 ms steps, like a toast, so hovering holds it in place.
+  readonly property int trayDwell: 6000
+  // Above a toast, which waits behind a capture just taken; below the OSD and requests.
+  readonly property real trayRank: 1.5
+
+  // Screen tools: the tool row is the power menu's tile grid with a key cap on each tile; the
+  // results are 420 px cards sharing one header.
+  readonly property int toolsKeyCap: 16
+  readonly property int toolsKeyCapRadius: 5
+  readonly property int toolsKeyCapSize: 10
+  readonly property int toolsKeyCapInset: 8
+  readonly property int resultWidth: 420
+  readonly property int resultInset: 14
+  readonly property int resultTile: 32
+  readonly property int resultTileRadius: 10
+  readonly property int resultTileGlyph: 16
+  readonly property int resultTitleSize: 14
+  readonly property int resultDescSize: 11
+  readonly property int resultHeaderHeight: 60
+  readonly property int resultBlockTop: 64
+  readonly property int resultBlockRadius: 14
+  readonly property int resultBlockPad: 12
+  readonly property int resultActionGap: 12
+  readonly property int resultDwell: 8000
+  readonly property int resultPillHeight: 22
+  readonly property int resultPillPad: 11
+  readonly property int resultPillSize: 11
+  readonly property int resultTextLines: 4
+  readonly property int resultTextLinesMax: 5
+  readonly property int resultTextLeading: 18
+  readonly property int resultQrLines: 3
+  readonly property real resultQrSize: 12.5
+  readonly property int colourWidth: 520
+  readonly property int colourSwatch: 177
+  readonly property int colourSwatchRadius: 16
+  readonly property int colourRowsX: 205
+  readonly property int colourRowWidth: 301
+  readonly property int colourLabelLeft: 27
+  readonly property int colourValueLeft: 84
+  readonly property int colourCopyGlyph: 14
+  readonly property int colourDividerTop: 205
+  readonly property int colourRecentTop: 215
+  readonly property int colourHistoryTop: 234
+  readonly property int colourHistoryCount: 10
+  readonly property int colourHistoryWidth: 42
+  readonly property int colourHistoryHeight: 28
+  readonly property int colourHistoryRadius: 9
+  readonly property int colourHistoryGap: 8
+  readonly property int colourHeight: colourHistoryTop + colourHistoryHeight + resultInset
 
   // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
   // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
@@ -495,10 +650,19 @@ Singleton {
   readonly property int controlNotifTextLeft: 52
   readonly property int controlNotifTitleSize: 14
   readonly property int controlNotifBodySize: 12
+  readonly property int controlNotifRowTitleSize: 13
   readonly property int controlPadBottom: 10
   // Past this the list scrolls rather than the panel growing further: about two cards, so the
   // panel tops out near 58% of a 1350 px screen rather than two-thirds.
   readonly property int controlNotifMaxHeight: 180
+  // Grouped by application the headers eat height, so the list takes more before it scrolls.
+  readonly property int controlNotifGroupedMaxHeight: 360
+  readonly property int controlNotifGroupHeader: 44
+  readonly property int controlNotifGroupCollapsed: 56
+  readonly property int controlNotifEntryHeight: 52
+  readonly property int controlNotifChipHeight: 18
+  readonly property int controlNotifSliver: 6
+  readonly property int controlNotifFade: 22
 
   // Sub-views. A 46 px pill on a 52 px pitch, under an 11 px section label.
   readonly property int controlRowHeight: 46
@@ -581,6 +745,44 @@ Singleton {
   readonly property int themeSwatchPad: 7
   readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
+  // The screen-share picker: the wallpaper picker's card and carousel, with a request header,
+  // a three-way track and a footer. The row is the wallpaper picker's, at its own tile widths.
+  readonly property int shareWidth: wallpaperWidth
+  readonly property int shareHeight: 320
+  readonly property int shareRadius: panelRadius
+  readonly property int shareInset: 24
+  readonly property int shareAvatarRadius: 12
+  readonly property int shareTitleLeft: 78
+  readonly property int shareTitleTop: 22
+  readonly property int shareSubTop: 46
+  readonly property int shareSubSize: 12
+  readonly property int shareTrackWidth: 312
+  readonly property int shareTrackTop: 26
+  readonly property var shareTileWidths: [256, 224]
+  readonly property int shareRowMid: 160
+
+  // The caption laid on a thumbnail: an opaque pill, so a live frame never costs it contrast.
+  readonly property int sharePlateHeight: 22
+  readonly property int sharePlateInset: 8
+  readonly property int sharePlatePad: 10
+  readonly property int sharePlateDot: 8
+  readonly property int sharePlateGap: 6
+  readonly property int sharePlateSize: 11
+
+  // Captured at this rate, and only for a tile inside the card.
+  readonly property int shareCaptureInterval: 200
+
+  readonly property int shareFooterTop: 256
+  readonly property int shareFooterHeight: 40
+  readonly property int shareLabelGap: 12
+  readonly property int shareLabelSize: 12
+  readonly property int shareButtonHeight: 40
+  readonly property int shareButtonPad: 22
+  readonly property int shareButtonSize: 13
+  readonly property int shareButtonGlyph: 14
+  readonly property int shareButtonGlyphGap: 8
+  readonly property int shareButtonGap: 10
+
   // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel,
   // so ChoiceTiles draws it from the power tokens; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
@@ -613,6 +815,82 @@ Singleton {
   readonly property real privacyGlyphStroke: 1.75
   readonly property color cameraMark: foam
   readonly property color microphoneMark: gold
+
+  // Live activities (Services/Activities.qml): satellites beside the shut pill, the hover cards
+  // that hang under them and the moments that grow out of the pill. A satellite is a pill-high
+  // circle; its ring is drawn on a centreline satelliteRingInset in from the edge.
+  readonly property int satelliteSize: barHeight
+  readonly property int satelliteGap: 8
+  readonly property real satelliteRingInset: 2.5
+  readonly property real satelliteRingWidth: 2
+  readonly property int satelliteGlyphSize: privacyGlyphSize
+  readonly property real satelliteOpenRing: 1.5
+  readonly property real satelliteTextSize: 10.5
+  readonly property real satelliteCaptionSize: 8.5
+  // The pill's x slide when a satellite comes or goes: the only underdamped motion in the
+  // shell, Ryan's call (about 3-4 px of overshoot on the 22 px travel, settled in ~320 ms).
+  readonly property real satelliteSlideOmega: 24
+  readonly property real satelliteSlideZeta: 0.62
+  // The attention halo: scales to 1.35 and fades from 0.5 over the pulse, then rests.
+  readonly property int satellitePulse: 1400
+  readonly property int satellitePulseRest: 1000
+  readonly property int satellitePulseEvery: 12000
+
+  // The hover card hangs this far under its satellite, and keeps this far off the screen edge.
+  readonly property int activityCardGap: 8
+  readonly property int activityCardWidth: 340
+  readonly property int activityCardRadius: panelRadius
+  readonly property int activityCardPad: 16
+  readonly property int activityChipSize: 36
+  readonly property int activityTrackHeight: 8
+  readonly property int activityWellRadius: 14
+  readonly property int activityButtonHeight: 30
+  readonly property int activityButtonGap: 8
+  readonly property int activityDotSize: 8
+  readonly property int activityDotPitch: 14
+  // The tallest a card may be; the window is this plus its offset, so no card resizes it.
+  readonly property int activityCardMaxHeight: 360
+
+  // The phone (Services/Phone.qml, Activities/PhoneCard.qml): the card is 440 wide beside a live
+  // screen preview and 360 without one; the satellite's ring turns love at this charge or less
+  // while it discharges; the preview is one adb screencap per interval while the card is up.
+  readonly property int phoneCardWidth: 440
+  readonly property int phoneCardCompactWidth: 360
+  readonly property int phoneCardHeight: 344
+  readonly property int phonePreviewWidth: 124
+  readonly property int phonePreviewHeight: 260
+  readonly property int phonePreviewRadius: 22
+  readonly property int phoneLowBattery: 20
+  readonly property int phonePreviewInterval: 1000
+
+  // Moments (Activities/Moments.qml): the sharing pill's row, and an OSD-sized compact one.
+  readonly property int momentWidth: sharingOfferWidth
+  readonly property int momentHeight: sharingOfferHeight
+  readonly property int momentRadius: sharingOfferRadius
+  readonly property int momentCompactWidth: 340
+  readonly property int momentCompactHeight: osdHeight
+  readonly property int momentCompactRadius: osdRadius
+  readonly property int momentButtonHeight: 26
+  readonly property real momentTitleSize: 12.5
+  readonly property real momentSubtitleSize: 10.5
+  readonly property real activityRowTitleSize: 12.5
+  // The detail lines of the Claude, rebuild and USB cards (derivation, command, space).
+  readonly property real activityDetailSize: 11.5
+  readonly property int momentDwell: 8000
+  readonly property int momentPluggedDwell: osdDwell + 900
+
+  // Pomodoro: 25 / 5 four times, then a long break.
+  readonly property int pomodoroFocusMinutes: 25
+  readonly property int pomodoroShortBreakMinutes: 5
+  readonly property int pomodoroLongBreakMinutes: 15
+  readonly property int pomodoroRounds: 4
+  readonly property int pomodoroMomentDwell: 6000
+
+  // The next calendar event: a satellite from this many minutes ahead, a reminder moment at the
+  // second, and it stays "starting" for the third after it has begun.
+  readonly property int eventLeadMinutes: 15
+  readonly property int eventRemindMinutes: 10
+  readonly property int eventLingerMinutes: 3
 
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: panelColumnWidth
@@ -716,6 +994,61 @@ Singleton {
   readonly property real lockBlur: surfaceBlur
   readonly property int lockIn: 350
   readonly property int lockOut: 350
+
+  // The glance row under the clock: a battery chip and the next event, two flat pills 12 apart.
+  // The event chip takes the rest of the pill's width; either one alone keeps its own.
+  readonly property int lockGlanceTop: 304
+  readonly property int lockGlanceHeight: 36
+  readonly property int lockGlanceGap: 12
+  readonly property int lockGlanceInset: 14
+  readonly property int lockGlanceGlyph: 16
+  readonly property real lockGlanceTextSize: 12.5
+  readonly property real lockGlanceTimeSize: 11.5
+  readonly property int lockBatteryChipWidth: 76
+  readonly property int lockEventChipWidth: lockPillWidth - lockBatteryChipWidth - lockGlanceGap
+  readonly property int lockEventSpineWidth: 3
+  readonly property int lockEventSpineHeight: 16
+  readonly property int lockEventTextLeft: 27
+
+  // The now-playing card sits one gap above the pill. Offsets are from the card's top-left.
+  readonly property int lockMediaWidth: lockPillWidth
+  readonly property int lockMediaHeight: 100
+  readonly property int lockMediaRadius: 26
+  readonly property int lockMediaGap: 40
+  readonly property int lockMediaTop: lockPillTop - lockMediaGap - lockMediaHeight
+  readonly property int lockMediaInset: 14
+  readonly property int lockMediaTextLeft: 74
+  readonly property int lockMediaTitleTop: 17
+  readonly property int lockMediaArtistTop: 35
+  readonly property int lockMediaTitleSize: 13
+  readonly property int lockMediaArtistSize: 11
+  readonly property int lockMediaButton: 32
+  readonly property int lockMediaButtonGap: 6
+  readonly property int lockMediaButtonTop: 22
+  readonly property int lockMediaGlyph: 14
+  readonly property int lockMediaTrackInset: 52
+  readonly property int lockMediaTrackY: 78
+  readonly property int lockMediaTrackHeight: 4
+  readonly property real lockMediaTimeSize: 10.5
+  readonly property real lockMediaTimeTop: 73.5
+
+  // Face unlock. The ring is drawn around the avatar while the camera looks, and the pill
+  // reverts to its plain placeholder a moment after a miss. Howdy has no retry cap of its own.
+  readonly property int lockScanRing: 50
+  readonly property int lockScanRingStroke: 2
+  readonly property int lockScanSweep: 110
+  readonly property real lockScanRingAlpha: 0.35
+  readonly property int lockScanGlyph: 20
+  readonly property int lockScanLineWidth: 16
+  readonly property real lockScanLineHeight: 1.75
+  readonly property int lockScanLine: 1200
+  readonly property int lockFaceNoticeMs: 2500
+  readonly property int lockFaceHold: 270
+  readonly property int lockFaceMaxMisses: 3
+  // An attempt that ends sooner than this never looked (lid shut, no camera): no notice.
+  readonly property int lockFaceMinLookMs: 400
+  // Howdy's own timeout is 5 s; this only catches a conversation that never answers.
+  readonly property int lockFaceHardTimeoutMs: 12000
 
   // The Nearby panel (boards 16a-16h). The 520 column carries two segmented tracks over
   // a send body (the Choose files button or the staged rows, then the devices) or a receive
@@ -1007,4 +1340,78 @@ Singleton {
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
+
+  // The Overview: the workspaces pill grows out of its own top-left corner into a card per
+  // workspace holding live thumbnails of its windows. The row is laid out at the final width,
+  // so the open is a reveal by the growing shape.
+  readonly property int overviewMargin: 10
+  readonly property int overviewSearchHeight: launcherSearchHeight
+  readonly property int overviewCardsTop: 110
+  readonly property int overviewCardGap: 16
+  readonly property int overviewInset: 24
+  readonly property int overviewBottom: 24
+  readonly property int overviewCardRadius: 14
+  readonly property int overviewStripWidth: 72
+  // Cards narrower than this make the row a carousel on the selected workspace.
+  readonly property int overviewCardMin: 240
+  readonly property int overviewWindowRadius: 3
+  readonly property real overviewDim: 0.28
+  readonly property int overviewLabelSize: 13
+  readonly property int overviewCountSize: 11
+  readonly property int overviewLabelY: 86
+  readonly property int overviewLabelInset: 4
+  readonly property int overviewActiveRing: 2
+  readonly property int overviewDropRing: 2
+  readonly property real overviewDropWash: 0.14
+  readonly property int overviewMetaSize: 12
+  readonly property int overviewMetaRight: 24
+  // The plate naming a window, and the pill naming a drop target.
+  readonly property int overviewPlateHeight: 22
+  readonly property int overviewPlateInset: 6
+  readonly property int overviewPlateSize: 11
+  readonly property int overviewPlateDot: 8
+  readonly property int overviewPlatePad: 10
+  readonly property int overviewPillHeight: 22
+  readonly property int overviewPillTop: 10
+  readonly property int overviewPillGlyph: 12
+  readonly property int overviewPillSize: 11
+  readonly property int overviewStripGlyph: 20
+  // The lifted window rides the compositor drag pile's spring (pkgs/dragpile defaults).
+  readonly property real overviewLiftScale: 0.7
+  readonly property real overviewLiftTilt: 3
+  readonly property real overviewLiftStiffness: 800
+  readonly property real overviewLiftDamping: 0.68
+  readonly property int overviewDragSlop: 6
+  // Capture rates, in ms between frames: the selected workspace's windows, then the rest.
+  readonly property int overviewCaptureNear: 100
+  readonly property int overviewCaptureFar: 500
+
+  // The keybind cheatsheet, shown while Super is held (generated from home/keybinds.nix).
+  readonly property int cheatWidth: 1180
+  readonly property int cheatInset: 32
+  readonly property int cheatColumns: 3
+  readonly property int cheatColumnWidth: 340
+  readonly property int cheatColumnGap: 48
+  readonly property int cheatHeaderHeight: 68
+  readonly property int cheatBodyTop: 86
+  readonly property int cheatBottom: 24
+  readonly property int cheatRowPitch: 30
+  readonly property int cheatGroupGap: 14
+  readonly property int cheatHeadBand: 26
+  readonly property int cheatHeadY: 8
+  readonly property int cheatTitleSize: 18
+  readonly property int cheatRowSize: 13
+  readonly property int cheatCapHeight: 22
+  readonly property int cheatCapRadius: 7
+  readonly property int cheatCapPad: 8
+  readonly property int cheatCapGap: 4
+  readonly property int cheatCapSize: 11
+  readonly property int cheatCapGlyph: 12
+  // The held-Super badge in the header.
+  readonly property int cheatBadgeHeight: 24
+  readonly property int cheatBadgeRadius: 8
+  readonly property int cheatBadgeSize: 12
+  readonly property int cheatBadgePad: 12
+  // The shell gives up on a sheet whose hide never arrived.
+  readonly property int cheatTimeout: 20000
 }
