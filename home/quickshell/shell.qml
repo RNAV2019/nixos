@@ -6,6 +6,7 @@ import qs.Auth
 import qs.Bar
 import qs.Calendar
 import qs.Capture
+import qs.Cheatsheet
 import qs.Commons
 import qs.Control
 import qs.Dictation
@@ -38,6 +39,7 @@ ShellRoot {
   AuthPreview {}
   CalendarPanel {}
   CaptureTray {}
+  Cheatsheet {}
   DictationPill {}
   ControlCenter {}
   Launcher {}
@@ -58,10 +60,11 @@ ShellRoot {
   LockPreview {}
 
   // The island surfaces with the same toggle/close pair; the recorder, theme, session, nearby
-  // and screen tools targets stay handwritten below, since they differ, and the auth prompt takes
-  // no toggle: polkitd opens it, and only an answer closes it.
+  // and screen tools targets stay handwritten below, since they differ, the cheatsheet is
+  // shown by holding Super, and the auth prompt takes no toggle: polkitd opens it, and only
+  // an answer closes it.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "screentools" && k !== "auth")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "screentools" && k !== "auth" && k !== "cheatsheet")
 
     IpcHandler {
       required property string modelData
@@ -140,6 +143,20 @@ ShellRoot {
     // Jump straight to the receive view: `qs ipc call nearby receive`.
     function receive(): void {
       Nearby.requestReceive();
+    }
+  }
+
+  // The keybind cheatsheet is shown while Super is held, which Hyprland times and reports here;
+  // see Bus.setCheatsheet() for the epoch and counter each call carries.
+  IpcHandler {
+    target: "cheatsheet"
+
+    function hold(epoch: int, seq: int): void {
+      Bus.setCheatsheet(true, epoch, seq);
+    }
+
+    function release(epoch: int, seq: int): void {
+      Bus.setCheatsheet(false, epoch, seq);
     }
   }
 

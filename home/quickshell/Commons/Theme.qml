@@ -1327,4 +1327,33 @@ Singleton {
   // Capture rates, in ms between frames: the selected workspace's windows, then the rest.
   readonly property int overviewCaptureNear: 100
   readonly property int overviewCaptureFar: 500
+
+  // The keybind cheatsheet, shown while Super is held (generated from home/keybinds.nix).
+  readonly property int cheatWidth: 1180
+  readonly property int cheatInset: 32
+  readonly property int cheatColumns: 3
+  readonly property int cheatColumnWidth: 340
+  readonly property int cheatColumnGap: 48
+  readonly property int cheatHeaderHeight: 68
+  readonly property int cheatBodyTop: 86
+  readonly property int cheatBottom: 24
+  readonly property int cheatRowPitch: 30
+  readonly property int cheatGroupGap: 14
+  readonly property int cheatHeadBand: 26
+  readonly property int cheatHeadY: 8
+  readonly property int cheatTitleSize: 18
+  readonly property int cheatRowSize: 13
+  readonly property int cheatCapHeight: 22
+  readonly property int cheatCapRadius: 7
+  readonly property int cheatCapPad: 8
+  readonly property int cheatCapGap: 4
+  readonly property int cheatCapSize: 11
+  readonly property int cheatCapGlyph: 12
+  // The held-Super badge in the header.
+  readonly property int cheatBadgeHeight: 24
+  readonly property int cheatBadgeRadius: 8
+  readonly property int cheatBadgeSize: 12
+  readonly property int cheatBadgePad: 12
+  // The shell gives up on a sheet whose hide never arrived.
+  readonly property int cheatTimeout: 20000
 }

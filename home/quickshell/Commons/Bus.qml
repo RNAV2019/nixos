@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview", "cheatsheet"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -74,6 +74,23 @@ Singleton {
 
   function closeSurface(key) {
     surfaceClosed(key);
+  }
+
+  // Whether the cheatsheet is wanted, set by Hyprland while Super is held on its own (the hold
+  // is timed in home/desktop.nix, which sees every key). The show and the hide are separate
+  // processes that can arrive out of order, so each carries the config's epoch and a counter
+  // and a stale one is dropped; the epoch tells a reloaded config's restarted counter from a
+  // late one.
+  property bool cheatsheetWanted: false
+  property int cheatsheetEpoch: 0
+  property int cheatsheetSeq: 0
+
+  function setCheatsheet(wanted, epoch, seq) {
+    if (epoch < cheatsheetEpoch || (epoch === cheatsheetEpoch && seq <= cheatsheetSeq))
+      return;
+    cheatsheetEpoch = epoch;
+    cheatsheetSeq = seq;
+    cheatsheetWanted = wanted;
   }
 
   // Which output each surface owns; absent means not on screen. Reassigned wholesale
