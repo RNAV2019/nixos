@@ -201,12 +201,12 @@ in
 
       with subtest("another administrator can be chosen and authenticates with their own password"):
           n = request()
-          prompt_up()
+          before = prompt_up()["failures"]
           # Field -> details plate -> identity chooser; Right moves to the next account.
           keys("Tab", "Tab", "Right")
           st = wait_status(lambda s: s["selected"] == 1 and s["pending"], "bob selected")
           # Switching accounts restarts PAM, which AuthFlow reports as a failed try; it is not one.
-          assert st["failures"] == 0 and st["error"] == "", st
+          assert st["failures"] == before and st["error"] == "", st
           shot("4-bob")
           keys("Tab", "Tab", "Tab")
           type_text("bob-pw")
