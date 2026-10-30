@@ -137,5 +137,4 @@ Rectangle {
 
     onClicked: root.dismissed()
   }
-
 }
