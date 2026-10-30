@@ -48,8 +48,7 @@ Singleton {
     root.qalcFor = "";
     root.dateFor = "";
 
-    // "25m" and "10 min" are a timer's, which has its rows; "25 m = 25 meters" would only echo it.
-    if (q.length === 0 || (!root.scoped && (!looksCalculatory(q) || TimerProvider.claims(q)))) {
+    if (q.length === 0 || (!root.scoped && !looksCalculatory(q))) {
       root.results = [];
       return;
     }
@@ -772,9 +771,8 @@ Singleton {
   QueuedProcess {
     id: qalc
 
-    // A 1 s ceiling keeps "99999!" from wedging the launcher. A follow-up queued for a query that
-    // has since stopped being maths runs with nothing to ask, and qalc would wait on stdin for ever.
-    command: root.qalcFor === "" ? ["true"] : ["qalc", "-m", "1000", root.forQalc(root.qalcFor)]
+    // A 1 s ceiling keeps "99999!" from wedging the launcher.
+    command: ["qalc", "-m", "1000", root.forQalc(root.qalcFor)]
     environment: ({
         XDG_CONFIG_HOME: root.qalcHome
       })

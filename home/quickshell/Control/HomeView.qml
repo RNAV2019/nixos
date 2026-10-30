@@ -20,7 +20,7 @@ Item {
   property int keyboardIndex: 0
 
   function keyboardMove(delta) {
-    keyboardIndex = (keyboardIndex + delta + 10) % 10;
+    keyboardIndex = (keyboardIndex + delta + 9) % 9;
   }
 
   function keyboardActivate() {
@@ -45,16 +45,13 @@ Item {
       root.opened("displays");
       break;
     case 6:
-      ChargeMode.cycle();
-      break;
-    case 7:
       root.recorderRequested();
       break;
-    case 8:
+    case 7:
       if (root.sink && root.sink.audio)
         root.sink.audio.muted = !root.sink.audio.muted;
       break;
-    case 9:
+    case 8:
       Brightness.step(true);
       break;
     }
@@ -90,14 +87,7 @@ Item {
 
   readonly property int count: NotificationStore.history.count
 
-  // Grouped by application, so the headers take height and the cap is higher; past it the list
-  // scrolls inside itself, and the panel stops growing.
-  readonly property int listHeight: count > 0 ? Math.min(Theme.controlNotifGroupedMaxHeight, Math.ceil(list.contentHeight)) : 44
-
-  // Groups go back to their default, one open, whenever the panel opens afresh.
-  function resetNotifications() {
-    list.reset();
-  }
+  readonly property int listHeight: count > 0 ? Math.min(Theme.controlNotifMaxHeight, Math.ceil(list.implicitHeight)) : 44
 
   readonly property int contentHeight: listTop + listHeight + Theme.controlPadBottom
 
@@ -237,14 +227,14 @@ Item {
   Tile {
     id: recorder
 
-    x: charge.x + charge.width + Theme.controlTileGap
+    x: displays.x + displays.width + Theme.controlTileGap
     y: displays.y
     width: root.inset + root.span - x
     label: Recorder.recording ? "Recording" : "Record"
     glyph: Recorder.recording ? Icons.stop : Icons.record
     sublabel: Recorder.status
     on: Recorder.busy
-    keyFocused: root.keyboardIndex === 7
+    keyFocused: root.keyboardIndex === 6
     onToggled: {
       if (Recorder.busy)
         Recorder.stop();
@@ -259,55 +249,14 @@ Item {
 
     x: root.inset
     y: bluetooth.y + Theme.controlTileHeight + Theme.controlTileGap
-    width: root.thirdWidth
+    width: root.span - root.thirdWidth - Theme.controlTileGap
     label: "Displays"
     glyph: Icons.monitor
-    sublabel: Displays.external ? Displays.count + (Displays.count === 1 ? " display" : " displays") : "Built-in"
+    sublabel: Displays.external ? "Built-in + " + Displays.modelOf(Displays.external) : "Built-in only"
     keyFocused: root.keyboardIndex === 5
     opensView: true
     onToggled: root.opened("displays")
     onOpened: root.opened("displays")
-  }
-
-  // Every press steps Fast, Standard, Long life: three states have no switch to flip, so the
-  // badge and the body do the same. Long life is lit, the one mode that limits the charge.
-  Tile {
-    id: charge
-
-    x: displays.x + displays.width + Theme.controlTileGap
-    y: displays.y
-    width: root.thirdWidth
-    label: "Charging"
-    icon: chargeGlyph
-    sublabel: ChargeMode.available ? ChargeMode.label : "Unavailable"
-    on: ChargeMode.limiting
-    keyFocused: root.keyboardIndex === 6
-    opacity: ChargeMode.available ? 1 : 0.5
-    accessibleName: "Charging mode"
-    Accessible.role: Accessible.Button
-    Accessible.checkable: false
-    Accessible.description: ChargeMode.limiting ? "Long life: stops charging at about 80 % to preserve the battery" : ChargeMode.label
-    onToggled: ChargeMode.cycle()
-  }
-
-  Component {
-    id: chargeGlyph
-
-    StrokeIcon {
-      size: Theme.controlTileGlyphSize
-      strokeWidth: 1.75
-      color: charge.glyphColor
-      path: {
-        switch (ChargeMode.mode) {
-        case "Fast":
-          return IconPaths.zap;
-        case "Long_Life":
-          return IconPaths.leaf;
-        default:
-          return IconPaths.battery;
-        }
-      }
-    }
   }
 
   VolumeRow {
@@ -386,20 +335,34 @@ Item {
     height: root.listHeight
     visible: root.count > 0
 
-    NotificationList {
+    Column {
       id: list
 
       width: notifications.width
-    }
-  }
+      spacing: Theme.controlNotifGap
 
-  // The list fades out at the bottom while there is more under it.
-  ScrollFade {
-    x: notifications.x
-    y: notifications.y + notifications.height - height
-    width: notifications.width
-    contentHeight: notifications.contentHeight
-    contentY: notifications.contentY
-    viewHeight: notifications.height
+      Repeater {
+        model: NotificationStore.history
+
+        // Rows are snapshots that never change, so a one-shot read is enough.
+        NotificationCard {
+          id: card
+
+          required property int index
+
+          readonly property var row: NotificationStore.history.get(index)
+
+          width: list.width
+          appName: row ? row.appName : ""
+          summary: row ? row.summary : ""
+          body: row ? row.body : ""
+          image: row ? row.image : ""
+          appIcon: row ? row.appIcon : ""
+          desktopEntry: row ? row.desktopEntry : ""
+          urgent: row ? row.urgent : false
+          onDismissed: NotificationStore.dismiss(card.index)
+        }
+      }
+    }
   }
 }

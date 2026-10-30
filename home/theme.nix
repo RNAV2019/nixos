@@ -263,6 +263,17 @@
     set recolor-darkcolor "${p.text}"
   '';
 
+  fuzzelFragment = p: ''
+    [colors]
+    background=${bare p.base}dd
+    text=${bare p.text}ff
+    match=${bare p.love}ff
+    selection=${bare p.overlay}ff
+    selection-text=${bare p.text}ff
+    selection-match=${bare p.love}ff
+    border=${bare p.highlightMed}ff
+  '';
+
   # libadwaita's colour variables, layered as Adwaita dark is: views darkest, then the
   # window, then bars, sidebars and popovers. pkgs/gtk4-live-css reloads it in open apps.
   gtk4Fragment = p: ''
@@ -372,6 +383,7 @@
       "lazygit.yml" = yaml.generate "${id}-lazygit.yml" (lazygitFragment p);
       "yazi.yazi" = x.yazi;
       "zathurarc" = text "zathurarc" (zathuraFragment p);
+      "fuzzel.ini" = text "fuzzel.ini" (fuzzelFragment p);
       "herdr.toml" = toml.generate "${id}-herdr.toml" (lib.recursiveUpdate config.programs.herdr.settings {theme = {name = x.herdr;} // lib.optionalAttrs (x ? herdrCustom) {custom = x.herdrCustom;};});
       "colors.sh" = text "colors.sh" (colorsFragment p);
     };
@@ -536,4 +548,5 @@ in {
     light = "current";
   };
   programs.zathura.extraConfig = "include ${current}/zathurarc";
+  programs.fuzzel.settings.main.include = "${current}/fuzzel.ini";
 }

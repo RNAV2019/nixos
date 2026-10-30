@@ -56,11 +56,6 @@ Variants {
       Omnibox.reset();
       query.text = "";
       win.selectFirst();
-      if (Omnibox.pendingAsk !== "") {
-        var asked = Omnibox.pendingAsk;
-        Omnibox.pendingAsk = "";
-        ClaudeChat.ask(asked);
-      }
     }
 
     function selectedRow() {
@@ -168,12 +163,10 @@ Variants {
         rowGlyph: String(item.glyph || ""),
         rowSwatch: String(item.swatch || ""),
         rowEmoji: String(item.emoji || ""),
-        rowPath: String(item.path || ""),
-        rowTone: String(item.tone || ""),
         // A list role would become a nested model, so the indices travel as text.
         rowMatches: (item.matches || []).join(",")
       };
-      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowPath, row.rowTone, row.rowMatches].join("\u0001");
+      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowMatches].join("\u0001");
       return row;
     }
 
@@ -482,8 +475,6 @@ Variants {
         required property string rowGlyph
         required property string rowSwatch
         required property string rowEmoji
-        required property string rowPath
-        required property string rowTone
         required property string rowMatches
 
         width: list.width
@@ -514,8 +505,6 @@ Variants {
           glyph: slot.rowGlyph
           swatch: slot.rowSwatch
           emoji: slot.rowEmoji
-          glyphPath: slot.rowPath
-          tone: slot.rowTone
           matches: slot.rowMatches.length > 0 ? slot.rowMatches.split(",").map(Number) : []
           current: slot.ListView.isCurrentItem
 

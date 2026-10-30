@@ -20,10 +20,6 @@ QtObject {
 
   property real omega: Theme.morphOmega
 
-  // Damping ratio. 1 is critical and is what every morph uses; only the pill's slide
-  // beside a satellite sets it lower (Theme.satelliteSlideZeta), for its one small overshoot.
-  property real zeta: 1
-
   // At rest once within a tenth of a pixel and all but still.
   property real epsilon: 0.1
 
@@ -67,18 +63,6 @@ QtObject {
       return;
     }
     var w = omega;
-    if (zeta < 1) {
-      // Underdamped, solved exactly too: x(t) = e^(-zw t) (x cos(wd t) + b sin(wd t)).
-      var zw = zeta * w;
-      var wd = w * Math.sqrt(1 - zeta * zeta);
-      var b = (v + zw * x) / wd;
-      var decay = Math.exp(-zw * dt);
-      var c = Math.cos(wd * dt);
-      var s = Math.sin(wd * dt);
-      value = target + decay * (x * c + b * s);
-      velocity = decay * ((b * wd - zw * x) * c - (zw * b + x * wd) * s);
-      return;
-    }
     var e = Math.exp(-w * dt);
     var k = v + w * x;
     velocity = (k - w * (x + k * dt)) * e;

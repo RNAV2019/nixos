@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import qs.Ui
 
 Item {
   id: root
@@ -10,10 +9,6 @@ Item {
   property string iconSource: ""
   // A computed answer draws a glyph or a colour swatch in place of an app icon.
   property string glyph: ""
-  // A Lucide stroke glyph (Commons/IconPaths.qml) in place of the font one, tinted by `tone`
-  // ("love" for something destructive; the accent otherwise).
-  property string glyphPath: ""
-  property string tone: ""
   property string swatch: ""
   // An emoji is drawn as itself, in colour, on a neutral tile.
   property string emoji: ""
@@ -56,8 +51,6 @@ Item {
   Accessible.focused: root.activeFocus
   Accessible.onPressAction: root.activated(Qt.NoModifier)
 
-  readonly property color toneColor: tone === "love" ? Theme.love : Theme.accent
-
   readonly property bool twoLine: description.length > 0
 
   // No themed icon: fall back to an initial, tinted off the name so it stays stable.
@@ -78,7 +71,7 @@ Item {
     width: Theme.launcherIconSize
     height: width
     radius: Theme.launcherIconRadius
-    color: root.swatch ? root.swatch : root.emoji ? Theme.launcherEmojiTile : root.glyph || root.glyphPath ? Theme.withAlpha(root.toneColor, 0.18) : Theme.withAlpha(root.tint, 0.22)
+    color: root.swatch ? root.swatch : root.emoji ? Theme.launcherEmojiTile : root.glyph ? Theme.withAlpha(Theme.accent, 0.18) : Theme.withAlpha(root.tint, 0.22)
     // A hairline keeps a swatch near the surface colour from vanishing into it.
     border.width: root.swatch ? 1 : 0
     border.color: Theme.withAlpha(Theme.text, 0.18)
@@ -86,21 +79,12 @@ Item {
 
     Text {
       anchors.centerIn: parent
-      visible: !root.swatch && !root.emoji && !root.glyphPath
+      visible: !root.swatch && !root.emoji
       text: root.glyph ? root.glyph : root.name.length > 0 ? root.name.charAt(0).toUpperCase() : "?"
-      color: root.glyph ? root.toneColor : root.tint
+      color: root.glyph ? Theme.accent : root.tint
       font.family: root.glyph ? Theme.iconFont : Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
       font.weight: Theme.weightBold
-    }
-
-    StrokeIcon {
-      anchors.centerIn: parent
-      visible: root.glyphPath !== ""
-      size: 14
-      strokeWidth: 1.75
-      path: root.glyphPath
-      color: root.toneColor
     }
 
     Text {

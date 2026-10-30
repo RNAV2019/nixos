@@ -205,20 +205,13 @@ in {
 
     networkmanagerapplet
 
-    # Screenshots (Services/Captures.qml) and the lock screen's snapshot; grimblast's PNG
-    # compression was too slow for the latter.
+    grimblast
+    # Used directly by the lock screen; grimblast's PNG compression is too slow.
     grim
     # Screen recorder; chosen over wf-recorder for --no-cursor and named audio devices.
     wl-screenrec
     slurp
     hyprpicker
-    # The tray's Annotate button.
-    satty
-    # The screen tools' Text and QR code readers; English is the only language data.
-    (tesseract.override {enableLanguages = ["eng"];})
-    zbar
-    # First frame of a finished recording, for its tray card.
-    ffmpeg-headless
 
     fd
     ripgrep

@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  repoDir,
   ...
 }: {
   # Repaints already-open Ghostty windows over OSC when the universal `theme_osc`
@@ -35,6 +36,8 @@
       lt = "eza --tree --level=2 --long --icons --git";
       la = "eza -lha --group-directories-first --icons=auto";
 
+      # Picks nixosConfigurations.<hostname>.
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
 
@@ -82,6 +85,7 @@
     shellAliases = {
       la = "ls -a";
       lt = "eza --tree --level=2 --long --icons --git";
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
       top = "btop";

@@ -1,10 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import qs.Activities
 import qs.Bar.Widgets
 import qs.Commons
-import qs.Services
 import qs.Ui
 
 Variants {
@@ -32,15 +30,13 @@ Variants {
       right: true
     }
 
-    // Tall enough for the island's expanded card; the strip is transparent. The pills sit
-    // oledShiftMax inside it, so their burn-in orbit has room either way; the margin and the
-    // exclusive zone take that back, leaving the same room for windows.
-    implicitHeight: Theme.islandExpandedHeight + 2 * Theme.oledShiftMax
-    margins.top: Theme.barMarginTop - Theme.oledShiftMax
+    // Tall enough for the island's expanded card; the strip is transparent.
+    implicitHeight: Theme.islandExpandedHeight
+    margins.top: Theme.barMarginTop
 
     // Windows give way to the resting strip only; an expanded card floats over them.
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: Theme.barHeight + Theme.oledShiftMax
+    exclusiveZone: Theme.barHeight
 
     // Input is taken only where a surface actually is; the rest stays click-through.
     mask: Region {
@@ -51,29 +47,16 @@ Variants {
       Region {
         item: island.suppressed ? null : island
       }
-
-      Region {
-        item: satellites.strip
-      }
     }
 
     Workspaces {
       id: workspaces
 
+      anchors.left: parent.left
       // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
-      x: snap(10 + Bus.workspacesOffsetX)
-      y: snap(Theme.oledShiftMax + Bus.workspacesOffsetY)
-      opacity: OledCare.level
+      anchors.leftMargin: 10
+      anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
-    }
-
-    // Live activities beside the pill. Declared first, so the pill paints over the circles it
-    // pushes out from behind it.
-    Satellites {
-      id: satellites
-
-      island: island
-      screenName: bar.screen ? bar.screen.name : ""
     }
 
     // The launcher and control centre cover the island; it stays mapped for handoff
@@ -82,8 +65,8 @@ Variants {
       id: island
 
       // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
-      x: snap((parent.width - width) / 2 + Bus.pillOffsetXFor(screenName))
-      y: snap(Theme.oledShiftMax + Bus.pillOffsetY)
+      x: snap((parent.width - width) / 2)
+      anchors.top: parent.top
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
       // Off covers, not owners: a surface covers the pill from its first frame on screen, so

@@ -25,7 +25,7 @@ Singleton {
   property string error: ""
 
   // month key -> array of events. An event is
-  // { start: Date, end: Date, allDay: bool, title, calendar, location, description, url }.
+  // { start: Date, end: Date, allDay: bool, title, calendar, location }.
   property var months: ({})
   property string pendingKey: ""
   property bool pendingForce: false
@@ -176,12 +176,47 @@ Singleton {
 
     stdout: StdioCollector {
       onStreamFinished: {
+        var lines = text.split("\n");
         if (text.trim() === "") {
           root.loading = false;
           return;
         }
 
-        var out = root.parseAgenda(text);
+        var cols = {};
+        var head = lines[0].split("\t");
+        for (var c = 0; c < head.length; c++)
+          cols[head[c].trim()] = c;
+
+        function field(parts, name) {
+          var i = cols[name];
+          return i === undefined || i >= parts.length ? "" : parts[i].trim();
+        }
+
+        var out = [];
+        for (var i = 1; i < lines.length; i++) {
+          if (lines[i].trim() === "")
+            continue;
+          var p = lines[i].split("\t");
+
+          var sd = field(p, "start_date");
+          if (sd === "")
+            continue;
+          var st = field(p, "start_time");
+          var ed = field(p, "end_date");
+          var et = field(p, "end_time");
+
+          // ical-agenda leaves both times empty for an all-day event.
+          var allDay = st === "";
+
+          out.push({
+            start: root.parse(sd, st),
+            end: root.parse(ed !== "" ? ed : sd, et),
+            allDay: allDay,
+            title: field(p, "title"),
+            calendar: field(p, "calendar"),
+            location: field(p, "location")
+          });
+        }
 
         var next = Object.assign({}, root.months);
         next[fetch.key] = out;
@@ -216,90 +251,6 @@ Singleton {
     }
   }
 
-  // ical-agenda's output as events. The columns are read by name, so a newer ical-agenda that
-  // adds one does not break an older shell.
-  function parseAgenda(text) {
-    var lines = text.split("\n");
-    var cols = {};
-    var head = lines[0].split("\t");
-    for (var c = 0; c < head.length; c++)
-      cols[head[c].trim()] = c;
-
-    function field(parts, name) {
-      var i = cols[name];
-      return i === undefined || i >= parts.length ? "" : parts[i].trim();
-    }
-
-    var out = [];
-    for (var i = 1; i < lines.length; i++) {
-      if (lines[i].trim() === "")
-        continue;
-      var p = lines[i].split("\t");
-
-      var sd = field(p, "start_date");
-      if (sd === "")
-        continue;
-      var st = field(p, "start_time");
-      var ed = field(p, "end_date");
-      var et = field(p, "end_time");
-
-      // ical-agenda leaves both times empty for an all-day event.
-      var allDay = st === "";
-
-      out.push({
-        start: root.parse(sd, st),
-        end: root.parse(ed !== "" ? ed : sd, et),
-        allDay: allDay,
-        title: field(p, "title"),
-        calendar: field(p, "calendar"),
-        location: field(p, "location"),
-        description: field(p, "description"),
-        url: field(p, "url")
-      });
-    }
-    return out;
-  }
-
-  // ---- what is coming up ----
-
-  // Today's and tomorrow's events whatever month the panel shows, for the island's next-event
-  // satellite (Activities/EventSource.qml); re-read every few minutes, so an event added on a phone
-  // still turns up. Timed and all-day alike, in start order.
-  property var upcoming: []
-
-  function refreshUpcoming() {
-    if (soon.running)
-      return;
-    var now = new Date();
-    var to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    soon.command = ["ical-agenda", root.stamp(now), root.stamp(to)];
-    soon.running = true;
-  }
-
-  Process {
-    id: soon
-
-    stdout: StdioCollector {
-      onStreamFinished: {
-        if (text.trim() === "")
-          return;
-        root.upcoming = root.parseAgenda(text).sort(function (a, b) {
-          return a.start - b.start;
-        });
-      }
-    }
-
-    // Quiet on failure: the panel already says when the calendar is not set up.
-    stderr: StdioCollector {}
-  }
-
-  Timer {
-    interval: 300000
-    running: true
-    repeat: true
-    onTriggered: root.refreshUpcoming()
-  }
-
   // Built field by field rather than handed to Date(), which parses a bare date as UTC
   // and would put a late evening event on the wrong day.
   function parse(date, time) {
@@ -308,8 +259,5 @@ Singleton {
     return new Date(parseInt(d[0], 10), parseInt(d[1], 10) - 1, parseInt(d[2], 10), parseInt(t[0], 10), parseInt(t[1], 10));
   }
 
-  Component.onCompleted: {
-    root.load();
-    root.refreshUpcoming();
-  }
+  Component.onCompleted: root.load()
 }

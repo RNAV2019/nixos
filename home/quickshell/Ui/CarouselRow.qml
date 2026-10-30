@@ -13,9 +13,6 @@ Item {
   property var model: []
   property int selected: 0
 
-  // Selected first, then the rest; each picker sets its own, and the wallpaper's is the default.
-  property var tileWidths: Theme.wallpaperTileWidths
-
   // The tile, as a Component whose root is a TileBase. The row leaves placement, selection
   // state and activation to the picker, since what Enter does differs per picker.
   property Component tile
@@ -34,7 +31,7 @@ Item {
   // The selected tile takes the first width, everything else the last, indexed by distance
   // from the selection and clamped to its end; see the token note.
   function tileWidth(i) {
-    var widths = root.tileWidths;
+    var widths = Theme.wallpaperTileWidths;
     var d = Math.abs(i - root.selected);
     return widths[Math.min(d, widths.length - 1)];
   }

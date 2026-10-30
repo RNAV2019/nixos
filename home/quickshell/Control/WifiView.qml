@@ -18,41 +18,6 @@ ControlSubView {
   readonly property var activeNetwork: NetworkInfo.activeNetwork
   readonly property var others: NetworkInfo.otherNetworks
 
-  // The scan as the list shows it, keyed by name and security. Strength alone reorders
-  // neighbours on every poll, so rows are ranked by tenths of it and then by name.
-  readonly property var snapshot: {
-    var entries = [];
-    var byKey = {};
-    if (active && Networking.wifiEnabled) {
-      var ranked = others.slice().sort(function (a, b) {
-        var tier = Math.round(b.signalStrength * 10) - Math.round(a.signalStrength * 10);
-        if (tier !== 0)
-          return tier;
-        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
-      });
-      for (var i = 0; i < ranked.length; i++) {
-        var n = ranked[i];
-        var key = n.name + "|" + n.security;
-        byKey[key] = n;
-        entries.push({
-          "key": key,
-          "name": n.name,
-          "strength": n.signalStrength,
-          "secured": NetworkInfo.secured(n),
-          "known": n.known,
-          "busy": n.stateChanging
-        });
-      }
-    }
-    return {
-      "entries": entries,
-      "byKey": byKey
-    };
-  }
-
-  onSnapshotChanged: networks.sync(snapshot.entries, snapshot.byKey)
-  Component.onCompleted: networks.sync(snapshot.entries, snapshot.byKey)
-
   // Scanning costs radio, so it runs only while this view is on screen.
   onActiveChanged: {
     if (active) {
@@ -184,25 +149,17 @@ ControlSubView {
     topPadding: 10
   }
 
-  KeyedList {
-    id: networks
+  Repeater {
+    model: root.active && Networking.wifiEnabled ? root.others : []
 
-    width: parent.width
-    animated: root.active
-
-    delegate: Column {
+    Column {
       id: entry
 
-      required property string key
-      required property string name
-      required property real strength
-      required property bool secured
-      required property bool known
-      required property bool busy
+      required property var modelData
 
-      readonly property bool needsPassword: secured && !known
+      readonly property bool needsPassword: NetworkInfo.secured(modelData) && !modelData.known
 
-      width: networks.width
+      width: parent.width
       spacing: Theme.controlRowGap
 
       DeviceRow {
@@ -212,32 +169,32 @@ ControlSubView {
         // Any network in range lights the dot and inner bar, as the island does for a link.
         icon: Component {
           WifiMark {
-            strength: entry.strength
+            strength: entry.modelData.signalStrength
             connected: true
             color: row.glyphColor
           }
         }
-        label: entry.name
+        label: entry.modelData.name
         onClicked: {
           if (entry.needsPassword)
-            root.pendingSsid = root.pendingSsid === entry.name ? "" : entry.name;
+            root.pendingSsid = root.pendingSsid === entry.modelData.name ? "" : entry.modelData.name;
           else
-            networks.objectFor(entry.key).connectWithSettings();
+            entry.modelData.connectWithSettings();
         }
 
         PillButton {
-          label: entry.busy ? "…" : "Connect"
+          label: entry.modelData.stateChanging ? "…" : "Connect"
           onClicked: {
             if (entry.needsPassword)
-              root.pendingSsid = entry.name;
+              root.pendingSsid = entry.modelData.name;
             else
-              networks.objectFor(entry.key).connectWithSettings();
+              entry.modelData.connectWithSettings();
           }
         }
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          visible: entry.secured
+          visible: NetworkInfo.secured(entry.modelData)
           text: Icons.lock
           color: Theme.muted
           font.family: Theme.iconFont
@@ -248,7 +205,7 @@ ControlSubView {
       Item {
         id: passwordRow
 
-        readonly property bool open: root.pendingSsid === entry.name
+        readonly property bool open: root.pendingSsid === entry.modelData.name
 
         width: parent.width
         height: open ? 40 : 0
@@ -295,7 +252,7 @@ ControlSubView {
             psk.text = "";
           }
           onAccepted: function (text) {
-            networks.objectFor(entry.key).connectWithPsk(text);
+            entry.modelData.connectWithPsk(text);
             root.pendingSsid = "";
             psk.text = "";
           }
@@ -308,7 +265,7 @@ ControlSubView {
           anchors.verticalCenter: parent.verticalCenter
           label: "Join"
           onClicked: {
-            networks.objectFor(entry.key).connectWithPsk(psk.text);
+            entry.modelData.connectWithPsk(psk.text);
             root.pendingSsid = "";
             psk.text = "";
           }

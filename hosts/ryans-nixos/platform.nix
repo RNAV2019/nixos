@@ -1,6 +1,5 @@
-# This laptop's hardware: Panther Lake graphics, the Ideapad keyboard, the OLED panel,
-# the backlight and the battery charge mode. Settings any machine would want stay in
-# modules/system.
+# This laptop's hardware: Panther Lake graphics, the Ideapad keyboard, the OLED panel
+# and the backlight. Settings any machine would want stay in modules/system.
 {pkgs, ...}: {
   # Panther Lake Xe3 needs a current kernel; there is no i915 fallback
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -47,11 +46,5 @@
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
     ACTION=="add", SUBSYSTEM=="backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
-
-    # Let the shell's charging tile pick the battery's charge mode (Fast, Standard, Long_Life).
-    # ideapad-laptop adds charge_types to BAT0 as a power-supply extension, which can land
-    # after the "add" event, so the attribute is matched on change too and only once it exists.
-    ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_types}=="?*", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/power_supply/%k/charge_types"
-    ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_types}=="?*", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/power_supply/%k/charge_types"
   '';
 }

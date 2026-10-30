@@ -20,8 +20,6 @@ Item {
   property bool busy: false
   // Board 13 draws the field from its first frame rather than waiting for a keystroke.
   property bool inputStarted: false
-  // Face unlock: "idle", "scanning", "recognised" or "missed". Only ever draws; Lock.qml decides.
-  property string faceState: "idle"
   property real ground: 0
   property real clockAlpha: 0
   property real loginAlpha: 0
@@ -32,7 +30,6 @@ Item {
 
   signal passwordEdited(string text)
   signal accepted
-  signal faceRetryRequested
 
   // The account and its picture, and Caps Lock, come from Services (Account, Keyboard).
   readonly property string facePath: Account.facePath
@@ -42,11 +39,6 @@ Item {
   readonly property bool capsLock: Keyboard.capsLock
   // Lets the IPC preview rehearse the caption without a physical Caps Lock.
   property bool forceCapsLock: false
-  // Lets the IPC preview rehearse the widgets on a machine with no battery or a silent player.
-  property bool forceBattery: false
-  property real forceLevel: 0.82
-  property bool forceCharging: false
-  property bool forcePaused: false
 
   function checkCapsLock() {
     Keyboard.check();
@@ -180,24 +172,6 @@ Item {
       renderType: Text.QtRendering
     }
 
-    LockGlance {
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockGlanceTop)
-      ui: canvas.ui
-      forceBattery: view.forceBattery
-      forceLevel: view.forceLevel
-      forceCharging: view.forceCharging
-      opacity: view.clockAlpha
-    }
-
-    LockNowPlaying {
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockMediaTop)
-      ui: canvas.ui
-      forcePaused: view.forcePaused
-      opacity: view.clockAlpha
-    }
-
     // Board 13: one pill carrying the avatar, the name, the password and the submit disc,
     // with the Caps Lock caption hanging under it. States are board 13b's five.
     Item {
@@ -205,10 +179,6 @@ Item {
 
       readonly property bool hasText: input.text.length > 0
       readonly property bool showError: view.statusIsError && !hasText && !view.busy
-      // Face states only show over an empty, idle field: typing or a submit takes line two back.
-      readonly property bool scanning: view.faceState === "scanning" && !hasText && !view.busy
-      readonly property bool recognised: view.faceState === "recognised" && !view.busy
-      readonly property bool missed: view.faceState === "missed" && !hasText && !showError && !view.busy
 
       anchors.horizontalCenter: parent.horizontalCenter
       y: canvas.u(Theme.lockPillTop)
@@ -302,9 +272,6 @@ Item {
           Keys.onPressed: function (event) {
             view.pointerShown = false;
             view.checkCapsLock();
-            // Esc on an empty field asks the camera again; no password is ever just Esc.
-            if (event.key === Qt.Key_Escape && input.text.length === 0)
-              view.faceRetryRequested();
             event.accepted = false;
           }
           Keys.onReleased: function (event) {
@@ -359,93 +326,6 @@ Item {
           }
         }
 
-        // The camera is looking: a ring round the avatar, its sweep turning like the spinner.
-        // Recognised closes it to a full accent circle.
-        Shape {
-          id: ring
-
-          readonly property real stroke: canvas.u(Theme.lockScanRingStroke)
-          readonly property real r: (width - stroke) / 2
-
-          x: avatar.x + (avatar.width - width) / 2
-          y: avatar.y + (avatar.height - height) / 2
-          width: canvas.u(Theme.lockScanRing)
-          height: width
-          opacity: login.scanning || login.recognised ? 1 : 0
-          antialiasing: true
-          preferredRendererType: Shape.CurveRenderer
-
-          Behavior on opacity {
-            NumberAnimation {
-              duration: Theme.duration(Theme.lockStateFade)
-            }
-          }
-
-          ShapePath {
-            fillColor: "transparent"
-            strokeColor: login.recognised ? Theme.accent : Qt.rgba(Theme.inkTertiary.r, Theme.inkTertiary.g, Theme.inkTertiary.b, Theme.lockScanRingAlpha)
-            strokeWidth: ring.stroke
-
-            Behavior on strokeColor {
-              ColorAnimation {
-                duration: Theme.duration(Theme.lockStateFade)
-              }
-            }
-
-            PathAngleArc {
-              centerX: ring.width / 2
-              centerY: ring.height / 2
-              radiusX: ring.r
-              radiusY: ring.r
-              startAngle: 0
-              sweepAngle: 360
-            }
-          }
-
-          Item {
-            id: sweep
-
-            anchors.fill: parent
-            opacity: login.scanning ? 1 : 0
-
-            Behavior on opacity {
-              NumberAnimation {
-                duration: Theme.duration(Theme.lockStateFade)
-              }
-            }
-
-            RotationAnimator on rotation {
-              from: 0
-              to: 360
-              duration: Theme.lockSpinnerTurn
-              loops: Animation.Infinite
-              running: login.scanning && !Theme.reduceMotion
-            }
-
-            Shape {
-              anchors.fill: parent
-              antialiasing: true
-              preferredRendererType: Shape.CurveRenderer
-
-              ShapePath {
-                fillColor: "transparent"
-                strokeColor: Theme.accent
-                strokeWidth: ring.stroke
-                capStyle: ShapePath.RoundCap
-
-                PathAngleArc {
-                  centerX: ring.width / 2
-                  centerY: ring.height / 2
-                  radiusX: ring.r
-                  radiusY: ring.r
-                  startAngle: -100
-                  sweepAngle: Theme.lockScanSweep
-                }
-              }
-            }
-          }
-        }
-
         Text {
           id: nameLabel
 
@@ -473,7 +353,7 @@ Item {
 
           Text {
             anchors.left: parent.left
-            anchors.leftMargin: view.busy || login.showError || login.recognised ? 0 : canvas.u(Theme.lockPlaceholderInset)
+            anchors.leftMargin: view.busy || login.showError ? 0 : canvas.u(Theme.lockPlaceholderInset)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             visible: !login.hasText
@@ -483,24 +363,12 @@ Item {
                 return "Checking…";
               if (login.showError)
                 return view.status;
-              if (login.recognised)
-                return "Recognised";
-              if (login.scanning)
-                return "Looking for you…";
-              if (login.missed)
-                return "Not recognised · enter password";
               return "Password";
             }
-            color: {
-              if (login.showError)
-                return Theme.love;
-              if (login.recognised)
-                return Theme.accent;
-              return login.missed ? Theme.gold : Theme.inkSecondary;
-            }
+            color: login.showError ? Theme.love : Theme.inkSecondary
             elide: Text.ElideRight
             font.family: Theme.uiFont
-            font.weight: login.showError || login.recognised || login.missed ? Theme.weightMedium : Theme.weightRegular
+            font.weight: login.showError ? Theme.weightMedium : Theme.weightRegular
             font.pixelSize: canvas.u(Theme.lockLineTwoSize)
             renderType: Text.QtRendering
           }
@@ -508,7 +376,7 @@ Item {
           Row {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
-            visible: !view.busy && !login.showError && !login.recognised
+            visible: !view.busy && !login.showError
 
             Repeater {
               model: 64
@@ -589,9 +457,6 @@ Item {
           id: submit
 
           readonly property bool live: login.hasText && !view.busy
-          // What the disc shows when nothing is being sent: the scan, the check, or the arrow.
-          readonly property bool scanMark: login.scanning && !live
-          readonly property bool checkMark: login.recognised && !live
 
           anchors.right: parent.right
           anchors.rightMargin: canvas.u(Theme.lockPillInset)
@@ -599,7 +464,7 @@ Item {
           width: canvas.u(Theme.lockSubmitSize)
           height: width
           radius: width / 2
-          color: live || checkMark ? Theme.accent : Theme.overlay
+          color: live ? Theme.accent : Theme.overlay
 
           Behavior on color {
             ColorAnimation {
@@ -609,63 +474,11 @@ Item {
 
           StrokeIcon {
             anchors.centerIn: parent
-            visible: !view.busy && !submit.scanMark && !submit.checkMark
+            visible: !view.busy
             size: canvas.u(Theme.lockArrowSize)
             strokeWidth: 2 * canvas.ui
             color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
             path: IconPaths.arrowRight
-          }
-
-          StrokeIcon {
-            anchors.centerIn: parent
-            visible: submit.checkMark
-            size: canvas.u(Theme.lockArrowSize)
-            strokeWidth: 2 * canvas.ui
-            color: Theme.inkOnAccent
-            path: IconPaths.check
-          }
-
-          // Looking: an indicator, not a button, with a scan line sweeping the glyph.
-          Item {
-            anchors.fill: parent
-            visible: submit.scanMark && !view.busy
-
-            StrokeIcon {
-              id: scanGlyph
-
-              anchors.centerIn: parent
-              size: canvas.u(Theme.lockScanGlyph)
-              strokeWidth: 1.75 * canvas.ui
-              color: Theme.accent
-              path: IconPaths.scanFace
-            }
-
-            Rectangle {
-              id: scanLine
-
-              readonly property real fromY: scanGlyph.y + scanGlyph.height * 0.3
-              readonly property real toY: scanGlyph.y + scanGlyph.height * 0.8
-
-              x: (parent.width - width) / 2
-              y: (fromY + toY) / 2
-              width: canvas.u(Theme.lockScanLineWidth)
-              height: Math.max(1, canvas.u(Theme.lockScanLineHeight))
-              radius: height / 2
-              color: Theme.accent
-              opacity: 0.9
-
-              SequentialAnimation on y {
-                loops: Animation.Infinite
-                running: submit.scanMark && !Theme.reduceMotion
-
-                NumberAnimation {
-                  from: scanLine.fromY
-                  to: scanLine.toY
-                  duration: Theme.lockScanLine
-                  easing.type: Easing.InOutQuad
-                }
-              }
-            }
           }
 
           // Checking: a quarter arc turning over a faint track.
