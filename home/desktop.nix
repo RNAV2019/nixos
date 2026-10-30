@@ -427,7 +427,7 @@ in {
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|sharing|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|sharing|notifications|osd|panel)";
           no_anim = true;
         }
       ];
