@@ -52,27 +52,84 @@ ControlSubView {
     return props["application.name"] || node.description || node.name;
   }
 
+  // The lists are keyed by node id; nodes come and go as streams start and devices appear,
+  // and a row must outlive the churn around it. Rows hold the label as text and look the node
+  // up for what they do, so a row fading out after its node is gone still reads.
+  function nodeRows(nodes, describe) {
+    var rows = [];
+    var byKey = {};
+    for (var i = 0; i < nodes.length; i++) {
+      var key = "n" + nodes[i].id;
+      byKey[key] = nodes[i];
+      rows.push({
+        "key": key,
+        "nodeId": nodes[i].id,
+        "kind": "node",
+        "text": describe(nodes[i])
+      });
+    }
+    return {
+      "entries": rows,
+      "byKey": byKey
+    };
+  }
+
+  readonly property var sinkSnapshot: nodeRows(sinks, label)
+  readonly property var sourceSnapshot: nodeRows(sources, label)
+
+  // Applications get their heading as the list's first row, so it comes and goes with them.
+  readonly property var streamSnapshot: {
+    var snap = nodeRows(streams, appLabel);
+    if (snap.entries.length > 0)
+      snap.entries.unshift({
+        "key": "~apps",
+        "nodeId": -1,
+        "kind": "header",
+        "text": "Applications"
+      });
+    return snap;
+  }
+
+  onSinkSnapshotChanged: sinkList.sync(sinkSnapshot.entries, sinkSnapshot.byKey)
+  onSourceSnapshotChanged: sourceList.sync(sourceSnapshot.entries, sourceSnapshot.byKey)
+  onStreamSnapshotChanged: streamList.sync(streamSnapshot.entries, streamSnapshot.byKey)
+
+  Component.onCompleted: {
+    sinkList.sync(sinkSnapshot.entries, sinkSnapshot.byKey);
+    sourceList.sync(sourceSnapshot.entries, sourceSnapshot.byKey);
+    streamList.sync(streamSnapshot.entries, streamSnapshot.byKey);
+  }
+
   SectionLabel {
     width: parent.width
     title: "Output device"
   }
 
-  Repeater {
-    model: root.sinks
+  KeyedList {
+    id: sinkList
 
-    DeviceRow {
-      required property var modelData
+    width: parent.width
+    animated: root.active
 
-      width: parent.width
-      label: root.label(modelData)
-      selected: root.sink !== null && modelData.id === root.sink.id
+    delegate: DeviceRow {
+      required property string key
+      required property int nodeId
+      required property string text
+
+      width: sinkList.width
+      label: text
+      selected: root.sink !== null && nodeId === root.sink.id
       showCheck: true
       Accessible.role: Accessible.RadioButton
-      Accessible.name: root.label(modelData)
+      Accessible.name: text
       Accessible.checkable: true
       Accessible.checked: selected
       Accessible.focusable: true
-      onClicked: Pipewire.preferredDefaultAudioSink = modelData
+      onClicked: {
+        var node = sinkList.objectFor(key);
+        if (node)
+          Pipewire.preferredDefaultAudioSink = node;
+      }
     }
   }
 
@@ -89,22 +146,31 @@ ControlSubView {
     height: Theme.controlSectionHeight + 8
   }
 
-  Repeater {
-    model: root.sources
+  KeyedList {
+    id: sourceList
 
-    DeviceRow {
-      required property var modelData
+    width: parent.width
+    animated: root.active
 
-      width: parent.width
-      label: root.label(modelData)
-      selected: root.source !== null && modelData.id === root.source.id
+    delegate: DeviceRow {
+      required property string key
+      required property int nodeId
+      required property string text
+
+      width: sourceList.width
+      label: text
+      selected: root.source !== null && nodeId === root.source.id
       showCheck: true
       Accessible.role: Accessible.RadioButton
-      Accessible.name: root.label(modelData)
+      Accessible.name: text
       Accessible.checkable: true
       Accessible.checked: selected
       Accessible.focusable: true
-      onClicked: Pipewire.preferredDefaultAudioSource = modelData
+      onClicked: {
+        var node = sourceList.objectFor(key);
+        if (node)
+          Pipewire.preferredDefaultAudioSource = node;
+      }
     }
   }
 
@@ -115,49 +181,83 @@ ControlSubView {
     muteAccessibleName: "Mute input"
   }
 
-  SectionLabel {
+  KeyedList {
+    id: streamList
+
     width: parent.width
-    visible: root.streams.length > 0
-    title: "Applications"
-    height: Theme.controlSectionHeight + 8
-  }
+    animated: root.active
 
-  Repeater {
-    model: root.streams
+    delegate: Item {
+      id: slot
 
-    DeviceRow {
-      id: streamRow
+      required property string key
+      required property string kind
+      required property string text
 
-      required property var modelData
+      readonly property bool isHeader: kind === "header"
+      readonly property var node: streamList.objectFor(key)
 
-      width: parent.width
-      label: root.appLabel(modelData)
+      // The slider follows the node while it lasts and holds its last reading through the
+      // fade-out, rather than draining to nothing as the node disappears.
+      property real volume: 0
+      property bool muted: false
 
-      BigSlider {
-        id: streamVolume
-
-        compact: true
-        anchors.verticalCenter: parent.verticalCenter
-        width: 200
-        height: 20
-        accessibleName: root.appLabel(streamRow.modelData) + " volume"
-        glyph: ""
-        value: streamRow.modelData.audio ? streamRow.modelData.audio.volume : 0
-        dimmed: streamRow.modelData.audio && streamRow.modelData.audio.muted
-        onMoved: function (v) {
-          if (streamRow.modelData.audio)
-            streamRow.modelData.audio.volume = v;
-        }
+      Binding {
+        target: slot
+        property: "volume"
+        value: slot.node && slot.node.audio ? slot.node.audio.volume : 0
+        when: slot.node !== null && slot.node.audio
+        restoreMode: Binding.RestoreNone
       }
 
-      Text {
-        anchors.verticalCenter: parent.verticalCenter
-        width: 34
-        horizontalAlignment: Text.AlignRight
-        text: Math.round(Math.max(0, Math.min(1, streamVolume.displayValue)) * 100) + "%"
-        color: Theme.muted
-        font.family: Theme.monoFont
-        font.pixelSize: Theme.sectionSize
+      Binding {
+        target: slot
+        property: "muted"
+        value: slot.node && slot.node.audio ? slot.node.audio.muted : false
+        when: slot.node !== null && slot.node.audio
+        restoreMode: Binding.RestoreNone
+      }
+
+      width: streamList.width
+      height: isHeader ? Theme.controlSectionHeight + 8 : Theme.controlRowHeight
+
+      SectionLabel {
+        anchors.fill: parent
+        visible: slot.isHeader
+        title: slot.text
+      }
+
+      DeviceRow {
+        anchors.fill: parent
+        visible: !slot.isHeader
+        label: slot.text
+
+        BigSlider {
+          id: streamVolume
+
+          compact: true
+          anchors.verticalCenter: parent.verticalCenter
+          width: 200
+          height: 20
+          accessibleName: slot.text + " volume"
+          glyph: ""
+          value: slot.volume
+          dimmed: slot.muted
+          onMoved: function (v) {
+            if (slot.node && slot.node.audio)
+              slot.node.audio.volume = v;
+          }
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          width: 34
+          horizontalAlignment: Text.AlignRight
+          text: Math.round(Math.max(0, Math.min(1, streamVolume.displayValue)) * 100) + "%"
+          color: Theme.muted
+          font.family: Theme.monoFont
+          font.pixelSize: Theme.sectionSize
+        }
       }
     }
   }

@@ -12,7 +12,7 @@ PanelWindow {
   required property var modelData
 
   // Identity on the bus, and the layer-shell namespace. One of "launcher",
-  // "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles".
+  // "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth".
   property string key: ""
 
   // The shape this surface settles at. Any of the three may be a live binding.
@@ -21,9 +21,15 @@ PanelWindow {
   property real openRadius: Theme.controlRadius
 
   property bool open: false
+  // Whether the surface holds the keyboard while open. Result cards that arrive unasked turn it
+  // off until the pointer is on them, so typing elsewhere is not stolen.
+  property bool keyboard: true
   // Some keyboard-first surfaces hide the pointer for their whole mapped window, not just the
   // card. The guard below accepts no buttons and only owns the cursor.
   property bool hideCursor: false
+  // Keyboard stays exclusive for as long as the surface is open, rather than handing over to
+  // on-demand once the first focus has landed. For a prompt that must not lose its keys.
+  property bool exclusiveKeyboard: false
   // A surface that spawns its own toplevel (the Nearby panel's file chooser) must not have
   // the full-screen window swallow input aimed at it. When set, only the card is a target;
   // clicks outside fall through to whatever is below.
@@ -236,13 +242,25 @@ PanelWindow {
   // this one stays mapped through its close. Exclusive covers it, but would eat all pointers.
   property bool focusPrimed: false
 
-  WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: win.open && win.keyboard ? (win.focusPrimed && !win.exclusiveKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
   Timer {
     id: focusPrime
 
     interval: 75
     onTriggered: win.focusPrimed = true
+  }
+
+  // A surface that was keyless and wants the keyboard now is primed as a fresh open is.
+  onKeyboardChanged: {
+    if (open && keyboard) {
+      focusPrimed = false;
+      focusPrime.restart();
+      Qt.callLater(function () {
+        if (win.open)
+          keys.forceActiveFocus();
+      });
+    }
   }
 
   onOpenChanged: {
@@ -372,8 +390,8 @@ PanelWindow {
       }
     }
 
-    x: snap((win.width - width) / 2)
-    y: snap(Theme.barMarginTop)
+    x: snap((win.width - width) / 2 + origin.offsetX)
+    y: snap(Theme.barMarginTop + origin.offsetY)
 
     clipContent: true
 

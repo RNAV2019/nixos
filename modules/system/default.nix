@@ -19,6 +19,7 @@ in {
     ./secrets.nix
     ./wifi.nix
     ./backups.nix
+    ./face-unlock.nix
   ];
 
   time.timeZone = "Europe/London";
@@ -200,7 +201,8 @@ in {
     };
   };
 
-  # Wayland privilege prompts.
+  # Wayland privilege prompts. This only runs polkitd; the agent that asks for the password is
+  # the Quickshell shell (home/quickshell/Services/Polkit.qml), so nothing else may start one.
   security.polkit.enable = true;
 
   # GTK/libadwaita color-scheme support.

@@ -1,11 +1,13 @@
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 import qs.Ui
 
 // The toast: the island grows into a 450 px card, then melts back into the clock.
-// One card, not a stack; only the card takes input.
+// One card at a time; the ones waiting peek out under it and are counted on it. Only the
+// card takes input, and the keyboard only when it carries a reply box.
 Variants {
   id: root
 
@@ -20,8 +22,20 @@ Variants {
     layerNamespace: "quickshell-notifications"
     rank: 1
 
+    // A card being typed into stays in front: the notification it belongs to, for as long as
+    // there is a draft, so a newer arrival queues behind it rather than taking the draft away.
+    property var pinned: null
+
     // The toast being shown; popups[0] is the newest.
-    readonly property var current: NotificationStore.popups.length > 0 ? NotificationStore.popups[0] : null
+    readonly property var current: {
+      var list = NotificationStore.popups;
+      if (win.pinned && list.indexOf(win.pinned) >= 0)
+        return win.pinned;
+      return list.length > 0 ? list[0] : null;
+    }
+
+    // How many wait behind it.
+    readonly property int queued: Math.max(0, NotificationStore.popups.length - 1)
 
     // Waits behind a user-opened panel.
     readonly property bool blocked: Bus.islandOpenFor(win.screenName)
@@ -29,8 +43,15 @@ Variants {
     wanted: current !== null && win.focused && !win.blocked
 
     openWidth: Theme.notifWidth
-    openHeight: win.front === 0 ? slotA.cardHeight : slotB.cardHeight
+    openHeight: win.frontSlot.cardHeight
     openRadius: Theme.notifRadius
+
+    // Only a card with a reply box wants the keyboard, and then only on demand: the compositor
+    // hands it over when the box is clicked, never when the toast appears.
+    keyboardFocus: win.frontSlot.canReply ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    cardOffset: swipe.offset
+    cardOpacity: swipe.fade * win.appear
 
     // ---- what the card shows ----
     //
@@ -40,15 +61,23 @@ Variants {
 
     property int front: 0
 
+    readonly property var frontSlot: win.front === 0 ? slotA : slotB
+
     // The notification the card is drawing (a snapshot), which outlives the live one.
-    readonly property var shown: win.front === 0 ? slotA.n : slotB.n
+    readonly property var shown: win.frontSlot.n
+
+    // There is a draft in the reply box.
+    readonly property bool typing: win.frontSlot.typing
+
+    onTypingChanged: win.pinned = win.typing ? win.current : null
 
     function snapshot(n) {
       var buttons = [];
       var actions = n.actions;
-      // "default" is the whole-card click, so never drawn; two is the row's limit.
+      // "default" is the whole-card click and "inline-reply" the reply box, so neither is drawn;
+      // two is the row's limit.
       for (var i = 0; i < actions.length && buttons.length < 2; i++) {
-        if (actions[i].identifier !== "default")
+        if (actions[i].identifier !== "default" && actions[i].identifier !== "inline-reply")
           buttons.push({
             text: String(actions[i].text),
             action: actions[i]
@@ -65,17 +94,23 @@ Variants {
         iconSource: NotificationStore.iconFor(n.image, n.appIcon, n.desktopEntry, n.appName),
         iconTinted: tinted,
         buttons: buttons,
+        hasReply: n.hasInlineReply,
+        replyPlaceholder: n.inlineReplyPlaceholder ? String(n.inlineReplyPlaceholder) : "",
         arrived: new Date()
       };
     }
 
     // A fresh arrival on a card nobody can see lands at once; on a card on screen it crossfades.
-    function present(n) {
+    // After a swipe the card is replaced where it stands (`instant`) and the surface fades in.
+    function present(n, instant) {
+      // A card on its way out keeps the slot until it is gone; see swipe.onGone.
+      if (win.leaving)
+        return;
       var shown = win.shown;
       if (shown && shown.ref === n)
         return;
       var shot = win.snapshot(n);
-      var crossfade = win.showing && !win.parked && shown !== null;
+      var crossfade = !instant && win.showing && !win.parked && shown !== null;
       if (!crossfade) {
         if (win.front === 0)
           slotA.n = shot;
@@ -139,14 +174,31 @@ Variants {
       NotificationStore.forgetPopup(n);
     }
 
+    // What the sender does with an action or a reply can close the notification on the spot,
+    // which moves `current` on to the next toast: so it is the one acted on that is dismissed.
     function invoke(action) {
+      var n = current;
       action.invoke();
-      close();
+      if (n) {
+        n.dismiss();
+        NotificationStore.forgetPopup(n);
+      }
+    }
+
+    // The sender gets the text, and the toast is done with.
+    function sendReply(text) {
+      var n = current;
+      if (!n)
+        return;
+      n.sendInlineReply(text);
+      n.dismiss();
+      NotificationStore.forgetPopup(n);
     }
 
     Timer {
-      // Only while the card is up and expiring, and the pointer is elsewhere.
-      running: win.open && win.timeout > 0 && !cardHover.containsMouse
+      // Only while the card is up and expiring, and nobody is on it: not the pointer over it,
+      // not a hand dragging it, not a draft in its reply box.
+      running: win.open && win.timeout > 0 && !cardHover.containsMouse && !swipe.held && !win.typing && !win.leaving
       interval: 100
       repeat: true
       onTriggered: {
@@ -178,6 +230,87 @@ Variants {
       function onClosed() {
         if (win.current)
           NotificationStore.forgetPopup(win.current);
+      }
+    }
+
+    // ---- the queue ----
+    //
+    // The toasts behind the front one show as two back layers under it, drawn in the window
+    // beneath the surface rather than inside it, so they stand against the desktop. Each is a
+    // strip: only the part below the card's bottom edge is drawn.
+
+    // A card leaving lifts the layers behind it, and one arriving sets the old front back
+    // behind it: the layers start offset the other way and settle.
+    property int lastQueued: 0
+
+    readonly property real rise: riseSpring.value
+
+    onQueuedChanged: {
+      var gone = win.queued < win.lastQueued;
+      win.lastQueued = win.queued;
+      riseSpring.animate = false;
+      riseSpring.target = gone ? Theme.notifQueuePeek : -Theme.notifQueuePeek;
+      riseSpring.animate = true;
+      riseSpring.target = 0;
+    }
+
+    MorphSpring {
+      id: riseSpring
+    }
+
+    QueueLayer {
+      host: win
+      depth: 2
+    }
+
+    QueueLayer {
+      host: win
+      depth: 1
+    }
+
+    // ---- swipe ----
+
+    // From the release that dismisses until the card is out of sight.
+    property bool leaving: false
+
+    // The surface coming back after a swipe, for the next card or the melt into the pill.
+    property real appear: 1
+
+    NumberAnimation {
+      id: appearIn
+
+      target: win
+      property: "appear"
+      from: 0
+      to: 1
+      duration: Theme.duration(Theme.morphEnter)
+      easing.type: Easing.OutQuad
+    }
+
+    // First in the surface, under the toasts: set beside the surface it swallowed their clicks,
+    // and over them it took the buttons' presses; here it only watches for a drag.
+    SwipeDismiss {
+      id: swipe
+
+      anchors.fill: parent
+      span: Theme.notifWidth
+      // A drag inside the box would be a selection.
+      enabled: win.open && !win.typing
+
+      // The notification goes at once and the next waits its turn: it replaces this card where
+      // it stands only once the swiped one is gone.
+      onCommitted: {
+        win.leaving = true;
+        win.close();
+      }
+
+      onGone: {
+        win.leaving = false;
+        swipe.reset();
+        win.appear = 0;
+        appearIn.restart();
+        if (win.current)
+          win.present(win.current, true);
       }
     }
 
@@ -218,6 +351,45 @@ Variants {
     }
   }
 
+  // A toast waiting behind the card, showing only the curve of its bottom edge.
+  component QueueLayer: Item {
+    id: layer
+
+    required property var host
+    // 1 is the next toast, 2 the one after.
+    required property int depth
+
+    readonly property bool shown: layer.host.open && layer.host.origin.presented && layer.host.queued >= layer.depth
+
+    parent: layer.host.contentItem
+    z: -layer.depth
+    // At rest under the card, whatever the card is being swiped to.
+    x: layer.host.surface.x - layer.host.cardOffset
+    y: layer.host.surface.snap(layer.host.surface.y + layer.host.surface.height)
+    width: layer.host.surface.width
+    height: Theme.notifQueuePeek * (Theme.notifQueueLayers + 1)
+    clip: true
+    opacity: layer.shown ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.morphState
+      }
+    }
+
+    Rectangle {
+      x: Theme.notifQueueInset * layer.depth
+      y: Theme.notifQueuePeek * layer.depth + layer.host.rise - height
+      width: layer.width - x * 2
+      height: Theme.notifRadius * 2
+      radius: Theme.notifRadius
+      color: Theme.surface
+      border.width: 1
+      border.color: Theme.surfaceOutline
+    }
+  }
+
   // One notification's card contents, at the board's positions.
   component Toast: Item {
     id: toast
@@ -236,13 +408,33 @@ Variants {
     readonly property color tint: toast.urgent ? Theme.love : NotificationStore.avatarColour(toast.appName, toast.iconTinted)
     readonly property var buttons: toast.n ? toast.n.buttons : []
 
+    // The sender takes replies, and Esc has not sent the box away for this card.
+    readonly property bool canReply: toast.n ? toast.n.hasReply : false
+    property bool replyOff: false
+    readonly property bool replying: toast.canReply && !toast.replyOff
+    readonly property bool typing: toast.replying && (replyInput.activeFocus || replyInput.text !== "")
+
+    // Esc steps back: out of the box to the sender's buttons, then out of the toast.
+    function leaveReply() {
+      replyInput.text = "";
+      toast.replyOff = true;
+      toast.forceActiveFocus();
+    }
+
+    onNChanged: {
+      replyOff = false;
+      replyInput.text = "";
+    }
+
     readonly property int bodyLines: !toast.n || toast.n.body === "" ? 0 : Math.min(Theme.notifBodyLines, bodyMetrics.lineCount)
 
     // Nothing on this bus carries a source line, so the body starts where it would have.
     readonly property int bodyTop: Theme.notifBodyTopBare
     readonly property int bodyBottom: bodyLines > 0 ? bodyTop + bodyLines * Theme.notifBodyLeading - 3 : Theme.notifTitleTop + 18
     readonly property int actionsTop: bodyBottom + Theme.notifActionGapAbove
-    readonly property int cardHeight: Math.max(Theme.notifAvatarSize + Theme.notifInset * 2, actionsTop + Theme.notifActionHeight + Theme.notifPadBottom)
+    // The reply box is taller than the pills it stands in for.
+    readonly property int rowHeight: toast.replying ? Theme.notifReplyHeight : Theme.notifActionHeight
+    readonly property int cardHeight: Math.max(Theme.notifAvatarSize + Theme.notifInset * 2, actionsTop + toast.rowHeight + Theme.notifPadBottom)
 
     readonly property string timestamp: {
       toast.clockDate;
@@ -266,6 +458,8 @@ Variants {
         duration: Theme.duration(Theme.morphEnter)
       }
     }
+
+    Keys.onEscapePressed: toast.host.close()
 
     // The sender's icon, or its initial on a colour picked off the name.
     Rectangle {
@@ -379,6 +573,15 @@ Variants {
       spacing: Theme.notifActionGap
       x: Theme.notifWidth - Theme.notifInset - width
       y: toast.actionsTop
+      enabled: !toast.replying
+      opacity: toast.replying ? 0 : 1
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.duration(Theme.morphContent)
+        }
+      }
 
       Repeater {
         model: toast.buttons
@@ -399,6 +602,196 @@ Variants {
         label: toast.urgent ? "Ignore" : "Dismiss"
         primary: toast.buttons.length === 0
         onPressed: toast.host.close()
+      }
+    }
+
+    // How many more are waiting, where the action row starts. Counting down cross-fades the
+    // digits; with nothing waiting it goes.
+    QueueChip {
+      x: Theme.notifTextLeft
+      y: toast.actionsTop + (Theme.notifActionHeight - height) / 2
+      count: toast.host ? toast.host.queued : 0
+      shown: toast.live && !toast.replying
+    }
+
+    // The sender's reply box in the action row's place.
+    Item {
+      id: replyRow
+
+      y: toast.actionsTop
+      width: Theme.notifWidth
+      height: Theme.notifReplyHeight
+      enabled: toast.replying
+      opacity: toast.replying ? 1 : 0
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.duration(Theme.morphContent)
+        }
+      }
+
+      Rectangle {
+        id: field
+
+        x: Theme.notifTextLeft
+        width: sendDisc.x - Theme.notifReplyGap - x
+        height: parent.height
+        radius: Theme.notifReplyRadius
+        color: Theme.surfaceSubtle
+        border.width: replyInput.activeFocus ? Theme.notifReplyFocusRing : 1
+        border.color: replyInput.activeFocus ? Theme.accent : Theme.surfaceOutline
+
+        Behavior on border.color {
+          Tint {}
+        }
+
+        Text {
+          x: Theme.notifReplyTextInset + (replyInput.activeFocus ? 3 : 0)
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - Theme.notifReplyTextInset * 2
+          visible: replyInput.text === ""
+          text: toast.n && toast.n.replyPlaceholder !== "" ? toast.n.replyPlaceholder : "Reply to " + (toast.n ? toast.n.summary : "") + "…"
+          color: Theme.inkTertiary
+          elide: Text.ElideRight
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.notifBodySize
+        }
+
+        TextInput {
+          id: replyInput
+
+          x: Theme.notifReplyTextInset
+          width: parent.width - Theme.notifReplyTextInset * 2
+          height: parent.height
+          verticalAlignment: TextInput.AlignVCenter
+          clip: true
+          color: Theme.inkPrimary
+          selectionColor: Theme.withAlpha(Theme.accent, Theme.fillSelected)
+          selectByMouse: true
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.notifBodySize
+
+          Accessible.role: Accessible.EditableText
+          Accessible.name: "Reply"
+
+          cursorDelegate: Rectangle {
+            width: 1.5
+            height: 16
+            color: Theme.accent
+          }
+
+          onAccepted: if (text !== "")
+            toast.host.sendReply(text)
+
+          Keys.onEscapePressed: toast.leaveReply()
+        }
+      }
+
+      Rectangle {
+        id: sendDisc
+
+        readonly property bool ready: replyInput.text !== ""
+
+        x: Theme.notifWidth - Theme.notifInset - width
+        width: Theme.notifReplyHeight
+        height: width
+        radius: width / 2
+        color: sendDisc.ready ? Theme.accent : Theme.surfaceRaised
+        opacity: sendArea.containsMouse && sendDisc.ready ? 0.85 : 1
+
+        Accessible.role: Accessible.Button
+        Accessible.name: "Send reply"
+
+        Behavior on color {
+          Tint {}
+        }
+
+        StrokeIcon {
+          anchors.centerIn: parent
+          size: 18
+          strokeWidth: 1.75
+          path: IconPaths.send
+          color: sendDisc.ready ? Theme.inkOnAccent : Theme.inkTertiary
+        }
+
+        MouseArea {
+          id: sendArea
+
+          anchors.fill: parent
+          enabled: sendDisc.ready
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: toast.host.sendReply(replyInput.text)
+        }
+      }
+    }
+  }
+
+  // "+2": the toasts waiting behind this one.
+  component QueueChip: Rectangle {
+    id: chip
+
+    property int count: 0
+    property bool shown: true
+
+    // The last number worth drawing, so it can fade out with the chip rather than before it.
+    property int last: 0
+    // Which of the two digits is the front one: each count change swaps them over.
+    property bool flip: false
+
+    onCountChanged: {
+      if (chip.count <= 0 || chip.count === chip.last)
+        return;
+      if (chip.last > 0)
+        chip.flip = !chip.flip;
+      (chip.flip ? digitB : digitA).text = "+" + chip.count;
+      chip.last = chip.count;
+    }
+
+    width: Theme.notifChipWidth
+    height: Theme.notifChipHeight
+    radius: height / 2
+    color: Theme.withAlpha(Theme.highlightMed, Theme.notifActionSecondaryAlpha)
+    opacity: chip.shown && chip.count > 0 ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.duration(Theme.morphContent)
+      }
+    }
+
+    Accessible.role: Accessible.StaticText
+    Accessible.name: chip.count + " more notifications"
+
+    ChipDigit {
+      id: digitA
+
+      front: !chip.flip
+    }
+
+    ChipDigit {
+      id: digitB
+
+      front: chip.flip
+    }
+  }
+
+  // One of the chip's two digits; the count change cross-fades them.
+  component ChipDigit: Text {
+    required property bool front
+
+    anchors.centerIn: parent
+    color: Theme.inkPrimary
+    opacity: front ? 1 : 0
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.notifChipSize
+    font.weight: Theme.weightSemi
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.duration(Theme.morphContent)
       }
     }
   }

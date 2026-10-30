@@ -31,7 +31,7 @@ FrostedSurface {
   property bool replaced: false
 
   // Keep the pill out of Hyprland's backdrop-blur sample while another surface grows over it.
-  opacity: suppressed ? 0 : 1
+  opacity: suppressed ? 0 : OledCare.level
 
   onSuppressedChanged: {
     if (suppressed) {
