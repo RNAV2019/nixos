@@ -645,7 +645,7 @@ in {
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel|overview|cheatsheet)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel|overview|cheatsheet|sharepicker)";
           no_anim = true;
         }
       ];
@@ -719,6 +719,15 @@ in {
   # big videos smaller than mpv would; 1.4 gives back the size they had in a 4K
   # video's window. Fullscreen controls are unchanged.
   xdg.configFile."mpv/script-opts/osc.conf".text = "scalewindowed=1.4\n";
+
+  # The screen-share portal asks the shell's picker, and the stock one when the shell is not
+  # there (pkgs/share-picker). A restore token is offered per request, not by default.
+  xdg.configFile."hypr/xdph.conf".text = ''
+    screencopy {
+      custom_picker_binary = ${pkgs.share-picker}/bin/share-picker
+      allow_token_by_default = false
+    }
+  '';
 
   services.hypridle = {
     enable = true;
