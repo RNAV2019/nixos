@@ -18,6 +18,7 @@
 - **A morphing island shell.** One pill at the top of the screen grows into every surface: launcher, control centre, calendar, wallpaper and theme pickers, Nearby sharing, power profiles, the screen recorder, notifications, OSDs, the session menu and polkit prompts. Written in QML under [`home/quickshell`](home/quickshell).
 - **Live theme switching.** `Alt + T` recolours the shell, Hyprland, Ghostty, fish, Helix, GTK and Helium in place, with no rebuild. Ships **Ariadne** (the default), **Rosé Pine** and **ASCII World**.
 - **Quick Share and AirDrop** from the Nearby panel (`Alt + N`). Files dragged anywhere in the compositor travel as a card pile drawn by [`dragpile`](pkgs/dragpile), a small Hyprland plugin.
+- **Your Android phone on the island.** While it is paired through [KDE Connect](https://kdeconnect.kde.org), a circle with a battery ring appears beside the pill; hover it for notifications, the clipboard, Ring phone and Send files, and a live thumbnail of the screen if you have wireless debugging on.
 - **A locked-down session.** greetd autologin goes straight to a Quickshell lock screen that is secured before any desktop helper starts. Secrets are kept in sops-nix, and borg backs up to a NAS every day.
 - **Its own tooling.** Custom tools are packaged as a flake overlay in [`pkgs/`](pkgs), with tests next to them.
 
@@ -156,6 +157,41 @@ sudo SOPS_AGE_KEY_FILE=/etc/nixos-secrets/age.key \
   sops set --value-stdin secrets/secrets.yaml '["users"]["ryan-hashed-password"]' < /tmp/hash.json
 shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 ```
+
+</details>
+
+<details>
+<summary><b>Phone on the island (KDE Connect)</b></summary>
+
+`programs.kdeconnect.enable` runs the KDE Connect daemon with the session and opens TCP and UDP
+1714-1764 for it. The island watches the daemon through [`phone-bridge`](pkgs/phone-bridge)
+(`Services/Phone.qml`): a paired, reachable phone is the first circle beside the pill, with its
+battery as the ring (love at 20 % or less, a bolt while it charges). Its notifications still arrive
+as ordinary toasts, because the daemon sends them to the shell's notification server.
+
+**Pair.** Install KDE Connect on the phone and open it on the same Wi-Fi, then either tap the
+laptop in the phone's device list, or run `kdeconnect-cli --list-devices` and
+`kdeconnect-cli --device <id> --pair` and accept on the phone. A request made from the phone
+grows out of the pill with Accept and Reject. On the phone, allow the plugins you want: Battery,
+Notification sync, Clipboard and Find my phone.
+
+**Hover card.** Name and link, battery, the last three phone notifications (click one to dismiss it
+on the phone), the text on this computer's clipboard with a button that sends it to the phone,
+Ring phone, and Send files, which opens Nearby. KDE Connect gives no way to tell what the phone
+sent to the clipboard, so the card shows the clipboard as it is here and never one a password
+manager copied.
+
+**Screen preview (optional).** KDE Connect cannot mirror the screen, so the card takes an `adb`
+screenshot once a second while it is open, and only when an adb device is connected at the phone's
+address. On the phone turn on Developer options, then Wireless debugging; then, once per network:
+
+```bash
+adb pair <ip>:<pairing-port>      # the code is on the phone's "Pair device with pairing code" screen
+adb connect <ip>:<port>           # the port on the Wireless debugging screen
+adb devices                       # the phone is listed as <ip>:<port>
+```
+
+Without it the card is the narrower one with no preview. Other adb devices (the TV) are never used.
 
 </details>
 

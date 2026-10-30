@@ -11,6 +11,7 @@
     start-desktop
     gen-commit
     ical-agenda
+    phone-bridge
     forward-dev
     t3code-nightly
     # Replaces the `rebuild` alias: nom, the diff, and progress on the island.

@@ -55,6 +55,8 @@ Singleton {
 
   // Recreated device plates - narrower bodies with a home bar, not a dot.
   readonly property string smartphone: "M9.73 2.5L14.27 2.5A2.73 2.73 0 0 1 17 5.23L17 18.77A2.73 2.73 0 0 1 14.27 21.5L9.73 21.5A2.73 2.73 0 0 1 7 18.77L7 5.23A2.73 2.73 0 0 1 9.73 2.5ZM11 18.5L13 18.5"
+  // The handset with the charging bolt inside it (Lucide smartphone-charging's bolt).
+  readonly property string smartphoneCharging: "M9.73 2.5L14.27 2.5A2.73 2.73 0 0 1 17 5.23L17 18.77A2.73 2.73 0 0 1 14.27 21.5L9.73 21.5A2.73 2.73 0 0 1 7 18.77L7 5.23A2.73 2.73 0 0 1 9.73 2.5ZM12.667 8L10 12h4l-2.667 4"
   readonly property string tablet: "M7.23 3L16.77 3A2.73 2.73 0 0 1 19.5 5.73L19.5 18.27A2.73 2.73 0 0 1 16.77 21L7.23 21A2.73 2.73 0 0 1 4.5 18.27L4.5 5.73A2.73 2.73 0 0 1 7.23 3ZM11 18L13 18"
   readonly property string laptop: "M4 6.5C4 5.67 4.67 5 5.5 5L18.5 5C19.33 5 20 5.67 20 6.5L20 16L4 16L4 6.5M2 19L22 19"
 
@@ -87,6 +89,9 @@ Singleton {
   readonly property string images: "M18 22H4a2 2 0 0 1-2-2V6M22 13l-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18M17 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"
   readonly property string pencilLine: "M13 21h8M15 5l4 4M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
   readonly property string copy: "M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+  // Lucide bell-ring and folder-open: the phone card's Ring phone and Send files.
+  readonly property string bellRing: "M10.268 21a2 2 0 0 0 3.464 0M22 8c0-2.3-.8-4.3-2-6M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326M4 2C2.8 3.7 2 5.7 2 8"
+  readonly property string folderOpen: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
   readonly property string trash: "M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"
   readonly property string search: "M21 21l-4.34-4.34M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z"
   readonly property string sparkles: "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0zM20 3v4M22 5h-4M4 17v2M5 18H3"
@@ -107,7 +112,6 @@ Singleton {
   readonly property string fileDiff: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7zM12 10v4M10 12h4M10 18h4"
   readonly property string scrollText: "M15 12h-5M15 8h-5M19 17V5a2 2 0 0 0-2-2H4M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"
   readonly property string terminal: "M12 19h8M4 17l6-6-6-6"
-  readonly property string folderOpen: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
   readonly property string loaderCircle: "M21 12a9 9 0 1 1-6.219-8.56"
   // Lucide, for the event card and moments, the sign-in moment and the launcher's timer rows.
   readonly property string calendarClock: "M16 14v2.2l1.6 1M16 2v4M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5M3 10h5M8 2v4M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0z"

@@ -11,6 +11,8 @@ Scope {
   readonly property alias event: event
   readonly property alias wifi: wifi
 
+  PhoneSource {}
+
   TimerSource {}
 
   PomodoroSource {}
