@@ -267,10 +267,15 @@ a GIF it has no palette banding.
 | `Alt + PrtSc` | Screenshot output | `Super + Ctrl + PrtSc` | Screenshot all screens |
 | `Alt + S` | Screen tools | | |
 | `Super + Scroll` | Zoom the screen, 1× to 4× | `Super + 0` | Reset zoom |
+| `Super + Tab` | Overview | hold `Super` | Keybind cheatsheet |
 
 Every capture is saved to `~/Pictures/screenshots`, copied, and shown in a tray that grows out of the island: hover it for Annotate (satty), Copy, Send (Nearby) and Delete, or drag the picture out as a file. `Alt + S` opens the screen tools: region, window and screen grabs, text recognition (tesseract), QR decoding (zbar) and a colour picker with a history. In the tools, `R W S T Q C` pick a tool, `Enter` runs it and `Esc` closes.
 
-The full list is in [`home/desktop.nix`](home/desktop.nix).
+**Overview** (`Super + Tab`, a three-finger swipe up, or `qs ipc call overview toggle`): the workspaces pill grows into a card per workspace holding live thumbnails of its windows, captured only while it is open. Typing filters windows by title and app (non-matches dim). `←` `→` and `Tab` walk the windows, `↑` `↓` jump between workspaces, `Enter` focuses the selection and closes, `Shift + ←/→` moves it to the neighbouring workspace, `Ctrl + W` closes it and `Esc` clears the filter, then closes. Drag a window onto another card (or the dashed `New` slot, which takes the lowest empty workspace) to move it there. Each output has its own, opened on the focused one.
+
+**Cheatsheet**: hold `Super` on its own for about 600 ms and every shortcut appears; let go and it goes. Pressing anything else with `Super` (a normal combo, or a mouse drag or scroll) never shows it, and hides it if it is already up. It is generated: the binds in [`home/desktop.nix`](home/desktop.nix) are a described table ([`home/keybinds.nix`](home/keybinds.nix)) that produces both the Hyprland binds and the JSON the sheet reads, so a new bind is listed by giving it a group and a description.
+
+The full list is the cheatsheet (hold `Super`), or [`home/desktop.nix`](home/desktop.nix).
 
 ## Touchpad gestures
 
