@@ -745,6 +745,44 @@ Singleton {
   readonly property int themeSwatchPad: 7
   readonly property var themeSwatchRoles: ["base", "surface", "text", "accent", "love"]
 
+  // The screen-share picker: the wallpaper picker's card and carousel, with a request header,
+  // a three-way track and a footer. The row is the wallpaper picker's, at its own tile widths.
+  readonly property int shareWidth: wallpaperWidth
+  readonly property int shareHeight: 320
+  readonly property int shareRadius: panelRadius
+  readonly property int shareInset: 24
+  readonly property int shareAvatarRadius: 12
+  readonly property int shareTitleLeft: 78
+  readonly property int shareTitleTop: 22
+  readonly property int shareSubTop: 46
+  readonly property int shareSubSize: 12
+  readonly property int shareTrackWidth: 312
+  readonly property int shareTrackTop: 26
+  readonly property var shareTileWidths: [256, 224]
+  readonly property int shareRowMid: 160
+
+  // The caption laid on a thumbnail: an opaque pill, so a live frame never costs it contrast.
+  readonly property int sharePlateHeight: 22
+  readonly property int sharePlateInset: 8
+  readonly property int sharePlatePad: 10
+  readonly property int sharePlateDot: 8
+  readonly property int sharePlateGap: 6
+  readonly property int sharePlateSize: 11
+
+  // Captured at this rate, and only for a tile inside the card.
+  readonly property int shareCaptureInterval: 200
+
+  readonly property int shareFooterTop: 256
+  readonly property int shareFooterHeight: 40
+  readonly property int shareLabelGap: 12
+  readonly property int shareLabelSize: 12
+  readonly property int shareButtonHeight: 40
+  readonly property int shareButtonPad: 22
+  readonly property int shareButtonSize: 13
+  readonly property int shareButtonGlyph: 14
+  readonly property int shareButtonGlyphGap: 8
+  readonly property int shareButtonGap: 10
+
   // The screen recorder's picker. The capture row is the power menu's tile grid to the pixel,
   // so ChoiceTiles draws it from the power tokens; the toggle rows below are this card's own.
   readonly property int recorderWidth: 316
