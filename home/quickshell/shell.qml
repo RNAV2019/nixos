@@ -27,7 +27,10 @@ import qs.Wallpaper
 ShellRoot {
   // Singletons start on first use; this one has to be running before the panel opens, to
   // put a remembered monitor back where it was.
-  Component.onCompleted: Displays.restoreAll()
+  Component.onCompleted: {
+    Displays.restoreAll();
+    Sounds.start();
+  }
 
   Bar {}
   PillSlide {}
@@ -278,6 +281,23 @@ ShellRoot {
     }
   }
 
+  // The interface sounds: `sounds toggle` is the Control centre's switch.
+  IpcHandler {
+    target: "sounds"
+
+    function play(name: string): bool {
+      return Sounds.play(name);
+    }
+
+    function toggle(): void {
+      Sounds.enabled = !Sounds.enabled;
+    }
+
+    function status(): string {
+      return Sounds.status();
+    }
+  }
+
   IpcHandler {
     target: "lock"
 
@@ -407,6 +427,17 @@ ShellRoot {
             kind: "primary"
           }
         ]
+      });
+    }
+
+    // A bare moment of the given kind, for hearing what a kind sounds like.
+    function raise(kind: string): void {
+      Activities.raiseMoment({
+        kind: kind,
+        attention: false,
+        icon: IconPaths.check,
+        title: kind,
+        subtitle: "Test moment"
       });
     }
 

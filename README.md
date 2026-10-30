@@ -219,6 +219,25 @@ runs the real agent against a real `polkitd` and PAM in a VM of its own.
 </details>
 
 <details>
+<summary><b>Interface sounds</b></summary>
+
+The shell makes a few quiet sounds: a tick on the volume keys, a shutter for screenshots, a pair
+for a charger or drive going in, a chime for notifications (a lower one for critical ones), a
+bell for timers and Pomodoro phases, a double tap when Claude or a Wi-Fi sign-in needs you, a
+rising or falling motif for a finished or failed rebuild and drive eject, one for a received
+file, and one each for locking and unlocking. They are synthesised at build time with sox
+([`pkgs/quickshell-sounds`](pkgs/quickshell-sounds)), never downloaded, and
+[`Services/Sounds.qml`](home/quickshell/Services/Sounds.qml) holds the one table that says which
+event plays which, played with `pw-play`.
+
+Turn them off in the Control centre under Audio > Interface sounds, or with
+`qs ipc call sounds toggle`; the choice is kept in `~/.local/state/shell/sounds`. Peace silences
+them too, except the critical-notification sound and a timer's alarm. Nothing sounds for the
+first few seconds after the shell starts or reloads.
+
+</details>
+
+<details>
 <summary><b>Backups</b></summary>
 
 Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
