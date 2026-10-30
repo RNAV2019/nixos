@@ -20,7 +20,7 @@ Item {
   property int keyboardIndex: 0
 
   function keyboardMove(delta) {
-    keyboardIndex = (keyboardIndex + delta + 9) % 9;
+    keyboardIndex = (keyboardIndex + delta + 10) % 10;
   }
 
   function keyboardActivate() {
@@ -45,13 +45,16 @@ Item {
       root.opened("displays");
       break;
     case 6:
-      root.recorderRequested();
+      ChargeMode.cycle();
       break;
     case 7:
+      root.recorderRequested();
+      break;
+    case 8:
       if (root.sink && root.sink.audio)
         root.sink.audio.muted = !root.sink.audio.muted;
       break;
-    case 8:
+    case 9:
       Brightness.step(true);
       break;
     }
@@ -227,14 +230,14 @@ Item {
   Tile {
     id: recorder
 
-    x: displays.x + displays.width + Theme.controlTileGap
+    x: charge.x + charge.width + Theme.controlTileGap
     y: displays.y
     width: root.inset + root.span - x
     label: Recorder.recording ? "Recording" : "Record"
     glyph: Recorder.recording ? Icons.stop : Icons.record
     sublabel: Recorder.status
     on: Recorder.busy
-    keyFocused: root.keyboardIndex === 6
+    keyFocused: root.keyboardIndex === 7
     onToggled: {
       if (Recorder.busy)
         Recorder.stop();
@@ -249,14 +252,55 @@ Item {
 
     x: root.inset
     y: bluetooth.y + Theme.controlTileHeight + Theme.controlTileGap
-    width: root.span - root.thirdWidth - Theme.controlTileGap
+    width: root.thirdWidth
     label: "Displays"
     glyph: Icons.monitor
-    sublabel: Displays.external ? "Built-in + " + Displays.modelOf(Displays.external) : "Built-in only"
+    sublabel: Displays.external ? Displays.count + (Displays.count === 1 ? " display" : " displays") : "Built-in"
     keyFocused: root.keyboardIndex === 5
     opensView: true
     onToggled: root.opened("displays")
     onOpened: root.opened("displays")
+  }
+
+  // Every press steps Fast, Standard, Long life: three states have no switch to flip, so the
+  // badge and the body do the same. Long life is lit, the one mode that limits the charge.
+  Tile {
+    id: charge
+
+    x: displays.x + displays.width + Theme.controlTileGap
+    y: displays.y
+    width: root.thirdWidth
+    label: "Charging"
+    icon: chargeGlyph
+    sublabel: ChargeMode.available ? ChargeMode.label : "Unavailable"
+    on: ChargeMode.limiting
+    keyFocused: root.keyboardIndex === 6
+    opacity: ChargeMode.available ? 1 : 0.5
+    accessibleName: "Charging mode"
+    Accessible.role: Accessible.Button
+    Accessible.checkable: false
+    Accessible.description: ChargeMode.limiting ? "Long life: stops charging at about 80 % to preserve the battery" : ChargeMode.label
+    onToggled: ChargeMode.cycle()
+  }
+
+  Component {
+    id: chargeGlyph
+
+    StrokeIcon {
+      size: Theme.controlTileGlyphSize
+      strokeWidth: 1.75
+      color: charge.glyphColor
+      path: {
+        switch (ChargeMode.mode) {
+        case "Fast":
+          return IconPaths.zap;
+        case "Long_Life":
+          return IconPaths.leaf;
+        default:
+          return IconPaths.battery;
+        }
+      }
+    }
   }
 
   VolumeRow {

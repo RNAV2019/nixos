@@ -14,6 +14,7 @@ Singleton {
   id: root
 
   readonly property var monitors: Hyprland.monitors.values
+  readonly property int count: monitors.length
 
   readonly property var internal: {
     for (var i = 0; i < monitors.length; i++)
