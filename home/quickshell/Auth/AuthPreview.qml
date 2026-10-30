@@ -7,7 +7,8 @@ import qs.Services
 // The authentication prompt on a rehearsal stage: a made-up request in place of polkitd's, so
 // every state can be seen without a privileged action to ask for one. Driven over IPC
 // (`qs ipc call authpreview ask pkexec|plain|code|info|identities|long`, then `checking`,
-// `fail`, `hide`); typing, Tab and the buttons are the real ones.
+// `fail`, `hide`); typing, Tab and the buttons are the real ones. `status` reports the live
+// agent as JSON.
 Scope {
   id: root
 
@@ -105,6 +106,23 @@ Scope {
 
     function hide(): void {
       Polkit.cancel();
+    }
+
+    // What the service holds, as one line, for the test that drives a real polkitd.
+    function status(): string {
+      return JSON.stringify({
+        registered: Polkit.registered,
+        pending: Polkit.pending,
+        checking: Polkit.checking,
+        error: Polkit.errorText,
+        failures: Polkit.failedCount,
+        actionId: Polkit.actionId,
+        message: Polkit.message,
+        prompt: Polkit.prompt,
+        selected: Polkit.selectedIndex,
+        identities: Polkit.identities.map(i => i.name),
+        shown: Bus.surfaceOpen("auth")
+      });
     }
   }
 }

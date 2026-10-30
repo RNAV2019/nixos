@@ -160,6 +160,31 @@ shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 </details>
 
 <details>
+<summary><b>Polkit prompts</b></summary>
+
+The shell is the session's polkit agent (`PolkitAgent` in
+[`Services/Polkit.qml`](home/quickshell/Services/Polkit.qml), `security.polkit.enable` in
+`modules/system/default.nix` only runs `polkitd`). Anything that asks for admin rights through
+polkit (`pkexec`, Nautilus' admin actions, fwupd, NetworkManager) grows an
+[authentication prompt](home/quickshell/Auth/AuthPrompt.qml) out of the island: who is asking,
+polkit's message, the action id (open it for the program and the account that will approve), your
+picture and name, and a password field. **Enter** authenticates, **Esc** cancels, **Tab** walks
+the plate, the buttons and, with several administrators, an account chooser. A wrong password
+shakes the pill and keeps "Sorry, that didn't work" up until the next keystroke. The prompt
+holds the keyboard exclusively, goes away on approval, Cancel, polkitd withdrawing the request or
+the session locking, and steps aside (then returns) when another panel takes the island.
+
+The Quickshell the flake pins hands over the action id, message and accounts but not polkit's
+`details` map, so the program is read back out of the message and the caller isn't shown.
+
+Rehearse every state without a real request: `qs ipc call authpreview ask pkexec` (also `plain`,
+`code`, `info`, `identities`, `long`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
+per session, so don't start a second shell to test it: `nix build .#checks.x86_64-linux.polkit-agent -L`
+runs the real agent against a real `polkitd` and PAM in a VM of its own.
+
+</details>
+
+<details>
 <summary><b>Backups</b></summary>
 
 Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
