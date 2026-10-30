@@ -318,8 +318,8 @@ PanelWindow {
       }
     }
 
-    x: snap((win.width - width) / 2)
-    y: snap(Theme.barMarginTop)
+    x: snap((win.width - width) / 2 + origin.offsetX)
+    y: snap(Theme.barMarginTop + origin.offsetY)
 
     clipContent: true
 
