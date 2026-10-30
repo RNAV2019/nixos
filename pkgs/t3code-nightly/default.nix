@@ -5,10 +5,10 @@
   fetchurl,
 }: let
   pname = "t3code-nightly";
-  version = "0.1.3-nightly.20261026.3726";
+  version = "0.1.6-nightly.20261030.3917";
   src = fetchurl {
     url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-x86_64.AppImage";
-    hash = "sha256-rMNNdhevokPYs2aG2QiomvxRe/6NdNCpBgF6iGfreZI=";
+    hash = "sha256-5OKXOohRi52ANQsv39Gwo2UujiGSDFWiaNnfDxDnfSM=";
   };
   appimageContents = appimageTools.extract {inherit pname version src;};
 in
