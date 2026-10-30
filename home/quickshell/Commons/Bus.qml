@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "screentools"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -64,7 +64,7 @@ Singleton {
   signal clockRefreshed
 
   // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
-  // "theme", "recorder", "calendar", "session", "profiles", "osd", "notify".
+  // "theme", "recorder", "calendar", "session", "profiles", "nearby", "screentools", "osd", "notify".
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 
@@ -134,7 +134,8 @@ Singleton {
   // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
   // island through owners, only through a transient screen, so a real panel covers it.
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
-  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation"]
+  // "captures" is the screenshot tray, which melts back by itself after a few seconds.
+  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "captures"]
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;

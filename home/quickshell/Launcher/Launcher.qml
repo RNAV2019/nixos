@@ -56,6 +56,11 @@ Variants {
       Omnibox.reset();
       query.text = "";
       win.selectFirst();
+      if (Omnibox.pendingAsk !== "") {
+        var asked = Omnibox.pendingAsk;
+        Omnibox.pendingAsk = "";
+        ClaudeChat.ask(asked);
+      }
     }
 
     function selectedRow() {

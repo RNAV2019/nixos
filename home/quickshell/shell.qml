@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Bar
 import qs.Calendar
+import qs.Capture
 import qs.Commons
 import qs.Control
 import qs.Dictation
@@ -25,6 +26,7 @@ ShellRoot {
 
   Bar {}
   CalendarPanel {}
+  CaptureTray {}
   DictationPill {}
   ControlCenter {}
   Launcher {}
@@ -34,6 +36,7 @@ ShellRoot {
   Osd {}
   Profiles {}
   RecorderPicker {}
+  ScreenToolsPanel {}
   SessionMenu {}
   WallpaperPicker {}
   ThemePicker {}
@@ -42,10 +45,10 @@ ShellRoot {
   }
   LockPreview {}
 
-  // The island surfaces with the same toggle/close pair; the recorder, theme, session
+  // The island surfaces with the same toggle/close pair; the recorder, theme, session, screen tools
   // and nearby targets stay handwritten below, since they differ.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "screentools")
 
     IpcHandler {
       required property string modelData
@@ -124,6 +127,79 @@ ShellRoot {
     // Jump straight to the receive view: `qs ipc call nearby receive`.
     function receive(): void {
       Nearby.requestReceive();
+    }
+  }
+
+  // The screen tools open on a key; `run` fires one directly (the colour picker has its own
+  // shortcut), closing the surface first if it is up.
+  IpcHandler {
+    target: "screentools"
+
+    function toggle(): void {
+      Bus.toggleSurface("screentools");
+    }
+
+    function close(): void {
+      Bus.closeSurface("screentools");
+    }
+
+    function run(tool: string): void {
+      ScreenTools.start(tool);
+    }
+  }
+
+  // Screenshots: each is saved, copied and shown in the tray. See Services/Captures.qml.
+  IpcHandler {
+    target: "capture"
+
+    function region(): void {
+      Captures.begin("region");
+    }
+
+    function window(): void {
+      Captures.begin("window");
+    }
+
+    function output(): void {
+      Captures.begin("output");
+    }
+
+    function screen(): void {
+      Captures.begin("screen");
+    }
+  }
+
+  // The tray's buttons, for a key to be bound to later.
+  IpcHandler {
+    target: "captures"
+
+    function annotate(): void {
+      Captures.annotate();
+    }
+
+    function copy(): void {
+      Captures.copy();
+    }
+
+    function send(): void {
+      Captures.send();
+    }
+
+    function open(): void {
+      Captures.open();
+    }
+
+    function step(): void {
+      Captures.step();
+    }
+
+    function dismiss(): void {
+      Captures.dismiss();
+    }
+
+    // `delete` is a reserved word in QML, so the IPC call is `remove`.
+    function remove(): void {
+      Captures.remove();
     }
   }
 

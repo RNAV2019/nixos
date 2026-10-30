@@ -52,6 +52,7 @@ Singleton {
     return "Off";
   }
 
+  // The tray (Services/Captures.qml) announces a saved recording; `elapsed` is still its length.
   signal saved(string path)
   signal failed(string reason)
 
@@ -252,35 +253,8 @@ Singleton {
           return;
         }
         root.saved(confirm.target);
-        announce.command = ["sh", "-c", 'notify-send -a "Screen Recorder" -A "open=Open" -A "folder=Show in folder" "Recording saved" "$1"', "sh", confirm.target.substring(confirm.target.lastIndexOf("/") + 1)];
-        announce.target = confirm.target;
-        announce.running = true;
       }
     }
-  }
-
-  // The shell is the notification server, so this comes back as a toast with real actions.
-  Process {
-    id: announce
-
-    property string target: ""
-
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var choice = text.trim();
-        if (choice === "open")
-          open.command = ["xdg-open", announce.target];
-        else if (choice === "folder")
-          open.command = ["xdg-open", announce.target.substring(0, announce.target.lastIndexOf("/"))];
-        else
-          return;
-        open.running = true;
-      }
-    }
-  }
-
-  Process {
-    id: open
   }
 
   Component.onCompleted: root.refreshMonitor()

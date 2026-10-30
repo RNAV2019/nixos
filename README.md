@@ -239,5 +239,9 @@ a GIF it has no palette banding.
 | `Super + L` | Lock | `Alt + R` | Screen recorder |
 | `Super + Escape` | Session menu | `Alt + P` | Power profiles |
 | `PrtSc` | Screenshot region | `Super + PrtSc` | Colour picker |
+| `Alt + PrtSc` | Screenshot output | `Super + Ctrl + PrtSc` | Screenshot all screens |
+| `Alt + S` | Screen tools | | |
+
+Every capture is saved to `~/Pictures/screenshots`, copied, and shown in a tray that grows out of the island: hover it for Annotate (satty), Copy, Send (Nearby) and Delete, or drag the picture out as a file. `Alt + S` opens the screen tools: region, window and screen grabs, text recognition (tesseract), QR decoding (zbar) and a colour picker with a history. In the tools, `R W S T Q C` pick a tool, `Enter` runs it and `Esc` closes.
 
 The full list is in [`home/desktop.nix`](home/desktop.nix).

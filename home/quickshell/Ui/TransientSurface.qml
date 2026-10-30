@@ -9,11 +9,11 @@ import qs.Services
 // the window grows out of the island, hands it over and comes back by itself. The window, the
 // still and the presentation handshake follow Ui/IslandSurface.qml; see the notes there.
 //
-// They take turns by `rank` (Bus.transientWants): OSD 4, dictation 3, a sharing request 2, a
-// toast 1, sharing progress 0. The highest wanting an output has the island, and one outranked
-// waits rather than being knocked out. When the higher one lets go, the waiting one takes over
-// from it as a handover, growing out of the shape it leaves, rather than the first shrinking to
-// the pill and the second growing back out of it.
+// They take turns by `rank` (Bus.transientWants): OSD 4, dictation 3, a sharing request 2, the
+// screenshot tray 1.5, a toast 1, sharing progress 0. The highest wanting an
+// output has the island, and one outranked waits rather than being knocked out. When the higher
+// one lets go, the waiting one takes over from it as a handover, growing out of the shape it
+// leaves, rather than the first shrinking to the pill and the second growing back out of it.
 PanelWindow {
   id: win
 
@@ -22,7 +22,7 @@ PanelWindow {
   // Identity on the bus and in the layer-shell namespace: "osd", "notify", "sharing", "dictation".
   property string key: ""
   property string layerNamespace: "quickshell-" + win.key
-  property int rank: 0
+  property real rank: 0
 
   // Bound by the owner: this surface wants the island on this output, other transients aside.
   property bool wanted: false
@@ -41,6 +41,10 @@ PanelWindow {
 
   // Everything the surface draws, laid out at its final metrics and uncovered by the shape.
   default property alias content: bodyHolder.data
+
+  // Drawn behind the surface and unclipped, so it may stand proud of the shape (the tray's
+  // stack of captures). Placed in window coordinates; it takes no input.
+  property alias underlay: underlayHolder.data
 
   // Raised inside show(), before the island is claimed, so the owner can latch what its open
   // shape is computed from.
@@ -290,6 +294,13 @@ PanelWindow {
       if (win.showing && !win.parked)
         win.dismiss();
     }
+  }
+
+  Item {
+    id: underlayHolder
+
+    anchors.fill: parent
+    visible: win.tall
   }
 
   FrostedSurface {

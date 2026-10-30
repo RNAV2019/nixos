@@ -394,6 +394,86 @@ Singleton {
   readonly property real powerTileFillAlpha: 0.9
   readonly property real powerTileBorderAlpha: 0.7
 
+  // The screenshot tray: a thumbnail card that grows out of the island after a capture. The
+  // card is 308 wide; a stack of captures is 16 taller, for the layers peeking out below.
+  readonly property int trayWidth: 308
+  readonly property int trayInset: 12
+  readonly property int trayThumbWidth: 284
+  readonly property int trayThumbHeight: 160
+  readonly property int trayThumbRadius: 14
+  readonly property int trayMetaGap: 10
+  readonly property int trayMetaHeight: 52
+  readonly property int trayHeight: trayInset + trayThumbHeight + trayMetaGap + trayMetaHeight + trayInset
+  readonly property int trayStackInset: 10
+  readonly property int trayStackPeek: 8
+  readonly property int trayStackHeight: trayHeight + trayStackPeek * 2
+  readonly property int trayTile: 28
+  readonly property int trayTileRadius: 8
+  readonly property int trayTileGlyph: 15
+  readonly property int trayTitleSize: 13
+  readonly property int trayDescSize: 11
+  readonly property int trayTagHeight: 22
+  readonly property int trayTagSize: 10
+  readonly property int trayActionWidth: 65
+  readonly property int trayActionHeight: 52
+  readonly property int trayActionGap: 8
+  readonly property int trayActionRadius: 14
+  readonly property int trayActionGlyph: 18
+  readonly property int trayActionLabelSize: 11
+  readonly property int trayChipHeight: 22
+  readonly property int trayBadge: 22
+  readonly property int trayDismiss: 22
+  readonly property int trayClearWidth: 48
+  // Counted down in 100 ms steps, like a toast, so hovering holds it in place.
+  readonly property int trayDwell: 6000
+  // Above a toast, which waits behind a capture just taken; below the OSD and requests.
+  readonly property real trayRank: 1.5
+
+  // Screen tools: the tool row is the power menu's tile grid with a key cap on each tile; the
+  // results are 420 px cards sharing one header.
+  readonly property int toolsKeyCap: 16
+  readonly property int toolsKeyCapRadius: 5
+  readonly property int toolsKeyCapSize: 10
+  readonly property int toolsKeyCapInset: 8
+  readonly property int resultWidth: 420
+  readonly property int resultInset: 14
+  readonly property int resultTile: 32
+  readonly property int resultTileRadius: 10
+  readonly property int resultTileGlyph: 16
+  readonly property int resultTitleSize: 14
+  readonly property int resultDescSize: 11
+  readonly property int resultHeaderHeight: 60
+  readonly property int resultBlockTop: 64
+  readonly property int resultBlockRadius: 14
+  readonly property int resultBlockPad: 12
+  readonly property int resultActionGap: 12
+  readonly property int resultDwell: 8000
+  readonly property int resultPillHeight: 22
+  readonly property int resultPillPad: 11
+  readonly property int resultPillSize: 11
+  readonly property int resultTextLines: 4
+  readonly property int resultTextLinesMax: 5
+  readonly property int resultTextLeading: 18
+  readonly property int resultQrLines: 3
+  readonly property real resultQrSize: 12.5
+  readonly property int colourWidth: 520
+  readonly property int colourSwatch: 177
+  readonly property int colourSwatchRadius: 16
+  readonly property int colourRowsX: 205
+  readonly property int colourRowWidth: 301
+  readonly property int colourLabelLeft: 27
+  readonly property int colourValueLeft: 84
+  readonly property int colourCopyGlyph: 14
+  readonly property int colourDividerTop: 205
+  readonly property int colourRecentTop: 215
+  readonly property int colourHistoryTop: 234
+  readonly property int colourHistoryCount: 10
+  readonly property int colourHistoryWidth: 42
+  readonly property int colourHistoryHeight: 28
+  readonly property int colourHistoryRadius: 9
+  readonly property int colourHistoryGap: 8
+  readonly property int colourHeight: colourHistoryTop + colourHistoryHeight + resultInset
+
   // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
   // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
   readonly property int osdWidth: 278
