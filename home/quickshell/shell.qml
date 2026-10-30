@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Auth
 import qs.Bar
 import qs.Calendar
 import qs.Commons
@@ -24,6 +25,8 @@ ShellRoot {
   Component.onCompleted: Displays.restoreAll()
 
   Bar {}
+  AuthPrompt {}
+  AuthPreview {}
   CalendarPanel {}
   DictationPill {}
   ControlCenter {}
@@ -42,10 +45,11 @@ ShellRoot {
   }
   LockPreview {}
 
-  // The island surfaces with the same toggle/close pair; the recorder, theme, session
-  // and nearby targets stay handwritten below, since they differ.
+  // The island surfaces with the same toggle/close pair; the recorder, theme, session and
+  // nearby targets stay handwritten below, since they differ, and the auth prompt takes no
+  // toggle: polkitd opens it, and only an answer closes it.
   Variants {
-    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby")
+    model: Bus.islandKeys.filter(k => k !== "theme" && k !== "session" && k !== "recorder" && k !== "nearby" && k !== "auth")
 
     IpcHandler {
       required property string modelData
