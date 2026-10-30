@@ -813,6 +813,18 @@ Singleton {
   // The tallest a card may be; the window is this plus its offset, so no card resizes it.
   readonly property int activityCardMaxHeight: 360
 
+  // The phone (Services/Phone.qml, Activities/PhoneCard.qml): the card is 440 wide beside a live
+  // screen preview and 360 without one; the satellite's ring turns love at this charge or less
+  // while it discharges; the preview is one adb screencap per interval while the card is up.
+  readonly property int phoneCardWidth: 440
+  readonly property int phoneCardCompactWidth: 360
+  readonly property int phoneCardHeight: 344
+  readonly property int phonePreviewWidth: 124
+  readonly property int phonePreviewHeight: 260
+  readonly property int phonePreviewRadius: 22
+  readonly property int phoneLowBattery: 20
+  readonly property int phonePreviewInterval: 1000
+
   // Moments (Activities/Moments.qml): the sharing pill's row, and an OSD-sized compact one.
   readonly property int momentWidth: sharingOfferWidth
   readonly property int momentHeight: sharingOfferHeight

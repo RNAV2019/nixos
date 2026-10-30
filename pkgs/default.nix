@@ -16,6 +16,7 @@ final: prev: {
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};
   ical-agenda = final.callPackage ./ical-agenda {};
+  phone-bridge = final.callPackage ./phone-bridge {};
   forward-dev = final.callPackage ./forward-dev {};
   typst-preview-window = final.callPackage ./typst-preview-window {};
   showcase = final.callPackage ./showcase {};

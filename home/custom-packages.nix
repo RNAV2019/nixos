@@ -7,6 +7,7 @@
     start-desktop
     gen-commit
     ical-agenda
+    phone-bridge
     forward-dev
     t3code-nightly
   ];
