@@ -16,6 +16,7 @@ Item {
   property string title: ""
   property string caption: ""
   property real reserve: 0
+  property real titleSize: 14
 
   x: 0
   y: 0
@@ -58,7 +59,7 @@ Item {
     text: root.title
     color: Theme.inkPrimary
     font.family: Theme.uiFont
-    font.pixelSize: 14
+    font.pixelSize: root.titleSize
     font.weight: Theme.weightSemi
   }
 
