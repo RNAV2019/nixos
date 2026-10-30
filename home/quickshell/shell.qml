@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Activities
 import qs.Auth
 import qs.Bar
 import qs.Calendar
@@ -26,6 +27,12 @@ ShellRoot {
   Component.onCompleted: Displays.restoreAll()
 
   Bar {}
+  PillSlide {}
+  SatelliteCards {}
+  Moments {}
+  ActivitySources {
+    id: activitySources
+  }
   AuthPrompt {}
   AuthPreview {}
   CalendarPanel {}
@@ -249,6 +256,120 @@ ShellRoot {
 
     function refresh(): void {
       Bus.clockRefreshed();
+    }
+  }
+
+  // `qs ipc call timer start 10m Pasta`; "90s", "10m", "1h30m" or a bare number of minutes.
+  // Quickshell IPC has no optional arguments, so a label-less timer is `quick 10m` (or `start
+  // 10m ""`). pause, resume, add and cancel take a timer id, 0 for every timer; `list` prints them.
+  IpcHandler {
+    target: "timer"
+
+    function quick(duration: string): string {
+      var id = Timers.start(duration, "");
+      return id > 0 ? "started " + id : "not a duration: " + duration;
+    }
+
+    function start(duration: string, label: string): string {
+      var id = Timers.start(duration, label);
+      return id > 0 ? "started " + id : "not a duration: " + duration;
+    }
+
+    function pause(id: int): void {
+      Timers.pause(id);
+    }
+
+    function resume(id: int): void {
+      Timers.resume(id);
+    }
+
+    function add(id: int, duration: string): void {
+      Timers.add(id, duration);
+    }
+
+    function cancel(id: int): void {
+      Timers.cancel(id);
+    }
+
+    function list(): string {
+      return Timers.describe();
+    }
+  }
+
+  IpcHandler {
+    target: "pomodoro"
+
+    function start(): void {
+      Pomodoro.start();
+    }
+
+    function pause(): void {
+      Pomodoro.pause();
+    }
+
+    function resume(): void {
+      Pomodoro.resume();
+    }
+
+    function skip(): void {
+      Pomodoro.skip();
+    }
+
+    function stop(): void {
+      Pomodoro.stop();
+    }
+
+    function status(): string {
+      return Pomodoro.describe();
+    }
+  }
+
+  // Test and automation hooks for the island's live activities.
+  IpcHandler {
+    target: "activities"
+
+    // Stand-in satellites: phone, event, alert, build; `clear` removes them.
+    function demo(name: string): void {
+      if (name === "clear")
+        Activities.clearDemos();
+      else
+        Activities.addDemo(name);
+    }
+
+    // The plugged-in moment as if the charger had just gone in: `plug 78 80`.
+    // A negative percent shows the real battery.
+    function plug(percent: int, minutes: int): void {
+      activitySources.plugged.simulatePlug(percent, minutes);
+    }
+
+    // The charger as a state change the watcher sees for itself: 1 in, 0 out, -1 the real battery.
+    function charger(state: int): void {
+      activitySources.plugged.fake = state;
+    }
+
+    // A moment with a title, for looking at how they queue.
+    function moment(title: string, attention: bool): void {
+      Activities.raiseMoment({
+        kind: "test",
+        attention: attention,
+        icon: IconPaths.check,
+        title: title,
+        subtitle: attention ? "Needs you" : "For your information",
+        buttons: [
+          {
+            text: "Dismiss",
+            kind: "primary"
+          }
+        ]
+      });
+    }
+
+    function dismissMoments(): void {
+      Activities.dismissAllMoments();
+    }
+
+    function list(): string {
+      return Activities.ordered.map(a => a.key + "\t" + a.kind + (a.pinned ? "\tpinned" : "") + (a.attention ? "\tattention" : "")).join("\n");
     }
   }
 }
