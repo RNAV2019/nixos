@@ -80,6 +80,10 @@ Singleton {
   // The provider whose view is open in place of the list, or null.
   property var view: null
 
+  // Text for the next open to put to Claude as a first question (the screen tools' OCR result),
+  // taken by the launcher as it opens.
+  property string pendingAsk: ""
+
   // Flat, in display order: headers are { id: "section:<name>", header: true, name }.
   property var results: []
 

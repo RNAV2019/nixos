@@ -34,6 +34,8 @@
 
   workspaces = lib.range 1 9;
 
+  gapsOut = 10;
+
   # With an external monitor connected, workspace 5 lives only there and the
   # rest only on the laptop panel. Rules fix where a workspace is created, so
   # focusing a missing one never opens it on the wrong output.
@@ -48,6 +50,18 @@
       end
     end'';
 
+  # Super+scroll zooms the screen by a fixed ratio per notch (dir is 1 in, -1 out), clamped
+  # to 1x-4x. Snapping near 1x lets a few notches out land exactly on it. Set at runtime
+  # like this, the zoom reverts on a config reload; zoomFactor animates the change.
+  zoomRatio = 1.25;
+  zoomMax = 4.0;
+  zoomBy = dir: ''
+    function()
+      local z = hl.get_config("cursor.zoom_factor") * ${toString zoomRatio} ^ ${toString dir}
+      if z < 1.05 then z = 1 end
+      hl.config({ cursor = { zoom_factor = math.min(z, ${toString zoomMax}) } })
+    end'';
+
   floatingOverlay = class: {
     match.class = class;
     float = true;
@@ -56,7 +70,7 @@
     rounding = 18;
   };
 in {
-  # grimblast writes into XDG_SCREENSHOTS_DIR and will not create it itself.
+  # Captures (Services/Captures.qml) are saved into XDG_SCREENSHOTS_DIR, created here.
   home.file."Pictures/screenshots/.keep".text = "";
 
   wayland.windowManager.hyprland = {
@@ -99,7 +113,7 @@ in {
 
         general = {
           gaps_in = 5;
-          gaps_out = 10;
+          gaps_out = gapsOut;
 
           border_size = 2;
 
@@ -125,6 +139,19 @@ in {
         };
 
         animations.enabled = true;
+
+        # Laptop touchpad swipes: a shorter drag than the 300 default, committing at a third
+        # of it (or on a quick flick) rather than half. Workspaces are a fixed 1-9, some of
+        # them pinned to a monitor, so a swipe off the last one must not open a tenth. The
+        # axis locks early so a diagonal swipe does not wobble.
+        gestures = {
+          workspace_swipe_distance = 250;
+          workspace_swipe_cancel_ratio = 0.3;
+          workspace_swipe_min_speed_to_force = 20;
+          workspace_swipe_create_new = false;
+          workspace_swipe_direction_lock = true;
+          workspace_swipe_direction_lock_threshold = 15;
+        };
 
         dwindle = {
           preserve_split = true;
@@ -278,23 +305,70 @@ in {
           speed = 1.39;
           bezier = "almostLinear";
         }
+        # Workspaces slide sideways, the way the swipe gesture drags them. In and Out
+        # share a speed so the pair stays in step; special workspaces slide up instead.
         {
           leaf = "workspaces";
-          enabled = false;
-          speed = 1;
-          bezier = "default";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slide";
         }
         {
           leaf = "workspacesIn";
-          enabled = false;
-          speed = 1;
-          bezier = "default";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slide";
         }
         {
           leaf = "workspacesOut";
-          enabled = false;
-          speed = 1;
-          bezier = "default";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slide";
+        }
+        {
+          leaf = "specialWorkspace";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slidevert";
+        }
+        {
+          leaf = "specialWorkspaceIn";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slidevert";
+        }
+        {
+          leaf = "specialWorkspaceOut";
+          enabled = true;
+          speed = 4.79;
+          bezier = "easeOutQuint";
+          style = "slidevert";
+        }
+        {
+          leaf = "zoomFactor";
+          enabled = true;
+          speed = 4.1;
+          bezier = "easeOutQuint";
+        }
+      ];
+
+      # Three fingers: sideways moves between workspaces, up opens the Overview. The
+      # swipe stays on the monitor's own workspaces, so it honours the pinning above.
+      gesture = [
+        {
+          fingers = 3;
+          direction = "horizontal";
+          action = "workspace";
+        }
+        {
+          fingers = 3;
+          direction = "up";
+          action = mkLuaInline ''function() hl.exec_cmd("qs ipc call overview toggle") end'';
         }
       ];
 
@@ -327,16 +401,16 @@ in {
         ++ lib.concatMap (key: [
           # Omarchy screenshot bindings. The extra keysyms cover the screenshot
           # key when keyd or its f16 mapping isn't active.
-          (bind key (exec "grimblast --notify copysave area"))
-          (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
-          (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))
-          (bind "${mod} + CTRL + ${key}" (exec "grimblast --notify copysave screen"))
+          (bind key (exec "qs ipc call capture region"))
+          (bind "ALT + ${key}" (exec "qs ipc call capture output"))
+          (bind "${mod} + ${key}" (exec "qs ipc call screentools run colour"))
+          (bind "${mod} + CTRL + ${key}" (exec "qs ipc call capture screen"))
         ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
         ++ [
           # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
           # With Super already held its press is too early to join, so SUPER + PrtSc
           # arrives as SUPER + SHIFT + S instead.
-          (bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))
+          (bind "${mod} + SHIFT + S" (exec "qs ipc call screentools run colour"))
 
           (bind "${mod} + L" (exec "lock-session"))
 
@@ -359,6 +433,9 @@ in {
 
           (bind "ALT + N" (exec "qs ipc call nearby toggle"))
 
+          # Region, window, text, QR code and colour grabs; Print stays a direct region capture.
+          (bind "ALT + S" (exec "qs ipc call screentools toggle"))
+
           # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER
           # first skips the release, which leaves it recording as if tapped.
           (bind "${mod} + D" (exec "dictate press"))
@@ -371,6 +448,10 @@ in {
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
           (bind "XF86AudioNext" (exec "playerctl next"))
           (bind "XF86AudioPrev" (exec "playerctl previous"))
+
+          (bind "${mod} + mouse_up" (zoomBy 1))
+          (bind "${mod} + mouse_down" (zoomBy (-1)))
+          (bind "${mod} + 0" ''function() hl.config({ cursor = { zoom_factor = 1 } }) end'')
 
           (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
           (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
@@ -422,12 +503,50 @@ in {
           float = true;
           center = true;
         }
+
+        # The screenshot tray's Annotate opens satty on one capture; it is a short-lived
+        # editor over the work, not a window to tile.
+        {
+          match.class = "^com\\.gabm\\.satty$";
+          float = true;
+          center = true;
+          size = "monitor_w*0.7 monitor_h*0.75";
+        }
+
+        # Chromium's picture-in-picture window shares the browser's class, so it is told
+        # apart by its title. It becomes a corner thumbnail a quarter of the monitor
+        # wide, in the browser's own aspect ratio, that follows you between workspaces. Move
+        # sees the window as it opened, before the size rule, so the corner is worked out from
+        # the final size instead of window_w and window_h.
+        {
+          match.title = "^(?i)picture[ -]in[ -]picture$";
+          float = true;
+          pin = true;
+          keep_aspect_ratio = true;
+          no_initial_focus = true;
+          size = "monitor_w*0.25 window_h*(monitor_w*0.25/window_w)";
+          move = "monitor_w*0.75-${toString gapsOut} monitor_h-window_h*(monitor_w*0.25/window_w)-${toString gapsOut}";
+        }
+
+        # Modal dialogs open centred in front of their window. Portal file choosers are
+        # empty lists until they fill, so they get room to browse.
+        {
+          match.modal = true;
+          float = true;
+          center = true;
+        }
+        {
+          match.class = "^(xdg-desktop-portal-gtk|org\\.freedesktop\\.impl\\.portal\\.desktop\\.gtk)$";
+          float = true;
+          center = true;
+          size = "monitor_w*0.6 monitor_h*0.65";
+        }
       ];
 
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|sharing|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel)";
           no_anim = true;
         }
       ];
@@ -501,27 +620,6 @@ in {
   # big videos smaller than mpv would; 1.4 gives back the size they had in a 4K
   # video's window. Fullscreen controls are unchanged.
   xdg.configFile."mpv/script-opts/osc.conf".text = "scalewindowed=1.4\n";
-
-  # The colours are included from the active theme; see theme.nix.
-  programs.fuzzel = {
-    enable = true;
-    settings = {
-      main = {
-        font = "JetBrainsMono Nerd Font:size=12";
-        width = 28;
-        lines = 8;
-        horizontal-pad = 14;
-        vertical-pad = 8;
-        inner-pad = 4;
-        placeholder = "Launch...";
-        icons-enabled = "no";
-      };
-      border = {
-        width = 1;
-        radius = 8;
-      };
-    };
-  };
 
   services.hypridle = {
     enable = true;

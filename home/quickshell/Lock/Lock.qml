@@ -35,6 +35,9 @@ Scope {
   // stops a broken worker reading as a wrong password.
   property bool pamErrored: false
 
+  // Set once an unlock has begun, so a face and a password landing together reveal once.
+  property bool unlocking: false
+
   LockReveal {
     id: reveal
 
@@ -72,6 +75,9 @@ Scope {
     root.pendingPassword = "";
     root.pamErrored = false;
     pamWatchdog.restart();
+    root.unlocking = false;
+    // Last, and only ever an extra way in: any failure here leaves the password as it was.
+    face.begin();
   }
 
   function requestManualLock() {
@@ -98,6 +104,8 @@ Scope {
 
   function unlock() {
     pamWatchdog.stop();
+    root.unlocking = true;
+    face.reset();
     root.pendingPassword = "";
     passwordPam.abort();
     root.password = "";
@@ -143,6 +151,12 @@ Scope {
 
     function onLockRequested() {
       root.requestManualLock();
+    }
+
+    // hypridle raises this after a wake; the camera looks again.
+    function onClockRefreshed() {
+      if (lockContext.locked && !root.unlocking)
+        face.begin();
     }
   }
 
@@ -216,6 +230,17 @@ Scope {
     id: submapReset
 
     command: ["hyprctl", "dispatch", "hl.dsp.submap(\"reset\")"]
+  }
+
+  FaceUnlock {
+    id: face
+
+    locked: lockContext.locked
+
+    onSucceeded: {
+      if (!root.unlocking)
+        root.unlock();
+    }
   }
 
   PamContext {
@@ -332,6 +357,7 @@ Scope {
         statusIsError: root.statusIsError
         busy: root.busy
         inputStarted: root.inputStarted
+        faceState: face.state
         ground: reveal.ground
         clockAlpha: reveal.clockAlpha
         loginAlpha: reveal.loginAlpha
@@ -340,8 +366,12 @@ Scope {
           root.password = text;
           if (text.length > 0 && !root.inputStarted)
             root.inputStarted = true;
+          // The first keystroke ends the scan; the field was never waiting on it.
+          if (text.length > 0)
+            face.cancel();
         }
         onAccepted: root.submit()
+        onFaceRetryRequested: face.retry()
       }
     }
   }
