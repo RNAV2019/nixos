@@ -61,7 +61,7 @@
 | **Terminal** | Ghostty, herdr, fish, starship, atuin, zoxide, fzf |
 | **Editor** | Helix (Steel plugin fork) |
 | **Browser** | Helium, with extensions pinned in Nix and a theme extension per palette |
-| **AI** | Claude Code, opencode, T3 Code nightly |
+| **AI** | Claude Code, opencode, T3 Code |
 | **Tools** | `gen-commit`, `ical-agenda`, `note-tui`, `backup`, `showcase`, … |
 | **Secrets / backups** | sops-nix (age); borg to a NAS over a Cloudflare tunnel |
 

@@ -21,7 +21,7 @@ final: prev: {
   showcase = final.callPackage ./showcase {};
   claude-statusline = final.callPackage ./claude-statusline {};
   claude-usage = final.callPackage ./claude-usage {};
-  t3code-nightly = final.callPackage ./t3code-nightly {};
+  t3code = final.callPackage ./t3code {};
 
   # Helium extensions
   fetchCrx = final.callPackage ./fetch-crx {};

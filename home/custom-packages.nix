@@ -8,6 +8,6 @@
     gen-commit
     ical-agenda
     forward-dev
-    t3code-nightly
+    t3code
   ];
 }
