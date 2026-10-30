@@ -24,6 +24,15 @@ Item {
 
   height: Theme.controlNotifEntryHeight
 
+  // First, under the cross: over it, it would take its press.
+  SwipeDismiss {
+    id: swipe
+
+    anchors.fill: parent
+    span: root.width
+    onGone: root.dismissed()
+  }
+
   Item {
     id: face
 
@@ -111,13 +120,5 @@ Item {
   // Hover without taking the press, so the swipe and the cross both still get it.
   HoverHandler {
     id: hover
-  }
-
-  SwipeDismiss {
-    id: swipe
-
-    anchors.fill: parent
-    span: root.width
-    onGone: root.dismissed()
   }
 }

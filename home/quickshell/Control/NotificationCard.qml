@@ -36,6 +36,18 @@ Rectangle {
     x: swipe.offset
   }
 
+  // First, under the buttons: over them it would take their presses. A drag that starts on one
+  // still reaches it.
+  SwipeDismiss {
+    id: swipe
+
+    anchors.fill: parent
+    enabled: root.swipeable
+    span: root.width
+    // Gone from sight, so what the card stands for can go too.
+    onGone: root.dismissed()
+  }
+
   Rectangle {
     id: avatar
 
@@ -126,13 +138,4 @@ Rectangle {
     onClicked: root.dismissed()
   }
 
-  SwipeDismiss {
-    id: swipe
-
-    anchors.fill: parent
-    enabled: root.swipeable
-    span: root.width
-    // Gone from sight, so what the card stands for can go too.
-    onGone: root.dismissed()
-  }
 }

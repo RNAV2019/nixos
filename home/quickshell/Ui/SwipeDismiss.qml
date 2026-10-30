@@ -33,14 +33,16 @@ Item {
   signal committed
   signal gone
 
-  // Raised once per dismissal, from the card's own fade rather than a binding on it: what
-  // `gone` does ends by resetting the card, which a binding would see as a loop.
+  // Raised once per dismissal, a turn after the fade that caused it: what `gone` does ends by
+  // resetting the card, and doing that inside the change that prompted it left `offset` stale.
   property bool sent: false
 
   function settle() {
     if (root.leaving && !root.sent && root.fade <= 0.02) {
       root.sent = true;
-      root.gone();
+      Qt.callLater(function () {
+        root.gone();
+      });
     }
   }
 
