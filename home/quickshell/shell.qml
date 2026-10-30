@@ -181,6 +181,71 @@ ShellRoot {
     }
   }
 
+  // `qs ipc call timer start 10m Pasta`; "90s", "10m", "1h30m" or a bare number of minutes.
+  // Quickshell IPC has no optional arguments, so a label-less timer is `quick 10m` (or `start
+  // 10m ""`). pause, resume, add and cancel take a timer id, 0 for every timer; `list` prints them.
+  IpcHandler {
+    target: "timer"
+
+    function quick(duration: string): string {
+      var id = Timers.start(duration, "");
+      return id > 0 ? "started " + id : "not a duration: " + duration;
+    }
+
+    function start(duration: string, label: string): string {
+      var id = Timers.start(duration, label);
+      return id > 0 ? "started " + id : "not a duration: " + duration;
+    }
+
+    function pause(id: int): void {
+      Timers.pause(id);
+    }
+
+    function resume(id: int): void {
+      Timers.resume(id);
+    }
+
+    function add(id: int, duration: string): void {
+      Timers.add(id, duration);
+    }
+
+    function cancel(id: int): void {
+      Timers.cancel(id);
+    }
+
+    function list(): string {
+      return Timers.describe();
+    }
+  }
+
+  IpcHandler {
+    target: "pomodoro"
+
+    function start(): void {
+      Pomodoro.start();
+    }
+
+    function pause(): void {
+      Pomodoro.pause();
+    }
+
+    function resume(): void {
+      Pomodoro.resume();
+    }
+
+    function skip(): void {
+      Pomodoro.skip();
+    }
+
+    function stop(): void {
+      Pomodoro.stop();
+    }
+
+    function status(): string {
+      return Pomodoro.describe();
+    }
+  }
+
   // Test and automation hooks for the island's live activities.
   IpcHandler {
     target: "activities"
