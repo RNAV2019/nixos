@@ -6,9 +6,16 @@ import Quickshell
 Scope {
   id: root
 
+  // The plugged-in watcher, for the shell's test IPC to override.
+  readonly property alias plugged: plugged
+
   TimerSource {}
 
   PomodoroSource {}
+
+  PluggedSource {
+    id: plugged
+  }
 
   DemoSource {}
 }

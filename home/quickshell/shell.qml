@@ -29,7 +29,9 @@ ShellRoot {
   PillSlide {}
   SatelliteCards {}
   Moments {}
-  ActivitySources {}
+  ActivitySources {
+    id: activitySources
+  }
   AuthPrompt {}
   AuthPreview {}
   CalendarPanel {}
@@ -256,6 +258,17 @@ ShellRoot {
         Activities.clearDemos();
       else
         Activities.addDemo(name);
+    }
+
+    // The plugged-in moment as if the charger had just gone in: `plug 78 80`.
+    // A negative percent shows the real battery.
+    function plug(percent: int, minutes: int): void {
+      activitySources.plugged.simulatePlug(percent, minutes);
+    }
+
+    // The charger as a state change the watcher sees for itself: 1 in, 0 out, -1 the real battery.
+    function charger(state: int): void {
+      activitySources.plugged.fake = state;
     }
 
     // A moment with a title, for looking at how they queue.
