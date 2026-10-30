@@ -127,7 +127,7 @@ None of the steps above bring back Bluetooth pairings or T3 Code and opencode hi
 ## Daily use
 
 ```bash
-rebuild              # nixos-rebuild switch for this hostname
+rebuild              # build, diff and switch this hostname, with progress on the island (`rebuild build|boot|test|dry`)
 nix flake update     # bump inputs
 nix flake check      # tool tests and qmlformat
 nix-clean            # collect old generations
