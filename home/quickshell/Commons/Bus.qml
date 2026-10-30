@@ -342,4 +342,19 @@ Singleton {
   function islandCardFor(screen) {
     return lookup(islandCards, screen, null);
   }
+
+  // Where the resting pill sits against its nominal spot, in logical px. The one source: the
+  // bar's island and every surface that grows out of it (Ui/IslandOrigin.qml) are placed by
+  // these, so a handoff starts from and returns to the pill wherever it is. The shift is the
+  // OLED orbit (Services/OledCare.qml); the slide is for anything else that moves the pill
+  // sideways, and adds to it.
+  property real pillShiftX: 0
+  property real pillShiftY: 0
+  property real pillSlideX: 0
+  readonly property real pillOffsetX: pillShiftX + pillSlideX
+  readonly property real pillOffsetY: pillShiftY
+
+  // The workspaces pill takes its own point on the orbit; nothing grows out of it.
+  property real workspacesOffsetX: 0
+  property real workspacesOffsetY: 0
 }
