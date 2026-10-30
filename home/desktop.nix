@@ -70,7 +70,7 @@
     rounding = 18;
   };
 in {
-  # grimblast writes into XDG_SCREENSHOTS_DIR and will not create it itself.
+  # Captures (Services/Captures.qml) are saved into XDG_SCREENSHOTS_DIR, created here.
   home.file."Pictures/screenshots/.keep".text = "";
 
   wayland.windowManager.hyprland = {
@@ -401,16 +401,16 @@ in {
         ++ lib.concatMap (key: [
           # Omarchy screenshot bindings. The extra keysyms cover the screenshot
           # key when keyd or its f16 mapping isn't active.
-          (bind key (exec "grimblast --notify copysave area"))
-          (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
-          (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))
-          (bind "${mod} + CTRL + ${key}" (exec "grimblast --notify copysave screen"))
+          (bind key (exec "qs ipc call capture region"))
+          (bind "ALT + ${key}" (exec "qs ipc call capture output"))
+          (bind "${mod} + ${key}" (exec "qs ipc call screentools run colour"))
+          (bind "${mod} + CTRL + ${key}" (exec "qs ipc call capture screen"))
         ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
         ++ [
           # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
           # With Super already held its press is too early to join, so SUPER + PrtSc
           # arrives as SUPER + SHIFT + S instead.
-          (bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))
+          (bind "${mod} + SHIFT + S" (exec "qs ipc call screentools run colour"))
 
           (bind "${mod} + L" (exec "lock-session"))
 
@@ -432,6 +432,9 @@ in {
           (bind "ALT + P" (exec "qs ipc call profiles toggle"))
 
           (bind "ALT + N" (exec "qs ipc call nearby toggle"))
+
+          # Region, window, text, QR code and colour grabs; Print stays a direct region capture.
+          (bind "ALT + S" (exec "qs ipc call screentools toggle"))
 
           # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER
           # first skips the release, which leaves it recording as if tapped.
@@ -534,7 +537,7 @@ in {
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|sharing|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel)";
           no_anim = true;
         }
       ];

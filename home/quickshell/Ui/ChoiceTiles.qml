@@ -6,7 +6,9 @@ import qs.Commons
 Item {
   id: root
 
-  // Entries of { glyph, label }, rebuilt by the caller when a label changes.
+  // Entries of { glyph, label }, rebuilt by the caller when a label changes. An entry may carry
+  // `path` (24-grid stroke data, drawn in place of the font glyph) and `keycap` (a letter
+  // drawn on the tile's corner, the key that fires it).
   property var model: []
 
   // The tile the keyboard is on and the tile that is filled are not the same thing.
@@ -104,10 +106,25 @@ Item {
         }
       }
 
+      StrokeIcon {
+        visible: tile.modelData.path !== undefined
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: Theme.powerGlyphTop - Theme.powerTileTop
+        size: Theme.powerGlyphSize
+        strokeWidth: 1.75
+        path: tile.modelData.path !== undefined ? tile.modelData.path : ""
+        color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
+
+        Behavior on color {
+          Tint {}
+        }
+      }
+
       Text {
+        visible: tile.modelData.path === undefined
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.powerGlyphTop - Theme.powerTileTop - height / 2 + Theme.powerGlyphSize / 2
-        text: tile.modelData.glyph
+        text: tile.modelData.glyph !== undefined ? tile.modelData.glyph : ""
         color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
         font.family: Theme.iconFont
         font.pixelSize: Theme.powerGlyphSize
@@ -128,6 +145,34 @@ Item {
 
         Behavior on color {
           Tint {}
+        }
+      }
+
+      // The key that fires the tile, on its top-right corner.
+      Rectangle {
+        visible: tile.modelData.keycap !== undefined
+        x: parent.width - width - Theme.toolsKeyCapInset
+        y: Theme.toolsKeyCapInset
+        width: Theme.toolsKeyCap
+        height: Theme.toolsKeyCap
+        radius: Theme.toolsKeyCapRadius
+        color: tile.isActive ? Theme.withAlpha(Theme.base, 0.16) : Theme.withAlpha(Theme.highlightMed, 0.5)
+
+        Behavior on color {
+          Tint {}
+        }
+
+        Text {
+          anchors.centerIn: parent
+          text: tile.modelData.keycap !== undefined ? tile.modelData.keycap : ""
+          color: tile.isActive ? Theme.inkOnAccent : Theme.inkTertiary
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.toolsKeyCapSize
+          font.weight: Theme.weightSemi
+
+          Behavior on color {
+            Tint {}
+          }
         }
       }
 
