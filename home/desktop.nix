@@ -504,6 +504,15 @@ in {
           center = true;
         }
 
+        # The screenshot tray's Annotate opens satty on one capture; it is a short-lived
+        # editor over the work, not a window to tile.
+        {
+          match.class = "^com\\.gabm\\.satty$";
+          float = true;
+          center = true;
+          size = "monitor_w*0.7 monitor_h*0.75";
+        }
+
         # Chromium's picture-in-picture window shares the browser's class, so it is told
         # apart by its title. It becomes a corner thumbnail a quarter of the monitor
         # wide, in the browser's own aspect ratio, that follows you between workspaces. Move
