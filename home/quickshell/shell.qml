@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Activities
 import qs.Auth
 import qs.Bar
 import qs.Calendar
@@ -25,6 +26,10 @@ ShellRoot {
   Component.onCompleted: Displays.restoreAll()
 
   Bar {}
+  PillSlide {}
+  SatelliteCards {}
+  Moments {}
+  ActivitySources {}
   AuthPrompt {}
   AuthPreview {}
   CalendarPanel {}
@@ -173,6 +178,44 @@ ShellRoot {
 
     function refresh(): void {
       Bus.clockRefreshed();
+    }
+  }
+
+  // Test and automation hooks for the island's live activities.
+  IpcHandler {
+    target: "activities"
+
+    // Stand-in satellites: phone, event, alert, build; `clear` removes them.
+    function demo(name: string): void {
+      if (name === "clear")
+        Activities.clearDemos();
+      else
+        Activities.addDemo(name);
+    }
+
+    // A moment with a title, for looking at how they queue.
+    function moment(title: string, attention: bool): void {
+      Activities.raiseMoment({
+        kind: "test",
+        attention: attention,
+        icon: IconPaths.check,
+        title: title,
+        subtitle: attention ? "Needs you" : "For your information",
+        buttons: [
+          {
+            text: "Dismiss",
+            kind: "primary"
+          }
+        ]
+      });
+    }
+
+    function dismissMoments(): void {
+      Activities.dismissAllMoments();
+    }
+
+    function list(): string {
+      return Activities.ordered.map(a => a.key + "\t" + a.kind + (a.pinned ? "\tpinned" : "") + (a.attention ? "\tattention" : "")).join("\n");
     }
   }
 }

@@ -134,7 +134,8 @@ Singleton {
   // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
   // island through owners, only through a transient screen, so a real panel covers it.
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
-  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation"]
+  // "moment" is a live activity's instant (Activities/Moments.qml): a timer done, a charger plugged in.
+  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "moment"]
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;
@@ -145,6 +146,10 @@ Singleton {
   // turn rather than being knocked out: when it lets go, the next one takes over from it.
   // Keyed by "key@screen" so a surface on one output never clears another's entry.
   property var transientWants: ({})
+
+  // Counts wants as they are made or change rank, so equal ranks take turns first come first
+  // served: the older want keeps the island and the younger waits behind it.
+  property int wantSerial: 0
 
   // A negative rank, or no output, withdraws the want.
   function setTransientWant(key, screenName, rank) {
@@ -160,7 +165,8 @@ Singleton {
     transientWants = writeMap(transientWants, id, {
       key: key,
       screen: screenName,
-      rank: rank
+      rank: rank,
+      serial: ++wantSerial
     });
   }
 
@@ -213,9 +219,13 @@ Singleton {
   function transientOutranked(key, screenName, rank) {
     if (screenName === "")
       return false;
+    var own = transientWants[key + "@" + screenName];
+    var ownSerial = own ? own.serial : Infinity;
     for (var id in transientWants) {
       var want = transientWants[id];
-      if (want.screen === screenName && want.key !== key && want.rank > rank)
+      if (want.screen !== screenName || want.key === key)
+        continue;
+      if (want.rank > rank || (want.rank === rank && want.serial < ownSerial))
         return true;
     }
     return false;
@@ -351,8 +361,15 @@ Singleton {
   property real pillShiftX: 0
   property real pillShiftY: 0
   property real pillSlideX: 0
+  // The one output the slide applies to (the one the satellites sit beside); the others keep
+  // their pill where it was.
+  property string pillSlideScreen: ""
   readonly property real pillOffsetX: pillShiftX + pillSlideX
   readonly property real pillOffsetY: pillShiftY
+
+  function pillOffsetXFor(screenName) {
+    return pillShiftX + (screenName === pillSlideScreen ? pillSlideX : 0);
+  }
 
   // The workspaces pill takes its own point on the orbit; nothing grows out of it.
   property real workspacesOffsetX: 0

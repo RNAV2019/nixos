@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import qs.Activities
 import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
@@ -50,6 +51,10 @@ Variants {
       Region {
         item: island.suppressed ? null : island
       }
+
+      Region {
+        item: satellites.strip
+      }
     }
 
     Workspaces {
@@ -62,13 +67,22 @@ Variants {
       screenOffsetY: Theme.barMarginTop
     }
 
+    // Live activities beside the pill. Declared first, so the pill paints over the circles it
+    // pushes out from behind it.
+    Satellites {
+      id: satellites
+
+      island: island
+      screenName: bar.screen ? bar.screen.name : ""
+    }
+
     // The launcher and control centre cover the island; it stays mapped for handoff
     // timing but is not painted, so it cannot enter the panel's blur sample.
     Island {
       id: island
 
       // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
-      x: snap((parent.width - width) / 2 + Bus.pillOffsetX)
+      x: snap((parent.width - width) / 2 + Bus.pillOffsetXFor(screenName))
       y: snap(Theme.oledShiftMax + Bus.pillOffsetY)
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""

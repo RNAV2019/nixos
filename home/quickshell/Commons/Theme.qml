@@ -698,6 +698,62 @@ Singleton {
   readonly property color cameraMark: foam
   readonly property color microphoneMark: gold
 
+  // Live activities (Services/Activities.qml): satellites beside the shut pill, the hover cards
+  // that hang under them and the moments that grow out of the pill. A satellite is a pill-high
+  // circle; its ring is drawn on a centreline satelliteRingInset in from the edge.
+  readonly property int satelliteSize: barHeight
+  readonly property int satelliteGap: 8
+  readonly property real satelliteRingInset: 2.5
+  readonly property real satelliteRingWidth: 2
+  readonly property int satelliteGlyphSize: privacyGlyphSize
+  readonly property real satelliteOpenRing: 1.5
+  readonly property real satelliteTextSize: 10.5
+  readonly property real satelliteCaptionSize: 8.5
+  // The pill's x slide when a satellite comes or goes: the only underdamped motion in the
+  // shell, Ryan's call (about 3-4 px of overshoot on the 22 px travel, settled in ~320 ms).
+  readonly property real satelliteSlideOmega: 24
+  readonly property real satelliteSlideZeta: 0.62
+  // The attention halo: scales to 1.35 and fades from 0.5 over the pulse, then rests.
+  readonly property int satellitePulse: 1400
+  readonly property int satellitePulseRest: 1000
+  readonly property int satellitePulseEvery: 12000
+
+  // The hover card hangs this far under its satellite, and keeps this far off the screen edge.
+  readonly property int activityCardGap: 8
+  readonly property int activityCardWidth: 340
+  readonly property int activityCardRadius: panelRadius
+  readonly property int activityCardPad: 16
+  readonly property int activityChipSize: 36
+  readonly property int activityTrackHeight: 8
+  readonly property int activityWellRadius: 14
+  readonly property int activityButtonHeight: 30
+  readonly property int activityButtonGap: 8
+  readonly property int activityDotSize: 8
+  readonly property int activityDotPitch: 14
+  // The tallest a card may be; the window is this plus its offset, so no card resizes it.
+  readonly property int activityCardMaxHeight: 360
+
+  // Moments (Activities/Moments.qml): the sharing pill's row, and an OSD-sized compact one.
+  readonly property int momentWidth: sharingOfferWidth
+  readonly property int momentHeight: sharingOfferHeight
+  readonly property int momentRadius: sharingOfferRadius
+  readonly property int momentCompactWidth: 340
+  readonly property int momentCompactHeight: osdHeight
+  readonly property int momentCompactRadius: osdRadius
+  readonly property int momentButtonHeight: 26
+  readonly property real momentTitleSize: 12.5
+  readonly property real momentSubtitleSize: 10.5
+  readonly property real activityRowTitleSize: 12.5
+  readonly property int momentDwell: 8000
+  readonly property int momentPluggedDwell: osdDwell + 900
+
+  // Pomodoro: 25 / 5 four times, then a long break.
+  readonly property int pomodoroFocusMinutes: 25
+  readonly property int pomodoroShortBreakMinutes: 5
+  readonly property int pomodoroLongBreakMinutes: 15
+  readonly property int pomodoroRounds: 4
+  readonly property int pomodoroMomentDwell: 6000
+
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: panelColumnWidth
   readonly property int calHeight: 600

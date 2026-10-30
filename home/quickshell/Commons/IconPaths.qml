@@ -31,7 +31,7 @@ Singleton {
   readonly property string chevronRight: "M9 18l6-6-6-6"
   readonly property string chevronDown: "M6 9l6 6 6-6"
 
-  // The lock screen's glance row, transport and face scan.
+  // The lock screen's glance row, transport and face scan; the live activities' controls use them too.
   readonly property string battery: "M16 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM22 11v2M6 11v2M10 11v2"
   readonly property string batteryCharging: "M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1M11 7l-3 5h4l-3 5M22 11v2"
   // The control centre's charge tile: Fast, and the limiting mode.
@@ -72,4 +72,10 @@ Singleton {
 
   // Recreated folder: straight tab step on a wide rounded body.
   readonly property string folder: "M3 7C3 5.9 3.9 5 5 5L9 5L11 7L19 7C20.1 7 21 7.9 21 9L21 17C21 18.1 20.1 19 19 19L5 19C3.9 19 3 18.1 3 17L3 7"
+
+  // The live activities' glyphs, Lucide: the square of Stop, the cup of a break, and the bare
+  // battery outline, whose fill the plugged-in moment draws itself.
+  readonly property string square: "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+  readonly property string coffee: "M10 2v2M14 2v2M6 2v2M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"
+  readonly property string batteryOutline: "M4 7h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM22 11v2"
 }
