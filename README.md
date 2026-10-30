@@ -239,5 +239,15 @@ a GIF it has no palette banding.
 | `Super + L` | Lock | `Alt + R` | Screen recorder |
 | `Super + Escape` | Session menu | `Alt + P` | Power profiles |
 | `PrtSc` | Screenshot region | `Super + PrtSc` | Colour picker |
+| `Super + Scroll` | Zoom the screen, 1× to 4× | `Super + 0` | Reset zoom |
 
 The full list is in [`home/desktop.nix`](home/desktop.nix).
+
+## Touchpad gestures
+
+| Gesture | Action |
+|---|---|
+| Three fingers, swipe left or right | Switch workspace, following the finger. Stays on the monitor's own workspaces, so workspace 5 remains the external monitor's |
+| Three fingers, swipe up | Toggle the Overview |
+
+Workspaces slide sideways to match the swipe, and special workspaces slide vertically. The swipe distance and feel are tuned under `gestures` in [`home/desktop.nix`](home/desktop.nix).
