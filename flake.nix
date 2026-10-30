@@ -106,6 +106,9 @@
       # NixOS VM: wifi.nix on iwd against hostapd/RADIUS on mac80211_hwsim.
       wifi-iwd = import ./tests/wifi-iwd.nix {inherit pkgs;};
 
+      # NixOS VM: the shell's polkit agent against a real polkitd and PAM, in a session of its own.
+      polkit-agent = import ./tests/polkit-agent.nix {inherit pkgs;};
+
       # qmlformat reads home/quickshell/.qmlformat.ini; any file it would change fails.
       quickshell-qmlformat =
         pkgs.runCommand "quickshell-qmlformat" {

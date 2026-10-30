@@ -266,6 +266,9 @@ Singleton {
   // The error PAM gave during this try, if it gave one; used for the latch when a try fails.
   property string heardError: ""
 
+  // An identity change is under way; see selectIdentity().
+  property bool switching: false
+
   // An answer typed before PAM has asked again (right after a failure), sent as soon as it does.
   property string queued: ""
   property bool hasQueued: false
@@ -316,8 +319,13 @@ Singleton {
     root.heardError = "";
     if (root.preview)
       root.previewSelected = index;
-    else
+    else {
+      // AuthFlow cancels the old PAM session to start the new one, and reports that as a failed
+      // try, synchronously; it is not one.
+      root.switching = true;
       root.flow.selectedIdentity = root.flow.identities[index];
+      root.switching = false;
+    }
   }
 
   // A try failed: hold the reason where the prompt can keep showing it.
@@ -380,7 +388,8 @@ Singleton {
     ignoreUnknownSignals: true
 
     function onAuthenticationFailed() {
-      root.noteFailure();
+      if (!root.switching)
+        root.noteFailure();
     }
 
     function onAuthenticationSucceeded() {
