@@ -70,7 +70,7 @@ Singleton {
   id: root
 
   // Order is the default section order. Adding a provider is one entry here.
-  readonly property var providers: [AppSearch, Calculator, ClipboardHistory, EmojiSearch, ClaudeChat]
+  readonly property var providers: [AppSearch, TimerProvider, Calculator, ClipboardHistory, EmojiSearch, ClaudeChat]
 
   property string query: ""
 

@@ -834,6 +834,12 @@ Singleton {
   readonly property int pomodoroRounds: 4
   readonly property int pomodoroMomentDwell: 6000
 
+  // The next calendar event: a satellite from this many minutes ahead, a reminder moment at the
+  // second, and it stays "starting" for the third after it has begun.
+  readonly property int eventLeadMinutes: 15
+  readonly property int eventRemindMinutes: 10
+  readonly property int eventLingerMinutes: 3
+
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: panelColumnWidth
   readonly property int calHeight: 600

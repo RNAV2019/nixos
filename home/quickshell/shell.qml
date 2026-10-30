@@ -366,6 +366,13 @@ ShellRoot {
       activitySources.plugged.fake = state;
     }
 
+    // NetworkManager's connectivity verdict as the sign-in watcher sees it: "portal", "limited",
+    // "none" or "full"; "" goes back to the real one. `network` is the SSID the moment names.
+    function wifi(state: string, network: string): void {
+      activitySources.wifi.fakeNetwork = network;
+      activitySources.wifi.fake = state;
+    }
+
     // A moment with a title, for looking at how they queue.
     function moment(title: string, attention: bool): void {
       Activities.raiseMoment({

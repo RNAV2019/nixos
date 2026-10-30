@@ -60,6 +60,13 @@ in {
   # known networks on. "wpa_supplicant" restores the old stack unchanged; wifi.nix
   # writes iwd's network files only while this is "iwd".
   networking.networkmanager.wifi.backend = "iwd";
+  # Without a probe NetworkManager never reports "portal", so the shell could not offer the
+  # sign-in page on a hotel or campus network that redirects every request to a login.
+  networking.networkmanager.settings.connectivity = {
+    uri = "http://nmcheck.gnome.org/check_network_status.txt";
+    response = "NetworkManager is online";
+    interval = 300;
+  };
 
   # LocalSend (discovery + transfer on port 53317)
   networking.firewall.allowedTCPPorts = [53317];

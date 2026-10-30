@@ -6,12 +6,22 @@ import Quickshell
 Scope {
   id: root
 
-  // The plugged-in watcher, for the shell's test IPC to override.
+  // The plugged-in, next-event and sign-in watchers, for the shell's test IPC to override.
   readonly property alias plugged: plugged
+  readonly property alias event: event
+  readonly property alias wifi: wifi
 
   TimerSource {}
 
   PomodoroSource {}
+
+  EventSource {
+    id: event
+  }
+
+  WifiSource {
+    id: wifi
+  }
 
   PluggedSource {
     id: plugged
