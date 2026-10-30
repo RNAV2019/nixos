@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview", "cheatsheet"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview", "cheatsheet", "sharepicker"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
