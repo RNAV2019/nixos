@@ -57,6 +57,7 @@
   zoomMax = 4.0;
   zoomBy = dir: ''
     function()
+      qs_super_used()
       local z = hl.get_config("cursor.zoom_factor") * ${toString zoomRatio} ^ ${toString dir}
       if z < 1.05 then z = 1 end
       hl.config({ cursor = { zoom_factor = math.min(z, ${toString zoomMax}) } })
@@ -69,6 +70,203 @@
     border_size = 0;
     rounding = 18;
   };
+
+  keybinds = import ./keybinds.nix {inherit lib;};
+
+  # The cheatsheet shows while Super is held on its own. Hyprland decides, not the shell: it
+  # sees every key (a shell surface only sees those sent to it), and a bind pair on Super
+  # cannot tell a lone hold from the start of a combo. The key event fires before Hyprland
+  # updates its pressed-key set, so a Super press arms a timer only when no other key is
+  # down, any other key press disarms it, and when it fires Super must still be the only key
+  # held. Releasing Super hides the sheet. Keycodes are xkb's (evdev + 8): Super_L, Super_R.
+  # Mouse and scroll Super binds call qs_super_used() themselves, as they are not key events.
+  # Each call to the shell carries the config's start time and a counter, so a hide that
+  # overtakes a show (they are two processes) is not undone by the late show; see Bus.qml.
+  cheatHoldMs = 600;
+  superHold = ''
+    do
+      local SUPER_L, SUPER_R = 133, 134
+      local epoch, timer, seq, shown = os.time(), nil, 0, false
+
+      local function others_down()
+        for code = 9, 255 do
+          if code ~= SUPER_L and code ~= SUPER_R and hl.is_key_down(code) then return true end
+        end
+        return false
+      end
+
+      local function disarm()
+        if timer then timer:set_enabled(false); timer = nil end
+      end
+
+      local function call(verb)
+        seq = seq + 1
+        hl.exec_cmd("qs ipc call cheatsheet " .. verb .. " " .. epoch .. " " .. seq)
+      end
+
+      function qs_super_used() disarm() end
+
+      hl.on("input.keyboard.key", function(code, _, state)
+        if code == SUPER_L or code == SUPER_R then
+          if state == 1 then
+            if not others_down() then
+              disarm()
+              timer = hl.timer(function()
+                timer = nil
+                if (hl.is_key_down(SUPER_L) or hl.is_key_down(SUPER_R)) and not others_down() then
+                  shown = true
+                  call("hold")
+                end
+              end, { timeout = ${toString cheatHoldMs}, type = "oneshot" })
+            end
+          elseif state == 0 then
+            disarm()
+            if shown then shown = false; call("release") end
+          end
+        elseif state == 1 then
+          -- A combo has begun: whatever the sheet was for is over, so it goes too.
+          disarm()
+          if shown then shown = false; call("release") end
+        end
+      end)
+    end'';
+
+  # What every key does. The binds, the touchpad gestures and the cheatsheet shown while
+  # Super is held all come from these rows; see home/keybinds.nix for the shape. Rows are
+  # listed in the order the sheet draws them within a group.
+  row = group: desc: binds: {inherit group desc binds;};
+  rowKeys = group: desc: keys: binds: {inherit group desc keys binds;};
+
+  # The three keysyms the screenshot key can arrive as. The extra ones cover it when keyd or
+  # its f16 mapping isn't active (Omarchy's bindings).
+  printKeys = ["Print" "XF86SelectiveScreenshot" "XF86Launch7"];
+  onPrint = prefix: dispatcher: map (key: bind "${prefix}${key}" dispatcher) printKeys;
+
+  keyRows = [
+    (row "Apps" "Terminal" [(bind "${mod} + RETURN" (exec "ghostty"))])
+    (row "Apps" "Browser" [(bind "${mod} + SHIFT + B" (exec "helium"))])
+    (row "Apps" "Files" [(bind "${mod} + SHIFT + F" (exec "nautilus"))])
+
+    (row "Windows" "Close" [(bind "${mod} + W" "hl.dsp.window.close()")])
+    (row "Windows" "Float" [(bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')])
+    (row "Windows" "Toggle split" [(bind "${mod} + J" ''hl.dsp.layout("togglesplit")'')])
+    (row "Windows" "Fullscreen" [(bind "${mod} + F" "hl.dsp.window.fullscreen()")])
+    (rowKeys "Windows" "Focus" ["Super" "←" "→" "↑" "↓"] [
+      (bind "${mod} + LEFT" ''hl.dsp.focus({ direction = "left" })'')
+      (bind "${mod} + RIGHT" ''hl.dsp.focus({ direction = "right" })'')
+      (bind "${mod} + UP" ''hl.dsp.focus({ direction = "up" })'')
+      (bind "${mod} + DOWN" ''hl.dsp.focus({ direction = "down" })'')
+    ])
+    (rowKeys "Windows" "Swap" ["Super" "Shift" "←" "→" "↑" "↓"] [
+      (bind "${mod} + SHIFT + LEFT" ''hl.dsp.window.swap({ direction = "left" })'')
+      (bind "${mod} + SHIFT + RIGHT" ''hl.dsp.window.swap({ direction = "right" })'')
+      (bind "${mod} + SHIFT + UP" ''hl.dsp.window.swap({ direction = "up" })'')
+      (bind "${mod} + SHIFT + DOWN" ''hl.dsp.window.swap({ direction = "down" })'')
+    ])
+    (rowKeys "Windows" "Grow / shrink" ["Super" "=" "−"] (
+      resizeBinds resizeStep ["${mod} + EQUAL" "${mod} + SHIFT + PLUS"]
+      ++ resizeBinds (-resizeStep) ["${mod} + MINUS" "${mod} + SHIFT + UNDERSCORE"]
+    ))
+    (rowKeys "Windows" "Move with mouse" ["Super" "Left drag"] [(bindm "${mod} + mouse:272" "hl.dsp.window.drag()")])
+    (rowKeys "Windows" "Resize with mouse" ["Super" "Right drag"] [(bindm "${mod} + mouse:273" "hl.dsp.window.resize()")])
+    # Super held for a drag is not a held Super: these tell the hold above, and pass the
+    # press through to the drag binds.
+    {
+      binds = [
+        (bindWith {non_consuming = true;} "${mod} + mouse:272" "function() qs_super_used() end")
+        (bindWith {non_consuming = true;} "${mod} + mouse:273" "function() qs_super_used() end")
+      ];
+    }
+    (rowKeys "Windows" "Zoom" ["Super" "Scroll"] [
+      (bind "${mod} + mouse_up" (zoomBy 1))
+      (bind "${mod} + mouse_down" (zoomBy (-1)))
+    ])
+    # Bound, but not on the sheet: the design keeps Windows at ten rows, and Zoom is its other half.
+    {binds = [(bind "${mod} + 0" ''function() hl.config({ cursor = { zoom_factor = 1 } }) end'')];}
+
+    (row "Workspaces" "Overview" [(bind "${mod} + TAB" (exec "qs ipc call overview toggle"))])
+    (rowKeys "Workspaces" "Go to workspace" ["Super" "1–9"] (map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces))
+    (rowKeys "Workspaces" "Move window to workspace" ["Super" "Shift" "1–9"] (map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces))
+    # Three fingers: sideways moves between workspaces, up opens the Overview. The swipe
+    # stays on the monitor's own workspaces, so it honours the pinning above.
+    {
+      group = "Workspaces";
+      desc = "Switch workspace";
+      keys = ["3 fingers" "←" "→"];
+      binds = [];
+      gestures = [
+        {
+          fingers = 3;
+          direction = "horizontal";
+          action = "workspace";
+        }
+      ];
+    }
+    {
+      group = "Workspaces";
+      desc = "Overview from the trackpad";
+      keys = ["3 fingers" "↑"];
+      binds = [];
+      gestures = [
+        {
+          fingers = 3;
+          direction = "up";
+          action = mkLuaInline ''function() hl.exec_cmd("qs ipc call overview toggle") end'';
+        }
+      ];
+    }
+
+    (row "Shell surfaces" "Launcher" [(bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))])
+    (row "Shell surfaces" "Control centre" [(bind "ALT + A" (exec "qs ipc call control toggle"))])
+    (row "Shell surfaces" "Calendar" [(bind "ALT + C" (exec "qs ipc call calendar toggle"))])
+    (row "Shell surfaces" "Theme" [(bind "ALT + T" (exec "qs ipc call theme toggle"))])
+    (row "Shell surfaces" "Profiles" [(bind "ALT + P" (exec "qs ipc call profiles toggle"))])
+    (row "Shell surfaces" "Nearby" [(bind "ALT + N" (exec "qs ipc call nearby toggle"))])
+    (rowKeys "Shell surfaces" "Wallpaper" ["Super" "Ctrl" "Space"] [(bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))])
+    (row "Shell surfaces" "Session menu" [(bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))])
+    (row "Shell surfaces" "Lock" [(bind "${mod} + L" (exec "lock-session"))])
+
+    (row "Capture" "Region" (onPrint "" (exec "qs ipc call capture region")))
+    (row "Capture" "Screen" (onPrint "ALT + " (exec "qs ipc call capture output")))
+    (row "Capture" "All screens" (onPrint "${mod} + CTRL + " (exec "qs ipc call capture screen")))
+    # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord. With
+    # SUPER already held its press is too early to join, so SUPER + PrtSc arrives as
+    # SUPER + SHIFT + S instead; it is bound too and listed once, as Super PrtSc.
+    (row "Capture" "Colour picker" (onPrint "${mod} + " (exec "qs ipc call screentools run colour")
+        ++ [(bind "${mod} + SHIFT + S" (exec "qs ipc call screentools run colour"))]))
+    # Region, window, text, QR code and colour grabs; Print stays a direct region capture.
+    (row "Capture" "Screen tools" [(bind "ALT + S" (exec "qs ipc call screentools toggle"))])
+    # Opens the picker, or stops and saves a running recording.
+    (row "Capture" "Record screen" [(bind "ALT + R" (exec "qs ipc call recorder toggle"))])
+
+    (row "Media" "Play / pause" [(bind "XF86AudioPlay" (exec "playerctl play-pause"))])
+    (rowKeys "Media" "Previous / next" ["Prev" "Next"] [
+      (bind "XF86AudioPrev" (exec "playerctl previous"))
+      (bind "XF86AudioNext" (exec "playerctl next"))
+    ])
+    (row "Media" "Mute" [(bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))])
+    # Routed through Quickshell so the OSD shows even at the limits.
+    (rowKeys "Media" "Volume" ["Vol −" "Vol +"] [
+      (bindel "XF86AudioLowerVolume" (exec "qs ipc call volume down"))
+      (bindel "XF86AudioRaiseVolume" (exec "qs ipc call volume up"))
+    ])
+    (rowKeys "Media" "Brightness" ["Bri −" "Bri +"] [
+      (bindel "XF86MonBrightnessDown" (exec "qs ipc call brightness down"))
+      (bindel "XF86MonBrightnessUp" (exec "qs ipc call brightness up"))
+    ])
+
+    # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER first skips
+    # the release, which leaves it recording as if tapped. The second is the same, cleaned
+    # up by a model before it is typed; see home/dictation.nix.
+    (rowKeys "Dictation" "Dictate, tap or hold" ["Super" "D"] [
+      (bind "${mod} + D" (exec "dictate press"))
+      (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
+    ])
+    (rowKeys "Dictation" "Dictate and clean up" ["Super" "Shift" "D"] [
+      (bind "${mod} + SHIFT + D" (exec "dictate press --post-process"))
+      (bindWith {release = true;} "${mod} + SHIFT + D" (exec "dictate release --post-process"))
+    ])
+  ];
 in {
   # Captures (Services/Captures.qml) are saved into XDG_SCREENSHOTS_DIR, created here.
   home.file."Pictures/screenshots/.keep".text = "";
@@ -82,6 +280,9 @@ in {
 
     # Loaded ahead of the settings, so plugin options below resolve.
     plugins = [pkgs.dragpile];
+
+    # Super held alone shows the cheatsheet; see superHold above.
+    extraConfig = superHold;
 
     settings = {
       env = [
@@ -357,111 +558,9 @@ in {
         }
       ];
 
-      # Three fingers: sideways moves between workspaces, up opens the Overview. The
-      # swipe stays on the monitor's own workspaces, so it honours the pinning above.
-      gesture = [
-        {
-          fingers = 3;
-          direction = "horizontal";
-          action = "workspace";
-        }
-        {
-          fingers = 3;
-          direction = "up";
-          action = mkLuaInline ''function() hl.exec_cmd("qs ipc call overview toggle") end'';
-        }
-      ];
-
-      bind =
-        [
-          (bind "${mod} + RETURN" (exec "ghostty"))
-          (bind "${mod} + SHIFT + B" (exec "helium"))
-          (bind "${mod} + SHIFT + F" (exec "nautilus"))
-
-          (bind "${mod} + W" "hl.dsp.window.close()")
-          (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')
-          (bind "${mod} + J" ''hl.dsp.layout("togglesplit")'')
-          (bind "${mod} + F" "hl.dsp.window.fullscreen()")
-        ]
-        ++ resizeBinds resizeStep ["${mod} + EQUAL" "${mod} + SHIFT + PLUS"]
-        ++ resizeBinds (-resizeStep) ["${mod} + MINUS" "${mod} + SHIFT + UNDERSCORE"]
-        ++ [
-          (bind "${mod} + LEFT" ''hl.dsp.focus({ direction = "left" })'')
-          (bind "${mod} + RIGHT" ''hl.dsp.focus({ direction = "right" })'')
-          (bind "${mod} + UP" ''hl.dsp.focus({ direction = "up" })'')
-          (bind "${mod} + DOWN" ''hl.dsp.focus({ direction = "down" })'')
-
-          (bind "${mod} + SHIFT + LEFT" ''hl.dsp.window.swap({ direction = "left" })'')
-          (bind "${mod} + SHIFT + RIGHT" ''hl.dsp.window.swap({ direction = "right" })'')
-          (bind "${mod} + SHIFT + UP" ''hl.dsp.window.swap({ direction = "up" })'')
-          (bind "${mod} + SHIFT + DOWN" ''hl.dsp.window.swap({ direction = "down" })'')
-        ]
-        ++ map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces
-        ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
-        ++ lib.concatMap (key: [
-          # Omarchy screenshot bindings. The extra keysyms cover the screenshot
-          # key when keyd or its f16 mapping isn't active.
-          (bind key (exec "qs ipc call capture region"))
-          (bind "ALT + ${key}" (exec "qs ipc call capture output"))
-          (bind "${mod} + ${key}" (exec "qs ipc call screentools run colour"))
-          (bind "${mod} + CTRL + ${key}" (exec "qs ipc call capture screen"))
-        ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
-        ++ [
-          # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
-          # With Super already held its press is too early to join, so SUPER + PrtSc
-          # arrives as SUPER + SHIFT + S instead.
-          (bind "${mod} + SHIFT + S" (exec "qs ipc call screentools run colour"))
-
-          (bind "${mod} + L" (exec "lock-session"))
-
-          (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
-
-          (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))
-
-          (bind "ALT + A" (exec "qs ipc call control toggle"))
-
-          (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
-
-          (bind "ALT + T" (exec "qs ipc call theme toggle"))
-
-          # Opens the picker, or stops and saves a running recording.
-          (bind "ALT + R" (exec "qs ipc call recorder toggle"))
-
-          (bind "ALT + C" (exec "qs ipc call calendar toggle"))
-
-          (bind "ALT + P" (exec "qs ipc call profiles toggle"))
-
-          (bind "ALT + N" (exec "qs ipc call nearby toggle"))
-
-          # Region, window, text, QR code and colour grabs; Print stays a direct region capture.
-          (bind "ALT + S" (exec "qs ipc call screentools toggle"))
-
-          # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER
-          # first skips the release, which leaves it recording as if tapped.
-          (bind "${mod} + D" (exec "dictate press"))
-          (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
-          # The same, cleaned up by a model before it is typed; see home/dictation.nix.
-          (bind "${mod} + SHIFT + D" (exec "dictate press --post-process"))
-          (bindWith {release = true;} "${mod} + SHIFT + D" (exec "dictate release --post-process"))
-
-          (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
-          (bind "XF86AudioPlay" (exec "playerctl play-pause"))
-          (bind "XF86AudioNext" (exec "playerctl next"))
-          (bind "XF86AudioPrev" (exec "playerctl previous"))
-
-          (bind "${mod} + mouse_up" (zoomBy 1))
-          (bind "${mod} + mouse_down" (zoomBy (-1)))
-          (bind "${mod} + 0" ''function() hl.config({ cursor = { zoom_factor = 1 } }) end'')
-
-          (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
-          (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
-
-          # Routed through Quickshell so the OSD shows even at the limits.
-          (bindel "XF86AudioRaiseVolume" (exec "qs ipc call volume up"))
-          (bindel "XF86AudioLowerVolume" (exec "qs ipc call volume down"))
-          (bindel "XF86MonBrightnessUp" (exec "qs ipc call brightness up"))
-          (bindel "XF86MonBrightnessDown" (exec "qs ipc call brightness down"))
-        ];
+      # Both come from the keybind table at the top of this file.
+      gesture = keybinds.gestures keyRows;
+      bind = keybinds.binds keyRows;
 
       window_rule = [
         # Ignore client maximize requests; Electron's restored maximize state
@@ -546,7 +645,7 @@ in {
       # Quickshell panels animate themselves, so no compositor fade.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel)";
+          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|screentools|captures|sharing|notifications|osd|panel|overview|cheatsheet)";
           no_anim = true;
         }
       ];
@@ -655,6 +754,11 @@ in {
 
   xdg.configFile."quickshell".source =
     config.lib.file.mkOutOfStoreSymlink "${repoDir}/home/quickshell";
+
+  # The cheatsheet's content, generated from keyRows so it cannot drift from the binds. Like the
+  # emoji table below it sits outside the out-of-store config tree, so it is read from a fixed
+  # path; see Services/Keybinds.qml.
+  xdg.dataFile."quickshell/bindings.json".text = keybinds.cheatsheet keyRows;
 
   # The launcher's emoji table, generated from nixpkgs' Unicode data. The config above is
   # out of store, so it reads this from a fixed path; see Services/EmojiSearch.qml.
