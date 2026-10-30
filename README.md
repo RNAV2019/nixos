@@ -259,7 +259,7 @@ runs the real agent against a real `polkitd` and PAM in a VM of its own.
 
 The shell makes a few quiet sounds: a tick on the volume keys, a shutter for screenshots, a pair
 for a charger or drive going in, a chime for notifications (a lower one for critical ones), a
-bell for timers and Pomodoro phases, a double tap when Claude or a Wi-Fi sign-in needs you, a
+bell for timers and Pomodoro phases, a double tap when Claude, a Wi-Fi sign-in or a phone pairing request needs you, a
 rising or falling motif for a finished or failed rebuild and drive eject, one for a received
 file, and one each for locking and unlocking. They are synthesised at build time with sox
 ([`pkgs/quickshell-sounds`](pkgs/quickshell-sounds)), never downloaded, and

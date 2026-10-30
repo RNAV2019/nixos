@@ -78,6 +78,7 @@ Singleton {
       "usb-inserted": "plugged",
       "event-reminder": "attention",
       "wifi-signin": "attention",
+      "phone-pair": "attention",
       "claude-permission": "attention",
       "claude-question": "attention",
       "claude-finished": "chime",
