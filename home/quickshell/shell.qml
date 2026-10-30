@@ -14,6 +14,7 @@ import qs.Lock
 import qs.Nearby
 import qs.Notifications
 import qs.Osd
+import qs.Overview
 import qs.Power
 import qs.Recorder
 import qs.Services
@@ -44,6 +45,7 @@ ShellRoot {
   SharingPill {}
   Notifications {}
   Osd {}
+  Overview {}
   Profiles {}
   RecorderPicker {}
   ScreenToolsPanel {}

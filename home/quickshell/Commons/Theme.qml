@@ -1282,4 +1282,49 @@ Singleton {
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
+
+  // The Overview: the workspaces pill grows out of its own top-left corner into a card per
+  // workspace holding live thumbnails of its windows. The row is laid out at the final width,
+  // so the open is a reveal by the growing shape.
+  readonly property int overviewMargin: 10
+  readonly property int overviewSearchHeight: launcherSearchHeight
+  readonly property int overviewCardsTop: 110
+  readonly property int overviewCardGap: 16
+  readonly property int overviewInset: 24
+  readonly property int overviewBottom: 24
+  readonly property int overviewCardRadius: 14
+  readonly property int overviewStripWidth: 72
+  // Cards narrower than this make the row a carousel on the selected workspace.
+  readonly property int overviewCardMin: 240
+  readonly property int overviewWindowRadius: 3
+  readonly property real overviewDim: 0.28
+  readonly property int overviewLabelSize: 13
+  readonly property int overviewCountSize: 11
+  readonly property int overviewLabelY: 86
+  readonly property int overviewLabelInset: 4
+  readonly property int overviewActiveRing: 2
+  readonly property int overviewDropRing: 2
+  readonly property real overviewDropWash: 0.14
+  readonly property int overviewMetaSize: 12
+  readonly property int overviewMetaRight: 24
+  // The plate naming a window, and the pill naming a drop target.
+  readonly property int overviewPlateHeight: 22
+  readonly property int overviewPlateInset: 6
+  readonly property int overviewPlateSize: 11
+  readonly property int overviewPlateDot: 8
+  readonly property int overviewPlatePad: 10
+  readonly property int overviewPillHeight: 22
+  readonly property int overviewPillTop: 10
+  readonly property int overviewPillGlyph: 12
+  readonly property int overviewPillSize: 11
+  readonly property int overviewStripGlyph: 20
+  // The lifted window rides the compositor drag pile's spring (pkgs/dragpile defaults).
+  readonly property real overviewLiftScale: 0.7
+  readonly property real overviewLiftTilt: 3
+  readonly property real overviewLiftStiffness: 800
+  readonly property real overviewLiftDamping: 0.68
+  readonly property int overviewDragSlop: 6
+  // Capture rates, in ms between frames: the selected workspace's windows, then the rest.
+  readonly property int overviewCaptureNear: 100
+  readonly property int overviewCaptureFar: 500
 }
