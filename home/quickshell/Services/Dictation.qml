@@ -99,36 +99,16 @@ Singleton {
     }
   }
 
-  Socket {
-    id: socket
+  // Quick to retry after a restart, then no more than twice a minute while Handy is away.
+  Stream {
+    socketPath: Quickshell.env("XDG_RUNTIME_DIR") + "/handy/overlay.sock"
+    retryMs: 1000
+    maxRetryMs: 30000
 
-    path: Quickshell.env("XDG_RUNTIME_DIR") + "/handy/overlay.sock"
-    connected: true
+    onLine: text => root.handle(text)
     onConnectedChanged: {
-      if (connected) {
-        retry.interval = 1000;
-      } else {
+      if (!connected)
         root.reset();
-        retry.interval = 1000;
-      }
-    }
-
-    parser: SplitParser {
-      onRead: data => root.handle(data)
-    }
-  }
-
-  // Each failed attempt logs a warning, so the retry backs off while Handy is away: quick
-  // after a restart, then no more than twice a minute.
-  Timer {
-    id: retry
-
-    interval: 1000
-    repeat: true
-    running: !socket.connected
-    onTriggered: {
-      socket.connected = true;
-      interval = Math.min(interval * 2, 30000);
     }
   }
 

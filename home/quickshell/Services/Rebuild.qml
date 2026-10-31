@@ -261,26 +261,11 @@ Job {
 
   // From the end of the file as it is now, and over any replacement of it (a new file is read
   // from its start). Ends with the shell, and is started again if it ever ends without it.
-  Process {
-    id: tail
-
+  // Until the first run there is no file, which tail says once and waits for.
+  Stream {
     command: ["tail", "-n0", "-F", "--pid=" + Quickshell.processId, root.logPath]
-    running: true
+    retryMs: 5000
 
-    stdout: SplitParser {
-      onRead: line => root.read(line)
-    }
-
-    // Until the first run there is no file, which tail says once and waits for.
-    stderr: SplitParser {}
-
-    onExited: restart.start()
-  }
-
-  Timer {
-    id: restart
-
-    interval: 5000
-    onTriggered: tail.running = true
+    onLine: text => root.read(text)
   }
 }

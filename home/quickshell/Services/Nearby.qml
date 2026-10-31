@@ -20,9 +20,9 @@ Singleton {
   property var peers: []
   property var transfers: []
 
-  // True while the event stream is up. When it drops, the reconnect timer keeps trying,
-  // which is how the panel notices a nearbyd restart.
-  property bool connected: false
+  // True while the event stream is up. When it drops, the stream keeps trying, which is how
+  // the panel notices a nearbyd restart.
+  readonly property bool connected: events.connected
 
   readonly property string mode: status.mode !== undefined ? status.mode : "android"
   readonly property bool scanning: status.scanning === true
@@ -527,35 +527,29 @@ Singleton {
 
   // ---- plumbing ----
 
-  Process {
+  // nearbyd restarted, or was not up yet: the stream reconnects.
+  Stream {
     id: events
 
     command: ["nearby", "events"]
-    running: true
 
-    stdout: SplitParser {
-      onRead: function (line) {
-        var text = line.trim();
-        if (text === "")
-          return;
-        try {
-          root.applyEvent(JSON.parse(text));
-        } catch (e) {
-          console.warn("nearby events: dropping unparsable line: " + text);
-        }
+    onLine: function (raw) {
+      var text = raw.trim();
+      if (text === "")
+        return;
+      try {
+        root.applyEvent(JSON.parse(text));
+      } catch (e) {
+        console.warn("nearby events: dropping unparsable line: " + text);
       }
     }
 
-    onRunningChanged: {
-      root.connected = events.running;
-      // Fresh subscribe replays status+peers+transfers from the daemon, which
-      // heals any gap while the stream was down (restart, Lagged drop).
-      if (events.running)
+    // Fresh subscribe replays status+peers+transfers from the daemon, which
+    // heals any gap while the stream was down (restart, Lagged drop).
+    onConnectedChanged: {
+      if (events.connected)
         resyncCall.running = true;
     }
-
-    // nearbyd restarted, or was not up yet: reconnect.
-    onExited: restart.start()
   }
 
   // One-shot snapshot merge after (re)connect: the daemon's subscribe already
@@ -578,13 +572,6 @@ Singleton {
         }
       }
     }
-  }
-
-  Timer {
-    id: restart
-
-    interval: 2000
-    onTriggered: events.running = true
   }
 
   // Errors come back as the daemon's notice events and as a failed transfer row; a call
