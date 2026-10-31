@@ -10,6 +10,10 @@ import qs.Ui
 // on the right. j/k move, h leaves for the parent, l enters a folder, space marks and moves on,
 // enter sends what is marked - or, with nothing marked, the focused file or folder. Escape
 // backs out to the panel. The mouse works too: click focuses, double-click enters or marks.
+//
+// With `images` it picks one picture, as the phone panel's wallpaper chooser does: only folders
+// and images are listed, enter on an image accepts it, and `source` ("phone" or "laptop") puts a
+// switch in the header, the phone side being confined to the SFTP mount in `phoneRoot`.
 Item {
   id: root
 
@@ -21,6 +25,16 @@ Item {
   property int focusIndex: 0
   property bool showHidden: false
 
+  property bool images: false
+  property string title: ""
+  property string source: ""
+  property string phoneName: ""
+  property string phoneRoot: ""
+  // The phone is chosen but would not share its files: the columns give way to an empty state.
+  property bool blocked: false
+
+  signal sourceChosen(string source)
+
   // Marked paths, in the order they were marked, plus a lookup. Marks survive moving between
   // folders, so files can be picked from several at once.
   property var marked: []
@@ -31,7 +45,9 @@ Item {
   signal cancelled
 
   readonly property string home: Quickshell.env("HOME")
-  readonly property var entries: current.entries
+  readonly property var entries: root.images ? current.entries.filter(function (e) {
+    return e.dir || Nearby.fileKind(e.name) === "image";
+  }) : current.entries
   readonly property var focused: focusIndex >= 0 && focusIndex < entries.length ? entries[focusIndex] : null
 
   // The columns end on a whole row, never a sliver of the next one.
@@ -51,8 +67,11 @@ Item {
     pendingFocus = "";
   }
 
+  // Where going up stops: the phone's mount, so the picker never wanders out of its storage.
+  readonly property string confine: source === "phone" ? phoneRoot : ""
+
   function parentOf(p) {
-    if (p === "/" || p === "")
+    if (p === "/" || p === "" || p === confine)
       return "";
     var i = p.lastIndexOf("/");
     return i <= 0 ? "/" : p.substring(0, i);
@@ -80,7 +99,7 @@ Item {
   }
 
   function toggleMark(entry) {
-    if (!entry)
+    if (!entry || root.images)
       return;
     var set = Object.assign({}, markedSet);
     var list = marked.slice();
@@ -96,7 +115,12 @@ Item {
   }
 
   function finish() {
-    if (marked.length > 0)
+    if (root.images) {
+      if (focused && focused.dir)
+        enter(focused.path);
+      else if (focused)
+        accepted([focused.path]);
+    } else if (marked.length > 0)
       accepted(marked.slice());
     else if (focused)
       accepted([focused.path]);
@@ -107,6 +131,8 @@ Item {
     var t = event.text;
     if (k === Qt.Key_Escape || t === "q") {
       cancelled();
+    } else if (root.blocked) {
+      return;
     } else if (k === Qt.Key_Down || t === "j") {
       move(1);
     } else if (k === Qt.Key_Up || t === "k") {
@@ -148,15 +174,18 @@ Item {
     showHidden: root.showHidden
     onLoaded: {
       if (root.pendingFocus !== "") {
-        for (var i = 0; i < entries.length; i++) {
-          if (entries[i].name === root.pendingFocus) {
+        for (var i = 0; i < root.entries.length; i++) {
+          if (root.entries[i].name === root.pendingFocus) {
             root.focusIndex = i;
             break;
           }
         }
         root.pendingFocus = "";
       }
-      root.focusIndex = Math.max(0, Math.min(root.focusIndex, entries.length - 1));
+      root.focusIndex = Math.max(0, Math.min(root.focusIndex, root.entries.length - 1));
+      // A phone with no Pictures folder opens at its top instead.
+      if (root.confine !== "" && current.error !== "" && root.dir !== root.confine)
+        root.dir = root.confine;
     }
   }
 
@@ -178,6 +207,7 @@ Item {
   // ---- header: the folder's path and the marked counter ----
 
   StrokeIcon {
+    visible: !root.images
     x: 24
     y: 20
     size: 16
@@ -187,6 +217,7 @@ Item {
   }
 
   Row {
+    visible: !root.images
     x: 48
     y: 20
     height: 16
@@ -226,9 +257,103 @@ Item {
     }
   }
 
+  // ---- header of the single-image picker ----
+
+  StrokeIcon {
+    visible: root.images
+    x: 24
+    y: 20
+    size: 16
+    strokeWidth: 1.75
+    path: root.source === "laptop" ? IconPaths.laptop : IconPaths.smartphone
+    color: root.source === "laptop" ? Theme.inkTertiary : Theme.accentFill
+  }
+
+  Text {
+    visible: root.images
+    x: 48
+    y: 11
+    width: imagesOnly.x - 48 - 16
+    elide: Text.ElideRight
+    text: root.title
+    color: Theme.inkPrimary
+    font.family: Theme.uiFont
+    font.pixelSize: 13
+    font.weight: Theme.weightSemi
+  }
+
+  Text {
+    visible: root.images
+    x: 48
+    y: 30
+    width: imagesOnly.x - 48 - 16
+    elide: Text.ElideLeft
+    text: {
+      var name = root.source === "phone" ? root.phoneName : Nearby.deviceName !== "" ? Nearby.deviceName : "This laptop";
+      var base = root.source === "phone" ? root.phoneRoot : root.home;
+      if (root.source === "laptop" && root.dir.indexOf(root.home) !== 0)
+        return root.dir;
+      var rel = root.dir.indexOf(base) === 0 ? root.dir.substring(base.length).replace(/^\//, "") : "";
+      return rel === "" ? name : name + " / " + rel.split("/").join(" / ");
+    }
+    color: Theme.inkSecondary
+    font.family: Theme.uiFont
+    font.pixelSize: 11.5
+    font.weight: Theme.weightMedium
+  }
+
+  Row {
+    id: imagesOnly
+
+    visible: root.images
+    x: sourceSwitch.x - 16 - width
+    y: 21
+    spacing: 6
+
+    StrokeIcon {
+      anchors.verticalCenter: parent.verticalCenter
+      size: 14
+      strokeWidth: 1.75
+      path: IconPaths.image
+      color: Theme.inkTertiary
+    }
+
+    Text {
+      anchors.verticalCenter: parent.verticalCenter
+      text: "Images only"
+      color: Theme.inkTertiary
+      font.family: Theme.uiFont
+      font.pixelSize: 11.5
+      font.weight: Theme.weightMedium
+    }
+  }
+
+  SegmentedTrack {
+    id: sourceSwitch
+
+    visible: root.images && root.source !== ""
+    x: root.width - 24 - width
+    y: 17
+    compact: true
+    currentIndex: root.source === "laptop" ? 1 : 0
+    segments: [
+      {
+        "label": "Phone"
+      },
+      {
+        "label": "Laptop"
+      }
+    ]
+    onChosen: function (index) {
+      root.sourceChosen(index === 1 ? "laptop" : "phone");
+    }
+  }
+
   // "0 marked" sits outlined and quiet; once something is marked it fills with the accent.
   Rectangle {
     id: chip
+
+    visible: !root.images
 
     readonly property bool any: root.marked.length > 0
 
@@ -286,6 +411,7 @@ Item {
   }
 
   Rectangle {
+    visible: !root.blocked
     x: Theme.pickerRuleOneX
     y: Theme.pickerColumnsTop
     width: 1
@@ -294,6 +420,7 @@ Item {
   }
 
   Rectangle {
+    visible: !root.blocked
     x: Theme.pickerRuleTwoX
     y: Theme.pickerColumnsTop
     width: 1
@@ -403,6 +530,7 @@ Item {
   Column_ {
     id: parentColumn
 
+    visible: !root.blocked
     x: Theme.pickerParentX
     y: Theme.pickerColumnsTop
     width: Theme.pickerParentWidth
@@ -434,11 +562,12 @@ Item {
   Column_ {
     id: currentColumn
 
+    visible: !root.blocked
     x: Theme.pickerCurrentX
     y: Theme.pickerColumnsTop
     width: Theme.pickerCurrentWidth
     height: root.columnsHeight
-    model: current.entries
+    model: root.entries
     currentIndex: root.focusIndex
     onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
     onCountChanged: positionViewAtIndex(currentIndex, ListView.Contain)
@@ -469,7 +598,7 @@ Item {
   }
 
   Text {
-    visible: !current.loading && current.entries.length === 0
+    visible: !root.blocked && !current.loading && root.entries.length === 0
     x: Theme.pickerCurrentX + Theme.pickerTextLeft
     y: Theme.pickerColumnsTop + 8
     text: current.error !== "" ? current.error : "Empty folder"
@@ -478,11 +607,45 @@ Item {
     font.pixelSize: Theme.pickerNameSize
   }
 
+  // ---- the phone would not share its files ----
+
+  StrokeIcon {
+    visible: root.blocked
+    x: (root.width - size) / 2
+    y: 150
+    size: 28
+    strokeWidth: 1.75
+    path: IconPaths.folderOff
+    color: Theme.inkTertiary
+  }
+
+  Text {
+    visible: root.blocked
+    y: 192
+    width: root.width
+    horizontalAlignment: Text.AlignHCenter
+    text: "Allow file access in KDE Connect on your phone"
+    color: Theme.inkPrimary
+    font.family: Theme.uiFont
+    font.pixelSize: 13
+    font.weight: Theme.weightMedium
+  }
+
+  PillButton {
+    visible: root.blocked
+    x: (root.width - width) / 2
+    y: 224
+    tonal: true
+    label: "Browse this laptop"
+    onClicked: root.sourceChosen("laptop")
+  }
+
   // ---- preview ----
 
   Item {
     id: preview
 
+    visible: !root.blocked
     x: Theme.pickerPreviewX
     y: Theme.pickerColumnsTop
     width: Theme.pickerPreviewWidth
@@ -525,8 +688,10 @@ Item {
       id: tile
 
       visible: preview.entry !== null && preview.kind !== "dir"
-      width: parent.width
-      height: Theme.pickerPreviewImageHeight
+      x: root.images ? Theme.pickerWallpaperPreviewInset : 0
+      y: root.images ? Theme.pickerWallpaperPreviewTop : 0
+      width: root.images ? Theme.pickerWallpaperPreviewWidth : parent.width
+      height: root.images ? Theme.pickerWallpaperPreviewHeight : Theme.pickerPreviewImageHeight
       layer.enabled: true
       layer.effect: MultiEffect {
         maskEnabled: true
@@ -587,7 +752,7 @@ Item {
 
       Rectangle {
         anchors.fill: parent
-        radius: Theme.pickerPreviewRadius
+        radius: root.images ? Theme.pickerWallpaperPreviewRadius : Theme.pickerPreviewRadius
         color: "black"
       }
     }
@@ -603,8 +768,9 @@ Item {
 
     Text {
       visible: tile.visible
-      y: Theme.pickerPreviewImageHeight + 14
-      width: parent.width
+      x: tile.x
+      y: tile.y + tile.height + (root.images ? 10 : 14)
+      width: tile.width
       elide: Text.ElideMiddle
       text: preview.entry ? preview.entry.name : ""
       color: Theme.inkPrimary
@@ -615,15 +781,23 @@ Item {
 
     Text {
       visible: tile.visible
-      y: Theme.pickerPreviewImageHeight + 34
-      width: parent.width
+      x: tile.x
+      y: tile.y + tile.height + (root.images ? 30 : 34)
+      width: tile.width
       elide: Text.ElideRight
       text: {
         if (!preview.entry)
           return "";
-        var parts = [Nearby.sizeLabel(preview.entry.size)];
-        if (preview.showsImage && origSize.w > 0)
-          parts.push(origSize.w + " × " + origSize.h);
+        var size = Nearby.sizeLabel(preview.entry.size);
+        var dims = preview.showsImage && origSize.w > 0 ? origSize.w + " × " + origSize.h : "";
+        // A wallpaper is chosen by its shape, so the pixels come first.
+        if (root.images)
+          return [dims, size].filter(function (p) {
+            return p !== "";
+          }).join(" · ");
+        var parts = [size];
+        if (dims !== "")
+          parts.push(dims);
         var ext = Nearby.extOf(preview.entry.name);
         if (ext !== "")
           parts.push(ext === "jpg" ? "JPEG" : ext.toUpperCase());

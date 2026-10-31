@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import qs.Commons
@@ -9,7 +10,10 @@ import qs.Ui
 // The phone panel (board "Phone panel"), opened from the phone satellite: the phone drawn on
 // the left with its time and notification stubs, readings beside it, then actions, the
 // clipboard and the phone's notifications. "Send files" grows the panel into Nearby's file
-// picker; what it accepts goes to the phone through KDE Connect.
+// picker; what it accepts goes to the phone through KDE Connect. The disc on the phone's corner
+// grows it into the same picker to choose the picture drawn on the phone's screen. "Browse"
+// mounts the phone's storage and opens it in the file manager; when the phone refuses, a note
+// under the actions says what to allow.
 Variants {
   id: root
 
@@ -50,6 +54,8 @@ Variants {
     key: "phone"
 
     property bool picking: false
+    // "files" for Send files, "wallpaper" for the phone preview's picture.
+    property string pickKind: "files"
     property string lastDir: ""
 
     openWidth: picking ? Theme.panelWidth(modelData, Theme.pickerWidth) : Theme.panelWidth(modelData, Theme.phoneWidth)
@@ -58,6 +64,7 @@ Variants {
 
     onOpening: {
       picking = false;
+      Phone.browseError = "";
       Phone.refreshClips();
     }
 
@@ -69,16 +76,60 @@ Variants {
         if (!Phone.connected && win.open)
           win.hide();
       }
+
+      // The file manager is on its way; the panel's job is done.
+      function onMounted(path, purpose) {
+        if (purpose === "open" && win.open)
+          win.hide();
+        else if (purpose === "pick" && win.open && win.picking)
+          win.showPhone(path);
+      }
+
+      function onMountFailed(purpose) {
+        if (purpose === "pick" && win.open && win.picking)
+          wallpaperPicker.blocked = true;
+      }
     }
 
     function chooseFiles() {
+      pickKind = "files";
       picker.open(win.lastDir);
       picking = true;
     }
 
+    // The wallpaper chooser opens on the laptop's Pictures; the phone side mounts first, and
+    // gives way to its own empty state when the phone will not share.
+    function chooseWallpaper() {
+      pickKind = "wallpaper";
+      wallpaperPicker.blocked = false;
+      wallpaperPicker.source = "phone";
+      wallpaperPicker.phoneName = Phone.name;
+      wallpaperPicker.dir = "";
+      picking = true;
+      Phone.mount("pick");
+    }
+
+    function showPhone(path) {
+      wallpaperPicker.blocked = false;
+      wallpaperPicker.phoneRoot = path;
+      wallpaperPicker.source = "phone";
+      wallpaperPicker.dir = path + "/Pictures";
+    }
+
+    function chooseSource(source) {
+      if (source === "phone") {
+        wallpaperPicker.source = "phone";
+        Phone.mount("pick");
+      } else {
+        wallpaperPicker.blocked = false;
+        wallpaperPicker.source = "laptop";
+        wallpaperPicker.dir = wallpaperPicker.home + "/Pictures";
+      }
+    }
+
     onKeyPressed: function (event) {
       if (picking)
-        picker.handleKey(event);
+        (pickKind === "wallpaper" ? wallpaperPicker : picker).handleKey(event);
     }
 
     SystemClock {
@@ -129,15 +180,81 @@ Variants {
           anchors.margins: Theme.phoneScreenInset
           radius: Theme.phoneScreenRadius
           clip: true
-          gradient: Gradient {
-            GradientStop {
-              position: 0
-              color: Theme.withAlpha(Theme.accent, Phone.ringing ? 0.55 : 0.32)
+          color: "transparent"
+
+          // The picture the user chose, under a scrim that keeps the time and the notification
+          // stubs legible, rounded to the screen's own corners; else the accent-to-base wash.
+          readonly property bool pictured: Phone.wallpaper !== "" && !Phone.ringing && wallpaperImage.status === Image.Ready
+
+          Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            visible: !screen.pictured
+            gradient: Gradient {
+              GradientStop {
+                position: 0
+                color: Theme.withAlpha(Theme.accent, Phone.ringing ? 0.55 : 0.32)
+              }
+
+              GradientStop {
+                position: 1
+                color: Theme.base
+              }
+            }
+          }
+
+          Item {
+            anchors.fill: parent
+            visible: screen.pictured
+            layer.enabled: visible
+            layer.effect: MultiEffect {
+              maskEnabled: true
+              maskSource: wallpaperMask
             }
 
-            GradientStop {
-              position: 1
-              color: Theme.base
+            Image {
+              id: wallpaperImage
+
+              anchors.fill: parent
+              source: Phone.wallpaper
+              asynchronous: true
+              fillMode: Image.PreserveAspectCrop
+              // Decoded at twice the screen's height, not the photo's.
+              sourceSize.height: parent.height * 2
+            }
+
+            Rectangle {
+              anchors.fill: parent
+              gradient: Gradient {
+                GradientStop {
+                  position: 0
+                  color: Theme.withAlpha(Theme.base, 0.45)
+                }
+
+                GradientStop {
+                  position: 0.4
+                  color: Theme.withAlpha(Theme.base, 0)
+                }
+
+                GradientStop {
+                  position: 1
+                  color: Theme.withAlpha(Theme.base, 0.6)
+                }
+              }
+            }
+          }
+
+          Item {
+            id: wallpaperMask
+
+            anchors.fill: parent
+            visible: false
+            layer.enabled: true
+
+            Rectangle {
+              anchors.fill: parent
+              radius: screen.radius
+              color: "black"
             }
           }
 
@@ -286,6 +403,35 @@ Variants {
         }
       }
 
+      // The wallpaper action: a disc over the phone's bottom-right corner, with a ring in the
+      // panel's ground cutting it out of the body.
+      Rectangle {
+        x: 106
+        y: 216
+        width: 34
+        height: 34
+        radius: 17
+        color: Theme.surface
+      }
+
+      IconButton {
+        x: 123 - width / 2
+        y: 233 - height / 2
+        text: Icons.image
+        font.family: Theme.iconFont
+        font.pixelSize: 16
+        baseColor: Theme.text
+        hoverColor: Theme.text
+        filled: true
+        fillSize: 30
+        fillColor: Theme.withAlpha(Theme.highlightMed, 0.75)
+        fillHoverColor: Theme.withAlpha(Theme.highlightMed, 0.95)
+        hitSize: 30
+        accessibleName: "Choose phone wallpaper"
+        activeFocusOnTab: true
+        onClicked: win.chooseWallpaper()
+      }
+
       // ---- who it is ----
 
       Text {
@@ -335,19 +481,22 @@ Variants {
               label: "Battery",
               glyph: Phone.charging ? Icons.step(Icons.batteryCharging, Phone.charge) : Icons.step(Icons.batteryDefault, Phone.charge),
               value: !Phone.hasBattery ? "Unknown" : Phone.charge + "%" + (Phone.charging ? " · charging" : ""),
-              level: Phone.hasBattery ? Phone.charge / 100 : -1
+              level: Phone.hasBattery ? Phone.charge / 100 : -1,
+              muted: false
             },
             {
               label: "Mobile",
               glyph: Phone.cellularStrength < 0 ? Icons.cellularOff : Icons.cellular[Math.min(4, Phone.cellularStrength)],
-              value: Phone.cellularType !== "" ? Phone.cellularType : "No report",
-              level: -1
+              value: Phone.cellularType !== "" ? Phone.cellularType : "Off on phone",
+              level: -1,
+              muted: Phone.cellularStrength < 0
             },
             {
               label: "Wi-Fi",
               glyph: Icons.wifiOn,
               value: Phone.wifiName !== "" ? Phone.wifiName : Phone.link === "Bluetooth" ? "Over Bluetooth" : "Not shared",
-              level: -1
+              level: -1,
+              muted: false
             }
           ]
 
@@ -362,28 +511,32 @@ Variants {
               anchors.verticalCenter: parent.verticalCenter
               size: 18
               path: modelData.glyph
-              color: modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
+              color: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
             }
 
+            // A row with a level is label, gap and bar as one block centred on the row; the
+            // bar runs from the label's edge to the reading's.
             Label {
               x: 45
-              y: 16
+              y: modelData.level >= 0 ? 12 : 16
               text: modelData.label
             }
 
             Reading {
               x: parent.width - 14 - width
-              y: 16
+              y: modelData.level >= 0 ? 12 : 16
               text: modelData.value
+              color: modelData.muted ? Theme.inkTertiary : Theme.subtle
             }
 
+            // The row's own ground is highlightLow, so the groove is the next step up.
             LevelTrack {
               x: 45
-              y: 36
+              y: 33
               width: parent.width - 45 - 14
               height: 3
               visible: modelData.level >= 0
-              color: Theme.withAlpha("white", 0.08)
+              color: Theme.highlightMed
               fillColor: Phone.low ? Theme.love : Theme.accent
               value: modelData.level
             }
@@ -392,6 +545,56 @@ Variants {
       }
 
       // ---- actions ----
+
+      // Browse could not reach the phone's files: what to allow, dismissable, and gone the
+      // next time Browse is pressed. The rest of the panel moves down to make room.
+      readonly property real noteSpace: Phone.browseError !== "" ? Theme.phoneNoteBarHeight + Theme.phoneNoteBarGap : 0
+
+      Rectangle {
+        id: browseNote
+
+        x: Theme.phoneInset
+        y: actions.y + actions.height + Theme.phoneNoteBarGap
+        width: home.inner
+        height: Theme.phoneNoteBarHeight
+        radius: Theme.phoneRowRadius
+        color: Theme.withAlpha(Theme.gold, 0.12)
+        border.width: 1
+        border.color: Theme.withAlpha(Theme.gold, 0.4)
+        visible: Phone.browseError !== ""
+
+        StrokeIcon {
+          x: 14
+          y: 10
+          size: 16
+          path: Icons.info
+          color: Theme.gold
+        }
+
+        Text {
+          x: 38
+          y: 11
+          width: parent.width - x - 44
+          elide: Text.ElideRight
+          text: Phone.browseError
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: 12
+          font.weight: Theme.weightMedium
+        }
+
+        StrokeIconButton {
+          x: 451
+          y: 11
+          size: 14
+          path: Icons.close
+          baseColor: Theme.subtle
+          hoverColor: Theme.text
+          hitSlop: 6
+          accessibleName: "Dismiss"
+          onClicked: Phone.browseError = ""
+        }
+      }
 
       Row {
         id: actions
@@ -427,7 +630,6 @@ Variants {
               on: false,
               run: function () {
                 Phone.browse();
-                win.hide();
               }
             },
             {
@@ -503,7 +705,7 @@ Variants {
         id: clipsLabel
 
         x: Theme.phoneInset
-        y: actions.y + actions.height + Theme.phoneSectionGap
+        y: actions.y + actions.height + home.noteSpace + Theme.phoneSectionGap
         width: home.inner
         implicitHeight: 13
         verticalAlignment: Qt.AlignTop
@@ -741,9 +943,9 @@ Variants {
       x: (parent.width - Theme.pickerWidth) / 2
       width: Theme.pickerWidth
       height: Theme.pickerHeight
-      opacity: win.picking ? 1 : 0
+      opacity: win.picking && win.pickKind === "files" ? 1 : 0
       visible: opacity > 0
-      enabled: win.picking
+      enabled: win.picking && win.pickKind === "files"
 
       Behavior on opacity {
         Morph {
@@ -755,6 +957,36 @@ Variants {
       onAccepted: function (paths) {
         Phone.share(paths);
         win.hide();
+      }
+      onCancelled: win.picking = false
+    }
+
+    // The same picker for one picture, with the phone's storage and the laptop's to choose
+    // between.
+    FilePicker {
+      id: wallpaperPicker
+
+      x: (parent.width - Theme.pickerWidth) / 2
+      width: Theme.pickerWidth
+      height: Theme.pickerHeight
+      images: true
+      title: "Choose phone wallpaper"
+      opacity: win.picking && win.pickKind === "wallpaper" ? 1 : 0
+      visible: opacity > 0
+      enabled: win.picking && win.pickKind === "wallpaper"
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.morphContent
+        }
+      }
+
+      onSourceChosen: function (source) {
+        win.chooseSource(source);
+      }
+      onAccepted: function (paths) {
+        Phone.setWallpaper(paths[0]);
+        win.picking = false;
       }
       onCancelled: win.picking = false
     }

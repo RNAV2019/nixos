@@ -57,6 +57,7 @@ Singleton {
   readonly property string mail: "mail"
   readonly property string chat: "chat"
   readonly property string notifications: "notifications"
+  readonly property string info: "info"
 
   readonly property string volumeMuted: "volume_off"
   readonly property string headphone: "headphones"

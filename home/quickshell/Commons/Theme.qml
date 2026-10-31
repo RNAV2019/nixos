@@ -786,6 +786,12 @@ Singleton {
   readonly property int nearbySegmentGlyph: 16
   readonly property int nearbySegmentSize: 12
   readonly property int nearbySegmentGap: 8
+  // Label-only cells (the platform control) are their label and this much either side; the
+  // wallpaper picker's source switch is two fixed 54 px cells 22 px tall, 4 apart.
+  readonly property int nearbyFitPad: 12
+  readonly property int nearbySourceHeight: 22
+  readonly property int nearbySourceCell: 54
+  readonly property int nearbySourceGap: 4
 
   // The send body (boards 16a, 16e, 16f). With nothing staged it is one full-width accent
   // button; staged files list as 40 px rows under a "Files" section line, and the panel
@@ -865,6 +871,12 @@ Singleton {
   readonly property int pickerFocusMarkHeight: 16
   readonly property int pickerPreviewImageHeight: 270
   readonly property int pickerPreviewRadius: 14
+  // The wallpaper chooser previews a 16:9 picture: 340 x 191 at (586, 76).
+  readonly property int pickerWallpaperPreviewInset: 10
+  readonly property int pickerWallpaperPreviewTop: 8
+  readonly property int pickerWallpaperPreviewWidth: 340
+  readonly property int pickerWallpaperPreviewHeight: 191
+  readonly property int pickerWallpaperPreviewRadius: 12
   readonly property int pickerChipHeight: 26
   readonly property int pickerChipGlyph: 14
 
@@ -1106,5 +1118,9 @@ Singleton {
   readonly property real phoneLabelSize: 12.5
   readonly property real phoneCaptionSize: 11.5
   readonly property int phoneClipsMax: 3
+  // The note Browse leaves when the phone refuses: 36 tall, 8 under the actions, and the rest
+  // of the panel 44 lower while it is up.
+  readonly property int phoneNoteBarHeight: 36
+  readonly property int phoneNoteBarGap: 8
   readonly property int phoneNotesMax: 2
 }

@@ -7,6 +7,8 @@ Rectangle {
 
   property string label: ""
   property bool destructive: false
+  // A resting ground and plain text, for a button that is the way out of an empty state.
+  property bool tonal: false
   // Set on rows that are themselves accent-filled.
   property bool onAccent: false
   property string accessibleName: ""
@@ -20,6 +22,8 @@ Rectangle {
   signal clicked
 
   readonly property color ink: {
+    if (tonal)
+      return Theme.text;
     if (onAccent)
       return Theme.inkOnAccent;
     return destructive ? Theme.dangerFill : Theme.accentFill;
@@ -46,6 +50,8 @@ Rectangle {
   }
 
   color: {
+    if (tonal)
+      return Theme.withAlpha(Theme.highlightMed, hover.containsMouse ? 1 : 0.85);
     if (onAccent)
       return Theme.withAlpha(Theme.inkOnAccent, hover.containsMouse ? 0.24 : 0.14);
     return Theme.withAlpha(destructive ? Theme.dangerFill : Theme.accentFill, hover.containsMouse ? 0.2 : 0);

@@ -33,10 +33,14 @@ Item {
   readonly property real edge: follow ? follow.x + follow.width : 0
   readonly property real followTop: follow ? (followingTransient ? follow.y - windowTop : follow.y) : 0
   readonly property real followHeight: follow ? follow.height : Theme.barHeight
-  readonly property real midline: followTop + followHeight / 2
+  // The disc sits on the row of the pill: a transient is that one row, and the open card's top
+  // row is as tall as the resting pill, so the disc stays where it was budding from instead of
+  // sliding down to the card's middle.
+  readonly property real rowHeight: followingTransient ? followHeight : Math.min(followHeight, Theme.barHeight)
+  readonly property real midline: followTop + rowHeight / 2
   // The end cap the bridge leaves from: the stadium's own circle, or for the open card a
   // circle of its corner radius, which is near enough for a bridge that only shows in motion.
-  readonly property real capRadius: follow ? Math.max(1, Math.min(followHeight / 2, follow.surfaceRadius)) : Theme.barHeight / 2
+  readonly property real capRadius: follow ? Math.max(1, Math.min(rowHeight / 2, follow.surfaceRadius)) : Theme.barHeight / 2
 
   // ---- out or in ----
 

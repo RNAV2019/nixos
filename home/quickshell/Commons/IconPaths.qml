@@ -35,6 +35,8 @@ Singleton {
   readonly property string circleX: "cancel"
 
   readonly property string wifiOff: "wifi_off"
+  readonly property string folderOff: "folder_off"
+  readonly property string phoneOff: "phonelink_off"
 
   // Drawn from the boards: the Android dome glyph and the filled Apple logo mark.
   readonly property string robotHead: "M4.5 17C4.5 12.86 7.86 9.5 12 9.5C16.14 9.5 19.5 12.86 19.5 17L4.5 17M7.5 8.6L6 6.2M16.5 8.6L18 6.2M9 13.2L9.01 13.2M15 13.2L15.01 13.2"
