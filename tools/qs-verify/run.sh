@@ -119,6 +119,17 @@ chmod +x "$QSV_WORK/bin/nearby"
 echo '{"event":"status","status":{"mode":"android","visible":false,"remaining":null,"scanning":false,"busy":false,"name":"test-laptop","download_dir":"/tmp/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}}' >"$QSV_WORK/nearby.baseline"
 
 
+# The phone panel's Browse opens the phone's mount in `nautilus`, started in a systemd scope.
+# Neither runs: the scope launcher logs what it was asked to start, and shoot.sh checks the log.
+cat >"$QSV_WORK/bin/systemd-run" <<STUB
+#!/bin/sh
+while [ \$# -gt 0 ] && [ "\$1" != "--" ]; do shift; done
+shift
+echo "\$*" >>"$QSV_WORK/launched.log"
+STUB
+chmod +x "$QSV_WORK/bin/systemd-run"
+: >"$QSV_WORK/launched.log"
+
 # `cliphist`, which the phone panel lists the newest clips from: a fixed history, nothing stored.
 cat >"$QSV_WORK/bin/cliphist" <<STUB
 #!/bin/sh
