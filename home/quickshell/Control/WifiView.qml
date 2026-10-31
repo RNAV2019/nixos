@@ -81,6 +81,14 @@ ControlSubView {
   }
 
   headerTrailing: [
+    HeaderButton {
+      kind: HeaderButton.Rescan
+      enabled: root.active
+      accessibleName: "Rescan"
+
+      onClicked: if (NetworkInfo.wifiDevice)
+        NetworkInfo.wifiDevice.scannerEnabled = true
+    },
     Switch {
       checked: Networking.wifiEnabled
       interactive: Networking.wifiHardwareEnabled
@@ -94,19 +102,6 @@ ControlSubView {
       onToggled: function (v) {
         Networking.wifiEnabled = v;
       }
-    },
-    IconButton {
-      text: Icons.refresh
-      baseColor: Theme.subtle
-      hoverColor: Theme.text
-      font.family: Theme.iconFont
-      font.pixelSize: 16
-      hitSlop: 8
-      enabled: root.active
-      accessibleName: "Rescan"
-
-      onClicked: if (NetworkInfo.wifiDevice)
-        NetworkInfo.wifiDevice.scannerEnabled = true
     }
   ]
 

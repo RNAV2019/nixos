@@ -36,14 +36,9 @@ ControlSubView {
   }
 
   headerTrailing: [
-    IconButton {
+    HeaderButton {
       visible: root.external !== null
-      text: Icons.restore
-      baseColor: Theme.subtle
-      hoverColor: Theme.text
-      font.family: Theme.iconFont
-      font.pixelSize: 16
-      hitSlop: 8
+      kind: HeaderButton.Reset
       enabled: root.active
       accessibleName: "Reset arrangement"
 

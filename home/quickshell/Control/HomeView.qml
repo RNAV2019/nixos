@@ -80,7 +80,7 @@ Item {
   }
 
   // Each block sits a fixed gap below the previous, so a missing card leaves no hole.
-  readonly property int tilesTop: Theme.controlHeaderHeight
+  readonly property int tilesTop: Theme.panelHeaderHeight
   readonly property int tilesBottom: tilesTop + Theme.controlTileHeight * 3 + Theme.controlTileGap * 2
   readonly property int slidersTop: tilesBottom + Theme.controlBlockGap
   readonly property int slidersBottom: slidersTop + Theme.controlSliderHeight * 2 + Theme.controlSliderGap
@@ -94,9 +94,10 @@ Item {
 
   readonly property int contentHeight: listTop + listHeight + Theme.controlPadBottom
 
-  ViewHeader {
+  PanelHeader {
     width: parent.width
     title: "Control Center"
+    hasBack: true
     onBacked: root.closed()
   }
 
@@ -332,32 +333,14 @@ Item {
     width: root.span
   }
 
-  Text {
+  SectionLabel {
     x: root.inset
     y: root.sectionTop
-    text: "Notifications"
-    color: Theme.muted
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.sectionSize
-    font.weight: Theme.weightMedium
-  }
-
-  IconButton {
-    id: clearAll
-
-    x: root.inset + root.span - width
-    y: root.sectionTop - 1
-    visible: root.count > 0
-    text: "Clear all"
-    baseColor: Theme.accent
-    hoverColor: Theme.text
-    font.family: Theme.uiFont
-    font.pixelSize: 12
-    font.weight: Theme.weightMedium
-    hitSlop: 6
-    accessibleName: "Clear all"
-
-    onClicked: NotificationStore.clear()
+    width: root.span
+    verticalAlignment: Qt.AlignTop
+    title: "Notifications"
+    action: root.count > 0 ? "Clear all" : ""
+    onActionClicked: NotificationStore.clear()
   }
 
   Text {

@@ -108,6 +108,14 @@ ControlSubView {
   }
 
   headerTrailing: [
+    HeaderButton {
+      kind: HeaderButton.Rescan
+      enabled: root.active
+      accessibleName: "Rescan"
+
+      onClicked: if (root.adapter && root.adapter.enabled)
+        root.adapter.discovering = true
+    },
     Switch {
       checked: root.adapter !== null && root.adapter.enabled
       interactive: root.adapter !== null
@@ -124,19 +132,6 @@ ControlSubView {
         root.adapter.enabled = v;
         root.adapter.discovering = v && root.active;
       }
-    },
-    IconButton {
-      text: Icons.refresh
-      baseColor: Theme.subtle
-      hoverColor: Theme.text
-      font.family: Theme.iconFont
-      font.pixelSize: 16
-      hitSlop: 8
-      enabled: root.active
-      accessibleName: "Rescan"
-
-      onClicked: if (root.adapter && root.adapter.enabled)
-        root.adapter.discovering = true
     }
   ]
 

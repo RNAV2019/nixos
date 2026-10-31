@@ -72,14 +72,6 @@ Variants {
       }
     }
 
-    // Back goes one step: out of a sub-view if there is one, out of the panel if not.
-    function back() {
-      if (view !== "")
-        view = "";
-      else
-        hide();
-    }
-
     // The view being left stays drawn until it is wholly past the card's right edge, which
     // the clip hides; a fixed timer cut it off mid-travel whenever the spring ran long.
     function unloadIfParked() {
@@ -111,11 +103,15 @@ Variants {
     onSubShownChanged: if (subShown)
       Qt.callLater(win.focusSubView)
 
+    // A sub-view's own panel takes Escape and Backspace to step back out. On the home view Escape
+    // falls through to close, and Backspace does what its Back button does.
     onKeyPressed: function (event) {
       switch (event.key) {
-      case Qt.Key_Escape:
       case Qt.Key_Backspace:
-        win.back();
+        // Already taken if a sub-view's panel stepped out on it.
+        if (win.view !== "" || event.accepted)
+          return;
+        win.hide();
         break;
       case Qt.Key_Left:
       case Qt.Key_Up:
@@ -231,6 +227,7 @@ Variants {
         id: wifiView
 
         WifiView {
+          surface: win
           active: win.open && win.view === "wifi"
           onBacked: win.view = ""
         }
@@ -240,6 +237,7 @@ Variants {
         id: audioView
 
         AudioView {
+          surface: win
           active: win.open && win.view === "audio"
           onBacked: win.view = ""
         }
@@ -249,6 +247,7 @@ Variants {
         id: bluetoothView
 
         BluetoothView {
+          surface: win
           active: win.open && win.view === "bluetooth"
           onBacked: win.view = ""
         }
@@ -258,6 +257,7 @@ Variants {
         id: displaysView
 
         DisplaysView {
+          surface: win
           active: win.open && win.view === "displays"
           hostScreen: modelData.name
           onBacked: win.view = ""
