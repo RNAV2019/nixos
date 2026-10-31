@@ -2,16 +2,17 @@ import QtQuick
 import QtQuick.Shapes
 import qs.Commons
 
-// The board's `Spinner`: a quarter arc turning over a faint ring, 20 px by default, the ring at
-// 0.4 of the size and both strokes at a tenth of it. It only turns while it is on screen.
+// The board's `Spinner`: a quarter arc turning over a faint ring, 20 px by default, with 2 px
+// strokes and the ring inset by half a stroke, as the login pill draws it. It only turns while it
+// is on screen.
 Shape {
   id: root
 
   property real size: Theme.lockSpinnerSize
   property bool running: true
 
-  readonly property real stroke: size / 10
-  readonly property real ringRadius: size * 0.4
+  property real stroke: 2
+  readonly property real ringRadius: (size - stroke) / 2
 
   implicitWidth: size
   implicitHeight: size
