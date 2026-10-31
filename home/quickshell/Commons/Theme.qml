@@ -375,9 +375,9 @@ Singleton {
   // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
   readonly property int osdWidth: 278
   // The pill hangs from barMarginTop and windows start barHeight + oledShiftMax + gaps_out
-  // below the strip, so 48 reached into the window under it.
-  readonly property int osdHeight: 40
-  readonly property int osdRadius: 20
+  // below the strip, so 48 reached into the window under it; 42 leaves 2 px at the orbit low.
+  readonly property int osdHeight: 42
+  readonly property int osdRadius: 21
   readonly property int osdGlyphLeft: 20
   readonly property int osdGlyphSize: 18
   readonly property int osdTrackLeft: 52
