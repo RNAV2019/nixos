@@ -9,6 +9,9 @@ import qs.Commons
 // Bind `target`, read `value`. A new target keeps the velocity, as a spring should. With
 // `animate` down a new target is taken at once and any motion stops, which is what writing
 // through a disabled Behavior does, so the `snapping` idiom in Ui/IslandOrigin.qml carries over.
+//
+// A `damping` ratio below one makes it underdamped: the value runs a little past its target and
+// settles back. Only the phone satellite asks for that; the shell's surfaces have no overshoot.
 QtObject {
   id: spring
 
@@ -19,8 +22,11 @@ QtObject {
   property bool animate: true
 
   property real omega: Theme.morphOmega
+  // 1 is critically damped; below 1 overshoots, by about 4.6% of the travel at 0.7.
+  property real damping: 1
 
-  // At rest once within a tenth of a pixel and all but still.
+  // At rest once within a tenth of a pixel and all but still; a value that is not in pixels
+  // sets its own.
   property real epsilon: 0.1
 
   readonly property bool running: driver.running
@@ -63,6 +69,17 @@ QtObject {
       return;
     }
     var w = omega;
+    if (damping < 1) {
+      // x'' = -2 z w x' - w^2 x, from (x, v), over dt.
+      var z = damping;
+      var wd = w * Math.sqrt(1 - z * z);
+      var ed = Math.exp(-z * w * dt);
+      var c = Math.cos(wd * dt);
+      var s = Math.sin(wd * dt);
+      value = target + ed * (x * c + (v + z * w * x) / wd * s);
+      velocity = ed * (v * c - (z * w * v + w * w * x) / wd * s);
+      return;
+    }
     var e = Math.exp(-w * dt);
     var k = v + w * x;
     velocity = (k - w * (x + k * dt)) * e;

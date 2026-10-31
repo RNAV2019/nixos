@@ -47,10 +47,14 @@ Item {
   readonly property bool panelUp: Bus.islandCovered(screenName) || Bus.islandOpenFor(screenName)
   readonly property bool wantOut: Phone.connected && Bus.sessionReady && !Bus.locking && !panelUp && !retreating
 
-  OvershootSpring {
+  // Unlike the island's morphs, this one overshoots a little; see Theme.phoneSpringDamping.
+  MorphSpring {
     id: progress
 
     target: root.wantOut ? 1 : 0
+    omega: Theme.phoneSpringOmega
+    damping: Theme.phoneSpringDamping
+    epsilon: 0.001
   }
 
   readonly property real p: progress.value
