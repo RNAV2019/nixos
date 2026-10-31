@@ -25,8 +25,9 @@ Item {
   property bool snapping: false
   readonly property bool glide: !Theme.reduceMotion && !root.snapping
 
-  // The room the row has.
-  readonly property real inner: Theme.wallpaperWidth - 2 * Theme.wallpaperInset
+  // The room the row has: the panel's own width, not the token, so a narrow screen's clamp is
+  // what the row centres on.
+  readonly property real inner: root.width - 2 * Theme.wallpaperInset
 
   // The selected tile takes the first width, everything else the last, indexed by distance
   // from the selection and clamped to its end; see the token note.
@@ -38,6 +39,11 @@ Item {
 
   function tileHeight(i) {
     return Math.round(root.tileWidth(i) / Theme.wallpaperTileAspect);
+  }
+
+  // Tiles share the row's middle line, so a taller one grows both ways.
+  function tileY(i) {
+    return Theme.wallpaperRowMid - root.tileHeight(i) / 2;
   }
 
   // A tile's left edge is the sum before it, so selecting right pushes the row left.
@@ -56,8 +62,8 @@ Item {
     if (stripWidth <= inner)
       return Theme.wallpaperInset + (inner - stripWidth) / 2;
 
-    var wanted = Theme.wallpaperWidth / 2 - (root.tileX(root.selected) + root.tileWidth(root.selected) / 2);
-    var furthest = Theme.wallpaperWidth - Theme.wallpaperInset - stripWidth;
+    var wanted = root.width / 2 - (root.tileX(root.selected) + root.tileWidth(root.selected) / 2);
+    var furthest = root.width - Theme.wallpaperInset - stripWidth;
     return Math.max(furthest, Math.min(Theme.wallpaperInset, wanted));
   }
 

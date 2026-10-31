@@ -38,6 +38,8 @@ Rectangle {
   readonly property bool showError: root.failed && !root.hasText && !root.busy
   // How far the shake has carried the pill; a host may carry what hangs under it along.
   readonly property real shakeX: shake.x
+  // The field, for a host that gives the keyboard to it as a surface opens.
+  readonly property Item inputItem: input
 
   signal passwordEdited(string text)
   signal accepted

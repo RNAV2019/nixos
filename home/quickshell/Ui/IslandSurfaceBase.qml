@@ -33,6 +33,10 @@ PanelWindow {
   // What a policy adds inside the card, beside the contents: items that draw nothing of their own.
   property alias surfaceData: surface.content
 
+  // Where a key the contents leave unaccepted goes next. A policy that takes keys names its own
+  // key item here, so the one it handles is the same whether a content item or it has focus.
+  property list<Item> contentKeyTargets
+
   // Raised inside show(), before the island is claimed, so a caller can reset the state its
   // own open shape is computed from.
   signal opening
@@ -391,6 +395,7 @@ PanelWindow {
       anchors.fill: parent
       opacity: (win.open && origin.presented) || (origin.held && win.stillCarriesBody) ? 1 : 0
       visible: opacity > 0
+      Keys.forwardTo: win.contentKeyTargets
 
       // Taken off the fade rather than run beside it, so the two cannot fall out of step and
       // the reveal out of the pill, where the travel is zero, is left untouched.

@@ -22,12 +22,17 @@ IslandSurfaceBase {
   // the full-screen window swallow input aimed at it. When set, only the card is a target;
   // clicks outside fall through to whatever is below.
   property bool passThrough: false
+  // The item that takes the keyboard when the surface opens, where it is not the surface itself:
+  // a text field, so typing lands in it. Keys it leaves unaccepted still reach keyPressed.
+  property Item focusTarget: null
 
-  // Every key the surface takes, before Escape is considered. Anything left unaccepted falls
-  // through to the Escape below, which closes.
+  // Every key the surface takes, before Escape is considered: those pressed with the surface
+  // itself focused, and those a focused content item left unaccepted. Anything left unaccepted
+  // falls through to the Escape below, which closes.
   signal keyPressed(var event)
 
   closesElsewhere: true
+  contentKeyTargets: [keys]
 
   // Open, the whole window is the surface's input region, and a click off the card hits the
   // dismiss MouseArea below; passThrough narrows it to the card so a spawned picker stays
@@ -54,7 +59,7 @@ IslandSurfaceBase {
       // Layer-shell hands the surface focus, but Qt still needs an active-focus target inside it.
       Qt.callLater(function () {
         if (win.open)
-          keys.forceActiveFocus();
+          (win.focusTarget ? win.focusTarget : keys).forceActiveFocus();
       });
     } else {
       focusPrime.stop();

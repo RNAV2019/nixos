@@ -171,6 +171,25 @@ Singleton {
   // Every section heading (Ui/SectionLabel.qml) and the small labels set beside one.
   readonly property int sectionSize: 11
 
+  // A panel's header (Ui/PanelHeader.qml): 70 px tall, its title and controls on the centre
+  // line. Back buttons sit 20 in and pull the trailing controls to 18 from the right edge.
+  readonly property int panelHeaderHeight: 70
+  readonly property int panelTitleSize: 18
+  readonly property int panelHeaderInset: 24
+  readonly property int panelHeaderBackInset: 20
+  readonly property int panelHeaderTrailInset: 18
+  readonly property int panelHeaderGap: 8
+  // Where a header's meta line sits on that centre line.
+  readonly property int panelHeaderMetaTop: 28
+  // And its footer, when the panel has one: the line near the foot of a 232 px card.
+  readonly property int panelFooterTop: 196
+  // The header's buttons (Ui/HeaderButton.qml): the discs' alphas and the bare glyphs' size.
+  readonly property int headerIconSize: 16
+  readonly property real headerButtonRestAlpha: 0.75
+  readonly property real headerButtonHoverAlpha: 0.95
+  // The hairline between a panel's sections (Ui/Divider.qml).
+  readonly property real dividerAlpha: 0.6
+
   readonly property int spacingLg: 12
 
   readonly property int panelRowInset: spacingLg
@@ -576,6 +595,7 @@ Singleton {
   readonly property int wallpaperTitleTop: 28
   readonly property int wallpaperMetaTop: 32
   readonly property int wallpaperFooterTop: 196
+  readonly property int wallpaperHeaderTop: 4
 
   // The row is a carousel, not a grid: clipped by the panel, running on past both edges.
   readonly property int wallpaperRowMid: 130
@@ -670,6 +690,7 @@ Singleton {
   readonly property int calNavSize: 30
   readonly property int calNavTop: 24
   readonly property int calNavGap: 6
+  readonly property int calHeaderTop: 4
   readonly property int calNavGlyphSize: 15
   readonly property int calTodayBtnHeight: 28
   readonly property real calTodayBtnSize: 11.5
