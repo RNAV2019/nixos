@@ -9,7 +9,14 @@ interfaces phone-bridge and the phone card use, driven from outside, and logging
     {"op": "notify", "dev", "id", "app", "title", "text", "dismissable", "silent"}
     {"op": "unnotify", "dev", "id"}
     {"op": "battery", "dev", "charge", "charging"}
-    {"op": "cellular", "dev", "type", "strength"}
+    {"op": "cellular", "dev", "type", "strength"}      "" and -1 are a phone that sends nothing
+    {"op": "share_received", "dev", "url"}             the phone sent a file: shareReceived(url)
+    {"op": "sftp", "dev", "grant", "mount"}            whether the phone allows file access, and
+                                                       the directory its storage mounts at
+    {"op": "job_start", "job", "dev", "direction": "out" | "in", "files": [...], "total",
+     "dir", "desktop"}                                 what kdeconnectd's job tracker does when a
+    {"op": "job_update", "job", "processed", "percent"}  transfer begins, moves and ends, through
+    {"op": "job_end", "job", "code", "message"}          org.kde.JobViewServer's requestView
 Every method the shell calls appends "<device> <interface>.<method> <args>" to CALLS_LOG.
 """
 
@@ -17,7 +24,7 @@ import asyncio
 import json
 import sys
 
-from dbus_fast import BusType, Variant
+from dbus_fast import BusType, Message, MessageFlag, MessageType, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.service import PropertyAccess, ServiceInterface, dbus_property, method, signal
 
@@ -187,11 +194,42 @@ class Share(ServiceInterface):
     def shareUrls(self, urls: "as"):
         note(self.dev, "share.shareUrls", *urls)
 
+    @signal()
+    def shareReceived(self, url: "s") -> "s":
+        return url
+
 
 class Sftp(ServiceInterface):
     def __init__(self, dev):
         super().__init__("org.kde.kdeconnect.device.sftp")
         self.dev = dev
+
+    def d(self):
+        return devices[self.dev]
+
+    @method()
+    def mountAndWait(self) -> "b":
+        note(self.dev, "sftp.mountAndWait")
+        d = self.d()
+        d["mounted"] = d.get("grant", True)
+        return d["mounted"]
+
+    @method()
+    def isMounted(self) -> "b":
+        return self.d().get("mounted", False)
+
+    @method()
+    def mountPoint(self) -> "s":
+        return self.d().get("mount", "/tmp/mock-phone") if self.d().get("mounted") else ""
+
+    @method()
+    def getMountError(self) -> "s":
+        return "" if self.d().get("grant", True) else "Permissions missing: filesystem access"
+
+    @method()
+    def unmount(self):
+        note(self.dev, "sftp.unmount")
+        self.d()["mounted"] = False
 
     @method()
     def startBrowsing(self) -> "b":
@@ -270,6 +308,104 @@ class Notification(ServiceInterface):
 
 
 daemon = None
+
+TRACKER = "org.kde.JobViewServer"
+# job id -> {"path", "dev", "direction", "dir", "state": the properties sent so far}
+jobs = {}
+
+
+async def tracker_call(path, iface, member, signature, body, wait=True):
+    message = Message(
+        destination=TRACKER,
+        path=path,
+        interface=iface,
+        member=member,
+        signature=signature,
+        body=body,
+        flags=MessageFlag.NONE if wait else MessageFlag.NO_REPLY_EXPECTED,
+    )
+    if not wait:
+        await bus.send(message)
+        return None
+    reply = await bus.call(message)
+    if reply.message_type == MessageType.ERROR:
+        note("tracker.error", member, reply.body)
+        return None
+    return reply
+
+
+def typed(props):
+    """KDE's tracker sends sizes as t, percent as u, and the rest as strings or booleans."""
+    kinds = {"percent": "u", "speed": "t", "elapsedTime": "t", "errorCode": "u", "suspended": "b"}
+    out = {}
+    for k, v in props.items():
+        kind = "b" if isinstance(v, bool) else kinds.get(k) or ("t" if k.startswith(("total", "processed")) else "s")
+        out[k] = Variant(kind, v)
+    return out
+
+
+async def job_start(op):
+    dev = devices[op["dev"]]
+    files = op.get("files", [])
+    incoming = op["direction"] == "in"
+    folder = op.get("dir", "/tmp/Downloads")
+    state = {
+        "destUrl": "file://" + folder if incoming else "",
+        "title": "Receiving file" if incoming else f"Sending to {dev['name']}",
+        "descriptionLabel1": "Source" if incoming else "File",
+        "descriptionValue1": dev["name"] if incoming else (files[0] if files else ""),
+        "descriptionLabel2": "Destination" if incoming else "",
+        "descriptionValue2": f"{folder}/{files[0]}" if incoming and files else "",
+        "totalFiles": len(files),
+        "processedFiles": 0,
+    }
+    if op.get("total"):
+        state["totalBytes"] = op["total"]
+    hints = dict(state) | {"immediate": True}
+    reply = await tracker_call(
+        "/JobViewServer",
+        "org.kde.JobViewServerV2",
+        "requestView",
+        "sia{sv}",
+        [op.get("desktop", "org.kde.kdeconnect.daemon"), 1, typed(hints)],
+    )
+    if reply is None:
+        return
+    path = reply.body[0]
+    jobs[op["job"]] = {"path": path, "state": state}
+    await tracker_call(path, "org.kde.JobViewV3", "update", "a{sv}", [typed(state)], wait=False)
+    note("job.start", op["job"], op["direction"], *files)
+
+
+async def job_update(op):
+    job = jobs[op["job"]]
+    props = {}
+    if "processed" in op:
+        props["processedBytes"] = op["processed"]
+    if "percent" in op:
+        props["percent"] = op["percent"]
+    if "files_done" in op:
+        props["processedFiles"] = op["files_done"]
+    if "file" in op:
+        folder = job["state"]["destUrl"].removeprefix("file://")
+        props["descriptionValue2" if folder else "descriptionValue1"] = f"{folder}/{op['file']}" if folder else op["file"]
+    job["state"].update(props)
+    await tracker_call(job["path"], "org.kde.JobViewV3", "update", "a{sv}", [typed(props)], wait=False)
+
+
+async def job_end(op):
+    job = jobs.pop(op["job"])
+    await tracker_call(
+        job["path"], "org.kde.JobViewV3", "terminate", "usa{sv}", [op.get("code", 0), op.get("message", ""), {}], wait=False
+    )
+    note("job.end", op["job"], op.get("code", 0))
+
+
+def on_signal(msg):
+    if msg.message_type == MessageType.SIGNAL and msg.member == "cancelRequested":
+        for name, job in jobs.items():
+            if job["path"] == msg.path:
+                note("job.cancelRequested", name)
 
 
 def changed():
@@ -355,6 +491,16 @@ class Control(ServiceInterface):
             d = devices[op["dev"]]
             d["cellular"] = {"type": op["type"], "strength": op.get("strength", -1)}
             d["ifaces"]["connectivity_report"].refreshed(op["type"], d["cellular"]["strength"])
+        elif kind == "share_received":
+            devices[op["dev"]]["ifaces"]["share"].shareReceived(op["url"])
+        elif kind == "sftp":
+            d = devices[op["dev"]]
+            d["grant"] = op.get("grant", True)
+            d["mount"] = op.get("mount", "/tmp/mock-phone")
+            d["mounted"] = False
+        elif kind in ("job_start", "job_update", "job_end"):
+            fn = {"job_start": job_start, "job_update": job_update, "job_end": job_end}[kind]
+            asyncio.ensure_future(fn(op))
 
 
 async def main():
@@ -363,6 +509,17 @@ async def main():
     daemon = Daemon()
     bus.export(ROOT, daemon)
     bus.export("/control", Control())
+    bus.add_message_handler(on_signal)
+    await bus.call(
+        Message(
+            destination="org.freedesktop.DBus",
+            path="/org/freedesktop/DBus",
+            interface="org.freedesktop.DBus",
+            member="AddMatch",
+            signature="s",
+            body=["type='signal',member='cancelRequested'"],
+        )
+    )
     await bus.request_name("org.kde.kdeconnect")
     await bus.request_name("org.mock.Control")
     await asyncio.get_event_loop().create_future()
