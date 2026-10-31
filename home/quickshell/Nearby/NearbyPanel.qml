@@ -239,20 +239,22 @@ Variants {
 
     onOpenChanged: {
       if (open) {
-        // Android is the default: an AirDrop window left from an earlier open (it holds the
-        // Wi-Fi) goes back, unless a transfer is riding it.
-        if (Nearby.mode === "apple" && !Nearby.busy && !Nearby.appleTransferActive)
+        // An AirDrop window left from an earlier open (it holds the Wi-Fi) goes back, unless a
+        // transfer is riding it, and Apple is not a pick that is kept.
+        if (Nearby.mode === "apple" && !Nearby.busy && !Nearby.appleTransferActive) {
           Nearby.setMode("android");
-        if (direction === "send")
-          Nearby.scanOn(0);
-        else
-          Nearby.turnOnForever();
+          Nearby.forgetApple();
+        }
+        win.startDaemon();
       } else {
-        Nearby.scanOff();
+        if (!Nearby.kdeconnect)
+          Nearby.scanOff();
         picking = false;
         previewActive = false;
-        if (Nearby.mode === "apple" && !Nearby.busy && !Nearby.appleTransferActive)
+        if (Nearby.mode === "apple" && !Nearby.busy && !Nearby.appleTransferActive) {
           Nearby.setMode("android");
+          Nearby.forgetApple();
+        }
         if (!Nearby.outboundInFlight(ignoreIds))
           clearFiles();
       }
@@ -262,7 +264,19 @@ Variants {
       if (!open)
         return;
       previewActive = false;
-      if (direction === "send") {
+      startDaemon();
+    }
+
+    // What nearbyd should be doing for the open panel: scanning for a send, visible for a
+    // receive. KDE Connect needs neither, so it is left alone (and told to stop if it was doing
+    // either for the platform just left).
+    function startDaemon() {
+      if (Nearby.kdeconnect) {
+        if (Nearby.scanning)
+          Nearby.scanOff();
+        if (Nearby.receivable)
+          Nearby.turnOff();
+      } else if (direction === "send") {
         Nearby.scanOn(0);
       } else {
         // Receiving means visible, until switched off from the chip: a phone's own "Everyone"
@@ -270,6 +284,15 @@ Variants {
         Nearby.scanOff();
         if (!Nearby.receivable)
           Nearby.turnOnForever();
+      }
+    }
+
+    Connections {
+      target: Nearby
+
+      function onPlatformChanged() {
+        if (win.open)
+          win.startDaemon();
       }
     }
 
@@ -281,7 +304,7 @@ Variants {
       if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
         direction = direction === "send" ? "receive" : "send";
         event.accepted = true;
-      } else if (direction === "send" && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+      } else if (direction === "send" && !sendView.phoneAbsent && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
         chooseFiles();
         event.accepted = true;
       }
@@ -324,7 +347,9 @@ Variants {
       readonly property real nearbyY: win.hasFiles ? Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows + rowsHeight + 20 : Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap + Theme.nearbyChooseHeight + 20
       readonly property real tilesY: nearbyY + 22
       readonly property real tileHeight: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap + 14 + (win.hasFiles ? Theme.nearbyDeviceSubGap + Theme.nearbyDeviceSubHeight : 0)
-      readonly property real contentHeight: tilesY + tileHeight + Theme.nearbyPadBottom
+      readonly property real contentHeight: phoneAbsent ? Theme.nearbyAbsentHeight : tilesY + tileHeight + Theme.nearbyPadBottom
+      // KDE Connect is picked and there is no phone to send to.
+      readonly property bool phoneAbsent: Nearby.kdeconnect && !Phone.connected
 
       Behavior on opacity {
         Morph {
@@ -346,7 +371,7 @@ Variants {
         height: Theme.nearbyChooseHeight
         radius: Theme.nearbyChooseRadius
         color: chooseArea.containsMouse ? Qt.lighter(Theme.accentFill, 1.06) : Theme.accentFill
-        opacity: win.hasFiles ? 0 : 1
+        opacity: win.hasFiles || sendView.phoneAbsent ? 0 : 1
         visible: opacity > 0
         scale: chooseArea.pressed ? Theme.pressScale : 1
 
@@ -407,7 +432,7 @@ Variants {
         y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop
         title: "Files"
         detail: win.files.length + (win.filesBytes > 0 ? " · " + Nearby.sizeLabel(win.filesBytes) : "")
-        opacity: win.hasFiles ? 1 : 0
+        opacity: win.hasFiles && !sendView.phoneAbsent ? 1 : 0
         visible: opacity > 0
 
         Behavior on opacity {
@@ -430,7 +455,7 @@ Variants {
         y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows
         width: Theme.nearbyWidth - Theme.nearbyInset * 2
         height: sendView.rowsHeight
-        visible: win.hasFiles
+        visible: win.hasFiles && !sendView.phoneAbsent
         clip: true
         spacing: Theme.nearbyFileGap
         interactive: win.files.length > Theme.nearbyFilesMax
@@ -463,8 +488,9 @@ Variants {
       // "Nearby", and what the stack is doing on the right: a daemon notice, the gold Wi-Fi
       // note in Apple mode (16f), or Scanning… (16a).
       SectionLine {
+        visible: !sendView.phoneAbsent
         y: sendView.nearbyY
-        title: "Nearby"
+        title: Nearby.kdeconnect ? "Your phone" : "Nearby"
 
         StrokeIcon {
           visible: Nearby.noticeText === "" && Nearby.wifiPaused
@@ -479,7 +505,7 @@ Variants {
           anchors.verticalCenter: parent.verticalCenter
           width: Math.min(implicitWidth, Theme.nearbyWidth - 120)
           elide: Text.ElideRight
-          text: Nearby.noticeText !== "" ? Nearby.noticeText : Nearby.busy ? (Nearby.mode === "apple" ? "Starting AirDrop…" : "Switching…") : Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
+          text: Nearby.noticeText !== "" ? Nearby.noticeText : Nearby.kdeconnect ? "" : Nearby.busy ? (Nearby.mode === "apple" ? "Starting AirDrop…" : "Switching…") : Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
           color: Nearby.noticeText !== "" ? (Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary) : Nearby.wifiPaused ? Theme.gold : Theme.accentFill
           font.family: Theme.uiFont
           font.pixelSize: Theme.nearbySectionSize
@@ -491,8 +517,41 @@ Variants {
         }
       }
 
+      // KDE Connect picked with no phone connected.
+      StrokeIcon {
+        visible: sendView.phoneAbsent
+        x: (Theme.nearbyWidth - size) / 2
+        y: 86
+        size: 28
+        strokeWidth: 1.75
+        path: IconPaths.phoneOff
+        color: Theme.inkTertiary
+      }
+
+      Text {
+        visible: sendView.phoneAbsent
+        y: 128
+        width: Theme.nearbyWidth
+        horizontalAlignment: Text.AlignHCenter
+        text: "No phone connected"
+        color: Theme.inkPrimary
+        font.family: Theme.uiFont
+        font.pixelSize: 13
+        font.weight: Theme.weightMedium
+      }
+
+      PillButton {
+        visible: sendView.phoneAbsent
+        x: (Theme.nearbyWidth - width) / 2
+        y: 160
+        tonal: true
+        label: "Switch to Android"
+        onClicked: Nearby.setPlatform("android")
+      }
+
       // The tiles: 56 px discs centred on 120 px columns, the row centred on the panel.
       Row {
+        visible: !sendView.phoneAbsent
         x: (Theme.nearbyWidth - sendView.shownPeers * Theme.nearbyDeviceSlot) / 2
         y: sendView.tilesY
 
@@ -589,10 +648,11 @@ Variants {
 
         y: receiveView.radarY
         width: Theme.nearbyWidth
-        deviceName: Nearby.deviceName
+        deviceName: Nearby.deviceName !== "" ? Nearby.deviceName : Nearby.kdeconnect ? "This laptop" : ""
         remainingLabel: Nearby.remainingLabel
-        receivable: Nearby.receivable
+        receivable: Nearby.kdeconnect ? Phone.connected : Nearby.receivable
         wifiPaused: Nearby.wifiPaused
+        peerName: Nearby.kdeconnect ? Phone.name : ""
         onTimerClicked: Nearby.receivable ? Nearby.turnOff() : Nearby.turnOnForever()
       }
 
@@ -777,23 +837,25 @@ Variants {
     width: Theme.nearbyWidth
     height: Theme.nearbyHeaderHeight
 
+    // Labels only: three cells with glyphs would not fit beside the direction control.
     SegmentedTrack {
       x: Theme.nearbyHeaderSide
-      currentIndex: Nearby.mode === "apple" ? 1 : 0
+      fit: true
+      currentIndex: Nearby.platform === "kdeconnect" ? 0 : Nearby.platform === "apple" ? 2 : 1
       pending: Nearby.busy
       segments: [
         {
-          "icon": IconPaths.robotHead,
+          "label": "KDE Connect"
+        },
+        {
           "label": "Android"
         },
         {
-          "icon": IconPaths.apple,
-          "label": "Apple",
-          "filled": true
+          "label": "Apple"
         }
       ]
       onChosen: function (index) {
-        Nearby.setMode(index === 1 ? "apple" : "android");
+        Nearby.setPlatform(index === 0 ? "kdeconnect" : index === 2 ? "apple" : "android");
       }
     }
 

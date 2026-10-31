@@ -9,6 +9,12 @@ import qs.Commons
 // each control is one short-lived `nearby` call. Events are the source of truth - the
 // daemon repeats state, peers and transfers on the stream - so an action's reply is never
 // what the panel draws. See ~/Projects/nearby/docs/protocol.md.
+//
+// KDE Connect is the third platform beside Quick Share (Android) and AirDrop (Apple), and is the
+// shell's own: nearbyd knows nothing of it. Its one peer is Services/Phone.qml's phone, its
+// sends are `Phone.share`, and what the bridge reports of its transfers (progress, arrivals) is
+// merged into `transfers` as rows of protocol "kdeconnect", so the tile, the sharing pill and the
+// arrivals draw them as they draw the other protocols'.
 Singleton {
   id: root
 
@@ -24,7 +30,52 @@ Singleton {
   // the panel notices a nearbyd restart.
   readonly property bool connected: events.connected
 
+  // nearbyd's own mode: "android" or "apple".
   readonly property string mode: status.mode !== undefined ? status.mode : "android"
+
+  // The platform the panel shows: "kdeconnect", "android" or "apple". What the user picked
+  // stays picked for as long as the shell runs; with nothing picked it is KDE Connect while a
+  // phone is connected and Android (nearbyd's mode) when there is none. A KDE Connect pick is
+  // let go when the phone disconnects, so the default applies again.
+  property string chosenPlatform: ""
+  readonly property string platform: chosenPlatform === "kdeconnect" || (chosenPlatform === "" && Phone.connected) ? "kdeconnect" : mode
+  readonly property bool kdeconnect: platform === "kdeconnect"
+
+  function setPlatform(p) {
+    root.chosenPlatform = p;
+    if (p === "kdeconnect") {
+      // An AirDrop window left running holds the Wi-Fi.
+      if (root.mode === "apple" && !root.busy && !root.appleTransferActive)
+        root.setMode("android");
+    } else {
+      root.setMode(p);
+    }
+  }
+
+  // Apple is not kept from one open of the panel to the next: its window holds the Wi-Fi.
+  function forgetApple() {
+    if (root.chosenPlatform === "apple")
+      root.chosenPlatform = "";
+  }
+
+  Connections {
+    target: Phone
+
+    function onConnectedChanged() {
+      if (!Phone.connected && root.chosenPlatform === "kdeconnect")
+        root.chosenPlatform = "";
+    }
+
+    function onTransferEvent(transfer) {
+      root.upsertTransfer(transfer);
+    }
+
+    function onTransferDropped(id) {
+      root.transfers = root.transfers.filter(function (t) {
+        return t.id !== id;
+      });
+    }
+  }
   readonly property bool scanning: status.scanning === true
   readonly property bool busy: status.busy === true
   readonly property bool receivable: status.visible === true
@@ -191,12 +242,19 @@ Singleton {
     return size !== "" ? head + " · " + size : head;
   }
 
+  // A KDE Connect transfer whose size and percentage are not known yet.
+  function isIndeterminate(t) {
+    return !!t && t.protocol === "kdeconnect" && t.state === "in_progress" && (t.percent === undefined || t.percent === null) && !(t.total_bytes > 0);
+  }
+
   // 0..1 for a row's background bar; a finished transfer is full.
   function progressOf(t) {
     if (!t)
       return 0;
     if (t.state === "finished")
       return 1;
+    if (t.percent !== undefined && t.percent !== null)
+      return Theme.clamp01(t.percent / 100);
     if (!t.total_bytes || t.total_bytes <= 0)
       return 0;
     return Theme.clamp01((t.bytes || 0) / t.total_bytes);
@@ -223,8 +281,17 @@ Singleton {
     onTriggered: root.freshArrival = ""
   }
 
-  // Peers of the stack the panel is showing: Quick Share in Android mode, AirDrop in Apple.
-  readonly property var peersForMode: root.peers.filter(function (p) {
+  // The phone as a peer, for the tile.
+  readonly property var kdePeer: Phone.connected ? {
+    "id": Phone.deviceId,
+    "name": Phone.name,
+    "protocol": "kdeconnect",
+    "kind": "phone"
+  } : null
+
+  // Peers of the stack the panel is showing: Quick Share in Android mode, AirDrop in Apple, the
+  // connected phone in KDE Connect.
+  readonly property var peersForMode: root.kdeconnect ? (root.kdePeer ? [root.kdePeer] : []) : root.peers.filter(function (p) {
     return p.protocol === (root.mode === "apple" ? "airdrop" : "quickshare");
   })
 
@@ -234,6 +301,8 @@ Singleton {
   })
 
   function peerById(id) {
+    if (root.kdePeer && root.kdePeer.id === id)
+      return root.kdePeer;
     for (var i = 0; i < peers.length; i++) {
       if (peers[i].id === id)
         return peers[i];
@@ -455,7 +524,10 @@ Singleton {
         continue;
       if (ignoreIds && ignoreIds.indexOf(t.id) !== -1)
         continue;
-      if (t.peer !== peer.name && t.peer !== peer.id && t.id !== peer.id)
+      // The bridge may not know who a job is with, and there is only one phone.
+      if (t.protocol !== "kdeconnect" && t.peer !== peer.name && t.peer !== peer.id && t.id !== peer.id)
+        continue;
+      if (t.protocol === "kdeconnect" && peer.protocol !== "kdeconnect")
         continue;
       if (!found || (t.started || 0) >= (found.started || 0))
         found = t;
@@ -495,6 +567,10 @@ Singleton {
   function send(files, peerRef) {
     if (!files || files.length === 0 || !peerRef)
       return;
+    if (root.kdeconnect) {
+      Phone.share(files);
+      return;
+    }
     sendCall.exec(["nearby", "send", "--detach"].concat(files).concat(["--to", peerRef]));
   }
 
@@ -512,12 +588,28 @@ Singleton {
   }
 
   function cancel(id) {
+    if (String(id).indexOf("kdc:") === 0) {
+      Phone.cancelTransfer(id);
+      return;
+    }
     cancelCall.exec(["nearby", "cancel", id]);
   }
 
-  function openDownloads() {
+  // The folder arrivals land in: nearbyd's, or the one the newest KDE Connect arrival is in.
+  readonly property string downloadsFolder: {
     if (downloadDir !== "")
-      Launch.open(downloadDir);
+      return downloadDir;
+    for (var i = 0; i < received.length; i++) {
+      var paths = received[i].saved_paths || [];
+      if (paths.length > 0)
+        return String(paths[0]).replace(/\/[^\/]*$/, "");
+    }
+    return "";
+  }
+
+  function openDownloads() {
+    if (downloadsFolder !== "")
+      Launch.open(downloadsFolder);
   }
 
   function openFile(path) {

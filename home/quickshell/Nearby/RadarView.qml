@@ -18,6 +18,8 @@ Item {
   property string remainingLabel: ""
   property bool receivable: false
   property bool wifiPaused: false
+  // KDE Connect's phone: there is no window to time, so its name takes the countdown's place.
+  property string peerName: ""
 
   signal timerClicked
 
@@ -151,9 +153,43 @@ Item {
     height: Theme.nearbyChipHeight
     spacing: Theme.nearbyChipPairGap
 
+    // Who is sending, as a chip: a paired phone needs no window to be open.
+    Rectangle {
+      visible: root.peerName !== ""
+      width: peerRow.implicitWidth + 24
+      height: Theme.nearbyChipHeight
+      radius: Theme.nearbyChipRadius
+      color: Theme.withAlpha(Theme.highlightMed, 0.85)
+
+      Row {
+        id: peerRow
+
+        anchors.centerIn: parent
+        spacing: Theme.nearbyChipInnerGap
+
+        StrokeIcon {
+          anchors.verticalCenter: parent.verticalCenter
+          size: Theme.nearbyPeerChipGlyph
+          strokeWidth: 1.8
+          path: IconPaths.smartphone
+          color: Theme.accentFill
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          text: root.peerName
+          color: Theme.inkPrimary
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.nearbyChipSize
+          font.weight: Theme.weightSemi
+        }
+      }
+    }
+
     // The countdown while a window runs, "Visible" while receiving has no end, "Off" when it
     // is switched off; clicking toggles receiving.
     Rectangle {
+      visible: root.peerName === ""
       width: timerRow.implicitWidth + 24
       height: Theme.nearbyChipHeight
       radius: Theme.nearbyChipRadius
@@ -215,7 +251,7 @@ Item {
 
     // Apple's exclusive radio: Wi-Fi is down while the window or a send runs.
     Rectangle {
-      visible: root.wifiPaused
+      visible: root.wifiPaused && root.peerName === ""
       width: wifiRow.implicitWidth + 24
       height: Theme.nearbyChipHeight
       radius: Theme.nearbyChipRadius

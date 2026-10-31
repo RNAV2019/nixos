@@ -797,6 +797,8 @@ Singleton {
   // button; staged files list as 40 px rows under a "Files" section line, and the panel
   // springs taller one row at a time.
   readonly property int nearbyBodyGap: 16
+  // With KDE Connect picked and no phone: the header, a glyph, a line and a button, 210 tall.
+  readonly property int nearbyAbsentHeight: 210
   readonly property int nearbyChooseHeight: 44
   readonly property int nearbyChooseRadius: 22
   readonly property int nearbyChooseGlyph: 16
@@ -895,6 +897,7 @@ Singleton {
   readonly property int nearbyChipRadius: 13
   readonly property real nearbyChipSize: 11.5
   readonly property int nearbyChipGlyph: 14
+  readonly property int nearbyPeerChipGlyph: 13
   readonly property int nearbyChipInnerGap: 6
   readonly property int nearbyChipPairGap: 8
   // One ripple out of the core to past the outer ring; three ripples ride it a third apart.

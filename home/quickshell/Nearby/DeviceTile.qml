@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Services
 import qs.Ui
 
 // One device under "Nearby" (boards 16a, 16e, 16f): a 56 px disc with the device glyph. A tap
@@ -33,12 +34,12 @@ Item {
   readonly property bool failed: state === "failed" || state === "rejected" || state === "cancelled"
   // The sub line belongs to a tile that is actually talking to its device.
   readonly property bool hasSub: filesReady && transfer !== null
+  // KDE Connect says nothing until its job reports: the ring turns instead of filling.
+  readonly property bool indeterminate: sending && Nearby.isIndeterminate(transfer)
   readonly property real progress: {
     if (sent)
       return 1;
-    if (!transfer || !transfer.total_bytes || transfer.total_bytes <= 0)
-      return 0;
-    return Theme.clamp01((transfer.bytes || 0) / transfer.total_bytes);
+    return Nearby.progressOf(transfer);
   }
 
   // The ring eases to each reading rather than snapping; events arrive at most every 250 ms.
@@ -78,6 +79,8 @@ Item {
       return "Waiting…";
     if (state === "connecting")
       return "Connecting…";
+    if (root.indeterminate)
+      return "Sending…";
     return Math.round(root.progress * 100) + "%";
   }
 
@@ -157,6 +160,16 @@ Item {
           ring.requestPaint();
         }
       }
+    }
+
+    // The quarter arc that turns where the total is not known, over the ring's own track.
+    Spinner {
+      visible: root.indeterminate
+      x: (parent.width - Theme.nearbyRingSize) / 2
+      y: (parent.height - Theme.nearbyRingSize) / 2
+      size: Theme.nearbyRingSize
+      stroke: Theme.nearbyRingWidth
+      track: false
     }
 
     Rectangle {

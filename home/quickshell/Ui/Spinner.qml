@@ -12,6 +12,8 @@ Shape {
   property bool running: true
 
   property real stroke: 2
+  // Off where something else already draws the ring it turns over.
+  property bool track: true
   readonly property real ringRadius: (size - stroke) / 2
 
   implicitWidth: size
@@ -21,7 +23,7 @@ Shape {
 
   ShapePath {
     fillColor: "transparent"
-    strokeColor: Theme.withAlpha(Theme.inkTertiary, 0.35)
+    strokeColor: root.track ? Theme.withAlpha(Theme.inkTertiary, 0.35) : "transparent"
     strokeWidth: root.stroke
 
     PathAngleArc {
