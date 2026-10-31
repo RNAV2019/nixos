@@ -189,7 +189,7 @@ Singleton {
   function launch(id) {
     var entry = DesktopEntries.byId(id);
     if (entry)
-      entry.execute();
+      Launch.entry(entry);
   }
 
   function activate(row, modifiers) {

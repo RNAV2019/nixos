@@ -269,18 +269,11 @@ Singleton {
       onStreamFinished: {
         var choice = text.trim();
         if (choice === "open")
-          open.command = ["xdg-open", announce.target];
+          Launch.open(announce.target);
         else if (choice === "folder")
-          open.command = ["xdg-open", announce.target.substring(0, announce.target.lastIndexOf("/"))];
-        else
-          return;
-        open.running = true;
+          Launch.open(announce.target.substring(0, announce.target.lastIndexOf("/")));
       }
     }
-  }
-
-  Process {
-    id: open
   }
 
   Component.onCompleted: root.refreshMonitor()
