@@ -6,18 +6,19 @@ import Quickshell
 // The launcher's search: one query fanned out to every provider, their rows merged into
 // sections. The launcher only draws `results` and calls `activate`.
 //
-// A provider is a Singleton with:
+// A provider is a Singleton file whose root type is Provider (Provider.qml), which holds the
+// defaults of what follows and the helpers rows are made with. It has:
 //   property string query       Written here: the typed text when this provider holds
 //                               the scope or none does; "" while another holds it.
-//   property bool scoped        Optional; written here, true while this provider holds
-//                               the scope. Set before `query`.
-//   readonly property string section   Heading over its rows ("Applications"), and the
-//                               chip's label in the search field while scoped.
-//   readonly property string prefix     Optional hidden shortcut into the scope ("=" for the
+//   property bool scoped        Written here, true while this provider holds the scope. Set
+//                               before `query`.
+//   property string section     Heading over its rows ("Applications"), and the chip's label
+//                               in the search field while scoped.
+//   property string prefix      Optional hidden shortcut into the scope ("=" for the
 //                               calculator); "" for none. Never needed: enterScope does the
 //                               same from a row.
-//   readonly property string scopeGlyph Optional; drawn in the scope chip.
-//   readonly property string hint       Optional; the field's placeholder while scoped
+//   property string scopeGlyph  Optional; drawn in the scope chip.
+//   property string hint        Optional; the field's placeholder while scoped
 //                               ("Search clipboard…").
 //   property var results        Rows for a non-empty query, in the provider's own order.
 //   property var emptyResults   Optional; rows for an empty query (apps list them all).
@@ -30,7 +31,7 @@ import Quickshell
 // chip, so the field never shows it. leaveScope() returns to every provider, clearing the
 // field. The launcher leaves the scope on Escape or on Backspace in an empty field.
 //
-// A row is a plain object:
+// A row is a plain object (Provider.makeRow fills in what a provider leaves out):
 //   { id, name, desc, icon, glyph, swatch, score, matches, ...anything else }
 //   id       Unique across every provider ("app:firefox.desktop"), stable while the row
 //            means the same thing: it keys diffing and animation.
@@ -120,8 +121,7 @@ Singleton {
     var scope = root.scope;
     for (var j = 0; j < providers.length; j++) {
       var pj = providers[j];
-      if (pj.scoped !== undefined)
-        pj.scoped = pj === scope;
+      pj.scoped = pj === scope;
       pj.query = !scope || pj === scope ? q : "";
     }
     schedule();
@@ -201,8 +201,7 @@ Singleton {
     for (var i = 0; i < providers.length; i++) {
       var p = providers[i];
       p.resultsChanged.connect(root.schedule);
-      if (p.emptyResultsChanged)
-        p.emptyResultsChanged.connect(root.schedule);
+      p.emptyResultsChanged.connect(root.schedule);
     }
     dispatch();
   }

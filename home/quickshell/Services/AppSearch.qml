@@ -8,13 +8,10 @@ import "../Commons/Fuzzy.js" as Fuzzy
 // prefix, initials, substring) sets the band a match lands in; the fuzzy score orders
 // within it, so a prefix still beats any scattered match. Keywords and generic names
 // match below every name match and highlight nothing.
-Singleton {
+Provider {
   id: root
 
-  property string query: ""
-
-  readonly property string section: "Applications"
-  readonly property string prefix: ""
+  section: "Applications"
 
   // Everything the menu may show, in name order, resolved once with the bits every
   // keystroke would otherwise recompute.
@@ -43,12 +40,12 @@ Singleton {
     return out;
   }
 
-  readonly property var emptyResults: entries.map(function (item) {
+  emptyResults: entries.map(function (item) {
     return root.rowFor(item, 0, []);
   })
 
   // Every match; Theme.launcherMaxRows caps the panel height, not the result count.
-  readonly property var results: {
+  results: {
     var q = query.trim().toLowerCase();
     if (q.length === 0)
       return [];
@@ -73,24 +70,15 @@ Singleton {
   }
 
   function rowFor(item, score, positions) {
-    return {
+    return makeRow({
       id: "app:" + item.id,
       desktopId: item.id,
       name: item.name,
       desc: item.desc,
       icon: item.icon,
-      glyph: "",
-      swatch: "",
       score: score,
       matches: positions
-    };
-  }
-
-  function run(start, length) {
-    var out = [];
-    for (var i = 0; i < length; i++)
-      out.push(start + i);
-    return out;
+    });
   }
 
   // Bands on Omnibox's 0-100 scale: name prefix 80, word prefix 65, initials 55,

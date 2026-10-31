@@ -10,16 +10,13 @@ import "../Commons/Fuzzy.js" as Fuzzy
 // leading '@') it lists recent clips and fuzzy-filters them; unscoped it only offers a
 // few clips that plainly contain the query, under the apps. Return copies a clip back,
 // Shift+Return deletes it. The history is read when the launcher opens, not polled.
-Singleton {
+Provider {
   id: root
 
-  property string query: ""
-  property bool scoped: false
-
-  readonly property string section: "Clipboard"
-  readonly property string prefix: "@"
-  readonly property string scopeGlyph: Icons.clipboard
-  readonly property string hint: "Search clipboard…"
+  section: "Clipboard"
+  prefix: "@"
+  scopeGlyph: Icons.clipboard
+  hint: "Search clipboard…"
 
   readonly property int listLimit: 200
   readonly property int unscopedLimit: 3
@@ -56,17 +53,15 @@ Singleton {
     list.run();
   }
 
-  readonly property var entryRow: ({
-      id: "clipboard:history",
-      name: "Clipboard History",
-      desc: "Copy back or delete something you copied",
-      icon: "",
-      glyph: Icons.clipboard,
-      swatch: "",
-      opensScope: true
-    })
+  entryRow: makeRow({
+    id: "clipboard:history",
+    name: "Clipboard History",
+    desc: "Copy back or delete something you copied",
+    glyph: Icons.clipboard,
+    opensScope: true
+  })
 
-  readonly property var entryWords: ["clipboard", "clip", "paste", "history"]
+  entryWords: ["clipboard", "clip", "paste", "history"]
 
   // Every word typed must start one of the entry words: "clip", "paste hist".
   function entryMatch(q) {
@@ -142,7 +137,7 @@ Singleton {
       name = (d && d.first ? root.collapse(d.first) : e.preview).substr(0, 160);
       desc = d ? count(d.lines) + (d.lines === 1 ? " line · " : " lines · ") + count(d.chars) + (d.chars === 1 ? " character" : " characters") : "Text";
     }
-    return {
+    return makeRow({
       id: "clip:" + e.id,
       clipId: e.id,
       clipLine: e.line,
@@ -150,19 +145,11 @@ Singleton {
       desc: desc,
       icon: icon,
       glyph: glyph,
-      swatch: "",
       score: score,
       matches: (positions || []).filter(function (p) {
         return p < name.length;
       })
-    };
-  }
-
-  function run(start, length) {
-    var out = [];
-    for (var i = 0; i < length; i++)
-      out.push(start + i);
-    return out;
+    });
   }
 
   function wordStart(text, i) {
@@ -187,7 +174,7 @@ Singleton {
     return null;
   }
 
-  readonly property var emptyResults: {
+  emptyResults: {
     if (!root.scoped)
       return [];
     return root.entries.map(function (e) {
@@ -195,7 +182,7 @@ Singleton {
     });
   }
 
-  readonly property var results: {
+  results: {
     var q = root.query.trim().toLowerCase();
     if (q.length === 0)
       return [];
@@ -211,12 +198,9 @@ Singleton {
       return out;
     }
 
-    var entry = root.entryMatch(q);
-    if (entry)
-      out.push(Object.assign({}, root.entryRow, {
-        score: entry.score,
-        matches: entry.positions
-      }));
+    var open = root.entryRowFor(q);
+    if (open)
+      out.push(open);
 
     // Three letters before a clip is offered, and only as a plain substring: scattered
     // letters match most of a history.
@@ -235,14 +219,8 @@ Singleton {
   }
 
   function activate(row, modifiers) {
-    if (row.opensScope) {
-      // Until Omnibox scopes without a prefix, typing the prefix does the same.
-      if (Omnibox.enterScope)
-        Omnibox.enterScope(root);
-      else
-        Omnibox.setQuery(root.prefix);
+    if (enters(row))
       return true;
-    }
     if (modifiers & Qt.ShiftModifier) {
       remove.exec(["sh", "-c", 'printf "%s\\n" "$1" | cliphist delete', "sh", row.clipLine]);
       return true;

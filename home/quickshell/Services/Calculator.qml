@@ -10,19 +10,14 @@ import qs.Commons
 // units, currency) to qalc. Each result is a row: `name` is shown, `copy` goes to the
 // clipboard. Unscoped it sees every launcher query, so `looksCalculatory` keeps an app name
 // from spawning qalc per keystroke; a leading '=' scopes the launcher to it alone.
-Singleton {
+Provider {
   id: root
 
-  // The query, its '=' already stripped when scoped.
-  property string query: ""
-  property bool scoped: false
-
-  readonly property string section: "Calculator"
-  readonly property string prefix: "="
-  readonly property string scopeGlyph: Icons.calculator
-  readonly property string hint: "Maths, units, currency, colours, times and dates"
-
-  property var results: []
+  // The query arrives with its '=' already stripped when scoped.
+  section: "Calculator"
+  prefix: "="
+  scopeGlyph: Icons.calculator
+  hint: "Maths, units, currency, colours, times and dates"
 
   readonly property string expr: query.trim()
 
@@ -94,20 +89,13 @@ Singleton {
   }
 
   function row(id, name, desc, extra) {
-    var r = {
+    return makeRow(Object.assign({
       id: "calc:" + id,
       name: name,
       desc: desc,
       copy: name,
-      icon: "",
-      glyph: "",
-      swatch: "",
-      score: root.score,
-      matches: []
-    };
-    for (var k in extra)
-      r[k] = extra[k];
-    return r;
+      score: root.score
+    }, extra));
   }
 
   // --- Colours ------------------------------------------------------------------------
