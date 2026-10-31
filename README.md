@@ -195,9 +195,9 @@ as JSON to that file and changes nothing in the terminal. [`Services/Rebuild.qml
 tails it, and [`Rebuild/RebuildPill.qml`](home/quickshell/Rebuild/RebuildPill.qml) grows the island's
 progress pill: "Rebuilding" with n of m derivations (a sliding segment until the total is known),
 then "Switched" and the time taken, or "Rebuild failed" with how far it got, which stays until
-clicked or the next rebuild. "Switched" is when the last Nix process has ended, so the activation
-that follows a switch is not waited for. With the shell not running the file is just left behind,
-and ignored when the shell starts. To try it without rebuilding, run any `nix build` with that option.
+clicked or the next rebuild. "Switched" waits for nixos-rebuild itself to exit, so it comes after
+the activation (whether that worked is in the terminal). With the shell not running the file is
+just left behind, and ignored when the shell starts. To try it without rebuilding, run any `nix build` with that option.
 
 </details>
 

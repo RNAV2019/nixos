@@ -32,8 +32,8 @@ import qs.Commons
 // - the run is over when none of its processes is alive and the log has been quiet a moment (the
 //   next nix process of the same rebuild starts within that). It failed if an error was seen, or
 //   an activity was still open (a process that ended without a result: killed, or Ctrl-C), else
-//   it is done. "Done" is the end of the last Nix process, so for a switch it is the build and
-//   the new generation being set, not the activation that follows; see the pill.
+//   it is done. The Nix processes' parent, nixos-rebuild, counts as one of them, so a switch is
+//   done once its activation has run too (whether that worked is only in the terminal).
 Singleton {
   id: root
 
@@ -65,6 +65,8 @@ Singleton {
 
   // ---- reading ----
 
+  // The run's processes: true for a Nix process in the log, "parent" for the nixos-rebuild that
+  // started one, which is not in the log but outlives them through the activation.
   property var _pids: ({})
   property var _open: ({})
   property int _openCount: 0
@@ -73,6 +75,8 @@ Singleton {
   // A realisation has been announced, so the next builds activity is its.
   property bool _announced: false
   property real _lastEvent: 0
+  // When a probe last found one of the run's processes alive.
+  property real _lastAlive: 0
   property bool _failed: false
 
   function _strip(text) {
@@ -87,6 +91,7 @@ Singleton {
     total = 0;
     dismissed = false;
     _pids = {};
+    _lastAlive = 0;
     _open = {};
     _openCount = 0;
     _buildId = 0;
@@ -176,7 +181,11 @@ Singleton {
   function _probe() {
     if (probe.running)
       return;
-    probe.command = ["sh", "-c", "for p; do [ -d /proc/$p ] && echo $p; done", "sh"].concat(Object.keys(_pids));
+    // Prints the live ones, and each live Nix process's parent as "parent <pid>" if that is
+    // nixos-rebuild (a `nix build` run by hand is not waited on past its end). Field 4 of stat is
+    // the parent; a Nix process's name has no spaces, so plain splitting finds it.
+    var args = Object.keys(_pids).map(p => (_pids[p] === "parent" ? "p" : "n") + p);
+    probe.command = ["sh", "-c", "for a; do p=${a#?}; [ -d /proc/$p ] || continue; echo $p; [ ${a%$p} = n ] && read -r _ _ _ pp _ < /proc/$p/stat && grep -qa nixos-rebuild /proc/$pp/cmdline 2>/dev/null && echo parent $pp; done", "sh"].concat(args);
     probe.running = true;
   }
 
@@ -185,14 +194,31 @@ Singleton {
 
     stdout: StdioCollector {
       onStreamFinished: {
-        if (root.phase === "building" && text.trim() === "" && Date.now() - root._lastEvent >= root.quietMs)
+        if (root.phase !== "building")
+          return;
+        var lines = text.trim() === "" ? [] : text.trim().split("\n");
+        var parents = null;
+        for (var i = 0; i < lines.length; i++) {
+          var m = /^parent (\d+)$/.exec(lines[i]);
+          if (m === null)
+            continue;
+          if (root._pids[m[1]] === undefined) {
+            parents = parents || Object.assign({}, root._pids);
+            parents[m[1]] = "parent";
+          }
+        }
+        if (parents !== null)
+          root._pids = parents;
+        if (lines.length > 0)
+          root._lastAlive = Date.now();
+        else if (Date.now() - root._lastEvent >= root.quietMs)
           root._finish();
       }
     }
   }
 
   function _finish() {
-    endedAt = _lastEvent;
+    endedAt = Math.max(_lastEvent, _lastAlive);
     var failed = _failed || _openCount > 0;
     if (!failed && total > 0)
       done = total;
