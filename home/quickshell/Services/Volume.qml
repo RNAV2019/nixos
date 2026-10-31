@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
 
@@ -54,8 +53,7 @@ LevelSource {
     var delta = _pendingPercent;
     _pendingPercent = 0;
     _lastWriteAt = Date.now();
-    setter.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.abs(delta) + "%" + (delta > 0 ? "+" : "-"), "-l", "1.0"];
-    setter.running = true;
+    setter.exec(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.abs(delta) + "%" + (delta > 0 ? "+" : "-"), "-l", "1.0"]);
   }
 
   function step(up) {
@@ -88,23 +86,12 @@ LevelSource {
     onTriggered: root.flush()
   }
 
-  Process {
+  Command {
     id: setter
 
-    property string errorText: ""
-
-    stderr: StdioCollector {
-      onStreamFinished: setter.errorText = text
-    }
+    label: "wpctl set-volume"
 
     onRunningChanged: if (!setter.running)
       root.flush()
-
-    onExited: function (code) {
-      if (code !== 0) {
-        var said = setter.errorText.trim();
-        console.warn("wpctl set-volume:", said !== "" ? said : "exit code " + code);
-      }
-    }
   }
 }

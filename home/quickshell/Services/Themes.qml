@@ -38,20 +38,12 @@ Singleton {
   function apply(id) {
     if (Theme.themeIds.indexOf(id) < 0 || id === Theme.name)
       return;
-    switcher.command = ["theme-switch", id];
-    switcher.running = true;
+    switcher.exec(["theme-switch", id]);
   }
 
   // Nothing to handle on failure: the name file only changes when the switch went through.
-  Process {
+  Command {
     id: switcher
-
-    stderr: StdioCollector {
-      onStreamFinished: {
-        if (text.trim() !== "")
-          console.warn("theme-switch:", text.trim());
-      }
-    }
 
     onExited: root.refresh()
   }

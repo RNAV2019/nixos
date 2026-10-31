@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.Commons
 
 // Watch sysfs for brightness events and write through brightnessctl.
@@ -82,8 +81,7 @@ LevelSource {
     _lastTarget = target;
     _hasLastTarget = true;
     _lastWriteAt = Date.now();
-    setter.command = ["brightnessctl", "--min-value=4", "set", Math.round(target * 100) + "%"];
-    setter.running = true;
+    setter.exec(["brightnessctl", "--min-value=4", "set", Math.round(target * 100) + "%"]);
   }
 
   function step(up) {
@@ -124,8 +122,10 @@ LevelSource {
     onTriggered: root.flushValue()
   }
 
-  Process {
+  Command {
     id: setter
+
+    label: "brightnessctl"
 
     onRunningChanged: if (!setter.running)
       root.flushValue()

@@ -109,8 +109,7 @@ Singleton {
     // One shell, so the device lookup happens at record time. The directory is made here,
     // so a recorder that is never used creates nothing.
     var script = 'mkdir -p "$(dirname "$1")" || exit 1; kind=$2; shift 2; ' + 'if [ -n "$kind" ]; then ' + 'alias=@DEFAULT_AUDIO_SINK@; [ "$kind" = source ] && alias=@DEFAULT_AUDIO_SOURCE@; ' + 'name=$(wpctl inspect "$alias" | sed -n \'s/.*node\\.name = "\\(.*\\)"/\\1/p\' | head -1); ' + '[ "$kind" = sink ] && name="$name.monitor"; ' + 'if [ -n "$name" ]; then set -- "$@" --audio --audio-device "$name"; fi; fi; ' + 'exec "$@"';
-    capture.command = ["sh", "-c", script, "sh", root.file, device].concat(args);
-    capture.running = true;
+    capture.exec(["sh", "-c", script, "sh", root.file, device].concat(args));
     root.state = "recording";
     tick.restart();
   }
@@ -212,14 +211,12 @@ Singleton {
     }
   }
 
-  Process {
+  Command {
     id: capture
 
-    property string errorText: ""
-
-    stderr: StdioCollector {
-      onStreamFinished: capture.errorText = text
-    }
+    label: "Screen recording"
+    // The exit code means nothing here: a stop is SIGINT, and the file it left says whether it worked.
+    logFailures: false
 
     // A failure before the first frame leaves nothing, so the file is stat'ed, not assumed.
     onExited: function (code) {
@@ -247,7 +244,7 @@ Singleton {
         var size = text.trim();
         if (size === "") {
           // wl-screenrec says why it gave up, and it says it better than a bare "nothing" would.
-          var said = capture.errorText.trim().split("\n")[0];
+          var said = capture.errText.split("\n")[0];
           root.failed(said !== "" ? said : "Nothing was recorded");
           return;
         }

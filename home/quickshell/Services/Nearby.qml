@@ -466,75 +466,53 @@ Singleton {
   // ---- actions: one `nearby` call each ----
 
   function setMode(m) {
-    modeCall.command = ["nearby", "mode", m];
-    modeCall.errText = "";
-    modeCall.running = true;
+    modeCall.exec(["nearby", "mode", m]);
   }
 
   function turnOn() {
-    windowCall.command = ["nearby", "on"];
-    windowCall.errText = "";
-    windowCall.running = true;
+    windowCall.exec(["nearby", "on"]);
   }
 
   // Visible until turned off (the daemon's `on 0`): receive mode should not expire out from
   // under a phone whose own "Everyone" window has already reverted to Contacts.
   function turnOnForever() {
-    windowCall.command = ["nearby", "on", "forever"];
-    windowCall.errText = "";
-    windowCall.running = true;
+    windowCall.exec(["nearby", "on", "forever"]);
   }
 
   function turnOff() {
-    windowCall.command = ["nearby", "off"];
-    windowCall.errText = "";
-    windowCall.running = true;
+    windowCall.exec(["nearby", "off"]);
   }
 
   // Peer ids live for one scan only, so the send view keeps a scan running while it is up.
   function scanOn(seconds) {
-    scanCall.command = ["nearby", "scan", "on", "--for", String(seconds !== undefined ? seconds : 20)];
-    scanCall.errText = "";
-    scanCall.running = true;
+    scanCall.exec(["nearby", "scan", "on", "--for", String(seconds !== undefined ? seconds : 20)]);
   }
 
   function scanOff() {
-    scanCall.command = ["nearby", "scan", "off"];
-    scanCall.errText = "";
-    scanCall.running = true;
+    scanCall.exec(["nearby", "scan", "off"]);
   }
 
   function send(files, peerRef) {
     if (!files || files.length === 0 || !peerRef)
       return;
-    sendCall.command = ["nearby", "send", "--detach"].concat(files).concat(["--to", peerRef]);
-    sendCall.errText = "";
-    sendCall.running = true;
+    sendCall.exec(["nearby", "send", "--detach"].concat(files).concat(["--to", peerRef]));
   }
 
   // Forget the finished/declined/cancelled rows so the received list does not grow forever.
   function clearReceived() {
-    clearCall.command = ["nearby", "clear"];
-    clearCall.errText = "";
-    clearCall.running = true;
+    clearCall.exec(["nearby", "clear"]);
   }
 
   function accept(id) {
-    acceptCall.command = ["nearby", "accept", id];
-    acceptCall.errText = "";
-    acceptCall.running = true;
+    acceptCall.exec(["nearby", "accept", id]);
   }
 
   function decline(id) {
-    declineCall.command = ["nearby", "decline", id];
-    declineCall.errText = "";
-    declineCall.running = true;
+    declineCall.exec(["nearby", "decline", id]);
   }
 
   function cancel(id) {
-    cancelCall.command = ["nearby", "cancel", id];
-    cancelCall.errText = "";
-    cancelCall.running = true;
+    cancelCall.exec(["nearby", "cancel", id]);
   }
 
   function openDownloads() {
@@ -548,16 +526,6 @@ Singleton {
   }
 
   // ---- plumbing ----
-
-  // Errors come back as the daemon's notice events and as a failed transfer row; a call
-  // that exits non-zero says so the same way.
-  function fail(proc, what, code) {
-    proc.exitCode = code;
-    if (code === 0)
-      return;
-    var text = proc.errText !== undefined ? proc.errText : "";
-    root.showNotice("error", what + (text !== "" ? ": " + text : ""));
-  }
 
   Process {
     id: events
@@ -595,8 +563,7 @@ Singleton {
   Command {
     id: resyncCall
 
-    logFailures: false
-
+    label: "nearby resync"
     command: ["nearby", "transfers", "--json"]
     stdout: StdioCollector {
       onStreamFinished: {
@@ -611,10 +578,6 @@ Singleton {
         }
       }
     }
-    onExited: function (code) {
-      if (code !== 0)
-        console.warn("nearby resync failed (" + code + "): " + resyncCall.errText);
-    }
   }
 
   Timer {
@@ -624,67 +587,59 @@ Singleton {
     onTriggered: events.running = true
   }
 
-  Command {
+  // Errors come back as the daemon's notice events and as a failed transfer row; a call
+  // that exits non-zero says so the same way.
+  component Call: Command {
+    onFailed: function (code, message) {
+      root.showNotice("error", label + (message !== "" ? ": " + message : ""));
+    }
+  }
+
+  Call {
     id: modeCall
 
-    onExited: function (code) {
-      root.fail(modeCall, "Mode switch", code);
-    }
+    label: "Mode switch"
   }
 
-  Command {
+  Call {
     id: windowCall
 
-    onExited: function (code) {
-      root.fail(windowCall, "Visibility", code);
-    }
+    label: "Visibility"
   }
 
-  Command {
+  Call {
     id: scanCall
 
-    onExited: function (code) {
-      root.fail(scanCall, "Scan", code);
-    }
+    label: "Scan"
   }
 
-  Command {
+  Call {
     id: sendCall
 
-    onExited: function (code) {
-      root.fail(sendCall, "Send", code);
-    }
+    label: "Send"
   }
 
-  Command {
+  Call {
     id: acceptCall
 
-    onExited: function (code) {
-      root.fail(acceptCall, "Accept", code);
-    }
+    label: "Accept"
   }
 
-  Command {
+  Call {
     id: declineCall
 
-    onExited: function (code) {
-      root.fail(declineCall, "Decline", code);
-    }
+    label: "Decline"
   }
 
-  Command {
+  Call {
     id: cancelCall
 
-    onExited: function (code) {
-      root.fail(cancelCall, "Cancel", code);
-    }
+    label: "Cancel"
   }
 
-  Command {
+  Call {
     id: clearCall
 
-    onExited: function (code) {
-      root.fail(clearCall, "Clear", code);
-    }
+    label: "Clear"
   }
 }
