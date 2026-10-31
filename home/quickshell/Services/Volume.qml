@@ -3,16 +3,36 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import qs.Commons
 
-// Writes only: the OSD, bar and audio panel read the sink from Pipewire directly, so this
-// singleton owns the wpctl calls the volume keys make and announces them.
-Singleton {
+// The default sink as a level source: the OSD's reads of its volume and mute, and the wpctl
+// calls the volume keys make. The bar and audio panel still read their nodes from Pipewire
+// directly.
+LevelSource {
   id: root
 
-  // Emitted per keypress even at the rail, so the OSD can appear without waiting on
-  // a Pipewire change that never comes.
-  signal adjusted
+  readonly property var sink: Pipewire.defaultAudioSink
+  readonly property var sinkAudio: sink ? sink.audio : null
+
+  // Raw, so a volume pushed past 100% still counts as a change; `value` is clamped.
+  readonly property real volume: sinkAudio ? sinkAudio.volume : 0
+  readonly property bool muted: sinkAudio ? sinkAudio.muted : false
+
+  available: sinkAudio !== null
+  value: Theme.clamp01(volume)
+  glyph: glyphFor(sink)
+  reading: muted ? "Muted" : percent
+  stateOnly: muted
+
+  // Pipewire only delivers a node's properties while something tracks it.
+  PwObjectTracker {
+    objects: root.sink ? [root.sink] : []
+  }
+
+  // Any client's change shows, not only the keys'.
+  onVolumeChanged: root.adjusted()
+  onMutedChanged: root.adjusted()
 
   // Key repeat can outpace wpctl: a signed pending delta preserves the net change and
   // lets opposite presses cancel before a process starts.
@@ -41,16 +61,23 @@ Singleton {
   function step(up) {
     _pendingPercent += up ? stepPercent : -stepPercent;
     writeTimer.restart();
+    // Per keypress even at the rail, so the OSD can appear without waiting on a Pipewire
+    // change that never comes.
     root.adjusted();
   }
 
-  // The glyph a sink shows: muted, or the ladder step for its level. `sink` is any
+  function set(v) {
+    if (sinkAudio)
+      sinkAudio.volume = Theme.clamp01(v);
+  }
+
+  // The glyph a sink shows: muted, or the ladder step for its level. `node` is any
   // Pipewire node, or null, and the OSD, bar and audio panel all read the same answer.
-  function glyph(sink) {
-    var audio = sink && sink.audio ? sink.audio : null;
+  function glyphFor(node) {
+    var audio = node && node.audio ? node.audio : null;
     var muted = audio !== null && audio.muted;
-    var percent = audio !== null ? audio.volume * 100 : 0;
-    return muted ? Icons.volumeMuted : Icons.step(Icons.volume, percent);
+    var level = audio !== null ? audio.volume * 100 : 0;
+    return muted ? Icons.volumeMuted : Icons.step(Icons.volume, level);
   }
 
   Timer {

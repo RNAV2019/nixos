@@ -100,7 +100,7 @@ Item {
 
     x: 16
     y: 13
-    text: Volume.glyph(root.sink)
+    text: Volume.glyphFor(root.sink)
     color: Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlMediaCaptionSize

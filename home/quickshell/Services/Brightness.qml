@@ -3,16 +3,15 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Watch sysfs for brightness events and write through brightnessctl.
-Singleton {
+LevelSource {
   id: root
 
-  property real value: gauge.value
-  property bool available: gauge.available
-
-  // Emitted per keypress, even at a rail, so the OSD appears without a sysfs change.
-  signal adjusted
+  value: gauge.value
+  available: gauge.available
+  glyph: Icons.brightness
 
   // Everything works in the raw sysfs range, which `value` and the slider share.
   // brightnessctl's -e flag would put a step up an exponential curve and disagree.
@@ -97,6 +96,7 @@ Singleton {
 
     var pct = Math.min(maxStepPercent, stepPercent + Math.max(0, _run - accelAfter) * stepGrowth);
     queueValue(baseValue() + (up ? pct : -pct) / 100);
+    // Per keypress, even at a rail, so the OSD appears without a sysfs change.
     root.adjusted();
   }
 
@@ -110,6 +110,10 @@ Singleton {
       _lastTarget = root.value;
       _hasLastTarget = true;
     }
+
+    // available filters the initial zero-to-real transition.
+    if (root.available)
+      root.adjusted();
   }
 
   Timer {

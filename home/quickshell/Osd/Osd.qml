@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -23,25 +22,15 @@ Scope {
     onTriggered: root.ready = true
   }
 
-  readonly property var sink: Pipewire.defaultAudioSink
-  readonly property var sinkAudio: sink ? sink.audio : null
-  readonly property var source: Pipewire.defaultAudioSource
-  readonly property var sourceAudio: source ? source.audio : null
+  readonly property var sources: ({
+      "volume": Volume,
+      "brightness": Brightness,
+      "kbd": KeyboardBacklight,
+      "mic": Microphone
+    })
 
-  readonly property real volume: sinkAudio ? sinkAudio.volume : 0
-  readonly property bool muted: sinkAudio ? sinkAudio.muted : false
-  readonly property bool micMuted: sourceAudio ? sourceAudio.muted : false
-
-  PwObjectTracker {
-    objects: {
-      var out = [];
-      if (root.sink)
-        out.push(root.sink);
-      if (root.source)
-        out.push(root.source);
-      return out;
-    }
-  }
+  // Before the first flash the pill is shut, so Volume only stands in for a mode of "".
+  readonly property var current: sources[mode] ?? Volume
 
   // A user-opened panel owns the pill, so no OSD starts under one; a flash is cut short.
   readonly property bool blocked: Bus.islandOpenAnywhere
@@ -61,45 +50,18 @@ Scope {
     hideTimer.restart();
   }
 
-  onVolumeChanged: if (ready)
-    flash("volume")
+  Instantiator {
+    model: Object.keys(root.sources)
 
-  onMutedChanged: if (ready)
-    flash("volume")
+    Connections {
+      required property string modelData
 
-  onMicMutedChanged: if (ready)
-    flash("mic")
+      target: root.sources[modelData]
 
-  // Keypresses at a rail move nothing, so adjusted covers them; value changes show too.
-  Connections {
-    target: Brightness
-
-    function onAdjusted() {
-      root.flash("brightness");
-    }
-
-    function onValueChanged() {
-      // available filters the initial zero-to-real transition.
-      if (root.ready && Brightness.available)
-        root.flash("brightness");
-    }
-  }
-
-  Connections {
-    target: Volume
-
-    function onAdjusted() {
-      root.flash("volume");
-    }
-  }
-
-  // Firmware handles the keyboard backlight key, so sysfs is its only signal.
-  Connections {
-    target: KeyboardBacklight
-
-    function onLevelChanged() {
-      if (root.ready && KeyboardBacklight.available)
-        root.flash("kbd");
+      function onAdjusted() {
+        if (root.ready)
+          root.flash(modelData);
+      }
     }
   }
 
@@ -119,39 +81,11 @@ Scope {
     onTriggered: root.showing = false
   }
 
-  readonly property real level: {
-    if (mode === "brightness")
-      return Brightness.value;
-    if (mode === "kbd")
-      return KeyboardBacklight.value;
-    return volume;
-  }
-
-  // Mute is a state, not a level, so the bar carries no fill for it.
-  readonly property bool stateOnly: (mode === "volume" && muted) || mode === "mic"
-
-  readonly property string glyph: {
-    if (mode === "brightness")
-      return Icons.brightness;
-    if (mode === "kbd")
-      return Icons.keyboardBacklight;
-    if (mode === "mic")
-      return root.micMuted ? Icons.microphoneMuted : Icons.microphone;
-    if (muted)
-      return Icons.volumeMuted;
-    return Icons.step(Icons.volume, volume * 100);
-  }
-
-  readonly property string reading: {
-    if (mode === "mic")
-      return root.micMuted ? "Mic off" : "Mic on";
-    if (mode === "volume" && muted)
-      return "Muted";
-    return Math.round(Math.max(0, Math.min(1, level)) * 100) + "%";
-  }
-
-  // A hot microphone must not be misread, so it takes its own colour.
-  readonly property bool alarming: mode === "mic" && root.micMuted
+  readonly property real level: current.value
+  readonly property bool stateOnly: current.stateOnly
+  readonly property string glyph: current.glyph
+  readonly property string reading: current.reading
+  readonly property bool alarming: current.alarming
 
   readonly property color ink: {
     if (alarming)

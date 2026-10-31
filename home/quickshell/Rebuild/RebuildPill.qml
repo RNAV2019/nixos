@@ -27,7 +27,7 @@ Variants {
     openHeight: Theme.rebuildPillHeight
     openRadius: Theme.rebuildPillRadius
 
-    readonly property bool building: Rebuild.phase === "building"
+    readonly property bool building: Rebuild.running
     readonly property bool finished: Rebuild.phase === "done"
     readonly property bool failed: Rebuild.phase === "failed"
 

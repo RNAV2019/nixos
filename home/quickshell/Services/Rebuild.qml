@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import qs.Commons
 
 // The system rebuild that the `rebuild` alias (home/shell.nix) is running, as Nix reports it. The
 // alias has Nix write its progress to a file (`--option json-log-path`, the JSON of
@@ -34,27 +33,16 @@ import qs.Commons
 //   an activity was still open (a process that ended without a result: killed, or Ctrl-C), else
 //   it is done. The Nix processes' parent, nixos-rebuild, counts as one of them, so a switch is
 //   done once its activation has run too (whether that worked is only in the terminal).
-Singleton {
+Job {
   id: root
 
   // The alias passes the same path.
   readonly property string logPath: (Quickshell.env("XDG_RUNTIME_DIR") || "") + "/rebuild.jsonl"
 
-  // "" when there is none; else building, done or failed. Only the latest run is kept.
-  property string phase: ""
-  property real startedAt: 0
-  property real endedAt: 0
-
-  // Derivations finished, of `total`; 0 while the total is not known.
-  property int done: 0
-  property int total: 0
-
   // The user has dismissed the finished or failed run.
   property bool dismissed: false
 
-  readonly property bool running: phase === "building"
   readonly property bool shown: phase !== "" && !dismissed
-  readonly property real fraction: total > 0 ? Theme.clamp01(done / total) : 0
 
   // How long the log must have been quiet, with no process alive, to call a run over.
   property int quietMs: 2500
@@ -84,7 +72,7 @@ Singleton {
   }
 
   function _begin() {
-    phase = "building";
+    phase = "running";
     startedAt = Date.now();
     endedAt = 0;
     done = 0;
@@ -109,7 +97,7 @@ Singleton {
     }
     if (e === null || typeof e !== "object")
       return;
-    if (phase !== "building")
+    if (phase !== "running")
       _begin();
     _lastEvent = Date.now();
 
@@ -194,7 +182,7 @@ Singleton {
 
     stdout: StdioCollector {
       onStreamFinished: {
-        if (root.phase !== "building")
+        if (root.phase !== "running")
           return;
         var lines = text.trim() === "" ? [] : text.trim().split("\n");
         var parents = null;

@@ -3,13 +3,15 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Firmware emits no Fn+Space event, so poll sysfs. LED writes need a udev rule.
-Singleton {
+LevelSource {
   id: root
 
-  readonly property real value: gauge.value
-  readonly property bool available: gauge.available
+  value: gauge.value
+  available: gauge.available
+  glyph: Icons.keyboardBacklight
 
   // Polling catches keypresses, which arrive in bursts: idle slowly, then drop to 100 ms
   // for a few seconds after a change, saving 2.5x idle wakeups over the old flat 200 ms.
@@ -18,6 +20,11 @@ Singleton {
   readonly property int burstDuration: 3000
 
   property int level: 0
+
+  // Firmware handles the key, so sysfs is the only signal; available filters the initial
+  // zero-to-real transition.
+  onLevelChanged: if (root.available)
+    root.adjusted()
 
   SysfsGauge {
     id: gauge

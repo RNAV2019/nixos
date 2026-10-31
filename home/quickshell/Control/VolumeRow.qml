@@ -19,7 +19,7 @@ Item {
 
   readonly property bool muted: root.audio !== null && root.audio.muted
 
-  readonly property string glyph: Volume.glyph(root.node)
+  readonly property string glyph: Volume.glyphFor(root.node)
 
   implicitHeight: Theme.controlSliderHeight
 

@@ -143,7 +143,7 @@ Item {
     y: root.tilesTop
     width: root.span - wifi.width - Theme.controlTileGap
     label: "Audio"
-    glyph: Volume.glyph(root.sink)
+    glyph: Volume.glyphFor(root.sink)
     sublabel: root.sink ? (root.sink.nickname || root.sink.description || root.sink.name) : "No output"
     on: root.sink !== null && root.sink.audio !== null && !root.sink.audio.muted
     keyFocused: root.keyboardIndex === 1
