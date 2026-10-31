@@ -44,3 +44,5 @@ panel-phone-ringing   720   28 110 220
 phone-satellite-card   925   26  80  30
 # The KDE Connect receive view's radar rings, rippling while the phone is up.
 panel-nearby-kde-receive  866  70  188  188
+# The turning arc on the phone's tile while a send has no reading.
+panel-nearby-kde-sending-quiet  924  276  72  72

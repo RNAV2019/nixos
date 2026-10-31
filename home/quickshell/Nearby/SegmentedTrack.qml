@@ -109,6 +109,8 @@ Rectangle {
           property: "plateX"
           value: root.pad + half.x
           when: half.isChosen
+          // The cell that lets go must not put the old value back over the one that takes it.
+          restoreMode: Binding.RestoreNone
         }
 
         Binding {
@@ -116,6 +118,7 @@ Rectangle {
           property: "plateWidth"
           value: half.width
           when: half.isChosen
+          restoreMode: Binding.RestoreNone
         }
 
         Row {

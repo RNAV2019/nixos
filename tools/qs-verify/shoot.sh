@@ -421,8 +421,9 @@ ph_up() { # the mock daemon and a phone with two notifications; kept for the sta
 # something to show and to choose.
 PH_STORAGE=$QSV_WORK/phone-storage
 ph_fixtures() {
-  local root pic i=0 name
+  local root pic i name
   for root in "$PH_STORAGE" "$HOME"; do
+    i=0
     if [[ $root == "$HOME" ]]; then
       mkdir -p "$root"/{Desktop,Documents,Downloads,Music,nixos,Projects,Videos}
     else
@@ -736,10 +737,11 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-nearby-kde-sending 1.0 0.3 setup_nearby_kde_sending teardown_nearby_kde_job
   shot panel-nearby-kde-sending-quiet 1.0 0.3 setup_nearby_kde_sending_quiet teardown_nearby_kde_job
   shot panel-nearby-kde-sent 0.6 0.2 setup_nearby_kde_sent teardown_nearby_kde_job
-  shot panel-nearby-kde-receive 1.8 0.3 setup_nearby_kde_receive teardown_kde_down
+  # Before the receive view is asked for: that leaves a request for the next open.
+  shot panel-nearby-kde-absent 1.5 0.3 setup_nearby_kde_absent teardown_nearby_kde_absent
   shot sharing-kde-receiving 1.3 0.3 setup_sharing_kde_receiving teardown_kde_down
   shot sharing-kde-saved 1.0 0.3 setup_sharing_kde_saved teardown_kde_down
-  shot panel-nearby-kde-absent 1.5 0.3 setup_nearby_kde_absent teardown_nearby_kde_absent
+  shot panel-nearby-kde-receive 1.8 0.3 setup_nearby_kde_receive teardown_kde_down
   # Last: the chosen picture stays on the phone preview from here on.
   shot panel-phone-wallpaper 1.0 0.3 setup_phone_wallpaper
   check one-wallpaper-copy one_wallpaper_copy
