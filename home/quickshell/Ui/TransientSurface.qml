@@ -263,10 +263,14 @@ PanelWindow {
   }
 
   onCoveringChanged: {
-    if (covering)
+    if (covering) {
       Bus.setTransientScreen(win.key, win.screenName);
-    else if (win.screenName !== "" && Bus.transientScreen(win.key) === win.screenName)
-      Bus.setTransientScreen(win.key, "");
+      Bus.setTransientSurface(win.screenName, surface);
+    } else {
+      if (win.screenName !== "" && Bus.transientScreen(win.key) === win.screenName)
+        Bus.setTransientScreen(win.key, "");
+      Bus.clearTransientSurface(win.screenName, surface);
+    }
   }
 
   Connections {

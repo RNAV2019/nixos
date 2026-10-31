@@ -18,6 +18,7 @@
 - **A morphing island shell.** One pill at the top of the screen grows into every surface: launcher, control centre, calendar, wallpaper and theme pickers, Nearby sharing, power profiles, the screen recorder, notifications, OSDs, the session menu and polkit prompts. Written in QML under [`home/quickshell`](home/quickshell).
 - **Live theme switching.** `Alt + T` recolours the shell, Hyprland, Ghostty, fish, Helix, GTK and Helium in place, with no rebuild. Ships **Ariadne** (the default), **Rosé Pine** and **ASCII World**.
 - **Quick Share and AirDrop** from the Nearby panel (`Alt + N`). Files dragged anywhere in the compositor travel as a card pile drawn by [`dragpile`](pkgs/dragpile), a small Hyprland plugin.
+- **The phone beside the island.** While KDE Connect has a paired phone, a satellite buds out of the pill with its battery as a ring. Click it for the phone panel: battery, mobile signal, ring, send files, browse storage, clipboard and the phone's notifications. [`phone-bridge`](pkgs/phone-bridge) turns kdeconnectd's D-Bus into JSON lines for the shell.
 - **A locked-down session.** greetd autologin goes straight to a Quickshell lock screen that is secured before any desktop helper starts. Secrets are kept in sops-nix, and borg backs up to a NAS every day.
 - **Its own tooling.** Custom tools are packaged as a flake overlay in [`pkgs/`](pkgs), with tests next to them.
 

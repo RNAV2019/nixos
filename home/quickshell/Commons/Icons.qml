@@ -43,6 +43,21 @@ Singleton {
   readonly property string keyboard: "keyboard"
   readonly property string mouse: "mouse"
 
+  // The phone panel (Phone/PhonePanel.qml): KDE Connect's actions, the phone's mobile signal
+  // by bars (0-4), clipboard rows and notification avatars.
+  readonly property string ringVolume: "ring_volume"
+  readonly property string uploadFile: "upload_file"
+  readonly property string folderOpen: "folder_open"
+  readonly property var cellular: ["signal_cellular_0_bar", "signal_cellular_1_bar", "signal_cellular_2_bar", "signal_cellular_3_bar", "signal_cellular_4_bar"]
+  readonly property string cellularOff: "signal_cellular_off"
+  readonly property string wifiOn: "wifi"
+  readonly property string link: "link"
+  readonly property string notes: "notes"
+  readonly property string copy: "content_copy"
+  readonly property string mail: "mail"
+  readonly property string chat: "chat"
+  readonly property string notifications: "notifications"
+
   readonly property string volumeMuted: "volume_off"
   readonly property string headphone: "headphones"
   readonly property var volume: ["volume_mute", "volume_down", "volume_up"]

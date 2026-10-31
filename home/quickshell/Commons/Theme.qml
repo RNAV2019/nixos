@@ -1058,4 +1058,53 @@ Singleton {
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
+
+  // ---- the phone (Bar/PhoneSatellite.qml, Phone/PhonePanel.qml) ----
+
+  // The satellite: a pill-tall disc this far off the right edge of whatever the island is
+  // wearing, with the battery as a ring inside its rim.
+  readonly property int phoneSatelliteSize: barHeight
+  readonly property int phoneSatelliteGap: 8
+  readonly property int phoneSatelliteGlyph: 14
+  readonly property real phoneRingRadius: 15.5
+  readonly property real phoneRingWidth: 2
+  // At or below this, discharging, the ring and glyph turn love.
+  readonly property int phoneLowBattery: 20
+  // Unlike the island's morphs, the satellite settles with a little overshoot, Ryan's choice:
+  // damping ratio 0.7 overshoots by about 4.6% of the travel, under 2 px of the bud's 44.
+  readonly property real phoneSpringOmega: 17
+  readonly property real phoneSpringDamping: 0.7
+  // The bridge between pill and satellite breaks once the gap between them passes this; the
+  // two stubs it leaves pull back over phoneNubFade.
+  readonly property real phoneBridgeBreak: 6
+  readonly property int phoneNubFade: reduceMotion ? 1 : 160
+  // How far back into its retreat a clicked satellite is before the panel is asked for, as
+  // satellite progress: by then the bridge has re-formed and it reads as going in.
+  readonly property real phoneOpenAt: 0.5
+
+  // The panel (board "Phone panel"): the phone drawn on the left, readings beside it, then
+  // actions, clipboard and notifications in a column.
+  readonly property int phoneWidth: panelColumnWidth
+  readonly property int phoneRadius: panelRadius
+  readonly property int phoneInset: 20
+  readonly property int phoneDeviceWidth: 110
+  readonly property int phoneDeviceHeight: 220
+  readonly property int phoneDeviceRadius: 9
+  readonly property int phoneScreenInset: 4
+  readonly property int phoneScreenRadius: 5
+  readonly property int phoneStatusLeft: 152
+  readonly property int phoneStatusTop: 80
+  readonly property int phoneStatusHeight: 48
+  readonly property int phoneStatusGap: 8
+  readonly property int phoneActionHeight: 40
+  readonly property int phoneActionGap: 8
+  readonly property int phoneRowHeight: 44
+  readonly property int phoneNoteHeight: 56
+  readonly property int phoneRowGap: 8
+  readonly property int phoneRowRadius: 14
+  readonly property int phoneSectionGap: 20
+  readonly property real phoneLabelSize: 12.5
+  readonly property real phoneCaptionSize: 11.5
+  readonly property int phoneClipsMax: 3
+  readonly property int phoneNotesMax: 2
 }

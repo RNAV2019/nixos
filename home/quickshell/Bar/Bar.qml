@@ -50,6 +50,10 @@ Variants {
       Region {
         item: island.suppressed ? null : island
       }
+
+      Region {
+        item: satellite.hitItem
+      }
     }
 
     Workspaces {
@@ -75,6 +79,17 @@ Variants {
       // the pill is never taken away before something is drawn in its place.
       suppressed: bar.screen !== null && (Bus.islandCovered(bar.screen.name) || Bus.transientOnScreen(bar.screen.name))
       replaced: bar.screen !== null && Bus.islandReplaced(bar.screen.name)
+    }
+
+    // KDE Connect's phone, budding out of the island's right end; drawn after it, so the
+    // bridge between them lies over the pill's outline.
+    PhoneSatellite {
+      id: satellite
+
+      anchors.fill: parent
+      pill: island
+      screenName: bar.screen ? bar.screen.name : ""
+      windowTop: Theme.barMarginTop - Theme.oledShiftMax
     }
   }
 }

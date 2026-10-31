@@ -13,6 +13,7 @@ import qs.Lock
 import qs.Nearby
 import qs.Notifications
 import qs.Osd
+import qs.Phone
 import qs.Power
 import qs.Rebuild
 import qs.Recorder
@@ -39,6 +40,7 @@ ShellRoot {
   ControlCenter {}
   Launcher {}
   NearbyPanel {}
+  PhonePanel {}
   SharingPill {}
   Notifications {}
   Osd {}

@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "phone"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -41,6 +41,7 @@ Singleton {
     owners = {};
     covers = {};
     transientScreens = {};
+    transientSurfaces = {};
     islandCards = {};
     islandClaims = {};
     islandHandoffs = {};
@@ -90,6 +91,25 @@ Singleton {
 
   function transientScreen(key) {
     return lookup(transientScreens, key, "");
+  }
+
+  // The drawn shape (a FrostedSurface) of the transient last to cover each output, for
+  // things that sit beside whatever the island is wearing: the phone satellite rides its
+  // right edge. The windows span the output from its top-left, so its x is the screen's.
+  property var transientSurfaces: ({})
+
+  function setTransientSurface(screenName, surface) {
+    if (screenName !== "")
+      transientSurfaces = writeMap(transientSurfaces, screenName, surface);
+  }
+
+  function clearTransientSurface(screenName, surface) {
+    if (screenName !== "" && lookup(transientSurfaces, screenName, null) === surface)
+      transientSurfaces = writeMap(transientSurfaces, screenName, "");
+  }
+
+  function transientSurfaceFor(name) {
+    return lookup(transientSurfaces, name, null);
   }
 
   function transientOnScreen(name) {

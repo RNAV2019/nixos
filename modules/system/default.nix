@@ -130,6 +130,12 @@ in {
 
   programs.uwsm.enable = true;
 
+  # The phone satellite and panel (Services/Phone.qml, through pkgs/phone-bridge). The daemon
+  # starts on first D-Bus use through the package's service file and shows no tray icon. The
+  # module opens TCP and UDP 1714-1764. Phone notifications also arrive as ordinary desktop
+  # notifications, which the shell turns into toasts.
+  programs.kdeconnect.enable = true;
+
   # Quickshell locks the autologin session before desktop helpers start.
   services.greetd = {
     enable = true;
