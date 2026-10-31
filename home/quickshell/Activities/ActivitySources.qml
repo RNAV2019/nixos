@@ -1,8 +1,8 @@
 import QtQuick
 import Quickshell
 
-// Every source of moments, started once with the shell. A new source is a file in this directory
-// added here.
+// Every source of moments, started once with the shell. A new source is a MomentSource in this
+// directory, added here.
 Scope {
   id: root
 

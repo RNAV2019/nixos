@@ -6,8 +6,10 @@ import qs.Services
 // Raises the plugged-in moment when the charger goes in. Only a change seen while running
 // counts: the state the shell finds at startup or on a reload is the baseline, and so is
 // whatever settles in the first seconds, while UPower is still filling in the battery.
-QtObject {
+MomentSource {
   id: root
+
+  kind: "plugged-in"
 
   // For tests: -1 follows the real battery, 0 / 1 stand in for it (QUICKSHELL_FAKE_PLUGGED=1
   // starts the shell with the charger in).
@@ -75,9 +77,7 @@ QtObject {
 
   // The moment itself; `stand` is a charge a test hook made up, else the battery is read live.
   function raise() {
-    Activities.raiseMoment({
-      kind: "plugged-in",
-      key: "plugged-in",
+    show({
       attention: false,
       width: Theme.momentCompactWidth,
       height: Theme.momentCompactHeight,

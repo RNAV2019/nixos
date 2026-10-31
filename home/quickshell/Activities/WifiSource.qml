@@ -8,8 +8,10 @@ import qs.Services
 // portal (modules/system/default.nix turns the check on). The moment stays until it is acted on
 // or dismissed, and is withdrawn when the check passes. A dismissed one does not return for the
 // same network, until the connection has been seen fully online or the network changes.
-QtObject {
+MomentSource {
   id: root
+
+  kind: "wifi-signin"
 
   // For tests: "portal", "full", "none" or "limited" stand in for NetworkManager's verdict;
   // QUICKSHELL_FAKE_CONNECTIVITY starts the shell with one, and `fakeNetwork` names the network.
@@ -22,11 +24,9 @@ QtObject {
   // The network the portal is on; the check says nothing about which.
   readonly property string network: fake !== "" ? fakeNetwork : NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.name : ""
 
-  // The network whose moment was dismissed ("" for none), and the moment on show.
+  // The network whose moment was dismissed ("" for none), and the one the moment on show is for.
   property string dismissedFor: ""
-  property int momentId: 0
   property string momentFor: ""
-  property bool withdrawing: false
 
   // NetworkManager's own probe address, which a portal redirects: where sign-in starts when no
   // page is known. The browser (Helium, the default) lands on the portal's login.
@@ -41,15 +41,6 @@ QtObject {
     root.sync();
   }
 
-  // Whether the moment this raised is still queued (the test hook can clear them all).
-  function queued() {
-    for (var i = 0; i < Activities.moments.length; i++) {
-      if (Activities.moments[i].id === momentId)
-        return true;
-    }
-    return false;
-  }
-
   function sync() {
     if (portal && network !== dismissedFor) {
       // The name can arrive after the verdict: raised again under the same key, it replaces itself.
@@ -60,21 +51,10 @@ QtObject {
     }
   }
 
-  function withdraw() {
-    if (momentId === 0)
-      return;
-    withdrawing = true;
-    Activities.dismissMoment(momentId);
-    withdrawing = false;
-    momentId = 0;
-  }
-
   function raise() {
     var name = root.network;
     momentFor = name;
-    momentId = Activities.raiseMoment({
-      kind: "wifi-signin",
-      key: "wifi-signin",
+    show({
       attention: true,
       icon: IconPaths.wifi,
       iconColor: Theme.gold,
@@ -95,16 +75,7 @@ QtObject {
   }
 
   // Any dismissal that is not ours is the user's, by acting or swiping it away.
-  property Connections moments: Connections {
-    target: Activities
-
-    function onMomentDismissed(kind) {
-      if (kind !== "wifi-signin" || root.withdrawing)
-        return;
-      root.dismissedFor = root.network;
-      root.momentId = 0;
-    }
-  }
+  onDismissed: root.dismissedFor = root.network
 
   // NetworkManager says which address it probes; the page itself is not something it keeps, so
   // the probe is what the browser opens, and the portal redirects it to its login.
