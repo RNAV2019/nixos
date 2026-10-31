@@ -30,7 +30,8 @@ LevelSource {
     id: gauge
 
     glob: "/sys/class/leds/*kbd_backlight*"
-    // inotify does not fire on sysfs, so the watch can never fire; the poll covers it.
+    // The firmware moves the level without a write the filesystem sees, so a watch would
+    // never fire; the poll is the signal.
     watch: false
 
     onValueChanged: {

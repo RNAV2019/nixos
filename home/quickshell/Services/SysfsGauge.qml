@@ -10,8 +10,10 @@ Item {
   // readable `brightness` wins.
   property string glob: ""
 
-  // Whether to watch the level file for changes. Sysfs never emits inotify events, so a
-  // polling reader sets this false to skip a watch that cannot fire.
+  // Whether to watch the level file for changes. Only a write made through the filesystem
+  // (brightnessctl, another tool) raises an inotify event; the firmware moving the value
+  // itself raises none, so a reader that must catch that polls and sets this false, as a
+  // watch would add nothing.
   property bool watch: true
 
   readonly property string devicePath: probeText
@@ -70,7 +72,8 @@ Item {
     path: root.devicePath === "" ? "" : root.devicePath + "/brightness"
     watchChanges: root.watch
 
-    // Sysfs emits write and close notifications on drivers that do; duplicate reloads are safe.
+    // A write through the filesystem raises write and close notifications, so one change can
+    // reload twice; that is safe.
     onFileChanged: currentFile.reload()
 
     onLoaded: {

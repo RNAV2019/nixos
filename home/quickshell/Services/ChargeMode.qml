@@ -99,10 +99,13 @@ Singleton {
       set(wanted);
   }
 
-  FileView {
+  // Polled: the firmware changes the mode without a write the filesystem sees, so no watch
+  // would fire, and it changes from other tools too.
+  PolledFile {
     id: file
 
     path: root.path
+    interval: 5000
     printErrors: false
 
     onLoaded: {
@@ -133,14 +136,6 @@ Singleton {
     name: "chargemode"
 
     onLoadedChanged: root.restore()
-  }
-
-  // Sysfs sends no inotify events, and the mode changes from other tools too.
-  Timer {
-    running: true
-    interval: 5000
-    repeat: true
-    onTriggered: file.reload()
   }
 
   Command {

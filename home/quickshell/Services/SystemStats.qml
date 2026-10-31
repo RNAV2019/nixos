@@ -52,28 +52,19 @@ Singleton {
       root.memory = Math.max(0, Math.min(1, 1 - available / total));
   }
 
-  FileView {
+  PolledFile {
     id: stat
 
+    interval: root.interval
     path: "/proc/stat"
     onLoaded: root.readCpu(text())
   }
 
-  FileView {
+  PolledFile {
     id: meminfo
 
+    interval: root.interval
     path: "/proc/meminfo"
     onLoaded: root.readMemory(text())
-  }
-
-  Timer {
-    interval: root.interval
-    running: true
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: {
-      stat.reload();
-      meminfo.reload();
-    }
   }
 }
