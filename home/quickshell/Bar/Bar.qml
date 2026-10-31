@@ -58,7 +58,6 @@ Variants {
       // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
       x: snap(10 + Bus.workspacesOffsetX)
       y: snap(Theme.oledShiftMax + Bus.workspacesOffsetY)
-      opacity: OledCare.level
       screenOffsetY: Theme.barMarginTop
     }
 

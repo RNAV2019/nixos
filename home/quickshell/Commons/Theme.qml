@@ -179,17 +179,13 @@ Singleton {
 
   // OLED burn-in care (Services/OledCare.qml). The island pill and the workspaces pill never
   // move, so on the OLED panel they would print into it: every few minutes each takes the next
-  // step of a slow orbit, and when nobody is about they fade to a low glow.
+  // step of a slow orbit.
   readonly property int oledShiftInterval: 180000
   // Furthest a pill strays from its nominal spot on either axis, in logical px. The bar window
   // reaches this much above and below its pills so the offset never clips.
   readonly property int oledShiftMax: 2
   // A step is crossed this slowly so it is never seen to move.
   readonly property int oledShiftTravel: 12000
-  readonly property int oledIdleDelay: 180000
-  readonly property real oledDimOpacity: 0.35
-  readonly property int oledDimDuration: 1500
-  readonly property int oledRestoreDuration: 150
   readonly property int panelSideMargin: 24
 
   function panelWidth(screen, desired) {
