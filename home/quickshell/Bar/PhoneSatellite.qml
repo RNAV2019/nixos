@@ -275,42 +275,15 @@ Item {
       }
     }
 
-    Shape {
+    Ring {
       anchors.fill: parent
-      preferredRendererType: Shape.CurveRenderer
+      stroke: Theme.phoneRingWidth
+      ringRadius: Theme.phoneRingRadius
+      trackColor: Theme.withAlpha("white", 0.08)
+      fillColor: Phone.low ? Theme.love : Theme.accent
+      value: Math.max(0, Phone.charge) / 100 * root.ringShown
       opacity: root.ringShown
       visible: opacity > 0
-
-      ShapePath {
-        fillColor: "transparent"
-        strokeColor: Theme.withAlpha("white", 0.08)
-        strokeWidth: Theme.phoneRingWidth
-
-        PathAngleArc {
-          centerX: face.width / 2
-          centerY: face.height / 2
-          radiusX: Theme.phoneRingRadius
-          radiusY: Theme.phoneRingRadius
-          startAngle: 0
-          sweepAngle: 360
-        }
-      }
-
-      ShapePath {
-        fillColor: "transparent"
-        strokeColor: Phone.low ? Theme.love : Theme.accent
-        strokeWidth: Theme.phoneRingWidth
-        capStyle: ShapePath.RoundCap
-
-        PathAngleArc {
-          centerX: face.width / 2
-          centerY: face.height / 2
-          radiusX: Theme.phoneRingRadius
-          radiusY: Theme.phoneRingRadius
-          startAngle: -90
-          sweepAngle: 360 * Math.max(0, Phone.charge) / 100 * root.ringShown
-        }
-      }
     }
 
     // Fades in through the middle of the travel, growing with the disc.
