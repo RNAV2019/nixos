@@ -19,6 +19,7 @@ Variants {
 
     key: "launcher"
     hideCursor: true
+    focusTarget: query
     openWidth: Theme.panelWidth(modelData, Theme.launcherWidth)
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
@@ -58,12 +59,12 @@ Variants {
       return null;
     }
 
-    // Escape peels one layer: the scope, then the launcher.
-    function back() {
-      if (win.scope)
-        Omnibox.leaveScope();
-      else
-        win.hide();
+    // Escape peels one layer: the scope here, then the launcher, which the surface closes.
+    onKeyPressed: function (event) {
+      if (event.key !== Qt.Key_Escape || !win.scope)
+        return;
+      Omnibox.leaveScope();
+      event.accepted = true;
     }
 
     function selectable(i) {
@@ -156,18 +157,6 @@ Variants {
 
       function onQueryRequested(text) {
         query.text = text;
-      }
-    }
-    // Hyprland skips focus when a mapped OnDemand surface goes None -> OnDemand, so
-    // Exclusive covers the close animation (permanent would swallow all pointer events).
-    onOpenChanged: {
-      if (open) {
-        // Layer-shell gives the surface focus, but Qt needs an active-focus target
-        // inside it before input sees a key.
-        Qt.callLater(function () {
-          if (win.open)
-            query.forceActiveFocus();
-        });
       }
     }
 
@@ -265,9 +254,6 @@ Variants {
       Keys.onPressed: function (event) {
         var ctrl = (event.modifiers & Qt.ControlModifier) !== 0;
         switch (event.key) {
-        case Qt.Key_Escape:
-          win.back();
-          break;
         case Qt.Key_Backspace:
           if (query.text.length > 0 || !win.scope || query.selectedText.length > 0)
             return;
@@ -305,12 +291,10 @@ Variants {
       }
     }
 
-    Rectangle {
+    Divider {
       x: Theme.launcherInset
       y: Theme.launcherSearchHeight
       width: win.openWidth - Theme.launcherInset * 2
-      height: 1
-      color: Theme.withAlpha(Theme.highlightMed, 0.6)
       visible: !win.listEmpty
     }
 

@@ -22,6 +22,7 @@ Variants {
     // Only the pill is a target: a click off it reaches whatever is below, and never answers
     // or dismisses a request.
     passThrough: true
+    focusTarget: pill.inputItem
 
     openWidth: Theme.lockPillWidth
     openHeight: Theme.lockPillHeight
@@ -87,16 +88,6 @@ Variants {
     }
 
     Connections {
-      target: win
-
-      // The surface takes its own focus a frame after it opens; the field takes it from that.
-      function onOpenChanged() {
-        if (win.open)
-          Qt.callLater(pill.focusInput);
-      }
-    }
-
-    Connections {
       target: Polkit
 
       function onFlowChanged() {
@@ -117,12 +108,10 @@ Variants {
 
     // ---- the pill ----
 
-    // Laid out at its own size; the growing island uncovers it. Escape reaches here from the
-    // field, which leaves keys it does not use unaccepted.
+    // Laid out at its own size; the growing island uncovers it. The field leaves the keys it
+    // does not use unaccepted, which is how Escape reaches the surface.
     Item {
       anchors.fill: parent
-
-      Keys.onEscapePressed: win.cancel()
 
       LoginPill {
         id: pill
