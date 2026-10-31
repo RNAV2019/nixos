@@ -11,7 +11,29 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "phone"]
+  // Every surface announces its key when it is made and withdraws it when it goes (Ui/IslandSurface.qml,
+  // Ui/TransientSurface.qml), once per output, so a new surface needs no entry here. The lists below
+  // are what is alive; nothing listens for a key whose surface has not been made, so nothing needs
+  // it earlier.
+  property var islandCounts: ({})
+  property var transientCounts: ({})
+
+  function registerSurface(key, transient) {
+    if (transient)
+      transientCounts = writeMap(transientCounts, key, lookup(transientCounts, key, 0) + 1);
+    else
+      islandCounts = writeMap(islandCounts, key, lookup(islandCounts, key, 0) + 1);
+  }
+
+  function unregisterSurface(key, transient) {
+    var left = lookup(transient ? transientCounts : islandCounts, key, 0) - 1;
+    if (transient)
+      transientCounts = writeMap(transientCounts, key, left > 0 ? left : "");
+    else
+      islandCounts = writeMap(islandCounts, key, left > 0 ? left : "");
+  }
+
+  readonly property var islandKeys: Object.keys(islandCounts)
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -156,10 +178,10 @@ Singleton {
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
   // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml);
   // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml).
-  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "moment", "rebuild"]
+  readonly property var transientKeys: Object.keys(transientCounts)
 
   function isTransient(key) {
-    return transientKeys.indexOf(key) !== -1;
+    return lookup(transientCounts, key, 0) > 0;
   }
 
   // Which transients want the island, on which output, and how urgently. Only one can be the

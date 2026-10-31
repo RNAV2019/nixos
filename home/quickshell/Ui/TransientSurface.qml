@@ -45,8 +45,14 @@ IslandSurfaceBase {
   onWantedChanged: syncWant()
   onRankChanged: syncWant()
   onScreenNameChanged: syncWant()
-  Component.onCompleted: syncWant()
-  Component.onDestruction: Bus.setTransientWant(win.key, win.wantScreen, -1)
+  Component.onCompleted: {
+    Bus.registerSurface(win.key, true);
+    syncWant();
+  }
+  Component.onDestruction: {
+    Bus.setTransientWant(win.key, win.wantScreen, -1);
+    Bus.unregisterSurface(win.key, true);
+  }
 
   onCoveringChanged: {
     if (covering) {

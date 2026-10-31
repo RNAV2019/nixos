@@ -63,9 +63,11 @@ IslandSurfaceBase {
   }
 
   Component.onCompleted: {
+    Bus.registerSurface(win.key, false);
     // A panel asked for may be wanted already when its output arrives, with nothing to change.
     win.evaluateSoon();
   }
+  Component.onDestruction: Bus.unregisterSurface(win.key, false)
 
   onShowingChanged: {
     if (showing)
