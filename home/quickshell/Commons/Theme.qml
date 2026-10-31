@@ -183,10 +183,48 @@ Singleton {
   readonly property int panelHeaderMetaTop: 28
   // And its footer, when the panel has one: the line near the foot of a 232 px card.
   readonly property int panelFooterTop: 196
-  // The header's buttons (Ui/HeaderButton.qml): the discs' alphas and the bare glyphs' size.
+  // Buttons (Ui/Button.qml). Grounded neutral kinds step highlightMed from the rest alpha to
+  // the hover one; the danger disc rests at its own; filled pills lift their fill by `fillLift`.
+  readonly property real groundRestAlpha: 0.75
+  readonly property real groundHoverAlpha: 0.95
+  readonly property real dangerRestAlpha: 0.8
+  readonly property real fillLift: 1.06
+  readonly property real washAlpha: 0.06
+  readonly property real plainHoverAlpha: 0.2
+  readonly property real tonalRestAlpha: 0.12
+  readonly property real tonalHoverAlpha: 0.2
+  readonly property real onAccentRestAlpha: 0.14
+  readonly property real onAccentHoverAlpha: 0.24
+  readonly property real hairlineAlpha: 0.7
+  // A control that cannot be used is the same control at this opacity.
+  readonly property real disabledAlpha: 0.4
+  readonly property int pillHeightCompact: 26
+  readonly property int pillHeightRegular: 30
+  readonly property int pillHeightLarge: 44
+  readonly property int pillPadCompact: 12
+  readonly property int pillPadRegular: 14
+  readonly property int pillPadLarge: 16
+  readonly property int pillLabelCompact: 11
+  readonly property int pillLabelRegular: 12
+  readonly property int pillLabelLarge: 13
+  readonly property int pillIconSize: 13
+  readonly property int pillIconLarge: 16
+  readonly property int pillIconGap: 6
+  readonly property int pillIconGapLarge: 8
+  readonly property int discCompact: 30
+  readonly property int discRegular: 36
+  readonly property int discLarge: 40
+  readonly property int discGlyph: 16
+  readonly property int discGlyphLarge: 18
+  // The switch (Ui/Switch.qml).
+  readonly property int switchWidth: 46
+  readonly property int switchHeight: 26
+  readonly property int switchKnob: 20
+  readonly property int switchInset: 3
+  // The text field (Ui/TextField.qml); the launcher's bare one takes its height from the type.
+  readonly property int textFieldHeight: 30
+  // The bare icon buttons' glyph.
   readonly property int headerIconSize: 16
-  readonly property real headerButtonRestAlpha: 0.75
-  readonly property real headerButtonHoverAlpha: 0.95
   // The hairline between a panel's sections (Ui/Divider.qml).
   readonly property real dividerAlpha: 0.6
 
@@ -354,10 +392,7 @@ Singleton {
   readonly property int notifBodyLines: 2
   readonly property int notifActionGapAbove: 10
   readonly property int notifActionHeight: 30
-  readonly property int notifActionRadius: 15
   readonly property int notifActionGap: 10
-  readonly property int notifActionPad: 16
-  readonly property int notifActionSize: 12
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
@@ -487,7 +522,6 @@ Singleton {
   readonly property int controlWidth: panelColumnWidth
   readonly property int controlRadius: panelRadius
   readonly property int controlInset: 13
-  readonly property int controlBackSize: 36
 
   // Tiles: two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; row one is a
   // narrow beside a wide tile, row two three equal.
@@ -517,10 +551,7 @@ Singleton {
   readonly property int controlMediaArtistSize: 12
   readonly property int controlMediaCaptionSize: 11
   // Transport: three equal discs to the right of the title, after One UI 9's player.
-  readonly property int controlMediaButtonSize: 40
   readonly property int controlMediaButtonGap: 8
-  readonly property real controlMediaButtonAlpha: 0.1
-  readonly property real controlMediaButtonHoverAlpha: 0.18
   // The scrub bar, also after One UI 9: a thick track, a solid thumb, and translucent hills
   // that ride the played part while music plays.
   readonly property int controlMediaTrackY: 98
@@ -665,13 +696,11 @@ Singleton {
   readonly property int momentCompactWidth: 340
   readonly property int momentCompactHeight: 42
   readonly property int momentCompactRadius: 21
-  readonly property int momentButtonHeight: 26
   readonly property real momentTitleSize: 12.5
   readonly property real momentSubtitleSize: 10.5
   readonly property int momentDwell: 8000
   readonly property int momentPluggedDwell: osdDwell + 900
-  // The moments' buttons (Activities/ActivityButton.qml).
-  readonly property int activityButtonHeight: 30
+  // The gap between a moment's buttons (Activities/MomentRow.qml).
   readonly property int activityButtonGap: 8
 
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
@@ -679,11 +708,7 @@ Singleton {
   readonly property int calHeight: 600
   readonly property int calRadius: panelRadius
   readonly property int calInset: 24
-  readonly property int calNavSize: 30
   readonly property int calHeaderTop: 4
-  readonly property int calNavGlyphSize: 15
-  readonly property int calTodayBtnHeight: 28
-  readonly property real calTodayBtnSize: 11.5
 
   // Seven columns on a 68 px pitch, six rows on 46; calGridTop is the first row's top, not a
   // baseline. Day centres in its cell, marker on the number, dot under it inside the marker.
@@ -811,9 +836,6 @@ Singleton {
   // With KDE Connect picked and no phone: the header, a glyph, a line and a button, 210 tall.
   readonly property int nearbyAbsentHeight: 210
   readonly property int nearbyChooseHeight: 44
-  readonly property int nearbyChooseRadius: 22
-  readonly property int nearbyChooseGlyph: 16
-  readonly property real nearbyChooseSize: 13
   readonly property int nearbySectionTop: 22
   readonly property int nearbySectionToRows: 6
   readonly property int nearbyFileHeight: 40
@@ -921,8 +943,6 @@ Singleton {
   readonly property real nearbyIncomingSenderSize: 12.5
   readonly property real nearbyIncomingMetaSize: 10.5
   readonly property int nearbyPinSize: 12
-  readonly property int nearbyAnswerHeight: 26
-  readonly property int nearbyAnswerRadius: 13
 
   readonly property int nearbyReceivedGap: 24
   readonly property int nearbyReceivedAfterCard: 22

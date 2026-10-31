@@ -370,69 +370,20 @@ Variants {
         }
 
         // Board 16a: one full-width accent button while nothing is staged.
-        Rectangle {
+        Button {
           id: chooseButton
 
           x: Theme.nearbyInset
           y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap
           width: sendView.width - Theme.nearbyInset * 2
-          height: Theme.nearbyChooseHeight
-          radius: Theme.nearbyChooseRadius
-          color: chooseArea.containsMouse ? Qt.lighter(Theme.accentFill, 1.06) : Theme.accentFill
-          opacity: win.hasFiles || sendView.phoneAbsent ? 0 : 1
+          kind: Button.Primary
+          size: Button.Large
+          text: "Choose files"
+          icon: IconPaths.plus
+          iconStroke: 2.1
+          revealed: !win.hasFiles && !sendView.phoneAbsent
           visible: opacity > 0
-          scale: chooseArea.pressed ? Theme.pressScale : 1
-
-          Behavior on opacity {
-            Morph {
-              duration: Theme.morphContent
-            }
-          }
-
-          Behavior on scale {
-            Morph {
-              duration: Theme.morphState
-            }
-          }
-
-          Behavior on color {
-            Tint {}
-          }
-
-          Row {
-            anchors.centerIn: parent
-            spacing: 8
-
-            StrokeIcon {
-              anchors.verticalCenter: parent.verticalCenter
-              size: Theme.nearbyChooseGlyph
-              strokeWidth: 2.1
-              path: IconPaths.plus
-              color: Theme.inkOnAccent
-            }
-
-            Text {
-              anchors.verticalCenter: parent.verticalCenter
-              text: "Choose files"
-              color: Theme.inkOnAccent
-              font.family: Theme.uiFont
-              font.pixelSize: Theme.nearbyChooseSize
-              font.weight: Theme.weightSemi
-            }
-          }
-
-          MouseArea {
-            id: chooseArea
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: win.chooseFiles()
-          }
-
-          Accessible.role: Accessible.Button
-          Accessible.name: "Choose files"
-          Accessible.onPressAction: win.chooseFiles()
+          onClicked: win.chooseFiles()
         }
 
         // Board 16e: "Files 3 · 18.4 MB" with an accent "+ Add", then one row per file.
@@ -553,12 +504,12 @@ Variants {
           font.weight: Theme.weightMedium
         }
 
-        PillButton {
+        Button {
           visible: sendView.phoneAbsent
           x: (sendView.width - width) / 2
           y: 160
-          tonal: true
-          label: "Switch to Android"
+          size: Button.Compact
+          text: "Switch to Android"
           onClicked: Nearby.setPlatform("android")
         }
 

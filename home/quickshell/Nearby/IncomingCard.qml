@@ -59,7 +59,7 @@ Rectangle {
 
   Row {
     x: root.width - Theme.nearbyRowInset - width
-    y: (root.height - Theme.nearbyAnswerHeight) / 2
+    y: (root.height - Theme.pillHeightCompact) / 2
     spacing: 8
 
     Text {
@@ -77,82 +77,18 @@ Rectangle {
       height: 1
     }
 
-    Rectangle {
-      width: declineLabel.implicitWidth + 24
-      height: Theme.nearbyAnswerHeight
-      radius: Theme.nearbyAnswerRadius
-      color: Theme.withAlpha(Theme.inkOnAccent, 0.12)
-      border.width: 1
-      border.color: Theme.withAlpha(Theme.inkOnAccent, 0.35)
-      scale: declineArea.pressed ? Theme.pressScale : 1
-
-      Behavior on scale {
-        Morph {
-          duration: Theme.morphState
-        }
-      }
-
-      Text {
-        id: declineLabel
-
-        anchors.centerIn: parent
-        text: "Decline"
-        color: Theme.inkOnAccent
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.nearbySectionSize
-        font.weight: Theme.weightSemi
-      }
-
-      MouseArea {
-        id: declineArea
-
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.declined()
-      }
-
-      Accessible.role: Accessible.Button
-      Accessible.name: "Decline"
-      Accessible.onPressAction: root.declined()
+    Button {
+      kind: Button.OnAccent
+      size: Button.Compact
+      text: "Decline"
+      onClicked: root.declined()
     }
 
-    Rectangle {
-      width: acceptLabel.implicitWidth + 24
-      height: Theme.nearbyAnswerHeight
-      radius: Theme.nearbyAnswerRadius
-      color: Theme.inkOnAccent
-      scale: acceptArea.pressed ? Theme.pressScale : 1
-
-      Behavior on scale {
-        Morph {
-          duration: Theme.morphState
-        }
-      }
-
-      Text {
-        id: acceptLabel
-
-        anchors.centerIn: parent
-        text: "Accept"
-        color: Theme.accentFill
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.nearbySectionSize
-        font.weight: Theme.weightSemi
-      }
-
-      MouseArea {
-        id: acceptArea
-
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.accepted()
-      }
-
-      Accessible.role: Accessible.Button
-      Accessible.name: "Accept"
-      Accessible.onPressAction: root.accepted()
+    Button {
+      kind: Button.Inverse
+      size: Button.Compact
+      text: "Accept"
+      onClicked: root.accepted()
     }
   }
 }

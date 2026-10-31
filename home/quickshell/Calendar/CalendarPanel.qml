@@ -119,18 +119,22 @@ Variants {
       }
 
       headerActions: [
-        HeaderButton {
-          kind: HeaderButton.Label
-          label: "Today"
+        Button {
+          size: Button.Compact
+          text: "Today"
           onClicked: Calendar.today()
         },
-        HeaderButton {
-          kind: HeaderButton.Previous
+        Button {
+          kind: Button.Disc
+          size: Button.Compact
+          icon: Icons.chevronLeft
           accessibleName: "Previous month"
           onClicked: Calendar.step(-1)
         },
-        HeaderButton {
-          kind: HeaderButton.Next
+        Button {
+          kind: Button.Disc
+          size: Button.Compact
+          icon: Icons.chevronRight
           accessibleName: "Next month"
           onClicked: Calendar.step(1)
         }

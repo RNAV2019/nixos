@@ -216,15 +216,15 @@ Item {
     } : {}
   }
 
-  StrokeIconButton {
+  Button {
     x: root.width - Theme.islandPillActionInset - width
     y: Theme.islandPillActionTop
-    size: Theme.islandPillActionSize
-    strokeWidth: 1.6
+    kind: Button.Icon
+    iconSize: Theme.islandPillActionSize
+    iconStroke: 1.6
     visible: root.hasAction
-    path: IconPaths.x
+    icon: IconPaths.x
     accessibleName: "Cancel"
-    baseColor: Theme.inkSecondary
     onClicked: root.cancelled()
   }
 

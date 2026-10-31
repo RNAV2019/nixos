@@ -32,7 +32,7 @@ Rectangle {
     id: avatar
 
     x: 14
-    y: 14
+    y: 16.5
     width: Theme.controlNotifAvatar
     height: Theme.controlNotifAvatar
     radius: height / 2
@@ -101,17 +101,16 @@ Rectangle {
     elide: Text.ElideRight
   }
 
-  IconButton {
+  Button {
     id: dismiss
 
     x: root.width - 30
-    y: 14
-    text: Icons.close
-    font.family: Theme.iconFont
-    font.pixelSize: 14
+    y: 16.5
+    kind: Button.Icon
+    icon: Icons.close
+    iconSize: 14
     baseColor: Theme.inkTertiary
     hoverColor: Theme.inkPrimary
-    hitSlop: 8
     accessibleName: "Dismiss notification"
     activeFocusOnTab: true
 

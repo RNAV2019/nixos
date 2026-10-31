@@ -400,14 +400,14 @@ Variants {
       font.pixelSize: Theme.notifAppSize
     }
 
-    IconButton {
+    Button {
       id: closeGlyph
 
       x: Theme.notifWidth - Theme.notifInset - width
-      y: Theme.notifAppTop - 1
-      text: Icons.close
-      font.family: Theme.iconFont
-      font.pixelSize: Theme.notifCloseSize
+      y: Theme.notifAppTop + 1.5
+      kind: Button.Icon
+      icon: Icons.close
+      iconSize: Theme.notifCloseSize
       baseColor: Theme.muted
       hoverColor: Theme.text
       hitSlop: 6
@@ -460,22 +460,22 @@ Variants {
       Repeater {
         model: toast.buttons
 
-        ActionPill {
+        Button {
           required property int index
           required property var modelData
 
-          label: modelData.text
-          primary: index === 0
-          onPressed: toast.host.invoke(modelData.action)
+          text: modelData.text
+          kind: index === 0 ? Button.Primary : Button.Neutral
+          onClicked: toast.host.invoke(modelData.action)
         }
       }
 
       // Always present and leftmost. A critical notification says Ignore, not
       // Dismiss, because sending it away is not dealing with it.
-      ActionPill {
-        label: toast.urgent ? "Ignore" : "Dismiss"
-        primary: toast.buttons.length === 0
-        onPressed: toast.host.close()
+      Button {
+        text: toast.urgent ? "Ignore" : "Dismiss"
+        kind: toast.buttons.length === 0 ? Button.Primary : Button.Neutral
+        onClicked: toast.host.close()
       }
     }
 
@@ -554,41 +554,6 @@ Variants {
       Morph {
         duration: Theme.duration(Theme.morphContent)
       }
-    }
-  }
-
-  component ActionPill: Rectangle {
-    id: pill
-
-    property string label: ""
-    property bool primary: false
-
-    signal pressed
-
-    implicitWidth: pillText.implicitWidth + Theme.notifActionPad * 2
-    implicitHeight: Theme.notifActionHeight
-    radius: Theme.notifActionRadius
-    color: primary ? Theme.accent : Theme.withAlpha(Theme.highlightMed, Theme.notifActionSecondaryAlpha)
-    opacity: pillArea.containsMouse ? 0.85 : 1
-
-    Text {
-      id: pillText
-
-      anchors.centerIn: parent
-      text: pill.label
-      color: pill.primary ? Theme.inkOnAccent : Theme.inkPrimary
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.notifActionSize
-      font.weight: pill.primary ? Font.DemiBold : Font.Medium
-    }
-
-    MouseArea {
-      id: pillArea
-
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: pill.pressed()
     }
   }
 }

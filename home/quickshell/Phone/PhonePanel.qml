@@ -444,19 +444,14 @@ Variants {
           color: Theme.surface
         }
 
-        IconButton {
+        Button {
           x: 123 - width / 2
           y: 233 - height / 2
-          text: Icons.image
-          font.family: Theme.iconFont
-          font.pixelSize: 16
-          baseColor: Theme.text
-          hoverColor: Theme.text
-          filled: true
-          fillSize: 30
-          fillColor: Theme.withAlpha(Theme.highlightMed, 0.75)
-          fillHoverColor: Theme.withAlpha(Theme.highlightMed, 0.95)
-          hitSize: 30
+          kind: Button.Disc
+          size: Button.Compact
+          icon: Icons.image
+          // Clicking it opens the picker, which wants the panel's keys, so it takes no focus.
+          activeFocusOnTab: false
           accessibleName: "Choose phone wallpaper"
           onClicked: win.chooseWallpaper()
         }
@@ -612,13 +607,12 @@ Variants {
             font.weight: Theme.weightMedium
           }
 
-          StrokeIconButton {
+          Button {
             x: 451
             y: 11
-            size: 14
-            path: Icons.close
-            baseColor: Theme.subtle
-            hoverColor: Theme.text
+            kind: Button.Icon
+            iconSize: 14
+            icon: Icons.close
             hitSlop: 6
             accessibleName: "Dismiss"
             onClicked: Phone.browseError = ""
@@ -672,58 +666,19 @@ Variants {
               }
             ]
 
-            Rectangle {
+            Button {
               id: action
 
               required property var modelData
 
               width: modelData.width
               height: Theme.phoneActionHeight
-              radius: height / 2
-              color: modelData.on ? Theme.accent : Theme.withAlpha(actionHit.containsMouse ? Theme.highlightMed : Theme.highlightLow, actionHit.containsMouse ? 0.6 : 0.9)
-              border.width: modelData.on ? 0 : 1
-              border.color: Theme.withAlpha(Theme.highlightMed, 0.7)
-              scale: actionHit.pressed ? Theme.pressScale : 1
-
-              Behavior on color {
-                Tint {}
-              }
-
-              Behavior on scale {
-                Morph {
-                  duration: Theme.morphState
-                }
-              }
-
-              Row {
-                anchors.centerIn: parent
-                spacing: 6
-
-                StrokeIcon {
-                  anchors.verticalCenter: parent.verticalCenter
-                  size: 16
-                  path: action.modelData.glyph
-                  color: action.modelData.on ? Theme.inkOnAccent : Theme.accent
-                }
-
-                Text {
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: action.modelData.label
-                  color: action.modelData.on ? Theme.inkOnAccent : Theme.text
-                  font.family: Theme.uiFont
-                  font.pixelSize: 12
-                  font.weight: Theme.weightSemi
-                }
-              }
-
-              MouseArea {
-                id: actionHit
-
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: action.modelData.run()
-              }
+              kind: modelData.on ? Button.Primary : Button.Neutral
+              text: modelData.label
+              icon: modelData.glyph
+              iconSize: 16
+              iconColor: modelData.on ? ink : Theme.accent
+              onClicked: modelData.run()
             }
           }
         }
@@ -923,15 +878,14 @@ Variants {
                 hoverEnabled: true
               }
 
-              StrokeIconButton {
+              Button {
                 id: dismissButton
 
                 x: parent.width - 12 - width
                 y: 10
-                size: 16
-                path: Icons.close
-                baseColor: Theme.subtle
-                hoverColor: Theme.text
+                kind: Button.Icon
+                iconSize: 16
+                icon: Icons.close
                 hitSlop: 6
                 accessibleName: "Dismiss notification"
                 visible: noteRow.modelData.dismissable && noteHit.containsMouse

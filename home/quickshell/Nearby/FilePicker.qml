@@ -629,12 +629,12 @@ Item {
     font.weight: Theme.weightMedium
   }
 
-  PillButton {
+  Button {
     visible: root.blocked
     x: (root.width - width) / 2
     y: 224
-    tonal: true
-    label: "Browse this laptop"
+    size: Button.Compact
+    text: "Browse this laptop"
     onClicked: root.sourceChosen("laptop")
   }
 

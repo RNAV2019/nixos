@@ -2,7 +2,7 @@ import QtQuick
 import qs.Commons
 
 // A panel's header: an optional Back button, the title, an optional meta line at the far end,
-// and a row of controls (HeaderButtons, a Switch) that children drop into. 70 px tall, all of
+// and a row of controls (Buttons, a Switch) that children drop into. 70 px tall, all of
 // it on one centre line; a panel whose design draws the title lower places the header lower.
 Item {
   id: root
@@ -22,13 +22,14 @@ Item {
 
   implicitHeight: Theme.panelHeaderHeight
 
-  HeaderButton {
+  Button {
     id: back
 
     x: Theme.panelHeaderBackInset
     y: (parent.height - height) / 2
     visible: root.hasBack
-    kind: HeaderButton.Back
+    kind: Button.Disc
+    icon: Icons.back
     accessibleName: "Back"
     onClicked: root.backed()
   }

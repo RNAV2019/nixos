@@ -15,6 +15,13 @@ Item {
   signal acted(var button)
 
   readonly property var buttons: moment ? moment.buttons : []
+  // The button spec's kind names, as Button draws them.
+  readonly property var kinds: ({
+      "primary": Button.Primary,
+      "secondary": Button.Neutral,
+      "ghost": Button.Ghost,
+      "danger": Button.Danger
+    })
   readonly property real inset: 16
 
   // Where the buttons begin, counted from the right edge.
@@ -62,11 +69,11 @@ Item {
     Repeater {
       model: root.buttons
 
-      ActivityButton {
+      Button {
         required property var modelData
 
-        compact: true
-        kind: modelData.kind || "secondary"
+        size: Button.Compact
+        kind: root.kinds[modelData.kind] !== undefined ? root.kinds[modelData.kind] : Button.Neutral
         text: modelData.text
         icon: modelData.icon || ""
         width: modelData.width || implicitWidth

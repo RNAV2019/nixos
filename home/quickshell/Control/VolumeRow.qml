@@ -38,14 +38,17 @@ Item {
     }
   }
 
-  MuteButton {
+  Button {
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     visible: root.showMute
+    kind: root.muted ? Button.DiscDanger : Button.Disc
+    size: Button.Large
     accessibleName: root.muteAccessibleName
-    muted: root.muted
-    glyph: root.glyph
-    onToggled: if (root.audio)
+    checkable: true
+    checked: root.muted
+    icon: root.glyph
+    onClicked: if (root.audio)
       root.audio.muted = !root.audio.muted
   }
 }

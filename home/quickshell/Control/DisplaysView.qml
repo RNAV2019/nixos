@@ -36,9 +36,10 @@ ControlSubView {
   }
 
   headerTrailing: [
-    HeaderButton {
+    Button {
       visible: root.external !== null
-      kind: HeaderButton.Reset
+      kind: Button.Icon
+      icon: Icons.restore
       enabled: root.active
       accessibleName: "Reset arrangement"
 

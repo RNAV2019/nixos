@@ -188,65 +188,17 @@ Item {
 
     // The countdown while a window runs, "Visible" while receiving has no end, "Off" when it
     // is switched off; clicking toggles receiving.
-    Rectangle {
+    Button {
       visible: root.peerName === ""
-      width: timerRow.implicitWidth + 24
-      height: Theme.nearbyChipHeight
-      radius: Theme.nearbyChipRadius
-      color: root.receivable ? Theme.withAlpha(Theme.accentFill, 0.12) : "transparent"
-      border.width: root.receivable ? 0 : 1
-      border.color: Theme.withAlpha(Theme.separator, 0.7)
-      scale: timerArea.pressed ? Theme.pressScale : 1
-
-      Behavior on scale {
-        Morph {
-          duration: Theme.morphState
-        }
-      }
-
-      Behavior on color {
-        Tint {}
-      }
-
-      Row {
-        id: timerRow
-
-        anchors.centerIn: parent
-        spacing: Theme.nearbyChipInnerGap
-
-        StrokeIcon {
-          anchors.verticalCenter: parent.verticalCenter
-          size: Theme.nearbyChipGlyph
-          strokeWidth: 1.8
-          path: IconPaths.timer
-          color: root.receivable ? Theme.accentFill : Theme.inkTertiary
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: root.receivable ? (root.remainingLabel !== "" ? root.remainingLabel : "Visible") : "Off"
-          color: root.receivable ? Theme.accentFill : Theme.inkTertiary
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.nearbyChipSize
-          font.weight: Theme.weightSemi
-          font.features: {
-            "tnum": 1
-          }
-        }
-      }
-
-      MouseArea {
-        id: timerArea
-
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.timerClicked()
-      }
-
-      Accessible.role: Accessible.Button
-      Accessible.name: root.receivable ? "Stop receiving" : "Start receiving"
-      Accessible.onPressAction: root.timerClicked()
+      kind: root.receivable ? Button.Tonal : Button.Ghost
+      size: Button.Compact
+      text: root.receivable ? (root.remainingLabel !== "" ? root.remainingLabel : "Visible") : "Off"
+      icon: IconPaths.timer
+      iconStroke: 1.8
+      ink: root.receivable ? Theme.accentFill : Theme.inkTertiary
+      tabular: true
+      accessibleName: root.receivable ? "Stop receiving" : "Start receiving"
+      onClicked: root.timerClicked()
     }
 
     // Apple's exclusive radio: Wi-Fi is down while the window or a send runs.

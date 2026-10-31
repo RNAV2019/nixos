@@ -208,80 +208,28 @@ Scope {
           font.letterSpacing: 1
         }
 
-        Rectangle {
+        Button {
           id: decline
 
           x: accept.x - 8 - width
           y: (parent.height - height) / 2
-          width: 64
-          height: Theme.nearbyAnswerHeight
-          radius: height / 2
-          color: declineArea.containsMouse ? Theme.withAlpha(Theme.inkPrimary, 0.06) : "transparent"
-          border.width: 1
-          border.color: Theme.withAlpha(Theme.separator, 0.7)
-          scale: declineArea.pressed ? Theme.pressScale : 1
-
-          Behavior on scale {
-            Morph {
-              duration: Theme.morphState
-            }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            text: "Decline"
-            color: Theme.inkPrimary
-            font.family: Theme.uiFont
-            font.pixelSize: 11
-            font.weight: Theme.weightSemi
-          }
-
-          MouseArea {
-            id: declineArea
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: if (root.offer)
-              Nearby.decline(root.offer.id)
-          }
+          kind: Button.Ghost
+          size: Button.Compact
+          text: "Decline"
+          onClicked: if (root.offer)
+            Nearby.decline(root.offer.id)
         }
 
-        Rectangle {
+        Button {
           id: accept
 
           x: parent.width - 16 - width
           y: (parent.height - height) / 2
-          width: 66
-          height: Theme.nearbyAnswerHeight
-          radius: height / 2
-          color: acceptArea.containsMouse ? Qt.lighter(Theme.accentFill, 1.06) : Theme.accentFill
-          scale: acceptArea.pressed ? Theme.pressScale : 1
-
-          Behavior on scale {
-            Morph {
-              duration: Theme.morphState
-            }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            text: "Accept"
-            color: Theme.inkOnAccent
-            font.family: Theme.uiFont
-            font.pixelSize: 11
-            font.weight: Theme.weightSemi
-          }
-
-          MouseArea {
-            id: acceptArea
-
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: if (root.offer)
-              Nearby.accept(root.offer.id)
-          }
+          kind: Button.Primary
+          size: Button.Compact
+          text: "Accept"
+          onClicked: if (root.offer)
+            Nearby.accept(root.offer.id)
         }
       }
 

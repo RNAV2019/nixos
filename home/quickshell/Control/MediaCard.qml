@@ -167,32 +167,16 @@ Item {
         }
       ]
 
-      Rectangle {
+      Button {
         id: button
 
         required property var modelData
 
-        readonly property bool hovered: buttonArea.containsMouse
-
-        width: Theme.controlMediaButtonSize
-        height: width
-        radius: width / 2
-        color: Theme.withAlpha(Theme.text, hovered && enabled ? Theme.controlMediaButtonHoverAlpha : Theme.controlMediaButtonAlpha)
-        scale: buttonArea.pressed ? Theme.pressScale : 1
+        kind: Button.Disc
+        size: Button.Large
         enabled: Media.active
-        // Dimmed with a layer, not bare opacity: the glyphs are filled and stroked in one
-        // colour, and at half opacity that overlap composites twice into a bright ring
-        // around each glyph. Rasterising first makes the dim even.
-        opacity: enabled ? 1 : 0.5
-        layer.enabled: opacity < 1
-
-        activeFocusOnTab: true
-        Accessible.role: Accessible.Button
-        Accessible.name: modelData.kind === "toggle" ? (Media.playing ? "Pause" : "Play") : modelData.name
-        Accessible.focusable: true
-        Accessible.onPressAction: button.activate()
-
-        function activate() {
+        accessibleName: modelData.kind === "toggle" ? (Media.playing ? "Pause" : "Play") : modelData.name
+        onClicked: {
           if (modelData.kind === "previous")
             Media.previous();
           else if (modelData.kind === "next")
@@ -201,38 +185,12 @@ Item {
             Media.toggle();
         }
 
-        Behavior on color {
-          Tint {}
-        }
-
-        Behavior on scale {
-          Morph {
-            duration: Theme.morphState
-          }
-        }
-
         TransportGlyph {
           anchors.centerIn: parent
           width: implicitWidth
           height: implicitHeight
           kind: button.modelData.kind === "toggle" ? (Media.playing ? "pause" : "play") : button.modelData.kind
-          color: button.activeFocus ? Theme.focusRing : Theme.text
-        }
-
-        MouseArea {
-          id: buttonArea
-
-          anchors.fill: parent
-          hoverEnabled: true
-          cursorShape: Qt.PointingHandCursor
-          onClicked: button.activate()
-        }
-
-        Keys.onPressed: function (event) {
-          if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            button.activate();
-            event.accepted = true;
-          }
+          color: button.ink
         }
       }
     }

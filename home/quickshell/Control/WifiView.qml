@@ -81,8 +81,9 @@ ControlSubView {
   }
 
   headerTrailing: [
-    HeaderButton {
-      kind: HeaderButton.Rescan
+    Button {
+      kind: Button.Icon
+      icon: Icons.refresh
       enabled: root.active
       accessibleName: "Rescan"
 
@@ -149,15 +150,17 @@ ControlSubView {
     }
     selected: true
 
-    PillButton {
-      label: "Disconnect"
-      onAccent: true
+    Button {
+      size: Button.Compact
+      text: "Disconnect"
+      kind: Button.OnAccent
       onClicked: NetworkInfo.disconnect(root.activeNetwork)
     }
 
-    PillButton {
-      label: "Forget"
-      onAccent: true
+    Button {
+      size: Button.Compact
+      text: "Forget"
+      kind: Button.OnAccent
       onClicked: NetworkInfo.forget(root.activeNetwork)
     }
   }
@@ -220,8 +223,10 @@ ControlSubView {
             networks.objectFor(entry.key).connectWithSettings();
         }
 
-        PillButton {
-          label: entry.busy ? "…" : "Connect"
+        Button {
+          size: Button.Compact
+          kind: Button.Plain
+          text: entry.busy ? "…" : "Connect"
           onClicked: {
             if (entry.needsPassword)
               root.pendingSsid = entry.name;
@@ -296,12 +301,14 @@ ControlSubView {
           }
         }
 
-        PillButton {
+        Button {
           id: join
 
+          size: Button.Compact
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
-          label: "Join"
+          kind: Button.Plain
+          text: "Join"
           onClicked: {
             networks.objectFor(entry.key).connectWithPsk(psk.text);
             root.pendingSsid = "";

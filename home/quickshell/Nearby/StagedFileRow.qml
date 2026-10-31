@@ -105,12 +105,15 @@ Rectangle {
     font.weight: Theme.weightMedium
   }
 
-  StrokeIconButton {
-    x: root.width - Theme.nearbyFileRemoveRight - size
-    y: (root.height - size) / 2
-    size: Theme.nearbyFileRemove
-    strokeWidth: 1.6
-    path: IconPaths.x
+  Button {
+    x: root.width - Theme.nearbyFileRemoveRight - width
+    y: (root.height - height) / 2
+    kind: Button.Icon
+    iconSize: Theme.nearbyFileRemove
+    iconStroke: 1.6
+    icon: IconPaths.x
+    baseColor: Theme.inkTertiary
+    hoverColor: Theme.inkPrimary
     accessibleName: "Remove " + root.name
 
     onClicked: root.removeClicked()
