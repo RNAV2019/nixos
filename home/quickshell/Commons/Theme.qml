@@ -371,6 +371,67 @@ Singleton {
   readonly property real powerTileFillAlpha: 0.9
   readonly property real powerTileBorderAlpha: 0.7
 
+  // The island pill row (Ui/IslandPill.qml): every pill that is a single 42 px line, in the
+  // eight layouts of the board's `Island pill` set. Left edges and widths are in px from the
+  // pill's left, `Inset`s from its right; the glyph slot is 18 x 18 except in the wide layout.
+  readonly property int islandPillWidth: 278
+  readonly property int islandPillWidthWide: 340
+  // The pill hangs from barMarginTop and windows start barHeight + oledShiftMax + gaps_out
+  // below the strip, so a 48 px row reached into the window under it; 42 leaves 2 px at the
+  // orbit low.
+  readonly property int islandPillHeight: 42
+  readonly property int islandPillRadius: 21
+  readonly property int islandPillGlyphLeft: 20
+  readonly property int islandPillGlyphTop: 12
+  readonly property int islandPillGlyphSize: 18
+  readonly property int islandPillGlyphTopWide: 9
+  readonly property int islandPillGlyphSizeWide: 24
+  readonly property int islandPillTextTop: 14
+  readonly property int islandPillTextLeft: 52
+  readonly property int islandPillLabelWidthTrack: 72
+  readonly property int islandPillLabelWidthWide: 170
+  readonly property int islandPillLabelLeftAction: 39
+  readonly property int islandPillLabelWidthAction: 200
+  readonly property int islandPillLabelLeftDetail: 54
+  readonly property int islandPillLabelWidthDetail: 58
+  readonly property int islandPillDetailLeft: 116
+  readonly property int islandPillDetailWidth: 44
+  readonly property int islandPillLabelWidthDots: 78
+  readonly property int islandPillDotsDetailLeft: 133
+  readonly property int islandPillDotsDetailWidth: 100
+  readonly property int islandPillTrackTop: 17
+  readonly property int islandPillTrackHeight: 8
+  readonly property int islandPillTrackLeft: 52
+  readonly property int islandPillTrackWidth: 166
+  readonly property int islandPillTrackWidthAction: 140
+  readonly property int islandPillTrackLeftLabel: 128
+  readonly property int islandPillTrackWidthLabel: 91
+  readonly property int islandPillReadingWidth: 80
+  readonly property int islandPillReadingInset: 20
+  readonly property int islandPillReadingInsetAction: 48
+  readonly property int islandPillReadingInsetWaveform: 45
+  readonly property int islandPillNoteTop: 15
+  readonly property int islandPillNoteWidth: 100
+  readonly property int islandPillNoteInset: 21
+  readonly property int islandPillActionTop: 15
+  readonly property int islandPillActionSize: 12
+  readonly property int islandPillActionInset: 20
+  readonly property int islandPillWaveformTop: 12
+  readonly property int islandPillWaveformWidth: 107
+  readonly property int islandPillWaveformHeight: 19
+  readonly property int islandPillDotsInset: 14
+  readonly property int islandPillDotsTop: 18
+  readonly property int islandPillDotSize: 6
+  readonly property int islandPillDotGap: 4
+  readonly property real islandPillCaptionSize: 12
+  readonly property real islandPillNoteSize: 11
+  readonly property real islandPillReadingSize: 12
+  // The alert outline: 1 px, in love at lockErrorOutline.
+  readonly property int islandPillAlertWidth: 1
+  // While a track's total is not known: a segment this share of the track, one pass in this long.
+  readonly property real levelTrackSweepShare: 0.25
+  readonly property int levelTrackSweep: 1200
+
   // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
   // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
   readonly property int osdWidth: 278
