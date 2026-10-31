@@ -31,9 +31,17 @@ tool_paths() {
   out=$(nix build --inputs-from "$QSV_REPO" --no-link --print-out-paths \
     nixpkgs#sway nixpkgs#grim nixpkgs#wtype nixpkgs#imagemagick nixpkgs#socat nixpkgs#dbus \
     nixpkgs#libnotify nixpkgs#pipewire nixpkgs#wireplumber nixpkgs#bubblewrap \
+    "$QSV_REPO#phone-bridge" \
     2>&1) || die "nix build of the tools failed:
 $out"
   printf '%s\n' "$out"
+}
+
+# A python with dbus-fast, to run the mock kdeconnectd (pkgs/phone-bridge/tests) on the private
+# session bus.
+mock_python() {
+  nix build --impure --no-link --print-out-paths --expr \
+    "(builtins.getFlake \"path:$QSV_REPO\").inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.python3.withPackages (ps: [ps.dbus-fast])" || die "no python with dbus-fast"
 }
 
 # ---- driving the running shell (after load_env) ----

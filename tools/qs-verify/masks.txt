@@ -32,3 +32,11 @@ panel-launcher-query   760   30  30  26
 panel-launcher-calc    824   30  16  26
 # The island's clock once the pointer has grown the island (it sits lower and wider).
 hover-island           925   26  80  30
+# The phone panel's drawn lock screen (its clock and date), and the "now" each notification
+# shows until a minute has passed.
+panel-phone*          740   58  70  50
+panel-phone*         1150  440  40  22
+panel-phone          1150  504  40  22
+panel-phone-ringing  1150  504  40  22
+# The ringing phone's pulsing rings.
+panel-phone-ringing   720   28 110 220

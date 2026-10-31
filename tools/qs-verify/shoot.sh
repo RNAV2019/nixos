@@ -35,7 +35,7 @@ wpctl() { command wpctl "$@" 2>/dev/null; }
 
 reset_ui() {
   local k
-  for k in launcher control wallpaper profiles calendar nearby recorder theme; do
+  for k in launcher control wallpaper profiles calendar nearby recorder theme phone; do
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
@@ -398,6 +398,41 @@ setup_control_notifications() {
   open_panel control
 }
 
+# ---- the phone: a mock kdeconnectd on the private session bus, read by the real phone-bridge ----
+
+PH_CALLS=$QSV_WORK/phone-calls.log
+ph() { busctl --user call org.mock.Control /control org.mock.Control Apply s "$1" >/dev/null; }
+ph_up() { # the mock daemon and a phone with two notifications; kept for the states after it
+  busctl --user list 2>/dev/null | grep -q org.mock.Control || {
+    setsid "$(mock_python)/bin/python" "$QSV_REPO/pkgs/phone-bridge/tests/mock-kdeconnectd.py" "$PH_CALLS" \
+      >"$QSV_WORK/mock-kdeconnectd.log" 2>&1 &
+    until busctl --user list 2>/dev/null | grep -q org.mock.Control; do sleep 0.2; done
+  }
+  ph '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"smartphone","battery":{"charge":78,"charging":false}}'
+  ph '{"op":"cellular","dev":"s24","type":"5G","strength":3}'
+  ph '{"op":"notify","dev":"s24","id":"n1","app":"WhatsApp","title":"Maya","text":"Dinner on Friday?"}'
+  ph '{"op":"notify","dev":"s24","id":"n2","app":"Gmail","title":"Weekly digest","text":"Seven new things in your inbox"}'
+  sleep 3
+}
+setup_phone_satellite() { :; }
+setup_phone_satellite_hover() { cursor 1045 26; }
+setup_phone_satellite_low() { ph '{"op":"battery","dev":"s24","charge":14,"charging":false}'; }
+teardown_phone_low() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
+setup_phone_satellite_osd() { setup_osd_volume; }
+setup_panel_phone() { open_panel phone; }
+setup_panel_phone_hover_note() {
+  open_panel phone
+  sleep 1.6
+  cursor 960 524
+}
+setup_panel_phone_ringing() {
+  open_panel phone
+  sleep 1.6
+  cursor 770 288
+  sleep 0.3
+  click
+}
+
 # ---- the run ----
 
 {
@@ -471,6 +506,18 @@ shot panel-control-notifications 1.5 0.3 setup_control_notifications
 shot notify-basic 1.3 0.3 setup_notify_basic wait_toast_gone
 shot notify-critical 1.3 0.3 setup_notify_critical wait_toast_gone
 shot notify-long 1.3 0.3 setup_notify_long wait_toast_gone
+
+# After everything else: the phone stays connected from here, which the other states must not see.
+if [[ -z $ONLY || $ONLY == *phone* ]]; then
+  ph_up
+  shot phone-satellite 1.0 0.3 setup_phone_satellite
+  shot phone-satellite-hover 1.2 0.3 setup_phone_satellite_hover
+  shot phone-satellite-low 1.2 0.3 setup_phone_satellite_low teardown_phone_low
+  shot phone-satellite-osd 0.9 0.15 setup_phone_satellite_osd teardown_osd_volume
+  shot panel-phone 1.8 0.3 setup_panel_phone
+  shot panel-phone-hover-note 1.0 0.3 setup_panel_phone_hover_note
+  shot panel-phone-ringing 1.0 0.3 setup_panel_phone_ringing
+fi
 
 reset_ui
 [[ -n $ONLY || ${#FAILED[@]} -gt 0 ]] || rm -rf "$OUT/unstable"

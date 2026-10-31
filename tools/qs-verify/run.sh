@@ -119,6 +119,18 @@ chmod +x "$QSV_WORK/bin/nearby"
 echo '{"event":"status","status":{"mode":"android","visible":false,"remaining":null,"scanning":false,"busy":false,"name":"test-laptop","download_dir":"/tmp/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}}' >"$QSV_WORK/nearby.baseline"
 
 
+# `cliphist`, which the phone panel lists the newest clips from: a fixed history, nothing stored.
+cat >"$QSV_WORK/bin/cliphist" <<STUB
+#!/bin/sh
+case "\$1" in
+  -preview-width) cat "$QSV_WORK/cliphist.list" ;;
+  decode) exit 0 ;;
+  *) exit 0 ;;
+esac
+STUB
+chmod +x "$QSV_WORK/bin/cliphist"
+printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1\tssh ryan@192.168.1.20\n' >"$QSV_WORK/cliphist.list"
+
 # Fixture wallpapers (the pickers list ~/Pictures/backgrounds/<theme>/), and the compositor's
 # own background: a gradient with shapes in it, so a panel's translucency and blur show.
 MAGICK=$(tool magick)

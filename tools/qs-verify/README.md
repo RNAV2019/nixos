@@ -53,6 +53,9 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 - Sharing pill: connecting, offer, receiving, saved.
 - Moments: plugged in, Wi-Fi sign-in.
 - Notification toasts: basic, critical, long text; the control centre's notification list.
+- The phone (last, so nothing before it sees it): the satellite docked, hovered, on a low battery
+  and riding the volume OSD, and the phone panel at rest, with the pointer over a notification and
+  ringing.
 
 ## How states are driven (no QML hooks)
 
@@ -68,6 +71,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | moments | the shell's own `activities` ipc (`plug`, `wifi`) |
 | auth prompt | the shell's own `authpreview` ipc |
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |
+| phone satellite, phone panel | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
 | pointer | `vpointer.c`, a persistent `zwlr_virtual_pointer` (headless sway has no pointer; without one there is no hover or click) |
 
 The shell runs from a copy of the config with two patches, both checked by `run.sh` (it fails
