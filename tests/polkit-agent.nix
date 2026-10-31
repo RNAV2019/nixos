@@ -4,8 +4,9 @@
 #
 # alice logs in on tty1 (a logind session), her profile starts a headless sway and the shell in
 # it. `pkcheck --allow-user-interaction` stands in for pkexec (the requester), and wtype types
-# the answers into the prompt. Covers a right password, a wrong one then a right one, Cancel,
-# Escape, another identity, the requester dying, and the session locking under an open prompt.
+# the answers into the prompt. Covers a right password, a wrong one then a right one,
+# Escape, the account the pill asks for when another administrator is listed first, the
+# requester dying, and the session locking under an open prompt.
 # Run: nix build .#checks.x86_64-linux.polkit-agent -L
 {pkgs}: let
   # The shell with no Hyprland to ask which output has the focus.
@@ -39,19 +40,21 @@ in
       hardware.graphics.enable = true;
       fonts.packages = [pkgs.inter pkgs.jetbrains-mono];
 
-      # Two administrators, so the prompt has an identity to choose. polkit's admin identities
-      # are the wheel group.
+      # Two administrators, one sorting before alice, so the prompt has an account to choose. polkit's
+      # admin identities are the wheel group.
       users.users.alice = {
         isNormalUser = true;
+        uid = 1000;
         extraGroups = ["wheel"];
         password = "alice-pw";
         description = "Alice Test";
       };
-      users.users.bob = {
+      users.users.aaron = {
         isNormalUser = true;
+        uid = 1001;
         extraGroups = ["wheel"];
-        password = "bob-pw";
-        description = "Bob Test";
+        password = "aaron-pw";
+        description = "Aaron Test";
       };
 
       # alice's session: a tty autologin, which logind makes a session of its own.
@@ -168,7 +171,8 @@ in
           n = request()
           st = prompt_up()
           assert st["actionId"] == "org.freedesktop.policykit.exec", st
-          assert sorted(st["identities"]) == ["alice", "bob"], st
+          assert sorted(st["identities"]) == ["aaron", "alice"], st
+          assert st["identity"] == "alice", st
           shot("1-prompt")
           type_text("alice-pw")
           shot("2-typed")
@@ -199,17 +203,14 @@ in
           wait_status(lambda s: not s["pending"] and not s["shown"], "the prompt to close")
           print("pkcheck exit after Escape:", rc)
 
-      with subtest("another administrator can be chosen and authenticates with their own password"):
+      with subtest("the pill asks for the user's own account even when another administrator is listed first"):
           n = request()
-          before = prompt_up()["failures"]
-          # Field -> details plate -> identity chooser; Right moves to the next account.
-          keys("Tab", "Tab", "Right")
-          st = wait_status(lambda s: s["selected"] == 1 and s["pending"], "bob selected")
-          # Switching accounts restarts PAM, which AuthFlow reports as a failed try; it is not one.
-          assert st["failures"] == before and st["error"] == "", st
-          shot("4-bob")
-          keys("Tab", "Tab", "Tab")
-          type_text("bob-pw")
+          st = prompt_up()
+          assert sorted(st["identities"]) == ["aaron", "alice"], st
+          assert st["identity"] == "alice", st
+          # Choosing the account restarts PAM, which AuthFlow reports as a failed try; it is not one.
+          assert st["failures"] == 0 and st["error"] == "", st
+          type_text("alice-pw")
           keys("Return")
           assert result(n) == 0, machine.succeed(f"cat /tmp/pk{n}.out")
           wait_status(lambda s: not s["pending"] and not s["shown"], "the prompt to close")

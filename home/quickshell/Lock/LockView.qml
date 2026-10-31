@@ -1,9 +1,7 @@
 import QtQuick
 import QtQuick.Effects
-import QtQuick.Shapes
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -177,370 +175,44 @@ Item {
     Item {
       id: login
 
-      readonly property bool hasText: input.text.length > 0
-      readonly property bool showError: view.statusIsError && !hasText && !view.busy
-
       anchors.horizontalCenter: parent.horizontalCenter
       y: canvas.u(Theme.lockPillTop)
       width: canvas.u(Theme.lockPillWidth)
       height: canvas.u(Theme.lockPillHeight + Theme.lockCaptionGap) + caption.height
       opacity: view.loginAlpha
 
-      transform: Translate {
-        id: shake
-      }
+      LoginPill {
+        id: pill
 
-      SequentialAnimation {
-        id: shakeAnimation
+        width: parent.width
+        height: canvas.u(Theme.lockPillHeight)
+        ui: canvas.ui
 
-        readonly property real travel: canvas.u(Theme.lockShakeTravel)
-        readonly property int step: Theme.lockShake / 6
+        title: view.displayName
+        initial: view.displayName
+        facePath: view.facePath
+        faceRevision: view.faceRevision
+        password: view.password
+        failed: view.statusIsError
+        status: view.status
+        busy: view.busy
 
-        NumberAnimation {
-          target: shake
-          property: "x"
-          to: -shakeAnimation.travel
-          duration: shakeAnimation.step
-          easing.type: Easing.OutQuad
+        onPasswordEdited: text => view.passwordEdited(text)
+        onAccepted: view.accepted()
+        onKeyPressed: {
+          view.pointerShown = false;
+          view.checkCapsLock();
         }
-        NumberAnimation {
-          target: shake
-          property: "x"
-          to: shakeAnimation.travel
-          duration: shakeAnimation.step * 2
-          easing.type: Easing.InOutQuad
-        }
-        NumberAnimation {
-          target: shake
-          property: "x"
-          to: -shakeAnimation.travel
-          duration: shakeAnimation.step * 2
-          easing.type: Easing.InOutQuad
-        }
-        NumberAnimation {
-          target: shake
-          property: "x"
-          to: 0
-          duration: shakeAnimation.step
-          easing.type: Easing.InQuad
-        }
+        // Caps Lock's own state lands after its press, so ask again on the release.
+        onKeyReleased: view.checkCapsLock()
       }
 
       Connections {
         target: view
 
         function onStatusIsErrorChanged() {
-          if (view.statusIsError && !Theme.reduceMotion)
-            shakeAnimation.restart();
-        }
-      }
-
-      Rectangle {
-        id: pill
-
-        width: parent.width
-        height: canvas.u(Theme.lockPillHeight)
-        radius: height / 2
-
-        color: Theme.surface
-        border.width: Math.max(1, Math.round(canvas.ui))
-        border.color: login.showError ? Qt.rgba(Theme.love.r, Theme.love.g, Theme.love.b, Theme.lockErrorOutline) : Theme.surfaceOutline
-
-        Behavior on border.color {
-          ColorAnimation {
-            duration: Theme.duration(Theme.lockStateFade)
-          }
-        }
-
-        TextInput {
-          id: input
-
-          anchors.fill: parent
-
-          focus: true
-          enabled: !view.busy
-          // The dots are fixed geometry beside this, so the field itself renders nothing.
-          echoMode: TextInput.NoEcho
-          color: "transparent"
-          cursorVisible: false
-          cursorDelegate: Item {}
-
-          text: view.password
-          onTextChanged: view.passwordEdited(text)
-          onAccepted: view.accepted()
-
-          Keys.onPressed: function (event) {
-            view.pointerShown = false;
-            view.checkCapsLock();
-            event.accepted = false;
-          }
-          Keys.onReleased: function (event) {
-            // Caps Lock's own state lands after its press, so ask again on the release.
-            view.checkCapsLock();
-            event.accepted = false;
-          }
-        }
-
-        Rectangle {
-          id: avatar
-
-          x: canvas.u(Theme.lockPillInset)
-          anchors.verticalCenter: parent.verticalCenter
-          width: canvas.u(Theme.lockAvatarSize)
-          height: width
-          radius: width / 2
-          color: Theme.overlay
-
-          // ~/.face links out of the store to ~/nixos/profile.jpg. The query is bumped on every
-          // change so a replaced picture reloads under the same name; cache is off for the same reason.
-          ClippingRectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: "transparent"
-            visible: face.status === Image.Ready
-
-            Image {
-              id: face
-
-              anchors.fill: parent
-              source: "file://" + view.facePath + "?" + view.faceRevision
-              sourceSize.width: width
-              sourceSize.height: height
-              fillMode: Image.PreserveAspectCrop
-              cache: false
-              asynchronous: false
-              smooth: true
-              mipmap: true
-            }
-          }
-
-          Text {
-            anchors.centerIn: parent
-            visible: face.status !== Image.Ready
-            text: view.displayName.length > 0 ? view.displayName.charAt(0).toUpperCase() : "?"
-            color: Theme.accent
-            font.family: Theme.uiFont
-            font.weight: Theme.weightSemi
-            font.pixelSize: canvas.u(Theme.lockAvatarGlyphSize)
-            renderType: Text.QtRendering
-          }
-        }
-
-        Text {
-          id: nameLabel
-
-          x: canvas.u(Theme.lockTextLeft)
-          y: canvas.u(Theme.lockNameTop)
-          width: submit.x - x - canvas.u(Theme.lockPillInset)
-          elide: Text.ElideRight
-
-          text: view.displayName
-          color: Theme.lockTextPrimary
-          font.family: Theme.uiFont
-          font.weight: Theme.weightSemi
-          font.pixelSize: canvas.u(Theme.lockNameSize)
-          renderType: Text.QtRendering
-        }
-
-        // Line two: the dots and caret while typing, otherwise the placeholder or the state.
-        Item {
-          id: lineTwo
-
-          x: canvas.u(Theme.lockTextLeft)
-          y: canvas.u(Theme.lockLineTwoTop)
-          width: nameLabel.width
-          height: canvas.u(Theme.lockLineTwoHeight)
-
-          Text {
-            anchors.left: parent.left
-            anchors.leftMargin: view.busy || login.showError ? 0 : canvas.u(Theme.lockPlaceholderInset)
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !login.hasText
-
-            text: {
-              if (view.busy)
-                return "Checking…";
-              if (login.showError)
-                return view.status;
-              return "Password";
-            }
-            color: login.showError ? Theme.love : Theme.inkSecondary
-            elide: Text.ElideRight
-            font.family: Theme.uiFont
-            font.weight: login.showError ? Theme.weightMedium : Theme.weightRegular
-            font.pixelSize: canvas.u(Theme.lockLineTwoSize)
-            renderType: Text.QtRendering
-          }
-
-          Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
-            visible: !view.busy && !login.showError
-
-            Repeater {
-              model: 64
-
-              Item {
-                id: slot
-
-                readonly property bool filled: index < input.text.length
-
-                width: filled ? canvas.u(Theme.lockDotSize + Theme.lockDotGap) : 0
-                // Every child is the caret's height, so the positioner lines them up
-                // without anchors, which it would ignore.
-                height: canvas.u(Theme.lockCaretHeight)
-
-                Behavior on width {
-                  NumberAnimation {
-                    duration: Theme.duration(Theme.lockDotPop)
-                    easing.type: Easing.OutQuad
-                  }
-                }
-
-                Rectangle {
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: canvas.u(Theme.lockDotSize)
-                  height: width
-                  radius: width / 2
-                  color: Theme.lockTextPrimary
-
-                  scale: slot.filled ? 1 : 0
-                  opacity: slot.filled ? 1 : 0
-
-                  Behavior on scale {
-                    NumberAnimation {
-                      duration: Theme.duration(Theme.lockDotPop)
-                      easing.type: slot.filled ? Easing.OutQuad : Easing.InQuad
-                    }
-                  }
-
-                  Behavior on opacity {
-                    NumberAnimation {
-                      duration: Theme.duration(Theme.lockDotPop)
-                    }
-                  }
-                }
-              }
-            }
-
-            Rectangle {
-              id: caret
-
-              width: Math.max(1, canvas.u(Theme.lockCaretWidth))
-              height: canvas.u(Theme.lockCaretHeight)
-              radius: width / 2
-              color: Theme.lockCaretColor
-
-              SequentialAnimation on opacity {
-                loops: Animation.Infinite
-                running: !Theme.reduceMotion
-                PropertyAction {
-                  value: 1
-                }
-                PauseAnimation {
-                  duration: Theme.lockCaretBlinkMs
-                }
-                PropertyAction {
-                  value: 0
-                }
-                PauseAnimation {
-                  duration: Theme.lockCaretBlinkMs
-                }
-              }
-            }
-          }
-        }
-
-        // The submit disc: a plate until there is something to send, then the accent.
-        Rectangle {
-          id: submit
-
-          readonly property bool live: login.hasText && !view.busy
-
-          anchors.right: parent.right
-          anchors.rightMargin: canvas.u(Theme.lockPillInset)
-          anchors.verticalCenter: parent.verticalCenter
-          width: canvas.u(Theme.lockSubmitSize)
-          height: width
-          radius: width / 2
-          color: live ? Theme.accent : Theme.overlay
-
-          Behavior on color {
-            ColorAnimation {
-              duration: Theme.duration(Theme.lockStateFade)
-            }
-          }
-
-          StrokeIcon {
-            anchors.centerIn: parent
-            visible: !view.busy
-            size: canvas.u(Theme.lockArrowSize)
-            strokeWidth: 2 * canvas.ui
-            color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
-            path: IconPaths.arrowRight
-          }
-
-          // Checking: a quarter arc turning over a faint track.
-          Shape {
-            id: spinner
-
-            anchors.centerIn: parent
-            width: canvas.u(Theme.lockSpinnerSize)
-            height: width
-            visible: view.busy
-            antialiasing: true
-            preferredRendererType: Shape.CurveRenderer
-
-            readonly property real stroke: 2 * canvas.ui
-            readonly property real r: (width - stroke) / 2
-
-            ShapePath {
-              fillColor: "transparent"
-              strokeColor: Qt.rgba(Theme.inkTertiary.r, Theme.inkTertiary.g, Theme.inkTertiary.b, 0.35)
-              strokeWidth: spinner.stroke
-
-              PathAngleArc {
-                centerX: spinner.width / 2
-                centerY: spinner.height / 2
-                radiusX: spinner.r
-                radiusY: spinner.r
-                startAngle: 0
-                sweepAngle: 360
-              }
-            }
-
-            ShapePath {
-              fillColor: "transparent"
-              strokeColor: Theme.accent
-              strokeWidth: spinner.stroke
-              capStyle: ShapePath.RoundCap
-
-              PathAngleArc {
-                centerX: spinner.width / 2
-                centerY: spinner.height / 2
-                radiusX: spinner.r
-                radiusY: spinner.r
-                startAngle: -90
-                sweepAngle: 90
-              }
-            }
-
-            RotationAnimator on rotation {
-              from: 0
-              to: 360
-              duration: Theme.lockSpinnerTurn
-              loops: Animation.Infinite
-              running: spinner.visible && !Theme.reduceMotion
-            }
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            enabled: submit.live
-            cursorShape: Qt.PointingHandCursor
-            onClicked: view.accepted()
-          }
+          if (view.statusIsError)
+            pill.shakeOnce();
         }
       }
 
@@ -551,6 +223,11 @@ Item {
         y: pill.height + canvas.u(Theme.lockCaptionGap)
         spacing: canvas.u(Theme.lockCaptionGlyphGap)
         opacity: view.capsLock || view.forceCapsLock ? 1 : 0
+
+        // Hangs from the pill, so it shakes with it.
+        transform: Translate {
+          x: pill.shakeX
+        }
 
         Behavior on opacity {
           NumberAnimation {

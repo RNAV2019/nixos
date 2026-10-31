@@ -165,20 +165,22 @@ shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 The shell is the session's polkit agent (`PolkitAgent` in
 [`Services/Polkit.qml`](home/quickshell/Services/Polkit.qml), `security.polkit.enable` in
 `modules/system/default.nix` only runs `polkitd`). Anything that asks for admin rights through
-polkit (`pkexec`, Nautilus' admin actions, fwupd, NetworkManager) grows an
-[authentication prompt](home/quickshell/Auth/AuthPrompt.qml) out of the island: who is asking,
-polkit's message, the action id (open it for the program and the account that will approve), your
-picture and name, and a password field. **Enter** authenticates, **Esc** cancels, **Tab** walks
-the plate, the buttons and, with several administrators, an account chooser. A wrong password
-shakes the pill and keeps "Sorry, that didn't work" up until the next keystroke. The prompt
-holds the keyboard exclusively, goes away on approval, Cancel, polkitd withdrawing the request or
-the session locking, and steps aside (then returns) when another panel takes the island.
+polkit (`pkexec`, Nautilus' admin actions, fwupd, NetworkManager) grows the login pill out of the
+island: your picture, "`<program>` needs permission" and a password field, the lock screen's pill
+([`Ui/LoginPill.qml`](home/quickshell/Ui/LoginPill.qml), drawn by
+[`Auth/AuthPrompt.qml`](home/quickshell/Auth/AuthPrompt.qml)). **Enter** authenticates and **Esc**
+cancels. A wrong password shakes the pill and says "Wrong password · try N" until the next
+keystroke. When several administrators may approve it asks for your own account, else the first
+one listed; there is no choice and no details. The prompt holds the keyboard exclusively, goes
+away on approval, Esc, polkitd withdrawing the request or the session locking, and steps aside
+(then returns) when another panel takes the island.
 
 The Quickshell the flake pins hands over the action id, message and accounts but not polkit's
-`details` map, so the program is read back out of the message and the caller isn't shown.
+`details` map, so the program is read back out of the message (else the action's owner) and the
+caller isn't known.
 
 Rehearse every state without a real request: `qs ipc call authpreview ask pkexec` (also `plain`,
-`code`, `info`, `identities`, `long`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
+`long`, `identities`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
 per session, so don't start a second shell to test it: `nix build .#checks.x86_64-linux.polkit-agent -L`
 runs the real agent against a real `polkitd` and PAM in a VM of its own.
 

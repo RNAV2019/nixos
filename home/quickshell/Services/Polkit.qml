@@ -9,10 +9,11 @@ import qs.Commons
 // polkitd sends (pkexec, Nautilus' admin actions, fwupd, ...) and keeps what the prompt in
 // Auth/AuthPrompt.qml has to remember between one question and the next.
 //
-// The pinned Quickshell (0.3.2) hands over the action id, the message, an icon name, the
-// identities that may approve and the PAM conversation. It drops polkit's `details` map
-// (program, command line, caller pid), so the program is read back out of the message, which
-// pkexec's action text quotes, and the caller is not known at all.
+// The pinned Quickshell (0.3.2) hands over the action id, the message, the identities that may
+// approve and the PAM conversation. It drops polkit's `details` map (program, command line,
+// caller pid), so who is asking is read back out of the message, which pkexec's action text
+// quotes, else taken from the action id. The prompt asks the user's own account when that may
+// approve, else the first one listed; it offers no choice.
 //
 // Two traps in that API are handled here. `failed` latches true for the rest of the flow, and
 // a failed try starts a fresh PAM session that clears its own message while it re-asks, so the
@@ -46,13 +47,9 @@ Singleton {
 
     property string message: ""
     property string actionId: ""
-    property string iconName: ""
     property var identities: []
     property int selectedIndex: 0
     property string prompt: "Password"
-    property bool echo: false
-    property string notice: ""
-    property bool noticeIsError: false
     property bool checking: false
   }
 
@@ -68,14 +65,6 @@ Singleton {
     target: held
     property: "actionId"
     value: root.preview ? root.preview.actionId : root.flow ? root.flow.actionId : ""
-    when: root.pending
-    restoreMode: Binding.RestoreNone
-  }
-
-  Binding {
-    target: held
-    property: "iconName"
-    value: root.preview ? root.preview.iconName : root.flow ? root.flow.iconName : ""
     when: root.pending
     restoreMode: Binding.RestoreNone
   }
@@ -106,30 +95,6 @@ Singleton {
 
   Binding {
     target: held
-    property: "echo"
-    value: root.liveEcho
-    when: root.pending
-    restoreMode: Binding.RestoreNone
-  }
-
-  Binding {
-    target: held
-    property: "notice"
-    value: root.liveNotice
-    when: root.pending
-    restoreMode: Binding.RestoreNone
-  }
-
-  Binding {
-    target: held
-    property: "noticeIsError"
-    value: root.liveNoticeIsError
-    when: root.pending
-    restoreMode: Binding.RestoreNone
-  }
-
-  Binding {
-    target: held
     property: "checking"
     value: root.liveChecking
     when: root.pending
@@ -140,13 +105,9 @@ Singleton {
   // is gone a moment later, and the card is still on its way out, so it must keep its words.
   readonly property string message: held.message
   readonly property string actionId: held.actionId
-  readonly property string iconName: held.iconName
   readonly property var identities: held.identities
   readonly property int selectedIndex: held.selectedIndex
   readonly property string prompt: held.prompt
-  readonly property bool echo: held.echo
-  readonly property string notice: held.notice
-  readonly property bool noticeIsError: held.noticeIsError
   readonly property bool checking: held.checking
 
   // The program the action text quotes, "" when it quotes none.
@@ -155,7 +116,7 @@ Singleton {
     return m ? m[1] : "";
   }
 
-  // Who is asking, for the line over the title: the program's name, else the action's owner.
+  // Who is asking, for the pill's label: the program's name, else the action's owner.
   readonly property string requester: {
     if (root.program !== "")
       return root.program.substring(root.program.lastIndexOf("/") + 1);
@@ -195,11 +156,15 @@ Singleton {
     return list;
   }
 
-  property int previewSelected: 0
+  // Who is asked for: the user's own account if it may approve, else the first listed.
+  function preferredIn(names) {
+    var at = names.indexOf(Account.userName);
+    return at >= 0 ? at : 0;
+  }
 
   readonly property int liveSelected: {
     if (root.preview)
-      return root.previewSelected;
+      return root.preferredIn(root.preview.identities.map(i => i.name));
     if (!root.flow)
       return 0;
     for (var i = 0; i < root.flow.identities.length; i++) {
@@ -207,26 +172,6 @@ Singleton {
         return i;
     }
     return 0;
-  }
-
-  // The rows under the details plate: what was read out of the request, then, in a rehearsal,
-  // whatever it brings. A row with nothing behind it is simply not there.
-  readonly property var detailRows: {
-    if (root.preview && root.preview.rows)
-      return root.preview.rows;
-    var rows = [];
-    if (root.program !== "")
-      rows.push({
-        label: "Program",
-        value: root.program
-      });
-    var who = root.identities[root.selectedIndex];
-    if (who)
-      rows.push({
-        label: "Identity",
-        value: who.name
-      });
-    return rows;
   }
 
   // ---- the conversation ----
@@ -242,31 +187,20 @@ Singleton {
     return text !== "" ? text : "Password";
   }
 
-  // Whether the answer is shown as typed (a one-time code) rather than as dots.
-  readonly property bool liveEcho: root.preview ? root.preview.echo === true : root.flow ? root.flow.responseVisible : false
-
-  // PAM's own text for this try: "" when it has said nothing, or has said it and moved on.
-  readonly property string liveNotice: {
-    if (root.preview)
-      return root.preview.notice || "";
-    return root.flow ? root.flow.supplementaryMessage : "";
-  }
-  readonly property bool liveNoticeIsError: root.preview ? root.preview.noticeIsError === true : root.flow ? root.flow.supplementaryIsError : false
-
   // An answer is out and nothing has come back yet. Set by submit(), cleared by PAM asking
   // again (a wrong answer, or a second factor) or by the flow ending.
   property bool submitted: false
   readonly property bool liveChecking: root.pending && root.submitted
 
-  // The error latched from the last failed try, until the next keystroke. Bumped on each
-  // failure so the pill can shake again for a second one.
+  // The error latched from the last failed try, until the next keystroke. `failedCount` counts
+  // the failures of this request and shakes the pill again for each; a new request starts at 0.
   property string errorText: ""
   property int failedCount: 0
 
   // The error PAM gave during this try, if it gave one; used for the latch when a try fails.
   property string heardError: ""
 
-  // An identity change is under way; see selectIdentity().
+  // An identity change is under way; see pickIdentity().
   property bool switching: false
 
   // An answer typed before PAM has asked again (right after a failure), sent as soon as it does.
@@ -308,23 +242,21 @@ Singleton {
       root.flow.cancelAuthenticationRequest();
   }
 
-  // Another identity restarts the conversation from its first question.
-  function selectIdentity(index) {
-    if (index === root.selectedIndex || index < 0 || index >= root.identities.length)
+  // The first question is asked of the user's own account when it may approve, whoever polkitd
+  // listed first. Choosing restarts the conversation, so it is done before anything is typed.
+  function pickIdentity() {
+    var list = root.flow.identities;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].string !== Account.userName)
+        continue;
+      if (list[i] !== root.flow.selectedIdentity) {
+        // AuthFlow cancels the old PAM session to start the new one, and reports that as a failed
+        // try, synchronously; it is not one.
+        root.switching = true;
+        root.flow.selectedIdentity = list[i];
+        root.switching = false;
+      }
       return;
-    root.submitted = false;
-    root.queued = "";
-    root.hasQueued = false;
-    root.errorText = "";
-    root.heardError = "";
-    if (root.preview)
-      root.previewSelected = index;
-    else {
-      // AuthFlow cancels the old PAM session to start the new one, and reports that as a failed
-      // try, synchronously; it is not one.
-      root.switching = true;
-      root.flow.selectedIdentity = root.flow.identities[index];
-      root.switching = false;
     }
   }
 
@@ -341,10 +273,12 @@ Singleton {
       return;
     root.closing = false;
     root.submitted = false;
+    root.failedCount = 0;
     root.errorText = "";
     root.heardError = "";
     root.queued = "";
     root.hasQueued = false;
+    root.pickIdentity();
   }
 
   onPreviewChanged: {
@@ -352,9 +286,9 @@ Singleton {
       return;
     root.closing = false;
     root.submitted = false;
+    root.failedCount = 0;
     root.errorText = "";
     root.heardError = "";
-    root.previewSelected = 0;
     root.previewAwaiting = true;
   }
 
