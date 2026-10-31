@@ -9,5 +9,8 @@
     ical-agenda
     forward-dev
     t3code
+    # The design editor (`openpencil-desktop`) and its CLI (`openpencil`, `openpencil eval`).
+    openpencil
+    openpencil-cli
   ];
 }
