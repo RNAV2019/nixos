@@ -63,8 +63,8 @@ Singleton {
 
   signal clockRefreshed
 
-  // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
-  // "theme", "recorder", "calendar", "session", "profiles", "auth", "osd", "notify".
+  // Opening and closing an island surface, by key: any of islandKeys, or a transient key
+  // (see transientKeys) for the surfaces that handle it.
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 

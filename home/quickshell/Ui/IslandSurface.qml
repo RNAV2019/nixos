@@ -11,8 +11,7 @@ PanelWindow {
 
   required property var modelData
 
-  // Identity on the bus, and the layer-shell namespace. One of "launcher",
-  // "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth".
+  // Identity on the bus, and the layer-shell namespace. One of Bus.islandKeys.
   property string key: ""
 
   // The shape this surface settles at. Any of the three may be a live binding.

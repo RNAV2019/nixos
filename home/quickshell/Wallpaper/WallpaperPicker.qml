@@ -76,18 +76,20 @@ Variants {
       case Qt.Key_Up:
       case Qt.Key_H:
       case Qt.Key_Backtab:
-        carousel.step(-1);
+        win.step(-1);
         break;
       case Qt.Key_Right:
       case Qt.Key_Down:
       case Qt.Key_L:
       case Qt.Key_Tab:
-        carousel.step(1);
+        win.step(1);
         break;
       case Qt.Key_Home:
+        initializingSelection = false;
         carousel.selected = 0;
         break;
       case Qt.Key_End:
+        initializingSelection = false;
         carousel.selected = Math.max(0, carousel.count - 1);
         break;
       case Qt.Key_Return:

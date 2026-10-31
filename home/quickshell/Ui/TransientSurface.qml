@@ -19,7 +19,7 @@ PanelWindow {
 
   required property var modelData
 
-  // Identity on the bus and in the layer-shell namespace: "osd", "notify", "sharing", "dictation".
+  // Identity on the bus and in the layer-shell namespace. One of Bus.transientKeys.
   property string key: ""
   property string layerNamespace: "quickshell-" + win.key
   property int rank: 0

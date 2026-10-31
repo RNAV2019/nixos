@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 import qs.Services
-import qs.Control
 import qs.Ui
 
 // The screen recorder's picker: from the keyboard or pill it grows out of the pill; from
