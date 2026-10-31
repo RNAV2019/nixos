@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Notifications
 import qs.Commons
 
@@ -20,23 +19,15 @@ Singleton {
 
   // Peace survives a reboot: every change to the flag is saved, and the saved one is
   // applied once the file is read at startup, unless a toggle has already landed.
-  property bool _peaceTouched: false
+  onPeaceChanged: peaceState.save(root.peace ? "1" : "0")
 
-  onPeaceChanged: {
-    root._peaceTouched = true;
-    peaceState.setText(root.peace ? "1" : "0");
-  }
-
-  FileView {
+  PersistedValue {
     id: peaceState
 
-    path: Paths.stateDir + "/peace"
-    printErrors: false
+    name: "peace"
 
-    onLoaded: {
-      if (root._peaceTouched)
-        return;
-      if (peaceState.text().trim() === "1")
+    onRestored: text => {
+      if (text === "1")
         root.peace = true;
     }
   }

@@ -3,8 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Io
-import qs.Commons
 
 // Where the external monitor sits relative to the laptop panel. A placement is saved per
 // monitor, keyed on its description (make, model and serial), as an offset from the panel,
@@ -96,7 +94,7 @@ Singleton {
       y: Math.round(y - internal.y)
     };
     saved = next;
-    store.setText(JSON.stringify(saved, null, 2));
+    store.save(JSON.stringify(saved, null, 2));
     apply(m, x, y);
   }
 
@@ -107,7 +105,7 @@ Singleton {
     var next = Object.assign({}, saved);
     delete next[m.description];
     saved = next;
-    store.setText(JSON.stringify(saved, null, 2));
+    store.save(JSON.stringify(saved, null, 2));
     var panel = layoutRect(internal);
     apply(m, panel.x + panel.w, panel.y);
   }
@@ -126,15 +124,14 @@ Singleton {
     }
   }
 
-  FileView {
+  PersistedValue {
     id: store
 
-    path: Paths.stateDir + "/displays.json"
-    printErrors: false
+    name: "displays.json"
 
-    onLoaded: {
+    onRestored: text => {
       try {
-        root.saved = JSON.parse(store.text()) || {};
+        root.saved = JSON.parse(text) || {};
       } catch (e) {
         root.saved = {};
       }
