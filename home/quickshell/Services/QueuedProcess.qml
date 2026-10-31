@@ -4,7 +4,7 @@ import Quickshell.Io
 // One process in flight; a run asked for while one is going queues exactly one more,
 // which starts when the current run exits. A burst of requests therefore collapses
 // into a single follow-up instead of a stack of processes.
-Process {
+StampedProcess {
   id: root
 
   property bool queued: false

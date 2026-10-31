@@ -63,18 +63,15 @@ Item {
   onDirsOnlyChanged: rebuild()
   Component.onCompleted: reload()
 
-  Process {
+  StampedProcess {
     id: lister
 
-    // The path this run lists, so a late answer for a folder already left is dropped.
-    property string forPath: ""
-
-    onRunningChanged: if (running)
-      forPath = root.path
+    // A late answer for a folder already left is dropped.
+    stamp: root.path
 
     stdout: StdioCollector {
       onStreamFinished: {
-        if (lister.forPath !== root.path)
+        if (lister.stale)
           return;
         var lines = text.split("\n");
         if (lines.length > 0 && lines[0] === "!") {

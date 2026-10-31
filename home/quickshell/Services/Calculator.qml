@@ -642,7 +642,6 @@ Singleton {
   }
 
   property string dateFor: ""
-  property string dateRanFor: ""
   property string dateKind: ""
   property string dateLabel: ""
   // The zone the answer is printed in; empty is the shell's own.
@@ -679,6 +678,7 @@ Singleton {
   QueuedProcess {
     id: date
 
+    stamp: root.dateFor
     command: ["date"].concat(root.dateArgs)
     // The shell's own environment has no TZDIR, and glibc then cannot find any zone.
     environment: root.dateZone ? {
@@ -688,20 +688,15 @@ Singleton {
       TZDIR: "/etc/zoneinfo"
     }
 
-    onRunningChanged: {
-      if (running)
-        root.dateRanFor = root.dateFor;
-    }
-
     stdout: StdioCollector {
       onStreamFinished: {
-        if (root.dateRanFor === root.dateFor && root.dateFor !== "")
+        if (!date.stale && root.dateFor !== "")
           root.results = root.dateRows(text);
       }
     }
 
     onExited: function (code) {
-      if (code !== 0 && root.dateRanFor === root.dateFor)
+      if (code !== 0 && !date.stale)
         root.results = [];
     }
   }
@@ -733,7 +728,6 @@ Singleton {
   }
 
   property string qalcFor: ""
-  property string qalcRanFor: ""
 
   // qalc prints "<expression as read> = <result>" (or ≈); errors and warnings are lines
   // of their own. An error means qalc guessed at the input, so nothing is shown.
@@ -752,7 +746,7 @@ Singleton {
       return [];
 
     var cut = Math.max(last.lastIndexOf(" = "), last.lastIndexOf(" ≈ "));
-    var shown = cut >= 0 ? last.substr(0, cut) : root.qalcRanFor;
+    var shown = cut >= 0 ? last.substr(0, cut) : qalc.launchedFor;
     var result = cut >= 0 ? last.substr(cut + 3) : last;
     var approx = cut >= 0 && last.substr(cut, 3) === " ≈ ";
     var value = tidy(result);
@@ -771,20 +765,17 @@ Singleton {
   QueuedProcess {
     id: qalc
 
+    stamp: root.qalcFor
+
     // A 1 s ceiling keeps "99999!" from wedging the launcher.
     command: ["qalc", "-m", "1000", root.forQalc(root.qalcFor)]
     environment: ({
         XDG_CONFIG_HOME: root.qalcHome
       })
 
-    onRunningChanged: {
-      if (running)
-        root.qalcRanFor = root.qalcFor;
-    }
-
     stdout: StdioCollector {
       onStreamFinished: {
-        if (root.qalcRanFor === root.qalcFor && root.qalcFor !== "")
+        if (!qalc.stale && root.qalcFor !== "")
           root.results = root.qalcRows(text);
       }
     }

@@ -62,17 +62,14 @@ Item {
     }
   }
 
-  Process {
+  StampedProcess {
     id: query
 
-    property int tag: 0
-
+    stamp: root.writeSeq
     command: root.command
 
     onRunningChanged: {
-      if (query.running) {
-        query.tag = root.writeSeq;
-      } else if (root._settleMissed) {
+      if (!query.running && root._settleMissed) {
         root._settleMissed = false;
         settleTimer.restart();
       }
@@ -85,7 +82,7 @@ Item {
           root._available = false;
           return;
         }
-        if (query.tag < root.writeSeq)
+        if (query.stale)
           return;
         root._available = true;
         root.value = value;
@@ -94,7 +91,7 @@ Item {
     }
 
     onExited: function (code) {
-      if (code !== 0 && query.tag >= root.writeSeq)
+      if (code !== 0 && !query.stale)
         root._available = false;
     }
   }
