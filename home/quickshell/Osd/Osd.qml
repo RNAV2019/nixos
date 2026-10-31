@@ -58,8 +58,8 @@ Scope {
 
       target: root.sources[modelData]
 
-      function onAdjusted() {
-        if (root.ready)
+      function onAdjusted(pressed) {
+        if (root.ready || pressed)
           root.flash(modelData);
       }
     }

@@ -97,7 +97,7 @@ LevelSource {
     var pct = Math.min(maxStepPercent, stepPercent + Math.max(0, _run - accelAfter) * stepGrowth);
     queueValue(baseValue() + (up ? pct : -pct) / 100);
     // Per keypress, even at a rail, so the OSD appears without a sysfs change.
-    root.adjusted();
+    root.adjusted(true);
   }
 
   // The panel slider's absolute target, in the same linear space as the steps.
@@ -113,7 +113,7 @@ LevelSource {
 
     // available filters the initial zero-to-real transition.
     if (root.available)
-      root.adjusted();
+      root.adjusted(false);
   }
 
   Timer {

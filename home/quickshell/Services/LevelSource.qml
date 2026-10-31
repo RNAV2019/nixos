@@ -23,7 +23,8 @@ Singleton {
 
   // Flash the OSD for this source. Emitted exactly when a change is worth showing; the OSD
   // keeps its own startup suppression, so a source does not hold back its first changes.
-  signal adjusted
+  // `pressed` marks a keypress, which shows even during that suppression.
+  signal adjusted(bool pressed)
 
   // A source with nothing to step or set keeps these no-ops.
   function step(up) {

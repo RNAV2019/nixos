@@ -24,7 +24,7 @@ LevelSource {
   // Firmware handles the key, so sysfs is the only signal; available filters the initial
   // zero-to-real transition.
   onLevelChanged: if (root.available)
-    root.adjusted()
+    root.adjusted(false)
 
   SysfsGauge {
     id: gauge

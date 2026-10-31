@@ -26,5 +26,5 @@ LevelSource {
     objects: root.source ? [root.source] : []
   }
 
-  onMutedChanged: root.adjusted()
+  onMutedChanged: root.adjusted(false)
 }

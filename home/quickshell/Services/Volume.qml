@@ -31,8 +31,8 @@ LevelSource {
   }
 
   // Any client's change shows, not only the keys'.
-  onVolumeChanged: root.adjusted()
-  onMutedChanged: root.adjusted()
+  onVolumeChanged: root.adjusted(false)
+  onMutedChanged: root.adjusted(false)
 
   // Key repeat can outpace wpctl: a signed pending delta preserves the net change and
   // lets opposite presses cancel before a process starts.
@@ -63,7 +63,7 @@ LevelSource {
     writeTimer.restart();
     // Per keypress even at the rail, so the OSD can appear without waiting on a Pipewire
     // change that never comes.
-    root.adjusted();
+    root.adjusted(true);
   }
 
   function set(v) {
