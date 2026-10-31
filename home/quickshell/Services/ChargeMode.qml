@@ -3,7 +3,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import qs.Commons
 
 // The battery's charge mode, from the kernel's power-supply `charge_types`: it reads
 // `[Fast] Standard Long_Life`, the bracketed word being the active one, and writing a word
@@ -45,24 +44,21 @@ Singleton {
     return mode;
   }
 
-  // The choice made here, kept so a firmware that forgets it across a reboot is put right
-  // when the shell next starts. Changes made elsewhere are not saved: they may be exactly
-  // the reset being undone.
-  property string _wanted: ""
-  property bool _wantedLoaded: false
+  // Whether the saved choice has been put back yet; it is, once.
   property bool _restored: false
-
-  // Mode to fall back on if a write is refused, so the tile does not claim a mode it lacks.
-  property string _restore: ""
 
   function set(word) {
     if (!available || word === mode || modes.indexOf(word) < 0)
       return;
-    _restore = mode;
+    var was = mode;
+    // Nothing moved if the write is refused, so the tile goes back to the mode it had rather
+    // than claim one the machine lacks.
+    if (!write.exec(["sh", "-c", 'printf %s "$1" > "$2"', "sh", word, root.path], function () {
+      root.mode = was;
+    }))
+      return;
     mode = word;
-    _wanted = word;
-    savedState.setText(word);
-    write.exec(["sh", "-c", 'printf %s "$1" > "$2"', "sh", word, root.path]);
+    savedState.save(word);
   }
 
   function cycle() {
@@ -95,11 +91,12 @@ Singleton {
 
   // Once both the device and the saved choice are known, undo a reset - once.
   function restore() {
-    if (_restored || !_wantedLoaded || mode === "")
+    if (_restored || !savedState.loaded || mode === "")
       return;
     _restored = true;
-    if (_wanted !== "" && _wanted !== mode && modes.indexOf(_wanted) >= 0)
-      set(_wanted);
+    var wanted = savedState.value;
+    if (wanted !== "" && wanted !== mode && modes.indexOf(wanted) >= 0)
+      set(wanted);
   }
 
   FileView {
@@ -127,23 +124,15 @@ Singleton {
     }
   }
 
-  FileView {
+  // The choice made here, kept so a firmware that forgets it across a reboot is put right
+  // when the shell next starts. Changes made elsewhere are not saved: they may be exactly
+  // the reset being undone.
+  PersistedValue {
     id: savedState
 
-    path: Paths.stateDir + "/chargemode"
-    printErrors: false
+    name: "chargemode"
 
-    onLoaded: {
-      if (root._wanted === "")
-        root._wanted = savedState.text().trim();
-      root._wantedLoaded = true;
-      root.restore();
-    }
-
-    onLoadFailed: {
-      root._wantedLoaded = true;
-      root.restore();
-    }
+    onLoadedChanged: root.restore()
   }
 
   // Sysfs sends no inotify events, and the mode changes from other tools too.
@@ -158,9 +147,6 @@ Singleton {
     id: write
 
     label: "Charge mode"
-
-    // Nothing moved, so show what the file still says.
-    onFailed: root.mode = root._restore
   }
 
   Connections {

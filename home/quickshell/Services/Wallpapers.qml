@@ -59,25 +59,25 @@ Singleton {
   function apply(entry) {
     if (!entry || entry.real === root.current)
       return;
+    // The link is the record: if it did not move, the state goes back to what is on disk.
+    if (!relink.exec(["sh", "-c", 'ln -sfn "$1" "$2.new" && mv -T "$2.new" "$2" && ln -sfn "$1" "$3.new" && mv -T "$3.new" "$3"', "sh", entry.path, root.link, root.themeLink], root.refresh))
+      return;
     root.current = entry.real;
     relink.target = entry.path;
-    relink.command = ["sh", "-c", 'ln -sfn "$1" "$2.new" && mv -T "$2.new" "$2" && ln -sfn "$1" "$3.new" && mv -T "$3.new" "$3"', "sh", entry.path, root.link, root.themeLink];
-    relink.running = true;
   }
 
   // Renamed over the old one, because rename is the only way to replace a symlink
   // without a moment where it does not exist.
-  Process {
+  Command {
     id: relink
 
     property string target: ""
 
+    label: "Wallpaper link"
+
     onExited: function (code) {
-      if (code !== 0) {
-        // The link is the record: if it did not move, the state goes back to what is on disk.
-        root.refresh();
+      if (code !== 0)
         return;
-      }
       paint.command = root.paintCommand(relink.target);
       paint.running = true;
     }
