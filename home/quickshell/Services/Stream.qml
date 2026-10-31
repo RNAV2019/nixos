@@ -12,7 +12,7 @@ Item {
   property string socketPath: ""
 
   // The wait before a retry, doubling per failed attempt up to maxRetryMs (equal for a fixed
-  // wait). A connection starts the count again.
+  // wait). A connection (a command's first line) starts the count again.
   property int retryMs: 2000
   property int maxRetryMs: retryMs
 
@@ -36,8 +36,10 @@ Item {
 
   Component.onCompleted: root._connect()
 
+  // A socket that opens is up; a command only once it says something, so one that starts
+  // and dies at once keeps backing off rather than restarting every retryMs.
   onConnectedChanged: {
-    if (root.connected)
+    if (root.connected && root.socketPath !== "")
       root._wait = root.retryMs;
   }
 
@@ -58,7 +60,10 @@ Item {
     command: root.command
 
     stdout: SplitParser {
-      onRead: data => root.line(data)
+      onRead: data => {
+        root._wait = root.retryMs;
+        root.line(data);
+      }
     }
 
     stderr: SplitParser {
