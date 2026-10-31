@@ -5,7 +5,7 @@ import qs.Services
 import qs.Ui
 import "../Commons/Duration.js" as Duration
 
-// The rebuild pill (Penpot "T / Rebuild pill"): the Sharing pill's progress state with a label
+// The rebuild pill (Penpot "T / Rebuild pill"): an IslandPill row (Ui/IslandPill.qml) with a label
 // before the track. The island grows out of its pill when a `rebuild` starts (Services/Rebuild.qml),
 // shows "Rebuilding" and n of m derivations as a fraction, then "Switched" and how long it took,
 // and after a short dwell melts back; a failed one says so and stays, outlined in love, until it
@@ -23,9 +23,9 @@ Variants {
 
     wanted: Rebuild.shown && win.focused && !Bus.islandOpenFor(win.screenName)
 
-    openWidth: Theme.rebuildPillWidth
-    openHeight: Theme.rebuildPillHeight
-    openRadius: Theme.rebuildPillRadius
+    openWidth: Theme.islandPillWidth
+    openHeight: Theme.islandPillHeight
+    openRadius: Theme.islandPillRadius
 
     readonly property bool building: Rebuild.running
     readonly property bool finished: Rebuild.phase === "done"
@@ -45,8 +45,8 @@ Variants {
 
       x: (win.surface.width - width) / 2
       y: (win.surface.height - height) / 2
-      width: Theme.rebuildPillWidth
-      height: Theme.rebuildPillHeight
+      width: Theme.islandPillWidth
+      height: Theme.islandPillHeight
 
       HoverHandler {
         id: hover
@@ -61,176 +61,77 @@ Variants {
 
       // ---- Building ----
       PillState {
+        anchors.fill: parent
         shown: win.building
 
-        StrokeIcon {
-          x: Theme.dictationGlyphLeft
-          y: (parent.height - size) / 2
-          size: Theme.dictationGlyphSize
-          strokeWidth: 1.75
-          path: IconPaths.snowflake
-          color: Theme.inkPrimary
-        }
-
-        Label {
-          text: "Rebuilding"
-        }
-
         // The total is not known yet while it evaluates: a segment slides across instead.
-        Rectangle {
-          id: track
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphLabelTrackReading"
+          label: "Rebuilding"
+          reading: Rebuild.total > 0 ? Math.round(Rebuild.fraction * 100) + "%" : "…"
+          tabularReading: true
+          value: Rebuild.fraction
+          indeterminate: Rebuild.total === 0
+          running: win.open
 
-          x: Theme.rebuildTrackLeft
-          y: (parent.height - height) / 2
-          width: Theme.rebuildTrackWidth
-          height: Theme.rebuildTrackHeight
-          radius: height / 2
-          color: Theme.surfaceSubtle
-          clip: true
-
-          readonly property bool known: Rebuild.total > 0
-
-          Rectangle {
-            width: track.known ? track.width * Rebuild.fraction : 0
-            height: parent.height
-            radius: parent.radius
-            color: Theme.accentFill
-
-            Behavior on width {
-              enabled: !Theme.reduceMotion
-
-              Morph {
-                duration: Theme.duration(Theme.morphProgress)
-              }
-            }
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 1.75
+            path: IconPaths.snowflake
+            color: Theme.inkPrimary
           }
-
-          Rectangle {
-            id: sweep
-
-            readonly property real span: track.width * Theme.rebuildSweepShare
-
-            visible: !track.known && !Theme.reduceMotion
-            width: span
-            height: parent.height
-            radius: parent.radius
-            color: Theme.accentFill
-
-            NumberAnimation on x {
-              from: -sweep.span
-              to: track.width
-              duration: Theme.rebuildSweep
-              loops: Animation.Infinite
-              running: sweep.visible && win.open
-            }
-          }
-        }
-
-        Value {
-          text: track.known ? Math.round(Rebuild.fraction * 100) + "%" : "…"
-          color: Theme.inkPrimary
         }
       }
 
       // ---- Done ----
       PillState {
+        anchors.fill: parent
         shown: win.finished
 
-        StrokeIcon {
-          x: Theme.dictationGlyphLeft
-          y: (parent.height - size) / 2
-          size: Theme.dictationGlyphSize
-          strokeWidth: 1.75
-          path: IconPaths.check
-          color: Theme.accentFill
-        }
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphLabelReading"
+          label: "Switched"
+          reading: Duration.elapsed(Rebuild.endedAt - Rebuild.startedAt)
+          readingColor: Theme.inkSecondary
+          tabularReading: true
 
-        Label {
-          text: "Switched"
-        }
-
-        Value {
-          text: Duration.elapsed(Rebuild.endedAt - Rebuild.startedAt)
-          color: Theme.inkSecondary
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 1.75
+            path: IconPaths.check
+            color: Theme.accentFill
+          }
         }
       }
 
       // ---- Failed ----
       PillState {
+        anchors.fill: parent
         shown: win.failed
 
-        StrokeIcon {
-          x: Theme.dictationGlyphLeft
-          y: (parent.height - size) / 2
-          size: Theme.dictationGlyphSize
-          strokeWidth: 1.75
-          path: IconPaths.circleX
-          color: Theme.love
-        }
-
-        Label {
-          text: "Rebuild failed"
-        }
-
         // How far it got, when it knew how far there was to go.
-        Value {
-          text: Rebuild.total > 0 ? Rebuild.done + "/" + Rebuild.total : ""
-          color: Theme.love
-        }
-      }
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphLabelReading"
+          alert: win.failed
+          label: "Rebuild failed"
+          reading: Rebuild.total > 0 ? Rebuild.done + "/" + Rebuild.total : ""
+          readingColor: Theme.love
+          tabularReading: true
 
-      // The attention: the pill's own outline, in love, as the login pill's refusal is.
-      Rectangle {
-        anchors.fill: parent
-        radius: height / 2
-        color: "transparent"
-        border.width: 1
-        border.color: Theme.withAlpha(Theme.love, Theme.lockErrorOutline)
-        opacity: win.failed ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.duration(Theme.lockStateFade)
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 1.75
+            path: IconPaths.circleX
+            color: Theme.love
           }
         }
       }
-    }
-  }
-
-  // One state's contents; the three cross-fade, so a new run replaces a failure where it stands.
-  component PillState: Item {
-    property bool shown: false
-
-    anchors.fill: parent
-    opacity: shown ? 1 : 0
-    visible: opacity > 0
-
-    Behavior on opacity {
-      Morph {
-        duration: Theme.morphContent * 2
-      }
-    }
-  }
-
-  component Label: Text {
-    x: Theme.rebuildLabelLeft
-    y: (parent.height - height) / 2
-    color: Theme.inkPrimary
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.nearbyRowNameSize
-    font.weight: Theme.weightMedium
-  }
-
-  // The reading at the right, its edge on the same inset as the Sharing pill's.
-  component Value: Text {
-    x: Theme.rebuildPillWidth - Theme.rebuildValueRight - width
-    y: (parent.height - height) / 2
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.osdValueSize
-    font.weight: Theme.weightSemi
-    font.features: {
-      "tnum": 1
     }
   }
 }
