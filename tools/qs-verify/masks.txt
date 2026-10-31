@@ -1,0 +1,32 @@
+# Regions that differ between runs for reasons that are not the code under test.
+# GLOB (of the capture's name, without .png)   X  Y  W  H     — logical px, scaled by the scenario
+#
+# The island's clock, wherever the resting pill is drawn.
+*      916   8   88   34
+
+# Animations that never rest. Painted over in both the stability check and the comparison.
+# The radar's pulsing rings (Nearby receive view).
+panel-nearby-receive   866  70  188  188
+panel-nearby-arrivals  866  70  188  188
+# The password field's blinking caret, wherever typing puts it.
+auth-typing            916  38   40   24
+# The auth prompt's checking spinner.
+auth-checking         1092  20   38   36
+# The dictation pill's working spinner.
+dictation-transcribing 834  16   32   32
+dictation-polishing    834  16   32   32
+# The password field's caret when the field is empty.
+auth-pkexec            838  38   14   22
+auth-plain             838  38   14   22
+auth-long              838  38   14   22
+auth-identities        838  38   14   22
+# The three dots of the sharing pill's "Connecting…".
+sharing-connecting    1054  24   38   14
+# The rebuild pill's progress track while the total is unknown: a segment sweeps across it.
+rebuild-building-unknown  944  25  100  16
+# The launcher search field's blinking caret (empty, after "te", after the calculator input).
+panel-launcher         740   30  50  26
+panel-launcher-query   760   30  30  26
+panel-launcher-calc    824   30  16  26
+# The island's clock once the pointer has grown the island (it sits lower and wider).
+hover-island           925   26  80  30

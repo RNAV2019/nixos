@@ -1,0 +1,15 @@
+# Lines quickshell logs at load that the harness knows and explains. Regexes, one per line,
+# matched against "WARN ..." / "ERROR ..." lines; anything else fails run.sh.
+
+# Sway is not Hyprland.
+Cannot connect to hyprland
+# The harness's system bus is empty on purpose (no live UPower, NetworkManager, bluez, polkitd).
+Could not (launch service|start) org\.freedesktop\.UPower|UPower service will not work
+Failed to create DBusObjectManagerInterface for "org\.bluez"
+Network will not work\. Could not find an available backend
+failed to register listener
+# Scratch HOME has no face picture or wallpaper (the lock view's fallbacks draw instead).
+LoginPill\.qml.*Cannot open: .*/\.face
+LockView\.qml.*Cannot open: .*/wallpaper/current
+# Present in the source today: the Variants-made IpcHandlers reassign modelData on creation.
+IpcHandler at @shell\.qml.*Signal detected: "modelDataChanged"
