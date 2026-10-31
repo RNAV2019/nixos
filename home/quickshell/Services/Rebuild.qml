@@ -7,7 +7,8 @@ import Quickshell.Io
 // The system rebuild that the `rebuild` alias (home/shell.nix) is running, as Nix reports it. The
 // alias has Nix write its progress to a file (`--option json-log-path`, the JSON of
 // `--log-format internal-json`); this tails that file and keeps what the pill in
-// Rebuild/RebuildPill.qml shows: building n of m derivations, then done or failed.
+// Rebuild/RebuildPill.qml shows: what the rebuild is doing, how far through the whole of it it is,
+// then done or failed.
 //
 // A file, not a socket the shell listens on, because Nix falls back to a plain file when nothing
 // listens (so a socket the shell dropped would be replaced by a root-owned file, and a stale one
@@ -21,19 +22,36 @@ import Quickshell.Io
 // - the first event of a run starts the pill; the nix processes of one rebuild (nixos-rebuild runs
 //   several, one after another) share the file, told apart by the pid in the top half of every
 //   activity id;
-// - "these N derivations will be built" plus "these M paths will be fetched" is the total, as
-//   Nix's own "x/y built, a/b copied" counts both. Nix's expected counts (field 1 of the progress
-//   of the `builds` activity, type 104, and `copy paths`, 103) are not used: they count
-//   evaluation-time work and swing up and down, so only their `done` (field 0, a result of type
-//   105) is, of the activities started after those messages. Until a message there is no total,
-//   which is the pill's evaluating state;
+// - every realisation's `builds` and `copy paths` activities (types 104 and 103) report
+//   [done, expected, running, failed] (results of type 105); their sums are `done` and `total`.
+//   That includes the realisations evaluation itself asks for: this configuration grafts GTK with
+//   system.replaceDependencies, which builds the ungrafted system while it evaluates, so most
+//   building happens before the "these N derivations will be built" of the last realisation;
+// - a `build` or `substitute` activity (105, 108) open means something is being built or fetched;
 // - a message of level 0 that starts "error" (not "error (ignored)") and a build that failed
 //   (field 3) mean failure;
 // - the run is over when none of its processes is alive and the log has been quiet a moment (the
 //   next nix process of the same rebuild starts within that). It failed if an error was seen, or
 //   an activity was still open (a process that ended without a result: killed, or Ctrl-C), else
-//   it is done. The Nix processes' parent, nixos-rebuild, counts as one of them, so a switch is
-//   done once its activation has run too (whether that worked is only in the terminal).
+//   it is done. nixos-rebuild (found by the log path in its command line) counts as one of them,
+//   so a switch is done once its activation has run too (whether that worked is only in the
+//   terminal).
+//
+// How far it is: Nix never knows the whole of it in advance (evaluation's builds are found as it
+// goes, and activation writes nothing to the log), so `progress` is the work credited so far over
+// the work expected, each measured in time:
+// - evaluating, the time the Nix processes ran with nothing building, against what evaluation
+//   took last time. Nix says nothing of how far it is, but a configuration starts about the same
+//   number of activities (sources copied to the store) each time it is evaluated, so the time
+//   leads, held within reach of that count;
+// - building, the time spent so far, expecting as much again for each derivation or path still
+//   to come as one took last time;
+// - activating, while only nixos-rebuild is left (switch-to-configuration), the time against the
+//   last activation's.
+// Work found on the way grows what is expected, so the bar holds rather than going back; work
+// that runs over its estimate creeps towards its end instead of reaching it. The lengths are
+// learned from the runs that worked (Paths.stateDir/rebuild.json); until there is one, rough
+// defaults stand in.
 Job {
   id: root
 
@@ -45,6 +63,12 @@ Job {
 
   readonly property bool shown: phase !== "" && !dismissed
 
+  // "evaluating", "building" or "activating": what it is doing; after a run, what it was.
+  property string step: ""
+
+  // How far through the whole rebuild, 0 to 1; 1 once it is done.
+  property real progress: 0
+
   // How long the log must have been quiet, with no process alive, to call a run over.
   property int quietMs: 2500
 
@@ -54,26 +78,34 @@ Job {
 
   // ---- reading ----
 
-  // The run's processes: true for a Nix process in the log, "parent" for the nixos-rebuild that
-  // started one, which is not in the log but outlives them through the activation.
+  // The run's processes: true for a Nix process in the log, "parent" for the nixos-rebuild given
+  // the log, which is not in it but outlives them through the activation.
   property var _pids: ({})
   property var _open: ({})
   property int _openCount: 0
-  // The realisation Nix announced last: how many derivations it builds and paths it fetches,
-  // and the activities that count them. Activity ids carry the pid in their top half, so they
-  // do not fit an int.
-  property int _toBuild: 0
-  property int _toFetch: 0
-  property real _buildId: 0
-  property real _copyId: 0
-  property int _built: 0
-  property int _fetched: 0
-  // A realisation has been announced, so the next builds and copy-paths activities are its.
-  property bool _announced: false
+  // Each builds and copy-paths activity's latest [done, expected], by id, from when it starts.
+  // Activity ids carry the pid in their top half, so they do not fit an int.
+  property var _units: ({})
+  // The build and substitute activities open, and when the last one closed.
+  property var _work: ({})
+  property int _workCount: 0
+  property real _workEndedAt: 0
   property real _lastEvent: 0
   // When a probe last found one of the run's processes alive.
   property real _lastAlive: 0
   property bool _failed: false
+  // Activities this run started that are not builds or fetches (mostly evaluation copying sources
+  // to the store).
+  property int _events: 0
+  // What nixos-rebuild was asked to do, read from its command line once a probe finds it.
+  property string _action: "switch"
+  // Only nixos-rebuild is left.
+  property bool _activating: false
+  // The time spent evaluating, building and activating, added up a tick at a time.
+  property real _evalMs: 0
+  property real _buildMs: 0
+  property real _activateMs: 0
+  property real _tickAt: 0
 
   function _strip(text) {
     return String(text).replace(/\u001b\[[0-9;]*m/g, "");
@@ -85,13 +117,25 @@ Job {
     endedAt = 0;
     done = 0;
     total = 0;
+    progress = 0;
+    step = "evaluating";
     dismissed = false;
     _pids = {};
     _lastAlive = 0;
     _open = {};
     _openCount = 0;
-    _resetRealisation();
+    _units = {};
+    _work = {};
+    _workCount = 0;
+    _workEndedAt = 0;
     _failed = false;
+    _events = 0;
+    _action = "switch";
+    _activating = false;
+    _evalMs = 0;
+    _buildMs = 0;
+    _activateMs = 0;
+    _tickAt = startedAt;
   }
 
   // One line of the log.
@@ -123,71 +167,171 @@ Job {
         _open[e.id] = true;
         _openCount++;
       }
-      // The builds and fetches of the realisation announced above, not the ones evaluation made.
-      if (e.type === 104 && _buildId === 0 && _announced)
-        _buildId = e.id;
-      else if (e.type === 103 && _copyId === 0 && _announced)
-        _copyId = e.id;
+      if (e.type === 103 || e.type === 104) {
+        _units[e.id] = [0, 0];
+      } else if (e.type === 105 || e.type === 108) {
+        _tick();
+        _work[e.id] = true;
+        _workCount++;
+      } else if (e.type === 0) {
+        _events++;
+      }
       break;
     case "stop":
       if (_open[e.id] !== undefined) {
         delete _open[e.id];
         _openCount--;
       }
+      if (_work[e.id] !== undefined) {
+        _tick();
+        delete _work[e.id];
+        _workCount--;
+        _workEndedAt = Date.now();
+      }
       break;
     case "result":
-      // Progress of the builds or the fetches: [done, expected, running, failed].
-      if (e.type === 105 && e.id !== 0 && (e.id === _buildId || e.id === _copyId) && e.fields !== undefined && e.fields.length >= 4) {
-        if (e.id === _buildId)
-          _built = e.fields[0];
-        else
-          _fetched = e.fields[0];
-        // A fetch can pull in a path the announcement did not list, so the count stops at it.
-        var now = Math.min(total, _built + _fetched);
-        if (now !== done)
-          done = now;
+      // Progress of a realisation's builds or fetches: [done, expected, running, failed]. Copying
+      // a path and downloading report progress too, but in bytes.
+      if (e.type === 105 && _units[e.id] !== undefined && e.fields !== undefined && e.fields.length >= 4) {
+        _units[e.id] = [e.fields[0], e.fields[1]];
+        _count();
         if (e.fields[3] > 0)
           _failed = true;
       }
       break;
     case "msg":
-      _message(e.level, _strip(e.msg));
+      if (e.level === 0 && /^error\b(?! \(ignored\))/.test(_strip(e.msg)))
+        _failed = true;
       break;
     }
   }
 
-  function _message(level, text) {
-    if (level === 0 && /^error\b(?! \(ignored\))/.test(text)) {
-      _failed = true;
-      return;
+  function _count() {
+    var d = 0, t = 0;
+    for (var id in _units) {
+      var u = _units[id];
+      d += Math.min(u[0], u[1]);
+      t += u[1];
     }
-    // Nix announces what it builds, then what it fetches; an announcement after the last one's
-    // activities started is the next realisation, and replaces it.
-    var built = /^(?:this derivation|these (\d+) derivations) will be built/.exec(text);
-    var fetched = built === null ? /^(?:this path|these (\d+) paths) will be fetched/.exec(text) : null;
-    var m = built || fetched;
-    if (m === null)
-      return;
-    if (_buildId !== 0 || _copyId !== 0)
-      _resetRealisation();
-    var n = m[1] !== undefined ? parseInt(m[1], 10) : 1;
-    if (built !== null)
-      _toBuild = n;
-    else
-      _toFetch = n;
-    total = _toBuild + _toFetch;
-    done = 0;
-    _announced = true;
+    done = d;
+    total = t;
   }
 
-  function _resetRealisation() {
-    _toBuild = 0;
-    _toFetch = 0;
-    _buildId = 0;
-    _copyId = 0;
-    _built = 0;
-    _fetched = 0;
-    _announced = false;
+  // ---- how far ----
+
+  // What the last runs that worked took; read from and written to `history`.
+  property var _hist: ({})
+
+  // A rough first guess, on a laptop, until a run has been measured.
+  readonly property real _defaultEvalMs: 25000
+  readonly property real _defaultStepMs: 4000
+  readonly property real _defaultActivateMs: 8000
+
+  // How long one derivation built or path fetched takes.
+  readonly property real _stepMs: _hist.stepMs || _defaultStepMs
+
+  // How long activation takes, 0 for a build or dry run, which has nothing after Nix.
+  function _expectedActivation() {
+    if (_action !== "switch" && _action !== "test" && _action !== "boot")
+      return 0;
+    var a = _hist.activateMs || {};
+    return a[_action] || _defaultActivateMs;
+  }
+
+  // Elapsed over expected, as a fraction that tracks it until 0.8 and then slows towards 0.97,
+  // so an overrun creeps rather than stops.
+  function _eased(elapsed, expected) {
+    if (expected <= 0)
+      return 0;
+    var x = elapsed / expected;
+    if (x < 0.8)
+      return x;
+    return 0.8 + 0.17 * (1 - Math.exp(-(x - 0.8) / 0.17));
+  }
+
+  // Adds the time since the last tick to what was going on through it.
+  function _tick() {
+    var now = Date.now();
+    var dt = Math.max(0, now - _tickAt);
+    _tickAt = now;
+    if (phase !== "running")
+      return;
+    if (_activating)
+      _activateMs += dt;
+    else if (_workCount > 0)
+      _buildMs += dt;
+    else
+      _evalMs += dt;
+  }
+
+  function _advance() {
+    _tick();
+    var now = Date.now();
+    step = _activating ? "activating" : (_workCount > 0 || now - _workEndedAt < 1000) ? "building" : "evaluating";
+
+    // Evaluation is all done once Nix is.
+    var e = _hist.evalMs || _defaultEvalMs;
+    var evaluated = 1;
+    if (!_activating) {
+      var byTime = _eased(_evalMs, e);
+      evaluated = byTime;
+      // The count comes in bursts with long quiet stretches between, so the time leads, but no
+      // further than a fifth of evaluation past the count.
+      if (_hist.evalEvents) {
+        var byCount = Math.min(1, _events / _hist.evalEvents);
+        evaluated = Math.min(0.97, Math.max(byCount, Math.min(byTime, byCount + 0.2)));
+      }
+    }
+    var pending = Math.max(0, total - done) * _stepMs;
+    var a = _expectedActivation();
+    var activated = _activating ? a * _eased(_activateMs, a) : 0;
+
+    var p = (e * evaluated + _buildMs + activated) / (e + _buildMs + pending + a);
+    if (p > progress)
+      progress = Math.min(0.99, p);
+  }
+
+  Timer {
+    interval: 200
+    repeat: true
+    running: root.running
+    onTriggered: root._advance()
+  }
+
+  // Keeps what a run that worked took, for the next run's estimates.
+  function _learn() {
+    var h = Object.assign({}, _hist);
+    // Halfway between the last estimate and this run, so one slow run (a cold cache, inputs to
+    // fetch) does not throw the next one far off.
+    var blend = (old, now) => Math.round(old ? (old + now) / 2 : now);
+    // An evaluation Nix had cached starts next to nothing and says nothing of the next one.
+    if (!h.evalEvents || _events >= h.evalEvents / 2) {
+      h.evalMs = blend(h.evalMs, _evalMs);
+      h.evalEvents = blend(h.evalEvents, _events);
+    }
+    if (_buildMs > 0 && done > 0)
+      h.stepMs = blend(h.stepMs, _buildMs / done);
+    if (_activateMs > 0 && _expectedActivation() > 0) {
+      var a = Object.assign({}, h.activateMs || {});
+      a[_action] = blend(a[_action], _activateMs);
+      h.activateMs = a;
+    }
+    _hist = h;
+    history.save(JSON.stringify(h, null, 2));
+  }
+
+  PersistedValue {
+    id: history
+
+    name: "rebuild.json"
+
+    onRestored: text => {
+      try {
+        root._hist = JSON.parse(text) || {};
+      } catch (e) {
+        root._hist = {};
+      }
+    }
   }
 
   // ---- ending ----
@@ -204,12 +348,19 @@ Job {
   function _probe() {
     if (probe.running)
       return;
-    // Prints the live ones, and each live Nix process's parent as "parent <pid>" if that is
-    // nixos-rebuild (a `nix build` run by hand is not waited on past its end). Field 4 of stat is
-    // the parent; a Nix process's name has no spaces, so plain splitting finds it.
-    var args = Object.keys(_pids).map(p => (_pids[p] === "parent" ? "p" : "n") + p);
-    probe.command = ["sh", "-c", "for a; do p=${a#?}; [ -d /proc/$p ] || continue; echo $p; [ ${a%$p} = n ] && read -r _ _ _ pp _ < /proc/$p/stat && grep -qa nixos-rebuild /proc/$pp/cmdline 2>/dev/null && echo parent $pp; done", "sh"].concat(args);
+    // Prints the live ones of the run's processes, then every process with this log in its
+    // command line as "parent <pid>" and its arguments, tab-separated; which of those are
+    // nixos-rebuild is up to `_isRebuild`. Found by command line rather than as a Nix process's
+    // parent, since a Nix process with nothing to do can be gone before tail has even seen the
+    // file.
+    probe.command = ["sh", "-c", "log=$1; shift; for p; do [ -d /proc/$p ] && echo $p; done; for f in $(grep -laF -- \"$log\" /proc/[0-9]*/cmdline 2>/dev/null); do p=${f#/proc/}; p=${p%/cmdline}; [ $p = $$ ] && continue; printf 'parent %s\\t' $p; tr '\\0\\n' '\\t ' < $f 2>/dev/null; echo; done", "sh", logPath].concat(Object.keys(_pids));
     probe.running = true;
+  }
+
+  // nixos-rebuild (or the sudo that runs it, which lives as long) given this log: the program and
+  // the path as arguments of their own, so a shell whose script merely mentions both is not.
+  function _isRebuild(args) {
+    return args.indexOf(logPath) >= 0 && args.some(a => /(?:^|\/)\.?nixos-rebuild(?:-wrapped)?$/.test(a));
   }
 
   Process {
@@ -221,18 +372,36 @@ Job {
           return;
         var lines = text.trim() === "" ? [] : text.trim().split("\n");
         var parents = null;
+        var alive = false;
+        var nixAlive = false;
         for (var i = 0; i < lines.length; i++) {
-          var m = /^parent (\d+)$/.exec(lines[i]);
-          if (m === null)
+          // A process gone before its command line was read (the probe's own grep, which has
+          // the path as an argument) leaves "parent <pid>" alone.
+          var m = /^parent (\d+)(?:\t(.*))?$/.exec(lines[i]);
+          if (m === null) {
+            alive = true;
+            if (root._pids[lines[i]] === true)
+              nixAlive = true;
             continue;
-          if (root._pids[m[1]] === undefined) {
-            parents = parents || Object.assign({}, root._pids);
-            parents[m[1]] = "parent";
           }
+          var args = (m[2] || "").split("\t");
+          if (root._pids[m[1]] !== undefined || !root._isRebuild(args))
+            continue;
+          alive = true;
+          parents = parents || Object.assign({}, root._pids);
+          parents[m[1]] = "parent";
+          var action = args.find(a => /^(?:switch|boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|build-image)$/.test(a));
+          if (action !== undefined)
+            root._action = action;
         }
         if (parents !== null)
           root._pids = parents;
-        if (lines.length > 0)
+        // Only nixos-rebuild is left: switch-to-configuration.
+        if (alive && !nixAlive && !root._activating && root._expectedActivation() > 0) {
+          root._tick();
+          root._activating = true;
+        }
+        if (alive)
           root._lastAlive = Date.now();
         else if (Date.now() - root._lastEvent >= root.quietMs)
           root._finish();
@@ -241,11 +410,20 @@ Job {
   }
 
   function _finish() {
+    _tick();
     endedAt = Math.max(_lastEvent, _lastAlive);
     var failed = _failed || _openCount > 0;
-    if (!failed && total > 0)
+    if (!failed) {
       done = total;
-    _announced = false;
+      progress = 1;
+      // The quiet wait before this is not the rebuild's.
+      var over = Math.max(0, Date.now() - endedAt);
+      if (_activating)
+        _activateMs = Math.max(0, _activateMs - over);
+      else
+        _evalMs = Math.max(0, _evalMs - over);
+      _learn();
+    }
     phase = failed ? "failed" : "done";
     // Done with: no process has it open, and the next run starts a new one.
     cleaner.exec(["rm", "-f", logPath]);

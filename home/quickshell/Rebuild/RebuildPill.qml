@@ -7,11 +7,11 @@ import "../Commons/Duration.js" as Duration
 
 // The rebuild pill (Penpot "T / Rebuild pill"): an IslandPill row (Ui/IslandPill.qml) with a label
 // before the track. The island grows out of its pill when a `rebuild` starts (Services/Rebuild.qml),
-// shows "Rebuilding" and how much of what Nix builds and fetches is done, then "Switched" and how
-// long it took, and after a short dwell melts back; a failed one says so, outlined in love, for
-// longer. The pointer passes through it: the rebuild runs in a terminal, which is where to act on
-// it. Ranked with the Sharing pill's progress, under everything that wants an answer, and waits
-// behind a user-opened panel.
+// shows what it is doing (Evaluating, Building, Activating) and how far through the whole rebuild
+// it is, then "Switched" and how long it took, and after a short dwell melts back; a failed one
+// says so, outlined in love, with how far it got, for longer. The pointer passes through it: the
+// rebuild runs in a terminal, which is where to act on it. Ranked with the Sharing pill's
+// progress, under everything that wants an answer, and waits behind a user-opened panel.
 Variants {
   model: Quickshell.screens
 
@@ -54,15 +54,15 @@ Variants {
         anchors.fill: parent
         shown: win.building
 
-        // The total is not known yet while it evaluates: a segment slides across instead.
+        // The step it is on, and how far through the whole rebuild (Services/Rebuild.qml says how
+        // that is measured). Rounded down, so 100% is only the moment it ends.
         IslandPill {
           anchors.fill: parent
           layout: "glyphLabelTrackReading"
-          label: "Rebuilding"
-          reading: Rebuild.total > 0 ? Math.round(Rebuild.fraction * 100) + "%" : ""
+          label: Rebuild.step === "building" ? "Building" : Rebuild.step === "activating" ? "Activating" : "Evaluating"
+          reading: Math.floor(Rebuild.progress * 100) + "%"
           tabularReading: true
-          value: Rebuild.fraction
-          indeterminate: Rebuild.total === 0
+          value: Rebuild.progress
           running: win.open
 
           StrokeIcon {
@@ -103,13 +103,13 @@ Variants {
         anchors.fill: parent
         shown: win.failed
 
-        // How far it got, when it knew how far there was to go.
+        // How far it got.
         IslandPill {
           anchors.fill: parent
           layout: "glyphLabelReading"
           alert: win.failed
           label: "Rebuild failed"
-          reading: Rebuild.total > 0 ? Rebuild.done + "/" + Rebuild.total : ""
+          reading: Math.floor(Rebuild.progress * 100) + "%"
           readingColor: Theme.love
           tabularReading: true
 
