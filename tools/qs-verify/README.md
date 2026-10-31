@@ -55,7 +55,13 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 - Notification toasts: basic, critical, long text; the control centre's notification list.
 - The phone (last, so nothing before it sees it): the satellite docked, hovered, on a low battery
   and riding the volume OSD, and the phone panel at rest, with the pointer over a notification and
-  ringing.
+  ringing, with low battery, with mobile off, after Browse is refused (the note), with the wallpaper
+  picker on the phone's storage, on the laptop and with no file access, and with a chosen wallpaper;
+  the satellite beside the open hover card; and Nearby over KDE Connect (choose files, sending with
+  and without a reading, sent, no phone, receiving) with the sharing pill receiving and saved. The
+  mock plays kdeconnectd's job tracker through the bridge's `org.kde.JobViewServer`, and two checks
+  (not screenshots) confirm Browse starts `nautilus` on the mount and that choosing a wallpaper
+  leaves exactly one copy in the state dir.
 
 ## How states are driven (no QML hooks)
 
@@ -71,7 +77,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | moments | the shell's own `activities` ipc (`plug`, `wifi`) |
 | auth prompt | the shell's own `authpreview` ipc |
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |
-| phone satellite, phone panel | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
+| phone satellite, phone panel, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
 | pointer | `vpointer.c`, a persistent `zwlr_virtual_pointer` (headless sway has no pointer; without one there is no hover or click) |
 
 The shell runs from a copy of the config with two patches, both checked by `run.sh` (it fails
