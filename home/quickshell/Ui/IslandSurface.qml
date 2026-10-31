@@ -21,9 +21,6 @@ PanelWindow {
   property real openRadius: Theme.controlRadius
 
   property bool open: false
-  // Whether the surface holds the keyboard while open. Result cards that arrive unasked turn it
-  // off until the pointer is on them, so typing elsewhere is not stolen.
-  property bool keyboard: true
   // Some keyboard-first surfaces hide the pointer for their whole mapped window, not just the
   // card. The guard below accepts no buttons and only owns the cursor.
   property bool hideCursor: false
@@ -34,9 +31,6 @@ PanelWindow {
   // the full-screen window swallow input aimed at it. When set, only the card is a target;
   // clicks outside fall through to whatever is below.
   property bool passThrough: false
-  // A surface the user only looks at (the cheatsheet) takes neither keys nor the pointer, so
-  // the window under it keeps both: its mask is empty and the compositor never gives it focus.
-  property bool takesInput: true
   property alias origin: origin
   property alias surface: surface
 
@@ -229,7 +223,7 @@ PanelWindow {
   // dismiss MouseArea below; passThrough narrows it to the card so a spawned picker stays
   // live. Not open (closing, a still, parked), nothing: the shape on its way out must not
   // swallow the clicks of whoever is below.
-  mask: !win.open || !win.takesInput ? emptyMask : win.passThrough ? cardMask : null
+  mask: !win.open ? emptyMask : win.passThrough ? cardMask : null
 
   Region {
     id: emptyMask
@@ -245,25 +239,13 @@ PanelWindow {
   // this one stays mapped through its close. Exclusive covers it, but would eat all pointers.
   property bool focusPrimed: false
 
-  WlrLayershell.keyboardFocus: win.open && win.takesInput && win.keyboard ? (win.focusPrimed && !win.exclusiveKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: win.open ? (win.focusPrimed && !win.exclusiveKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.Exclusive) : WlrKeyboardFocus.None
 
   Timer {
     id: focusPrime
 
     interval: 75
     onTriggered: win.focusPrimed = true
-  }
-
-  // A surface that was keyless and wants the keyboard now is primed as a fresh open is.
-  onKeyboardChanged: {
-    if (open && keyboard) {
-      focusPrimed = false;
-      focusPrime.restart();
-      Qt.callLater(function () {
-        if (win.open)
-          keys.forceActiveFocus();
-      });
-    }
   }
 
   onOpenChanged: {

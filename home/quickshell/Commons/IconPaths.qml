@@ -5,8 +5,8 @@ import Quickshell
 
 // The icons StrokeIcon draws. Each is a Material Symbols Rounded name, the shell's one icon
 // set (Commons/Icons.qml), except the few marks Material has no counterpart for: board 13's
-// submit arrow and Caps Lock, the Android and Apple platform marks, the Claude spark and the
-// battery outline the plugged-in moment fills itself. Those stay 24-grid SVG path data.
+// submit arrow and Caps Lock, the Android and Apple platform marks and the battery outline the
+// plugged-in moment fills itself. Those stay 24-grid SVG path data.
 Singleton {
   readonly property string arrowUp: "arrow_upward"
   readonly property string arrowDown: "arrow_downward"
@@ -18,30 +18,21 @@ Singleton {
   readonly property string plus: "add"
   readonly property string x: "close"
   readonly property string check: "check"
-  // The share picker's Share button (its sources are the tools' monitor, app-window and crop).
-  readonly property string screenShare: "screen_share"
-  // The notification reply row sends with the plane (a group's chevron is chevronDown, turned over).
-  readonly property string send: "send"
   // The island's privacy marks.
   readonly property string camera: "videocam"
   readonly property string microphone: "mic"
 
-  // The polkit prompt's requester disc and details chevrons.
-  readonly property string lock: "lock"
-  readonly property string chevronRight: "chevron_right"
-  readonly property string chevronDown: "expand_more"
-
-  // The lock screen's glance row, transport and face scan; the live activities' controls use them too.
+  // The control centre's charge tile: Fast, Standard and the limiting mode.
   readonly property string battery: "battery_android_full"
-  readonly property string batteryCharging: "battery_android_bolt"
-  // The control centre's charge tile: Fast, and the limiting mode.
   readonly property string zap: "bolt"
   readonly property string leaf: "eco"
-  readonly property string skipBack: "skip_previous"
-  readonly property string skipForward: "skip_next"
-  readonly property string pause: "pause"
-  readonly property string play: "play_arrow"
-  readonly property string scanFace: "familiar_face_and_zone"
+  // The plugged-in moment's bare battery outline, whose fill it draws itself, and the sign-in
+  // moment's Wi-Fi.
+  readonly property string batteryOutline: "M4 7h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM22 11v2"
+  readonly property string wifi: "wifi"
+  // The rebuild pill's snowflake (NixOS) and failure cross.
+  readonly property string snowflake: "ac_unit"
+  readonly property string circleX: "cancel"
 
   readonly property string wifiOff: "wifi_off"
 
@@ -51,7 +42,6 @@ Singleton {
 
   // Nearby's device plates.
   readonly property string smartphone: "smartphone"
-  readonly property string smartphoneCharging: "charging_station"
   readonly property string tablet: "tablet_android"
   readonly property string laptop: "laptop"
 
@@ -67,45 +57,4 @@ Singleton {
   readonly property string listChecks: "checklist"
 
   readonly property string folder: "folder"
-
-  // The screenshot tray and the screen tools.
-  readonly property string crop: "crop"
-  readonly property string appWindow: "web_asset"
-  readonly property string monitor: "desktop_windows"
-  readonly property string scanText: "document_scanner"
-  readonly property string qrCode: "qr_code"
-  readonly property string pipette: "colorize"
-  // A still camera; `camera` above is the video glyph the privacy marks use.
-  readonly property string photo: "photo_camera"
-  readonly property string images: "photo_library"
-  readonly property string pencilLine: "edit"
-  readonly property string copy: "content_copy"
-  // The phone card's Ring phone and Send files.
-  readonly property string bellRing: "notifications_active"
-  readonly property string folderOpen: "folder_open"
-  readonly property string trash: "delete"
-  readonly property string search: "search"
-  readonly property string sparkles: "auto_awesome"
-  readonly property string externalLink: "open_in_new"
-  // The live activities' glyphs: the square of Stop, the cup of a break, and the bare
-  // battery outline, whose fill the plugged-in moment draws itself.
-  readonly property string square: "stop"
-  readonly property string coffee: "coffee"
-  readonly property string batteryOutline: "M4 7h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM22 11v2"
-  // The Claude, rebuild and USB activities' glyphs; the spark of Claude is drawn.
-  readonly property string claude: "M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"
-  readonly property string snowflake: "ac_unit"
-  readonly property string hardDrive: "hard_drive"
-  readonly property string eject: "eject"
-  readonly property string circleX: "cancel"
-  readonly property string packageCheck: "inventory"
-  readonly property string fileDiff: "difference"
-  readonly property string scrollText: "receipt_long"
-  readonly property string terminal: "terminal"
-  readonly property string loaderCircle: "progress_activity"
-  // The event card and moments, the sign-in moment and the launcher's timer rows.
-  readonly property string calendarClock: "calendar_clock"
-  readonly property string mapPin: "location_on"
-  readonly property string wifi: "wifi"
-  readonly property string repeat: "repeat"
 }

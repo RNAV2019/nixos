@@ -54,11 +54,6 @@ Variants {
       Omnibox.reset();
       query.text = "";
       win.selectFirst();
-      if (Omnibox.pendingAsk !== "") {
-        var asked = Omnibox.pendingAsk;
-        Omnibox.pendingAsk = "";
-        ClaudeChat.ask(asked);
-      }
     }
 
     function selectedRow() {
@@ -159,11 +154,9 @@ Variants {
         rowIcon: String(item.icon || ""),
         rowGlyph: String(item.glyph || ""),
         rowSwatch: String(item.swatch || ""),
-        rowEmoji: String(item.emoji || ""),
-        rowPath: String(item.path || ""),
-        rowTone: String(item.tone || "")
+        rowEmoji: String(item.emoji || "")
       };
-      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowPath, row.rowTone].join("\u0001");
+      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji].join("\u0001");
       return row;
     }
 
@@ -448,8 +441,6 @@ Variants {
         required property string rowGlyph
         required property string rowSwatch
         required property string rowEmoji
-        required property string rowPath
-        required property string rowTone
 
         width: list.width
         height: Theme.launcherRowHeight
@@ -462,8 +453,6 @@ Variants {
           glyph: slot.rowGlyph
           swatch: slot.rowSwatch
           emoji: slot.rowEmoji
-          glyphPath: slot.rowPath
-          tone: slot.rowTone
           current: slot.ListView.isCurrentItem
 
           onActivated: function (modifiers) {

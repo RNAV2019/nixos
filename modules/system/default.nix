@@ -19,7 +19,6 @@ in {
     ./secrets.nix
     ./wifi.nix
     ./backups.nix
-    ./face-unlock.nix
   ];
 
   time.timeZone = "Europe/London";
@@ -130,13 +129,6 @@ in {
   ];
 
   programs.uwsm.enable = true;
-
-  # The phone on the island (Services/Phone.qml). The daemon starts with the session through the
-  # package's XDG autostart entry and its D-Bus service file; it has no tray icon of its own
-  # (kdeconnect-indicator is a separate program nothing starts). The module opens TCP and UDP
-  # 1714-1764 and loads uinput. Phone notifications arrive as ordinary desktop notifications,
-  # which the shell turns into toasts.
-  programs.kdeconnect.enable = true;
 
   # Quickshell locks the autologin session before desktop helpers start.
   services.greetd = {

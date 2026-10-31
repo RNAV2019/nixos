@@ -11,7 +11,7 @@ Singleton {
 
   signal surfacesClosingForLock
 
-  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview", "cheatsheet", "sharepicker"]
+  readonly property var islandKeys: ["launcher", "control", "wallpaper", "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth"]
 
   // Map helpers for the copy-modify-reassign pattern below: a binding cannot see an in-place
   // property write, so every change builds a fresh object and reassigns the property.
@@ -64,7 +64,7 @@ Singleton {
   signal clockRefreshed
 
   // Opening and closing an island surface, by key: "launcher", "control", "wallpaper",
-  // "theme", "recorder", "calendar", "session", "profiles", "nearby", "auth", "screentools", "overview", "osd", "notify".
+  // "theme", "recorder", "calendar", "session", "profiles", "auth", "osd", "notify".
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 
@@ -74,23 +74,6 @@ Singleton {
 
   function closeSurface(key) {
     surfaceClosed(key);
-  }
-
-  // Whether the cheatsheet is wanted, set by Hyprland while Super is held on its own (the hold
-  // is timed in home/desktop.nix, which sees every key). The show and the hide are separate
-  // processes that can arrive out of order, so each carries the config's epoch and a counter
-  // and a stale one is dropped; the epoch tells a reloaded config's restarted counter from a
-  // late one.
-  property bool cheatsheetWanted: false
-  property int cheatsheetEpoch: 0
-  property int cheatsheetSeq: 0
-
-  function setCheatsheet(wanted, epoch, seq) {
-    if (epoch < cheatsheetEpoch || (epoch === cheatsheetEpoch && seq <= cheatsheetSeq))
-      return;
-    cheatsheetEpoch = epoch;
-    cheatsheetSeq = seq;
-    cheatsheetWanted = wanted;
   }
 
   // Which output each surface owns; absent means not on screen. Reassigned wholesale
@@ -151,9 +134,9 @@ Singleton {
   // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
   // island through owners, only through a transient screen, so a real panel covers it.
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
-  // "captures" is the screenshot tray, which melts back by itself after a few seconds.
-  // "moment" is a live activity's instant (Activities/Moments.qml): a timer done, a charger plugged in.
-  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "captures", "moment"]
+  // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml);
+  // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml).
+  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "moment", "rebuild"]
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;
@@ -379,15 +362,8 @@ Singleton {
   property real pillShiftX: 0
   property real pillShiftY: 0
   property real pillSlideX: 0
-  // The one output the slide applies to (the one the satellites sit beside); the others keep
-  // their pill where it was.
-  property string pillSlideScreen: ""
   readonly property real pillOffsetX: pillShiftX + pillSlideX
   readonly property real pillOffsetY: pillShiftY
-
-  function pillOffsetXFor(screenName) {
-    return pillShiftX + (screenName === pillSlideScreen ? pillSlideX : 0);
-  }
 
   // The workspaces pill takes its own point on the orbit; nothing grows out of it.
   property real workspacesOffsetX: 0

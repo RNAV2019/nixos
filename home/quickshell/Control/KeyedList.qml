@@ -23,9 +23,6 @@ Item {
   // The first fill lands as the view is built, so it is placed rather than faded in.
   property bool primed: false
 
-  // The gap between rows.
-  property real spacing: Theme.controlRowGap
-
   readonly property ListModel store: ListModel {}
 
   function objectFor(key) {
@@ -82,7 +79,7 @@ Item {
     width: root.width
     height: 4096
     model: root.store
-    spacing: root.spacing
+    spacing: Theme.controlRowGap
     interactive: false
     // No current row: a view with one hands it the focus whenever the rows around it change,
     // which closed a password field that was being typed in.

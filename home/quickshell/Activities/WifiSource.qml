@@ -109,7 +109,7 @@ QtObject {
   // NetworkManager says which address it probes; the page itself is not something it keeps, so
   // the probe is what the browser opens, and the portal redirects it to its login.
   function openPage() {
-    opener.exec(["sh", "-c", "uri=$(busctl --system get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager ConnectivityCheckUri 2>/dev/null | cut -d'\"' -f2); exec xdg-open \"${uri:-$1}\"", "sh", root.probe]);
+    opener.exec(Launch.scoped(["sh", "-c", "uri=$(busctl --system get-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager ConnectivityCheckUri 2>/dev/null | cut -d'\"' -f2); exec xdg-open \"${uri:-$1}\"", "sh", root.probe], "xdg-open"));
   }
 
   property Command opener: Command {

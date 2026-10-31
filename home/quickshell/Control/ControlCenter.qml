@@ -59,7 +59,6 @@ Variants {
       view = "";
       home.keyboardIndex = recorderOut && Bus.ownerOf("recorder") !== "" ? 7 : 0;
       recorderOut = false;
-      home.resetNotifications();
       // Nothing pushes a colour-temperature change, so ask now, while it is about to be seen.
       NightLight.refresh();
     }

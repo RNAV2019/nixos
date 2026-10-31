@@ -539,12 +539,12 @@ Singleton {
 
   function openDownloads() {
     if (downloadDir !== "")
-      Quickshell.execDetached(["xdg-open", downloadDir]);
+      Launch.open(downloadDir);
   }
 
   function openFile(path) {
     if (path)
-      Quickshell.execDetached(["xdg-open", path]);
+      Launch.open(path);
   }
 
   // ---- plumbing ----

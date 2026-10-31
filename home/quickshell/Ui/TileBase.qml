@@ -15,9 +15,6 @@ Item {
   property string kind: "tile"
   property string title: ""
 
-  // Anything else drawn as the picture, above the image and clipped with it: a live capture.
-  property alias picture: content.data
-
   // Shown under the picture until it loads, so an empty tile still reads as its type.
   property color placeholderColor: Theme.overlay
 

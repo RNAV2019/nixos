@@ -30,7 +30,7 @@ QtObject {
   readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
   // Where the pill rests; the surface is placed by this so it starts from and returns to it.
-  readonly property real offsetX: Bus.pillOffsetXFor(screenName)
+  readonly property real offsetX: Bus.pillOffsetX
   readonly property real offsetY: Bus.pillOffsetY
 
   readonly property real originWidth: fromCard ? fromWidth : collapsedWidth

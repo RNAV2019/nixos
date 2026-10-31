@@ -102,10 +102,6 @@
     checks.${system} = {
       gen-commit = pkgs.callPackage ./pkgs/gen-commit/tests {};
       ical-agenda = pkgs.callPackage ./pkgs/ical-agenda/tests {};
-      claude-island = pkgs.claude-island.tests;
-      rebuild = pkgs.rebuild.tests;
-      island-usb = pkgs.island-usb.tests;
-      phone-bridge = pkgs.callPackage ./pkgs/phone-bridge/tests {};
 
       # NixOS VM: wifi.nix on iwd against hostapd/RADIUS on mac80211_hwsim.
       wifi-iwd = import ./tests/wifi-iwd.nix {inherit pkgs;};

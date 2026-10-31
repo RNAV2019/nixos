@@ -2,23 +2,19 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import qs.Commons
 
 // Burn-in care for the OLED panel: the island pill and the workspaces pill sit in one place for
-// hours, so each creeps round a small orbit and fades down when the machine has been idle. The
-// orbit is published on the Bus (pillShift*, workspacesOffset*) for the bar and every surface
-// that grows out of the pill; the fade is `level`, which both pills multiply into their opacity.
+// hours, so each creeps round a small orbit. The orbit is published on the Bus (pillShift*,
+// workspacesOffset*) for the bar and every surface that grows out of the pill.
 Singleton {
   id: root
 
-  // For tests only: QUICKSHELL_OLED_SPEEDUP=N runs the orbit N times faster, and
-  // QUICKSHELL_OLED_IDLE_SECONDS replaces the idle delay.
+  // For tests only: QUICKSHELL_OLED_SPEEDUP=N runs the orbit N times faster.
   readonly property real speedup: Math.max(1, Number(Quickshell.env("QUICKSHELL_OLED_SPEEDUP")) || 1)
-  readonly property real idleSeconds: Number(Quickshell.env("QUICKSHELL_OLED_IDLE_SECONDS")) || Theme.oledIdleDelay / 1000
 
   // Whether any surface, transient, lock or open card is up. The orbit holds still meanwhile, so
-  // nothing grows out of a pill that is moving, and the pills stay lit for whatever is going on.
+  // nothing grows out of a pill that is moving.
   readonly property bool busy: Bus.locking || occupied(Bus.owners) || occupied(Bus.covers) || occupied(Bus.transientScreens) || occupied(Bus.islandCards)
 
   function occupied(map) {
@@ -142,37 +138,5 @@ Singleton {
     target: Bus
     property: "workspacesOffsetY"
     value: root.workspacesPoint.y
-  }
-
-  // ---- the idle dim ----
-
-  // Respects idle inhibitors, so a video or a presentation keeps the pills lit.
-  IdleMonitor {
-    id: idle
-
-    timeout: root.idleSeconds
-    respectInhibitors: true
-  }
-
-  // An active camera or microphone mark is a privacy indicator and is never dimmed.
-  readonly property bool dimmed: idle.isIdle && !busy && !Privacy.camera && !Privacy.microphone
-
-  // 1 lit, down to oledDimOpacity; multiplied into the opacity of both pills.
-  property real level: 1
-
-  // Slow down, quick back: the dim should go unnoticed, the return should beat the eye.
-  onDimmedChanged: {
-    fade.stop();
-    fade.to = dimmed ? Theme.oledDimOpacity : 1;
-    fade.duration = Theme.duration(dimmed ? Theme.oledDimDuration : Theme.oledRestoreDuration);
-    fade.start();
-  }
-
-  NumberAnimation {
-    id: fade
-
-    target: root
-    property: "level"
-    easing.type: Easing.InOutQuad
   }
 }

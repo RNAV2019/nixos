@@ -74,6 +74,9 @@
       ui = {
         # Don't prompt for a new tab name.
         prompt_new_tab_name = false;
+
+        # Collapse the sidebar completely
+        sidebar_collapsed_mode = "hidden";
       };
 
       # herdr counts scrollback in bytes.

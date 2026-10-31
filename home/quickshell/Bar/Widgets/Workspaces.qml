@@ -2,16 +2,39 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
-import qs.Services
 import qs.Ui
 
 FrostedSurface {
   id: root
 
-  readonly property var ids: WindowList.allIds
+  readonly property int persistent: 5
+
+  readonly property var ids: {
+    var seen = {};
+    var out = [];
+    for (var i = 1; i <= persistent; i++) {
+      seen[i] = true;
+      out.push(i);
+    }
+    for (var j = 0; j < Hyprland.workspaces.values.length; j++) {
+      var id = Hyprland.workspaces.values[j].id;
+      if (id > 0 && !seen[id]) {
+        seen[id] = true;
+        out.push(id);
+      }
+    }
+    out.sort(function (a, b) {
+      return a - b;
+    });
+    return out;
+  }
 
   function workspaceFor(id) {
-    return WindowList.workspaceFor(id);
+    for (var i = 0; i < Hyprland.workspaces.values.length; i++) {
+      if (Hyprland.workspaces.values[i].id === id)
+        return Hyprland.workspaces.values[i];
+    }
+    return null;
   }
 
   function focus(id) {

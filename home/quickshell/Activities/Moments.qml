@@ -4,8 +4,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The moments (Penpot "Ariadne / Moment"): a timer ringing, a phase changing, a charger plugged
-// in. Each grows out of the shut pill at the screen's centre, holds, and melts back; the queue
+// The moments (Penpot "Ariadne / Moment"): a charger plugged in, a network asking for a sign-in.
+// Each grows out of the shut pill at the screen's centre, holds, and melts back; the queue
 // and what a moment is are in Services/Activities.qml. One surface per output, shown on the
 // focused one, taking turns with the OSD, the toasts and sharing by rank like each of them: an
 // attention moment ranks with a notification (1), an informational one with sharing progress (0).
@@ -38,11 +38,6 @@ Variants {
     openWidth: win.shown ? win.shown.width : Theme.momentWidth
     openHeight: win.shown ? win.shown.height : Theme.momentHeight
     openRadius: win.shown ? win.shown.radius : Theme.momentRadius
-
-    // Swiped aside to dismiss, for the ones that stay until answered (a sign-in page, a reminder
-    // with nothing to press); a moment with buttons can be swiped too.
-    cardOffset: swipe.offset
-    cardOpacity: swipe.fade
 
     // What is drawn: `shown` once the island is showing it. A second moment arriving while one
     // is up crossfades, the shape springing to its size meanwhile.
@@ -125,18 +120,11 @@ Variants {
         id: hover
       }
 
-      // First, under the buttons: it only watches for a drag.
-      SwipeDismiss {
-        id: swipe
-
-        anchors.fill: parent
-        span: stage.width
+      // Under the buttons: a click anywhere else sends the moment away, the only way out of one
+      // that stays until acted on (a sign-in page) short of its button.
+      TapHandler {
         enabled: win.open && win.drawn !== null
-
-        onCommitted: if (win.drawn !== null)
-          Activities.dismissMoment(win.drawn.id)
-
-        onGone: swipe.reset()
+        onTapped: Activities.dismissMoment(win.drawn.id)
       }
 
       Loader {

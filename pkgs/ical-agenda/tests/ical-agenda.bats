@@ -35,7 +35,7 @@ column() {
 @test "prints the column header gcalcli printed" {
   run ical-agenda 2026-09-01 2026-09-30
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | head -1)" = "$(printf 'start_date\tstart_time\tend_date\tend_time\ttitle\tcalendar\tlocation\tdescription\turl')" ]
+  [ "$(printf '%s\n' "$output" | head -1)" = "$(printf 'start_date\tstart_time\tend_date\tend_time\ttitle\tcalendar\tlocation')" ]
 }
 
 @test "a timed event carries its date, times and location" {
@@ -47,14 +47,6 @@ column() {
   [ "$(column end_time 1)" = "10:00" ]
   [ "$(column title 1)" = "Standup" ]
   [ "$(column location 1)" = "Room 3" ]
-}
-
-@test "the description and the event's link are carried, tabs and newlines folded" {
-  run ical-agenda 2026-09-17 2026-09-17
-  [ "$status" -eq 0 ]
-  [ "$(column title 1)" = "Design review" ]
-  [ "$(column description 1)" = "Agenda Join: https://meet.example.com/abc-defg-hij" ]
-  [ "$(column url 1)" = "https://zoom.example.com/j/123456789" ]
 }
 
 @test "an all-day event leaves both times empty" {

@@ -2,166 +2,262 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 
-// The system rebuild that `rebuild` (pkgs/rebuild) is running, as it reports over
-// Services/IslandBridge.qml: evaluating, building n of m derivations, activating, then done or
-// failed. Only the latest run is kept. Its log and the diff against the running system are
-// files the program saved; the card opens them in a terminal.
+// The system rebuild that the `rebuild` alias (home/shell.nix) is running, as Nix reports it. The
+// alias has Nix write its progress to a file (`--option json-log-path`, the JSON of
+// `--log-format internal-json`); this tails that file and keeps what the pill in
+// Rebuild/RebuildPill.qml shows: building n of m derivations, then done or failed.
+//
+// A file, not a socket the shell listens on, because Nix falls back to a plain file when nothing
+// listens (so a socket the shell dropped would be replaced by a root-owned file, and a stale one
+// makes every Nix process print "error (ignored)"), and a shell that stopped reading would block
+// the build on a full socket. A file can do neither: the rebuild is unchanged whether or not the
+// shell runs, and the shell only ever reads. It is root's (the build is under sudo), in the
+// user's runtime directory, and removed here when a run ends, so it does not grow. A run the
+// shell was not there for is left in it and skipped: tailing starts at the end.
+//
+// What is read, of the events Nix writes (one JSON object a line):
+// - the first event of a run starts the pill; the nix processes of one rebuild (nixos-rebuild runs
+//   several, one after another) share the file, told apart by the pid in the top half of every
+//   activity id;
+// - "these N derivations will be built" is the total. Nix's own count (the progress of the
+//   `builds` activity, type 104, field 1) is not: it counts evaluation-time builds and swings
+//   up and down, so only its `done` (field 0, a result of type 105) is used, of the activity
+//   started after that message. Until the message there is no total, which is the pill's
+//   evaluating state;
+// - a message of level 0 that starts "error" (not "error (ignored)") and a build that failed
+//   (field 3) mean failure;
+// - the run is over when none of its processes is alive and the log has been quiet a moment (the
+//   next nix process of the same rebuild starts within that). It failed if an error was seen, or
+//   an activity was still open (a process that ended without a result: killed, or Ctrl-C), else
+//   it is done. The Nix processes' parent, nixos-rebuild, counts as one of them, so a switch is
+//   done once its activation has run too (whether that worked is only in the terminal).
 Singleton {
   id: root
 
-  // "" when there is none; else evaluating, building, activating, done or failed.
+  // The alias passes the same path.
+  readonly property string logPath: (Quickshell.env("XDG_RUNTIME_DIR") || "") + "/rebuild.jsonl"
+
+  // "" when there is none; else building, done or failed. Only the latest run is kept.
   property string phase: ""
-  property string runId: ""
-  property string mode: "switch"
-  property string host: ""
   property real startedAt: 0
   property real endedAt: 0
 
+  // Derivations finished, of `total`; 0 while the total is not known.
   property int done: 0
   property int total: 0
-  // "derivations" or "paths".
-  property string unit: "derivations"
-  property string current: ""
-  // The latest line of the activation, which says which units are restarting.
-  property string detail: ""
 
-  property string error: ""
-  property string summary: ""
-  property int changed: 0
-  property int generation: 0
-  property string logFile: ""
-  property string diffFile: ""
-
-  // Where a failure happened, for its caption ("Building · 1:12").
-  property string stage: ""
-
-  // The user has dismissed the finished or failed run, or it has stood long enough.
+  // The user has dismissed the finished or failed run.
   property bool dismissed: false
 
-  readonly property bool running: phase === "evaluating" || phase === "building" || phase === "activating"
+  readonly property bool running: phase === "building"
   readonly property bool shown: phase !== "" && !dismissed
-  readonly property real fraction: phase === "building" && total > 0 ? Theme.clamp01(done / total) : phase === "activating" || phase === "done" ? 1 : 0
+  readonly property real fraction: total > 0 ? Theme.clamp01(done / total) : 0
 
-  property real now: Date.now()
-  readonly property real elapsed: Math.max(0, (running ? now : endedAt) - startedAt)
-
-  readonly property var phaseTitles: ({
-      evaluating: "Evaluating",
-      building: "Building",
-      activating: "Activating"
-    })
-
-  // What a finished run is called: the mode says whether anything was switched to.
-  readonly property string doneTitle: ({
-      switch: "Switched",
-      boot: "Ready on next boot",
-      test: "Activated",
-      build: "Built",
-      dry: "Dry run"
-    })[mode] || "Done"
-
-  // Cues for the moments: a run finished (not a dry run), or failed.
-  signal finished
-  signal failed
+  // How long the log must have been quiet, with no process alive, to call a run over.
+  property int quietMs: 2500
 
   function dismiss() {
     dismissed = true;
   }
 
-  // Show the saved log (from its end, where a failure is) or the diff in a terminal.
-  function showLog() {
-    if (logFile !== "")
-      viewer.exec(["ghostty", "-e", "less", "-R", "+G", logFile]);
+  // ---- reading ----
+
+  // The run's processes: true for a Nix process in the log, "parent" for the nixos-rebuild that
+  // started one, which is not in the log but outlives them through the activation.
+  property var _pids: ({})
+  property var _open: ({})
+  property int _openCount: 0
+  // Activity ids carry the pid in their top half, so they do not fit an int.
+  property real _buildId: 0
+  // A realisation has been announced, so the next builds activity is its.
+  property bool _announced: false
+  property real _lastEvent: 0
+  // When a probe last found one of the run's processes alive.
+  property real _lastAlive: 0
+  property bool _failed: false
+
+  function _strip(text) {
+    return String(text).replace(/\u001b\[[0-9;]*m/g, "");
   }
 
-  function showDiff() {
-    if (diffFile !== "")
-      viewer.exec(["ghostty", "-e", "less", "-R", diffFile]);
+  function _begin() {
+    phase = "building";
+    startedAt = Date.now();
+    endedAt = 0;
+    done = 0;
+    total = 0;
+    dismissed = false;
+    _pids = {};
+    _lastAlive = 0;
+    _open = {};
+    _openCount = 0;
+    _buildId = 0;
+    _announced = false;
+    _failed = false;
   }
 
-  function handle(msg) {
-    if (msg.phase === "cancelled") {
-      if (msg.id === runId)
-        phase = "";
+  // One line of the log.
+  function read(line) {
+    var e;
+    try {
+      e = JSON.parse(line);
+    } catch (err) {
       return;
     }
-    if (msg.id !== runId) {
-      runId = msg.id;
+    if (e === null || typeof e !== "object")
+      return;
+    if (phase !== "building")
+      _begin();
+    _lastEvent = Date.now();
+
+    if (e.id !== undefined) {
+      var pid = Math.floor(e.id / 4294967296);
+      if (_pids[pid] === undefined) {
+        var seen = Object.assign({}, _pids);
+        seen[pid] = true;
+        _pids = seen;
+      }
+    }
+
+    switch (e.action) {
+    case "start":
+      if (_open[e.id] === undefined) {
+        _open[e.id] = true;
+        _openCount++;
+      }
+      // The builds of the realisation announced above, not the ones evaluation made.
+      if (e.type === 104 && _buildId === 0 && _announced)
+        _buildId = e.id;
+      break;
+    case "stop":
+      if (_open[e.id] !== undefined) {
+        delete _open[e.id];
+        _openCount--;
+      }
+      break;
+    case "result":
+      // Progress of the builds: [done, expected, running, failed].
+      if (e.type === 105 && e.id === _buildId && _buildId !== 0 && e.fields !== undefined && e.fields.length >= 4) {
+        if (e.fields[0] !== done)
+          done = e.fields[0];
+        if (e.fields[3] > 0)
+          _failed = true;
+      }
+      break;
+    case "msg":
+      _message(e.level, _strip(e.msg));
+      break;
+    }
+  }
+
+  function _message(level, text) {
+    if (level === 0 && /^error\b(?! \(ignored\))/.test(text)) {
+      _failed = true;
+      return;
+    }
+    var m = /^(?:this derivation|these (\d+) derivations) will be built/.exec(text);
+    if (m !== null) {
+      total = m[1] !== undefined ? parseInt(m[1], 10) : 1;
       done = 0;
-      total = 0;
-      current = "";
-      detail = "";
-      error = "";
-      summary = "";
-      changed = 0;
-      generation = 0;
-      diffFile = "";
-      stage = "";
-      dismissed = false;
-      endedAt = 0;
-    }
-    var before = phase;
-    mode = msg.mode || "switch";
-    host = msg.host || "";
-    startedAt = msg.started || startedAt;
-    logFile = msg.log || logFile;
-    diffFile = msg.diff || diffFile;
-    if (msg.total !== undefined) {
-      done = msg.done;
-      total = msg.total;
-      unit = msg.unit || "derivations";
-    }
-    if (msg.current !== undefined)
-      current = msg.current;
-    if (msg.detail !== undefined)
-      detail = msg.detail;
-    if (msg.phase === "failed") {
-      stage = before;
-      error = msg.error || "The rebuild failed";
-    }
-    if (msg.phase === "done") {
-      summary = msg.summary || "";
-      changed = msg.changed || 0;
-      generation = msg.generation || 0;
-    }
-    if (msg.ended)
-      endedAt = msg.ended;
-    phase = msg.phase;
-    now = Date.now();
-    if (before !== phase && phase === "done" && mode !== "dry")
-      finished();
-    if (before !== phase && phase === "failed")
-      failed();
-  }
-
-  Connections {
-    target: IslandBridge
-
-    function onReceived(msg) {
-      if (msg.src === "rebuild" && msg.id)
-        root.handle(msg);
+      _buildId = 0;
+      _announced = true;
     }
   }
 
+  // ---- ending ----
+
+  // Ticks while a run is on: asks which of its processes are alive, and ends it once none is and
+  // the log has been quiet.
   Timer {
     interval: 1000
     repeat: true
     running: root.running
-    onTriggered: root.now = Date.now()
+    onTriggered: root._probe()
   }
 
-  // A finished run's satellite stands for a few minutes; a failed one until dismissed.
-  Timer {
-    interval: 300000
-    running: root.phase === "done" && !root.dismissed
-    onTriggered: root.dismissed = true
+  function _probe() {
+    if (probe.running)
+      return;
+    // Prints the live ones, and each live Nix process's parent as "parent <pid>" if that is
+    // nixos-rebuild (a `nix build` run by hand is not waited on past its end). Field 4 of stat is
+    // the parent; a Nix process's name has no spaces, so plain splitting finds it.
+    var args = Object.keys(_pids).map(p => (_pids[p] === "parent" ? "p" : "n") + p);
+    probe.command = ["sh", "-c", "for a; do p=${a#?}; [ -d /proc/$p ] || continue; echo $p; [ ${a%$p} = n ] && read -r _ _ _ pp _ < /proc/$p/stat && grep -qa nixos-rebuild /proc/$pp/cmdline 2>/dev/null && echo parent $pp; done", "sh"].concat(args);
+    probe.running = true;
+  }
+
+  Process {
+    id: probe
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        if (root.phase !== "building")
+          return;
+        var lines = text.trim() === "" ? [] : text.trim().split("\n");
+        var parents = null;
+        for (var i = 0; i < lines.length; i++) {
+          var m = /^parent (\d+)$/.exec(lines[i]);
+          if (m === null)
+            continue;
+          if (root._pids[m[1]] === undefined) {
+            parents = parents || Object.assign({}, root._pids);
+            parents[m[1]] = "parent";
+          }
+        }
+        if (parents !== null)
+          root._pids = parents;
+        if (lines.length > 0)
+          root._lastAlive = Date.now();
+        else if (Date.now() - root._lastEvent >= root.quietMs)
+          root._finish();
+      }
+    }
+  }
+
+  function _finish() {
+    endedAt = Math.max(_lastEvent, _lastAlive);
+    var failed = _failed || _openCount > 0;
+    if (!failed && total > 0)
+      done = total;
+    _announced = false;
+    phase = failed ? "failed" : "done";
+    // Done with: no process has it open, and the next run starts a new one.
+    cleaner.exec(["rm", "-f", logPath]);
   }
 
   Command {
-    id: viewer
+    id: cleaner
 
-    label: "rebuild viewer"
+    label: "Rebuild log cleanup"
+  }
+
+  // ---- the file ----
+
+  // From the end of the file as it is now, and over any replacement of it (a new file is read
+  // from its start). Ends with the shell, and is started again if it ever ends without it.
+  Process {
+    id: tail
+
+    command: ["tail", "-n0", "-F", "--pid=" + Quickshell.processId, root.logPath]
+    running: true
+
+    stdout: SplitParser {
+      onRead: line => root.read(line)
+    }
+
+    // Until the first run there is no file, which tail says once and waits for.
+    stderr: SplitParser {}
+
+    onExited: restart.start()
+  }
+
+  Timer {
+    id: restart
+
+    interval: 5000
+    onTriggered: tail.running = true
   }
 }

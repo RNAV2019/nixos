@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import qs.Activities
 import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
@@ -51,10 +50,6 @@ Variants {
       Region {
         item: island.suppressed ? null : island
       }
-
-      Region {
-        item: satellites.strip
-      }
     }
 
     Workspaces {
@@ -63,17 +58,7 @@ Variants {
       // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
       x: snap(10 + Bus.workspacesOffsetX)
       y: snap(Theme.oledShiftMax + Bus.workspacesOffsetY)
-      opacity: OledCare.level
       screenOffsetY: Theme.barMarginTop
-    }
-
-    // Live activities beside the pill. Declared first, so the pill paints over the circles it
-    // pushes out from behind it.
-    Satellites {
-      id: satellites
-
-      island: island
-      screenName: bar.screen ? bar.screen.name : ""
     }
 
     // The launcher and control centre cover the island; it stays mapped for handoff
@@ -82,7 +67,7 @@ Variants {
       id: island
 
       // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
-      x: snap((parent.width - width) / 2 + Bus.pillOffsetXFor(screenName))
+      x: snap((parent.width - width) / 2 + Bus.pillOffsetX)
       y: snap(Theme.oledShiftMax + Bus.pillOffsetY)
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
