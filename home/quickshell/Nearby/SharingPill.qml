@@ -7,7 +7,7 @@ import qs.Services
 import qs.Ui
 
 // The Sharing Pill (boards 16i-16l): how an incoming share reaches you while the Sharing Panel
-// is shut. The island grows out of its pill into: connecting (a phone is handshaking, 278 x 48)
+// is shut. The island grows out of its pill into: connecting (a phone is handshaking, 278 x 42)
 // -> request (sender, payload, PIN, Decline / Accept; 420 x 64) -> receiving (an OSD-style
 // track with the percentage and an × to cancel) -> saved (a check, the file's name and Open),
 // and after a short dwell melts back into the clock. A request stays until it is answered; if
@@ -118,9 +118,9 @@ Scope {
 
       readonly property bool big: shownMode === "request"
 
-      openWidth: big ? Theme.sharingOfferWidth : Theme.sharingProgressWidth
-      openHeight: big ? Theme.sharingOfferHeight : Theme.sharingProgressHeight
-      openRadius: big ? Theme.sharingOfferRadius : Theme.sharingProgressRadius
+      openWidth: big ? Theme.sharingOfferWidth : Theme.islandPillWidth
+      openHeight: big ? Theme.sharingOfferHeight : Theme.islandPillHeight
+      openRadius: big ? Theme.sharingOfferRadius : Theme.islandPillRadius
 
       // Click-through while only connecting; the card takes input when it has buttons.
       cardInput: win.shownMode !== "connecting"
@@ -137,81 +137,28 @@ Scope {
       }
 
       // ---- 16i connecting ----
-      PillState {
+      SharingState {
         name: "connecting"
 
-        StrokeIcon {
-          x: 20
-          y: (parent.height - size) / 2
-          size: 18
-          strokeWidth: 1.75
-          path: IconPaths.smartphone
-          color: Theme.inkSecondary
-        }
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphLabelDetailDots"
+          label: "Connecting…"
+          detail: root.connecting && root.connecting.peer ? root.connecting.peer : ""
+          running: win.open
 
-        Row {
-          x: 52
-          y: (parent.height - height) / 2
-          width: 180
-
-          Text {
-            id: connectingLabel
-
-            text: "Connecting… "
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 1.75
+            path: IconPaths.smartphone
             color: Theme.inkSecondary
-            font.family: Theme.uiFont
-            font.pixelSize: 12
-            font.weight: Theme.weightMedium
-          }
-
-          Text {
-            width: 180 - connectingLabel.implicitWidth
-            elide: Text.ElideRight
-            text: root.connecting && root.connecting.peer ? root.connecting.peer : ""
-            color: Theme.inkPrimary
-            font.family: Theme.uiFont
-            font.pixelSize: 12
-            font.weight: Theme.weightMedium
-          }
-        }
-
-        // Three dots passing a beat along, brightest first.
-        Row {
-          id: dots
-
-          x: 238
-          y: (parent.height - 6) / 2
-          spacing: 4
-
-          property real beat: 0
-
-          NumberAnimation on beat {
-            from: 0
-            to: 3
-            duration: Theme.sharingPulse
-            loops: Animation.Infinite
-            running: win.open && win.shownMode === "connecting" && !Theme.reduceMotion
-          }
-
-          Repeater {
-            model: 3
-
-            Rectangle {
-              required property int index
-
-              width: 6
-              height: 6
-              radius: 3
-              // Distance behind the beat, wrapped: 0 is lit, then 0.55, then 0.25 (board 16i).
-              readonly property real lag: ((dots.beat - index) % 3 + 3) % 3
-              color: Theme.withAlpha(Theme.accentFill, lag < 1 ? 1 - 0.45 * lag : lag < 2 ? 0.55 - 0.3 * (lag - 1) : 0.25 + 0.75 * (lag - 2))
-            }
           }
         }
       }
 
       // ---- 16j request ----
-      PillState {
+      SharingState {
         name: "request"
         stateWidth: Theme.sharingOfferWidth
         stateHeight: Theme.sharingOfferHeight
@@ -339,111 +286,48 @@ Scope {
       }
 
       // ---- 16k receiving ----
-      PillState {
+      SharingState {
         name: "receiving"
 
-        StrokeIcon {
-          x: 20
-          y: (parent.height - size) / 2
-          size: 18
-          strokeWidth: 1.75
-          path: IconPaths.smartphone
-          color: Theme.inkPrimary
-        }
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphTrackReadingAction"
+          reading: Math.round(Theme.clamp01(root.activeProgress) * 100) + "%"
+          tabularReading: true
+          value: root.activeProgress
+          running: win.open
+          onCancelled: if (root.activeTransfer)
+            Nearby.cancel(root.activeTransfer.id)
 
-        Rectangle {
-          x: 52
-          y: (parent.height - height) / 2
-          width: 140
-          height: 8
-          radius: 4
-          color: Theme.surfaceSubtle
-
-          Rectangle {
-            width: parent.width * Theme.clamp01(root.activeProgress)
-            height: parent.height
-            radius: parent.radius
-            color: Theme.accentFill
-
-            Behavior on width {
-              enabled: !Theme.reduceMotion
-
-              Morph {
-                duration: Theme.duration(Theme.morphProgress)
-              }
-            }
-          }
-        }
-
-        Text {
-          x: 202
-          y: (parent.height - height) / 2
-          text: Math.round(Theme.clamp01(root.activeProgress) * 100) + "%"
-          color: Theme.inkPrimary
-          font.family: Theme.uiFont
-          font.pixelSize: 12
-          font.weight: Theme.weightSemi
-          font.features: {
-            "tnum": 1
-          }
-        }
-
-        StrokeIcon {
-          x: 246
-          y: (parent.height - size) / 2
-          size: 12
-          strokeWidth: 1.6
-          path: IconPaths.x
-          color: cancelArea.containsMouse ? Theme.inkPrimary : Theme.inkSecondary
-
-          MouseArea {
-            id: cancelArea
-
-            anchors.fill: parent
-            anchors.margins: -8
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: if (root.activeTransfer)
-              Nearby.cancel(root.activeTransfer.id)
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 1.75
+            path: IconPaths.smartphone
+            color: Theme.inkPrimary
           }
         }
       }
 
       // ---- 16l saved ----
-      PillState {
+      SharingState {
         name: "saved"
 
-        StrokeIcon {
-          x: 20
-          y: (parent.height - size) / 2
-          size: 18
-          strokeWidth: 2
-          path: IconPaths.check
-          color: Theme.accentFill
-        }
+        IslandPill {
+          anchors.fill: parent
+          layout: "glyphLabelReading"
+          label: root.savedName !== "" ? root.savedName : "Saved"
+          labelElide: Text.ElideMiddle
+          reading: "Open"
+          readingColor: Theme.accentFill
 
-        Text {
-          x: 52
-          y: (parent.height - height) / 2
-          width: openLabel.x - x - 12
-          elide: Text.ElideMiddle
-          text: root.savedName !== "" ? root.savedName : "Saved"
-          color: Theme.inkPrimary
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.nearbyRowNameSize
-          font.weight: Theme.weightMedium
-        }
-
-        Text {
-          id: openLabel
-
-          x: parent.width - 20 - width
-          y: (parent.height - height) / 2
-          text: "Open"
-          color: Theme.accentFill
-          font.family: Theme.uiFont
-          font.pixelSize: 12
-          font.weight: Theme.weightSemi
+          StrokeIcon {
+            anchors.centerIn: parent
+            size: Theme.islandPillGlyphSize
+            strokeWidth: 2
+            path: IconPaths.check
+            color: Theme.accentFill
+          }
         }
 
         MouseArea {
@@ -471,23 +355,16 @@ Scope {
 
   // Each state is laid out at its final size and centred, so the growing shape reveals it.
   // The open and the close are the card's own fade; this only crosses between states.
-  component PillState: Item {
+  component SharingState: PillState {
     property string name: ""
-    property real stateWidth: Theme.sharingProgressWidth
-    property real stateHeight: Theme.sharingProgressHeight
+    property real stateWidth: Theme.islandPillWidth
+    property real stateHeight: Theme.islandPillHeight
 
     x: (win.surface.width - stateWidth) / 2
     y: (win.surface.height - stateHeight) / 2
     width: stateWidth
     height: stateHeight
-    opacity: win.shownMode === name ? 1 : 0
-    visible: opacity > 0
-    enabled: win.open && opacity > 0.5
-
-    Behavior on opacity {
-      Morph {
-        duration: Theme.morphContent * 2
-      }
-    }
+    shown: win.shownMode === name
+    open: win.open
   }
 }
