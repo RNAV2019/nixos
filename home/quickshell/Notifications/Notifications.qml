@@ -5,7 +5,8 @@ import qs.Services
 import qs.Ui
 
 // The toast: the island grows into a 450 px card, then melts back into the clock.
-// One card, not a stack; only the card takes input.
+// One card at a time; the ones waiting peek out under it and are counted on it. Only the card
+// takes input.
 Variants {
   id: root
 
@@ -22,6 +23,9 @@ Variants {
 
     // The toast being shown; popups[0] is the newest.
     readonly property var current: NotificationStore.popups.length > 0 ? NotificationStore.popups[0] : null
+
+    // How many wait behind it.
+    readonly property int queued: Math.max(0, NotificationStore.popups.length - 1)
 
     // Waits behind a user-opened panel.
     readonly property bool blocked: Bus.islandOpenFor(win.screenName)
@@ -181,6 +185,41 @@ Variants {
       }
     }
 
+    // ---- the queue ----
+    //
+    // The toasts behind the front one show as two back layers under it, drawn in the window
+    // beneath the surface rather than inside it, so they stand against the desktop. Each is a
+    // strip: only the part below the card's bottom edge is drawn.
+
+    // A card leaving lifts the layers behind it, and one arriving sets the old front back
+    // behind it: the layers start offset the other way and settle.
+    property int lastQueued: 0
+
+    readonly property real rise: riseSpring.value
+
+    onQueuedChanged: {
+      var gone = win.queued < win.lastQueued;
+      win.lastQueued = win.queued;
+      riseSpring.animate = false;
+      riseSpring.target = gone ? Theme.notifQueuePeek : -Theme.notifQueuePeek;
+      riseSpring.animate = true;
+      riseSpring.target = 0;
+    }
+
+    MorphSpring {
+      id: riseSpring
+    }
+
+    QueueLayer {
+      host: win
+      depth: 2
+    }
+
+    QueueLayer {
+      host: win
+      depth: 1
+    }
+
     MouseArea {
       id: cardHover
 
@@ -215,6 +254,44 @@ Variants {
       host: win
       clockDate: clock.date
       live: win.front === 1
+    }
+  }
+
+  // A toast waiting behind the card, showing only the curve of its bottom edge.
+  component QueueLayer: Item {
+    id: layer
+
+    required property var host
+    // 1 is the next toast, 2 the one after.
+    required property int depth
+
+    readonly property bool shown: layer.host.open && layer.host.origin.presented && layer.host.queued >= layer.depth
+
+    parent: layer.host.contentItem
+    z: -layer.depth
+    x: layer.host.surface.x
+    y: layer.host.surface.snap(layer.host.surface.y + layer.host.surface.height)
+    width: layer.host.surface.width
+    height: Theme.notifQueuePeek * (Theme.notifQueueLayers + 1)
+    clip: true
+    opacity: layer.shown ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.morphState
+      }
+    }
+
+    Rectangle {
+      x: Theme.notifQueueInset * layer.depth
+      y: Theme.notifQueuePeek * layer.depth + layer.host.rise - height
+      width: layer.width - x * 2
+      height: Theme.notifRadius * 2
+      radius: Theme.notifRadius
+      color: Theme.surface
+      border.width: 1
+      border.color: Theme.surfaceOutline
     }
   }
 
@@ -399,6 +476,83 @@ Variants {
         label: toast.urgent ? "Ignore" : "Dismiss"
         primary: toast.buttons.length === 0
         onPressed: toast.host.close()
+      }
+    }
+
+    // How many more are waiting, where the action row starts. Counting down cross-fades the
+    // digits; with nothing waiting it goes.
+    QueueChip {
+      x: Theme.notifTextLeft
+      y: toast.actionsTop + (Theme.notifActionHeight - height) / 2
+      count: toast.host ? toast.host.queued : 0
+      shown: toast.live
+    }
+  }
+
+  // "+2": the toasts waiting behind this one.
+  component QueueChip: Rectangle {
+    id: chip
+
+    property int count: 0
+    property bool shown: true
+
+    // The last number worth drawing, so it can fade out with the chip rather than before it.
+    property int last: 0
+    // Which of the two digits is the front one: each count change swaps them over.
+    property bool flip: false
+
+    onCountChanged: {
+      if (chip.count <= 0 || chip.count === chip.last)
+        return;
+      if (chip.last > 0)
+        chip.flip = !chip.flip;
+      (chip.flip ? digitB : digitA).text = "+" + chip.count;
+      chip.last = chip.count;
+    }
+
+    width: Theme.notifChipWidth
+    height: Theme.notifChipHeight
+    radius: height / 2
+    color: Theme.withAlpha(Theme.highlightMed, Theme.notifActionSecondaryAlpha)
+    opacity: chip.shown && chip.count > 0 ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.duration(Theme.morphContent)
+      }
+    }
+
+    Accessible.role: Accessible.StaticText
+    Accessible.name: chip.count + " more notifications"
+
+    ChipDigit {
+      id: digitA
+
+      front: !chip.flip
+    }
+
+    ChipDigit {
+      id: digitB
+
+      front: chip.flip
+    }
+  }
+
+  // One of the chip's two digits; the count change cross-fades them.
+  component ChipDigit: Text {
+    required property bool front
+
+    anchors.centerIn: parent
+    color: Theme.inkPrimary
+    opacity: front ? 1 : 0
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.notifChipSize
+    font.weight: Theme.weightSemi
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.duration(Theme.morphContent)
       }
     }
   }

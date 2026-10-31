@@ -377,6 +377,14 @@ Singleton {
   readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
+  // Toasts waiting behind the card: back layers peeking under it, and a "+N" chip in the action row.
+  readonly property int notifQueueInset: 14
+  readonly property int notifQueuePeek: 8
+  readonly property int notifQueueLayers: 2
+  readonly property int notifChipWidth: 32
+  readonly property int notifChipHeight: 22
+  readonly property int notifChipSize: 11
+
   // The polkit authentication prompt: the island grown into a 420 px card. Everything sits on
   // a 20 px inset, so the message, the details plate, the pill and the buttons share both edges.
   readonly property int authWidth: 420
