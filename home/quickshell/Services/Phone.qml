@@ -30,16 +30,21 @@ Singleton {
   // appearing does not take the satellite from it. Chosen when a picture arrives.
   property var phone: null
 
+  // KDE Connect 26.08 calls a phone "phone"; earlier releases said "smartphone".
+  function _isPhone(d) {
+    return d.type === "phone" || d.type === "smartphone";
+  }
+
   function _pick(devices) {
     var held = root.phone !== null ? root.phone.id : "";
     var pick = null;
     for (var i = 0; i < devices.length; i++) {
       var d = devices[i];
-      if (!d.paired || !d.reachable || (d.type !== "smartphone" && d.type !== "tablet"))
+      if (!d.paired || !d.reachable || (!root._isPhone(d) && d.type !== "tablet"))
         continue;
       if (d.id === held)
         return d;
-      if (pick === null || (pick.type === "tablet" && d.type === "smartphone"))
+      if (pick === null || (pick.type === "tablet" && root._isPhone(d)))
         pick = d;
     }
     return pick;

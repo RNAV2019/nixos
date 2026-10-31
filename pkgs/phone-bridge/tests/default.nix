@@ -30,7 +30,7 @@ in
 
     phone-bridge events > events.out &
     sleep 1
-    ctl '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"smartphone","battery":{"charge":78,"charging":false}}'
+    ctl '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"phone","battery":{"charge":78,"charging":false}}'
     ctl '{"op":"notify","dev":"s24","id":"n1","app":"WhatsApp","title":"Maya","text":"Dinner?"}'
     ctl '{"op":"notify","dev":"s24","id":"n2","app":"Quiet","title":"Ongoing","text":"x","silent":true}'
     ctl '{"op":"battery","dev":"s24","charge":14,"charging":true}'

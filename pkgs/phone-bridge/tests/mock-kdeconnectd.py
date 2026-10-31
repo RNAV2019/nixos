@@ -310,7 +310,7 @@ class Control(ServiceInterface):
                 op["id"],
                 {
                     "name": "",
-                    "type": "smartphone",
+                    "type": "phone",
                     "reachable": True,
                     "paired": True,
                     "pairRequested": False,

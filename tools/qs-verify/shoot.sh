@@ -408,7 +408,7 @@ ph_up() { # the mock daemon and a phone with two notifications; kept for the sta
       >"$QSV_WORK/mock-kdeconnectd.log" 2>&1 &
     until busctl --user list 2>/dev/null | grep -q org.mock.Control; do sleep 0.2; done
   }
-  ph '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"smartphone","battery":{"charge":78,"charging":false}}'
+  ph '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"phone","battery":{"charge":78,"charging":false}}'
   ph '{"op":"cellular","dev":"s24","type":"5G","strength":3}'
   ph '{"op":"notify","dev":"s24","id":"n1","app":"WhatsApp","title":"Maya","text":"Dinner on Friday?"}'
   ph '{"op":"notify","dev":"s24","id":"n2","app":"Gmail","title":"Weekly digest","text":"Seven new things in your inbox"}'
