@@ -36,8 +36,10 @@
       lt = "eza --tree --level=2 --long --icons --git";
       la = "eza -lha --group-directories-first --icons=auto";
 
-      # Picks nixosConfigurations.<hostname>.
-      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
+      # Picks nixosConfigurations.<hostname>. The option has Nix append its progress as JSON to a file
+      # the shell's rebuild pill tails (home/quickshell/Services/Rebuild.qml); the terminal is
+      # unchanged, and with no shell running the file is just left behind.
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path \"$XDG_RUNTIME_DIR/rebuild.jsonl\"";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
 
@@ -85,7 +87,8 @@
     shellAliases = {
       la = "ls -a";
       lt = "eza --tree --level=2 --long --icons --git";
-      rebuild = "sudo nixos-rebuild switch --flake ${repoDir}";
+      # The same option as in fish, spelled for nu: the log the rebuild pill tails.
+      rebuild = "sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path $\"($env.XDG_RUNTIME_DIR? | default '')/rebuild.jsonl\"";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
       top = "btop";

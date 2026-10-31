@@ -127,7 +127,7 @@ None of the steps above bring back Bluetooth pairings or T3 Code and opencode hi
 ## Daily use
 
 ```bash
-rebuild              # nixos-rebuild switch for this hostname
+rebuild              # nixos-rebuild switch for this hostname; the island shows its progress
 nix flake update     # bump inputs
 nix flake check      # tool tests and qmlformat
 nix-clean            # collect old generations
@@ -183,6 +183,21 @@ Rehearse every state without a real request: `qs ipc call authpreview ask pkexec
 `long`, `identities`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
 per session, so don't start a second shell to test it: `nix build .#checks.x86_64-linux.polkit-agent -L`
 runs the real agent against a real `polkitd` and PAM in a VM of its own.
+
+</details>
+
+<details>
+<summary><b>Rebuild pill</b></summary>
+
+`rebuild` is a plain `sudo nixos-rebuild switch`, plus `--option json-log-path
+"$XDG_RUNTIME_DIR/rebuild.jsonl"` ([`home/shell.nix`](home/shell.nix)), which has Nix append its progress
+as JSON to that file and changes nothing in the terminal. [`Services/Rebuild.qml`](home/quickshell/Services/Rebuild.qml)
+tails it, and [`Rebuild/RebuildPill.qml`](home/quickshell/Rebuild/RebuildPill.qml) grows the island's
+progress pill: "Rebuilding" with n of m derivations (a sliding segment until the total is known),
+then "Switched" and the time taken, or "Rebuild failed" with how far it got, which stays until
+clicked or the next rebuild. "Switched" is when the last Nix process has ended, so the activation
+that follows a switch is not waited for. With the shell not running the file is just left behind,
+and ignored when the shell starts. To try it without rebuilding, run any `nix build` with that option.
 
 </details>
 

@@ -134,8 +134,9 @@ Singleton {
   // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
   // island through owners, only through a transient screen, so a real panel covers it.
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
-  // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml).
-  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "moment"]
+  // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml);
+  // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml).
+  readonly property var transientKeys: ["osd", "notify", "sharing", "dictation", "moment", "rebuild"]
 
   function isTransient(key) {
     return transientKeys.indexOf(key) !== -1;

@@ -32,6 +32,9 @@ Singleton {
   // moment's Wi-Fi arcs (Lucide).
   readonly property string batteryOutline: "M4 7h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM22 11v2"
   readonly property string wifi: "M12 20h.01M2 8.82a15 15 0 0 1 20 0M5 12.859a10 10 0 0 1 14 0M8.5 16.429a5 5 0 0 1 7 0"
+  // The rebuild pill's snowflake (NixOS) and failure cross, Lucide.
+  readonly property string snowflake: "M2 12h20M12 2v20m8-4-4-4 4-4M4 8l4 4-4 4m12-12-4 4-4-4M8 20l4-4 4 4"
+  readonly property string circleX: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM15 9l-6 6M9 9l6 6"
 
   // Lucide wifi-off - the board's arcs land on the same curve ends.
   readonly property string wifiOff: "M12 20h.01M8.5 16.429a5 5 0 0 1 7 0M5 12.859a10 10 0 0 1 5.17-2.69M19 12.859a10 10 0 0 0-2.007-1.523M2 8.82a15 15 0 0 1 4.177-2.643M22 8.82a15 15 0 0 0-11.288-3.764M2 2l20 20"

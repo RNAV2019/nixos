@@ -432,6 +432,20 @@ Singleton {
   readonly property int sharingProgressRadius: 24
   readonly property int sharingConfirmDwell: 2500
 
+  // The rebuild pill (Rebuild/RebuildPill.qml) is the Sharing pill's progress state, 278 x 48,
+  // with the track after a label: what changes is only what is in it.
+  readonly property int rebuildPillWidth: sharingProgressWidth
+  readonly property int rebuildPillHeight: sharingProgressHeight
+  readonly property int rebuildPillRadius: sharingProgressRadius
+  readonly property int rebuildLabelLeft: 52
+  readonly property int rebuildTrackLeft: 128
+  readonly property int rebuildTrackWidth: 91
+  readonly property int rebuildTrackHeight: 8
+  readonly property int rebuildValueRight: 20
+  // While the total is not known: a segment this share of the track, one pass in this long.
+  readonly property real rebuildSweepShare: 0.25
+  readonly property int rebuildSweep: 1200
+
   // The dictation pill, Handy's recording overlay drawn by the island: an OSD-sized row
   // (mic, the level bars, the time and an ×) that opens into a card once live text arrives,
   // the row staying on top and the transcript flowing under it.

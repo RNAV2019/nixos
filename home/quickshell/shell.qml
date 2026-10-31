@@ -14,6 +14,7 @@ import qs.Nearby
 import qs.Notifications
 import qs.Osd
 import qs.Power
+import qs.Rebuild
 import qs.Recorder
 import qs.Services
 import qs.Session
@@ -27,6 +28,7 @@ ShellRoot {
 
   Bar {}
   Moments {}
+  RebuildPill {}
   ActivitySources {
     id: activitySources
   }
