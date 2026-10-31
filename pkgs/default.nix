@@ -10,6 +10,8 @@ final: prev: {
   gtk4-live-css = final.callPackage ./gtk4-live-css {};
   # The launcher's emoji table, from nixpkgs' Unicode and CLDR data.
   quickshell-emoji = final.callPackage ./quickshell-emoji {};
+  # The shell's icon font: Material Symbols Rounded, filled, as a static instance.
+  material-symbols-filled = final.callPackage ./material-symbols-filled {};
   # Offline dictation: nixpkgs' build, given its typing tools.
   handy = final.callPackage ./handy {inherit (prev) handy;};
   # The screen-share portal, telling the share picker which app is asking.

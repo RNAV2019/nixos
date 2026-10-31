@@ -190,6 +190,8 @@ in {
     noto-fonts
     noto-fonts-color-emoji
     inter
+    # The shell's one icon set (home/quickshell/Commons/Icons.qml).
+    material-symbols-filled
   ];
 
   fonts.fontconfig = {

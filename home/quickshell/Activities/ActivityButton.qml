@@ -9,7 +9,7 @@ Rectangle {
   id: root
 
   property string text: ""
-  // A Lucide path, drawn before the label.
+  // An IconPaths icon, drawn before the label.
   property string icon: ""
   // "primary", "secondary", "ghost" or "danger".
   property string kind: "secondary"

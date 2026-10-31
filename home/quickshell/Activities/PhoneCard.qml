@@ -195,7 +195,7 @@ Item {
       Rectangle {
         anchors.fill: parent
         anchors.margins: -4
-        radius: 12
+        radius: 14
         color: Theme.withAlpha(Theme.surfaceSubtle, 0.9)
         opacity: rowArea.containsMouse && row.modelData.dismissable ? 1 : 0
 

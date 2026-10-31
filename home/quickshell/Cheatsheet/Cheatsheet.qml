@@ -111,12 +111,11 @@ Variants {
 
             Text {
               y: Theme.cheatHeadY
-              text: group.modelData.group.toUpperCase()
-              color: Theme.launcherHeaderColor
+              text: group.modelData.group
+              color: Theme.inkTertiary
               font.family: Theme.uiFont
-              font.pixelSize: Theme.launcherHeaderSize
-              font.weight: Theme.weightSemi
-              font.letterSpacing: Theme.launcherHeaderTracking
+              font.pixelSize: Theme.sectionSize
+              font.weight: Theme.weightMedium
             }
 
             Repeater {

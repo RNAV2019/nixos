@@ -3,6 +3,6 @@ import qs.Commons
 
 // Colour never overshoots. A short ease-out keeps state changes legible without a brightness pulse.
 ColorAnimation {
-  duration: Theme.duration(Theme.morphState)
+  duration: Theme.duration(Theme.tintFade)
   easing.type: Easing.OutQuad
 }

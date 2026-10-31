@@ -58,14 +58,15 @@ import Quickshell
 //            colour); else the name's initial.
 //   score    0-100. 60 and up is a strong match and may lift its section to the top: apps
 //            put a name prefix at 80, the calculator a sum at 90.
-//   matches  Indices into `name` to highlight, from Fuzzy.match; [] for none.
+//   matches  Indices into `name` the query matched, from Fuzzy.match; [] for none. The
+//            launcher no longer draws them, but they stay part of a row.
 // Rows come back to `activate` as they were given, plus `provider` and `rank`, so a
 // provider can carry its own fields (`desktopId`, `copy`) through.
 //
 // Ordering: within a section by score (ties keep provider order); sections in `providers`
 // order, except that the section with the best row is lifted to the top when that row is
-// strong. Headers show only when two or more sections do. An empty query shows each
-// provider's `emptyResults`.
+// strong. Sections are an ordering only: the launcher draws no headings between them. An
+// empty query shows each provider's `emptyResults`.
 Singleton {
   id: root
 
@@ -84,7 +85,7 @@ Singleton {
   // taken by the launcher as it opens.
   property string pendingAsk: ""
 
-  // Flat, in display order: headers are { id: "section:<name>", header: true, name }.
+  // Flat, in display order.
   property var results: []
 
   readonly property int strongScore: 60
@@ -126,7 +127,7 @@ Singleton {
 
   // Tab on a non-empty unscoped query: the selected row's provider first, then `ask`.
   function tab(row, text) {
-    if (row && !row.header && row.provider && row.provider.tab && row.provider.tab(row) === true)
+    if (row && row.provider && row.provider.tab && row.provider.tab(row) === true)
       return true;
     if (root.scope || text.trim().length === 0)
       return false;
@@ -239,21 +240,14 @@ Singleton {
     }
 
     var out = [];
-    for (i = 0; i < sections.length; i++) {
-      if (sections.length > 1)
-        out.push({
-          id: "section:" + sections[i].name,
-          header: true,
-          name: sections[i].name
-        });
+    for (i = 0; i < sections.length; i++)
       out = out.concat(sections[i].rows);
-    }
     root.results = out;
   }
 
   // Hands the row to its provider. Returns whether to stay open.
   function activate(row, modifiers) {
-    if (!row || row.header || !row.provider)
+    if (!row || !row.provider)
       return false;
     return row.provider.activate(row, modifiers || 0) === true;
   }

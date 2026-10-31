@@ -127,7 +127,7 @@ Item {
     y: 110
     width: root.inner
     height: 32
-    radius: 12
+    radius: 14
     color: Theme.surfaceSubtle
 
     Text {

@@ -30,7 +30,7 @@ Gauge {
     return NetworkInfo.activeNetwork.signalStrength;
   }
 
-  // Three bars about the dot, lit by signal strength; the dot sits at (24, 31) in the ring.
+  // The signal wedge, filled to its strength; its point sits at (24, 31) in the ring.
   WifiGlyph {
     x: 24 - centreX
     y: 31 - centreY

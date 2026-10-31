@@ -29,7 +29,7 @@ Rectangle {
     var out = "";
     for (var j = 0; j < title.length; j++) {
       var c = title.charAt(j).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-      out += hit[j] ? "<font color=\"" + Theme.launcherMatchColor + "\"><b>" + c + "</b></font>" : c;
+      out += hit[j] ? "<font color=\"" + Theme.overviewMatchColor + "\"><b>" + c + "</b></font>" : c;
     }
     return out;
   }

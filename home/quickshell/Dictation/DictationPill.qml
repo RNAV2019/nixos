@@ -93,9 +93,7 @@ Scope {
           }
 
           Behavior on color {
-            ColorAnimation {
-              duration: Theme.morphState
-            }
+            Tint {}
           }
         }
 

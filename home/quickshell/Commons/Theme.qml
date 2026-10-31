@@ -148,11 +148,14 @@ Singleton {
     return palette[h % palette.length];
   }
 
-  // The Nerd Font carries icons and holds digits on a fixed advance, so it stays for icons,
-  // identifiers and live readouts; prose and labels use a proportional face.
+  // The mono face holds digits on a fixed advance, so it stays for identifiers and live
+  // readouts; prose and labels use a proportional face.
   readonly property string fontFamily: "JetBrainsMono Nerd Font"
-  readonly property string iconFont: fontFamily
   readonly property string monoFont: fontFamily
+  // Icons are Material Symbols Rounded, named by ligature (Commons/Icons.qml): a static
+  // instance filled at weight 400 (pkgs/material-symbols-filled), so an icon Text keeps its
+  // regular weight.
+  readonly property string iconFont: "Material Symbols Rounded Filled"
   readonly property string uiFont: "Inter"
   // Inter's large-optical-size cut, for type big enough that the text cut looks loose.
   readonly property string displayFont: "Inter Display"
@@ -256,7 +259,7 @@ Singleton {
   readonly property int islandTitleSize: 13
   readonly property int islandCaptionSize: 11
   readonly property int islandArtSize: 48
-  readonly property int islandArtRadius: 10
+  readonly property int islandArtRadius: 8
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
@@ -269,7 +272,7 @@ Singleton {
   readonly property int islandCalTodaySize: 18
   readonly property int islandCalPlateWidth: 35
   readonly property int islandCalPlateHeight: 37
-  readonly property int islandCalPlateRadius: 12
+  readonly property int islandCalPlateRadius: 14
   // Row centres, measured from the top of the block.
   readonly property real islandCalLabelMid: 10.5
   readonly property real islandCalDayMid: 27.5
@@ -278,7 +281,8 @@ Singleton {
   readonly property real islandCalPlateAlpha: 0.08
 
   // The app launcher, which the island pill grows into, sharing a top edge and centre line.
-  // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap.
+  // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap, and no
+  // section headings between providers: saneAspect's launcher has none.
   readonly property int launcherWidth: panelColumnWidth
   readonly property int launcherRadius: panelRadius
   readonly property int launcherInset: 14
@@ -289,37 +293,30 @@ Singleton {
   readonly property int launcherListTop: 80
   readonly property int launcherRowHeight: 42
   readonly property int launcherRowGap: 3
-  readonly property int launcherRowRadius: 10
+  readonly property int launcherRowRadius: 8
   readonly property int launcherPadBottom: 14
   readonly property int launcherIconLeft: 27
   readonly property int launcherIconSize: 26
-  readonly property int launcherIconRadius: 7
+  readonly property int launcherIconRadius: 8
   readonly property int launcherTextLeft: 66
   readonly property int launcherNameSize: 14
   readonly property int launcherDescSize: 11
+  // The chat view's gutter mark and scroll thumb.
   readonly property int launcherMarkerWidth: 3
   readonly property int launcherMarkerHeight: 20
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
-  // Section headings: a small tracked capital label sat low, so it reads with the rows
-  // under it, aligned to the icon column. They are not rows and are never selected.
-  readonly property int launcherHeaderHeight: 26
-  readonly property int launcherHeaderSize: 10
-  readonly property real launcherHeaderTracking: 0.8
-  readonly property int launcherHeaderPadBottom: 5
-  readonly property color launcherHeaderColor: inkTertiary
-  // The characters a query matched, in the name.
-  readonly property color launcherMatchColor: accent
-  // The scope chip at the field's left: the provider's glyph and section on an accent tint,
-  // its glyph on the search glyph's spot.
+  // The selected row is a plain fill; no marker, no accent. The accent stays for the caret.
+  readonly property real launcherSelectedAlpha: 0.10
+  // The scope chip at the search row's right end: the provider's glyph and section in the
+  // accent on a quiet pill, so the field keeps its search glyph and its text column.
   readonly property int launcherChipHeight: 28
-  readonly property int launcherChipPad: 10
-  readonly property int launcherChipRadius: 9
+  readonly property int launcherChipPad: 12
   readonly property int launcherChipGap: 6
   readonly property int launcherChipTextGap: 10
   readonly property int launcherChipSize: 13
-  readonly property int launcherChipGlyphSize: 15
-  readonly property real launcherChipAlpha: 0.16
+  readonly property int launcherChipGlyphSize: 16
+  readonly property real launcherChipAlpha: 0.08
   // A provider's view in the list's place grows the panel up to this, then scrolls; the
   // screen margin keeps it clear of a short screen's bottom edge.
   readonly property int launcherViewMaxHeight: 520
@@ -353,7 +350,7 @@ Singleton {
   // The notification toast: the pill grows into one card, holds while read, then melts back.
   // One card, not a stack; a second notification replaces the first.
   readonly property int notifWidth: 450
-  readonly property int notifRadius: 28
+  readonly property int notifRadius: 26
   readonly property int notifInset: 16
   readonly property int notifTextLeft: 68
   readonly property int notifAvatarSize: 40
@@ -416,7 +413,7 @@ Singleton {
   readonly property int authMessageLines: 3
   readonly property int authBlockGap: 12
   readonly property int authDetailsHeight: 32
-  readonly property int authDetailsRadius: 12
+  readonly property int authDetailsRadius: 14
   readonly property int authDetailsRowHeight: 20
   readonly property int authDetailsPad: 8
   readonly property real authDetailsBorderAlpha: 0.7
@@ -445,7 +442,7 @@ Singleton {
   readonly property int powerInset: 11
   readonly property int powerTileWidth: 90
   readonly property int powerTileHeight: 80
-  readonly property int powerTileRadius: 16
+  readonly property int powerTileRadius: 14
   readonly property int powerTileGap: 12
   readonly property int powerTileTop: 16
   readonly property int powerGlyphTop: 38
@@ -499,7 +496,7 @@ Singleton {
   readonly property int resultWidth: 420
   readonly property int resultInset: 14
   readonly property int resultTile: 32
-  readonly property int resultTileRadius: 10
+  readonly property int resultTileRadius: 8
   readonly property int resultTileGlyph: 16
   readonly property int resultTitleSize: 14
   readonly property int resultDescSize: 11
@@ -519,7 +516,7 @@ Singleton {
   readonly property real resultQrSize: 12.5
   readonly property int colourWidth: 520
   readonly property int colourSwatch: 177
-  readonly property int colourSwatchRadius: 16
+  readonly property int colourSwatchRadius: 14
   readonly property int colourRowsX: 205
   readonly property int colourRowWidth: 301
   readonly property int colourLabelLeft: 27
@@ -531,7 +528,7 @@ Singleton {
   readonly property int colourHistoryCount: 10
   readonly property int colourHistoryWidth: 42
   readonly property int colourHistoryHeight: 28
-  readonly property int colourHistoryRadius: 9
+  readonly property int colourHistoryRadius: 8
   readonly property int colourHistoryGap: 8
   readonly property int colourHeight: colourHistoryTop + colourHistoryHeight + resultInset
 
@@ -555,7 +552,7 @@ Singleton {
   // Accept/Decline; progress collapses to OSD size; confirm holds briefly.
   readonly property int sharingOfferWidth: 420
   readonly property int sharingOfferHeight: 64
-  readonly property int sharingOfferRadius: 22
+  readonly property int sharingOfferRadius: 26
   readonly property int sharingProgressWidth: 278
   readonly property int sharingProgressHeight: 48
   readonly property int sharingProgressRadius: 24
@@ -620,7 +617,7 @@ Singleton {
   // The media card; the gap separates each block from the next.
   readonly property int controlBlockGap: 15
   readonly property int controlMediaHeight: 140
-  readonly property int controlMediaRadius: 16
+  readonly property int controlMediaRadius: 14
   readonly property int controlMediaTitleSize: 19
   readonly property int controlMediaArtistSize: 12
   readonly property int controlMediaCaptionSize: 11
@@ -713,7 +710,7 @@ Singleton {
   // The row is a carousel, not a grid: clipped by the panel, running on past both edges.
   readonly property int wallpaperRowMid: 130
   readonly property int wallpaperTileGap: 16
-  readonly property int wallpaperTileRadius: 10
+  readonly property int wallpaperTileRadius: 8
 
   // The chosen wallpaper is drawn larger and every other one the same, so the row has one
   // focus. First is the selected width, last everything else; four come to 720 inside 752.
@@ -751,7 +748,7 @@ Singleton {
   readonly property int shareHeight: 320
   readonly property int shareRadius: panelRadius
   readonly property int shareInset: 24
-  readonly property int shareAvatarRadius: 12
+  readonly property int shareAvatarRadius: 14
   readonly property int shareTitleLeft: 78
   readonly property int shareTitleTop: 22
   readonly property int shareSubTop: 46
@@ -859,7 +856,7 @@ Singleton {
   readonly property int phoneCardHeight: 344
   readonly property int phonePreviewWidth: 124
   readonly property int phonePreviewHeight: 260
-  readonly property int phonePreviewRadius: 22
+  readonly property int phonePreviewRadius: 26
   readonly property int phoneLowBattery: 20
   readonly property int phonePreviewInterval: 1000
 
@@ -925,7 +922,7 @@ Singleton {
   readonly property int calAgendaTop: 430
   readonly property int calAgendaHeight: 38
   readonly property int calAgendaGap: 4
-  readonly property int calAgendaRadius: 12
+  readonly property int calAgendaRadius: 14
   readonly property int calSpineLeft: 12
   readonly property int calSpineWidth: 3
   readonly property int calSpineHeight: 20
@@ -1084,10 +1081,10 @@ Singleton {
   readonly property int nearbySectionTop: 22
   readonly property int nearbySectionToRows: 6
   readonly property int nearbyFileHeight: 40
-  readonly property int nearbyFileRadius: 12
+  readonly property int nearbyFileRadius: 14
   readonly property int nearbyFileGap: 6
   readonly property int nearbyFileThumb: 28
-  readonly property int nearbyFileThumbRadius: 7
+  readonly property int nearbyFileThumbRadius: 8
   readonly property int nearbyFileThumbGlyph: 15
   readonly property int nearbyFileTextLeft: 48
   readonly property int nearbyFileRemove: 12
@@ -1176,7 +1173,7 @@ Singleton {
 
   readonly property int nearbyIncomingTop: 18
   readonly property int nearbyIncomingHeight: 64
-  readonly property int nearbyIncomingRadius: 16
+  readonly property int nearbyIncomingRadius: 14
   readonly property int nearbyIncomingGlyph: 20
   readonly property real nearbyIncomingSenderSize: 12.5
   readonly property real nearbyIncomingMetaSize: 10.5
@@ -1249,6 +1246,10 @@ Singleton {
 
   // A control changing state rather than shape: a toggle, a slider, a hover or a press.
   readonly property int morphState: reduceMotion ? 1 : 115
+
+  // A colour changing with that state: a tile lighting, a hover tint, a button's ink. Slower
+  // than the press it answers, at saneAspect's 250 ms, and never overshooting (Ui/Tint.qml).
+  readonly property int tintFade: reduceMotion ? 1 : 250
 
   // Content swaps are not morphs. A surface takes ~300 ms to change shape while its contents
   // change over ~five frames, so fading on the geometry's clock would read as a dissolve.
@@ -1370,6 +1371,8 @@ Singleton {
   readonly property int overviewPlateInset: 6
   readonly property int overviewPlateSize: 11
   readonly property int overviewPlateDot: 8
+  // The characters a filter matched in a window title.
+  readonly property color overviewMatchColor: accent
   readonly property int overviewPlatePad: 10
   readonly property int overviewPillHeight: 22
   readonly property int overviewPillTop: 10
@@ -1402,7 +1405,7 @@ Singleton {
   readonly property int cheatTitleSize: 18
   readonly property int cheatRowSize: 13
   readonly property int cheatCapHeight: 22
-  readonly property int cheatCapRadius: 7
+  readonly property int cheatCapRadius: 8
   readonly property int cheatCapPad: 8
   readonly property int cheatCapGap: 4
   readonly property int cheatCapSize: 11

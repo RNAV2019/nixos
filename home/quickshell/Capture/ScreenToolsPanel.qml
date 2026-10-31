@@ -576,11 +576,10 @@ Variants {
               x: Theme.colourLabelLeft
               y: (parent.height - height) / 2
               text: formatRow.modelData.label
-              color: Theme.launcherHeaderColor
+              color: Theme.inkTertiary
               font.family: Theme.uiFont
-              font.pixelSize: Theme.launcherHeaderSize
-              font.weight: Theme.weightSemi
-              font.letterSpacing: Theme.launcherHeaderTracking
+              font.pixelSize: Theme.sectionSize
+              font.weight: Theme.weightMedium
             }
 
             Text {
@@ -626,12 +625,11 @@ Variants {
         Text {
           x: Theme.colourLabelLeft
           y: Theme.colourRecentTop
-          text: "RECENT"
-          color: Theme.launcherHeaderColor
+          text: "Recent"
+          color: Theme.inkTertiary
           font.family: Theme.uiFont
-          font.pixelSize: Theme.launcherHeaderSize
-          font.weight: Theme.weightSemi
-          font.letterSpacing: Theme.launcherHeaderTracking
+          font.pixelSize: Theme.sectionSize
+          font.weight: Theme.weightMedium
         }
 
         Repeater {

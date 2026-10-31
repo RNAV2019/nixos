@@ -1,26 +1,41 @@
 import QtQuick
 import QtQuick.Shapes
+import qs.Commons
 
-// The design's icons (boards 16a-16g) are 24-grid round-capped stroke marks - and the
-// shell's font glyphs are filled, so they cannot match them. One shape renderer covers
-// both the strokes and the few filled marks (the Apple logo). Weight is a screen-pixel
-// value, since the design tunes it per size.
+// One icon at `size`, from Commons/IconPaths.qml. Most entries there are Material Symbols
+// names, drawn as a filled glyph in Theme.iconFont, the shell's one icon set; the few marks
+// Material has no counterpart for (brand logos, board-specific glyphs, the drawn battery
+// outline) stay 24-grid SVG path data, stroked with round caps or `filled`. Stroke weight is a
+// screen-pixel value and only applies to those.
 Item {
   id: root
 
-  // SVG path data on the 24-unit grid; subpaths are allowed.
+  // A Material Symbols name, or SVG path data on the 24-unit grid (subpaths are allowed).
   property string path: ""
   property real size: 24
   property color color: "black"
   property real strokeWidth: size * 2 / 24
   property bool filled: false
 
+  // Path data always starts with a moveto; a ligature name never does.
+  readonly property bool isGlyph: /^[a-z0-9_]+$/.test(path)
+
   implicitWidth: size
   implicitHeight: size
+
+  Text {
+    anchors.centerIn: parent
+    visible: root.isGlyph
+    text: root.isGlyph ? root.path : ""
+    color: root.color
+    font.family: Theme.iconFont
+    font.pixelSize: root.size
+  }
 
   Shape {
     width: 24
     height: 24
+    visible: !root.isGlyph
     transformOrigin: Item.TopLeft
     scale: root.size / 24
     // The default geometry renderer only antialiases with multisampling, which the
@@ -37,7 +52,7 @@ Item {
       joinStyle: ShapePath.RoundJoin
 
       PathSvg {
-        path: root.path
+        path: root.isGlyph ? "" : root.path
       }
     }
   }

@@ -41,16 +41,14 @@ Variants {
     // it back to the top.
     property bool userMoved: false
 
-    // Headers are shorter than rows; the cap is still Theme.launcherMaxRows rows' worth, and
-    // an empty result set owns one row's height, so the panel can say so.
+    // Up to Theme.launcherMaxRows rows, then the list scrolls. Nothing to show leaves no list,
+    // and the panel closes up to the search row rather than saying so.
     readonly property int listHeight: {
-      var cap = Theme.launcherMaxRows * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap;
-      var h = -Theme.launcherRowGap;
-      for (var i = 0; i < win.results.length && h < cap; i++)
-        h += (win.results[i].header ? Theme.launcherHeaderHeight : Theme.launcherRowHeight) + Theme.launcherRowGap;
-      return Math.max(Theme.launcherRowHeight, Math.min(cap, h));
+      var shown = Math.min(Theme.launcherMaxRows, win.results.length);
+      return shown > 0 ? shown * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap : 0;
     }
-    readonly property int contentHeight: Theme.launcherListTop + (viewProvider ? viewHeight : listHeight) + Theme.launcherPadBottom
+    readonly property bool listEmpty: !viewProvider && win.results.length === 0
+    readonly property int contentHeight: listEmpty ? Theme.launcherSearchHeight : Theme.launcherListTop + (viewProvider ? viewHeight : listHeight) + Theme.launcherPadBottom
 
     onOpening: {
       Omnibox.reset();
@@ -85,23 +83,18 @@ Variants {
     }
 
     function selectable(i) {
-      return i >= 0 && i < rows.count && !rows.get(i).rowHeader;
+      return i >= 0 && i < rows.count;
     }
 
     function selectFirst() {
-      var i = 0;
-      while (i < rows.count && !win.selectable(i))
-        i++;
-      list.currentIndex = i < rows.count ? i : 0;
+      list.currentIndex = 0;
       // The index may not have changed while the rows under it did.
       Qt.callLater(list.reveal, false);
     }
 
-    // Steps over headers; stays put at either end.
+    // Stays put at either end.
     function step(dir) {
       var i = list.currentIndex + dir;
-      while (i >= 0 && i < rows.count && !win.selectable(i))
-        i += dir;
       if (!win.selectable(i))
         return;
       list.currentIndex = i;
@@ -157,11 +150,10 @@ Variants {
         win.selectFirst();
     }
 
-    // Every row carries every role, so headers and every provider's rows share one model.
+    // Every row carries every role, so every provider's rows share one model.
     function rowFor(item) {
       var row = {
         entryId: item.id,
-        rowHeader: item.header === true,
         rowName: String(item.name || ""),
         rowDesc: String(item.desc || ""),
         rowIcon: String(item.icon || ""),
@@ -169,11 +161,9 @@ Variants {
         rowSwatch: String(item.swatch || ""),
         rowEmoji: String(item.emoji || ""),
         rowPath: String(item.path || ""),
-        rowTone: String(item.tone || ""),
-        // A list role would become a nested model, so the indices travel as text.
-        rowMatches: (item.matches || []).join(",")
+        rowTone: String(item.tone || "")
       };
-      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowPath, row.rowTone, row.rowMatches].join("\u0001");
+      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowPath, row.rowTone].join("\u0001");
       return row;
     }
 
@@ -210,22 +200,22 @@ Variants {
       y: Theme.launcherSearchHeight / 2 - height / 2
       text: Icons.search
       color: Theme.muted
-      visible: !win.chip
       font.family: Theme.iconFont
       font.pixelSize: Theme.launcherGlyphSize
     }
 
-    // The scope as a breadcrumb: the provider's glyph and name on an accent tint, where the
-    // search glyph sat, so its glyph lands on the same spot. Backspace or Escape lifts it.
+    // The scope, named at the search row's far end: the provider's glyph and name in the
+    // accent on a quiet pill, inset from the right as the search glyph is from the left.
+    // Backspace or Escape lifts it.
     Rectangle {
       id: chip
 
-      x: Theme.launcherGlyphLeft - Theme.launcherChipPad
+      x: win.openWidth - (Theme.launcherGlyphLeft - Theme.launcherChipPad) - width
       y: (Theme.launcherSearchHeight - height) / 2
       width: chipRow.implicitWidth + Theme.launcherChipPad * 2
       height: Theme.launcherChipHeight
-      radius: Theme.launcherChipRadius
-      color: Theme.withAlpha(Theme.accent, Theme.launcherChipAlpha)
+      radius: height / 2
+      color: Theme.withAlpha(Theme.text, Theme.launcherChipAlpha)
       visible: win.chip !== null
 
       Row {
@@ -258,9 +248,9 @@ Variants {
     TextInput {
       id: query
 
-      x: win.chip ? chip.x + chip.width + Theme.launcherChipTextGap : Theme.launcherTextLeft
+      x: Theme.launcherTextLeft
       y: Theme.launcherSearchHeight / 2 - height / 2
-      width: win.openWidth - x - Theme.launcherInset
+      width: (win.chip ? chip.x - Theme.launcherChipTextGap : win.openWidth - Theme.launcherInset) - x
       color: Theme.text
       font.family: Theme.uiFont
       font.pixelSize: Theme.launcherSearchSize
@@ -366,16 +356,7 @@ Variants {
       width: win.openWidth - Theme.launcherInset * 2
       height: 1
       color: Theme.withAlpha(Theme.highlightMed, 0.6)
-    }
-
-    Text {
-      x: Theme.launcherTextLeft
-      y: Theme.launcherListTop + (Theme.launcherRowHeight - height) / 2
-      text: !win.scope ? "No matches" : win.scope.query.trim().length > 0 ? "No result" : "Start typing"
-      color: Theme.muted
-      visible: rows.count === 0 && !win.viewProvider
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.launcherNameSize
+      visible: !win.listEmpty
     }
 
     // A provider's own view, in the list's place. Made when opened and dropped on close, so
@@ -413,9 +394,8 @@ Variants {
       boundsBehavior: Flickable.StopAtBounds
       flickableDirection: Flickable.VerticalFlick
 
-      // Keep the selection on screen without pinning it to a fixed row, with a heading right
-      // above it in view too. By hand: ListView's own range tracking loses the row once a
-      // heading's delegate, shorter than its size guess, has been recycled.
+      // Keep the selection on screen without pinning it to a fixed row. By hand, so the
+      // scroll rides the same Morph as everything else.
       onCurrentIndexChanged: Qt.callLater(list.reveal, false)
 
       function reveal(settle) {
@@ -424,8 +404,6 @@ Variants {
           return;
         var top = item.y;
         var bottom = item.y + item.height;
-        if (currentIndex > 0 && currentIndex <= rows.count && rows.get(currentIndex - 1).rowHeader)
-          top -= Theme.launcherHeaderHeight + Theme.launcherRowGap;
         var y = scroll.running ? scroll.to : list.contentY;
         if (top < y)
           y = top;
@@ -455,27 +433,15 @@ Variants {
       highlightMoveVelocity: -1
       highlightResizeDuration: 0
 
-      highlight: Item {
-        Rectangle {
-          anchors.fill: parent
-          radius: Theme.launcherRowRadius
-          color: Theme.withAlpha(Theme.text, 0.06)
-        }
-
-        Rectangle {
-          y: (parent.height - height) / 2
-          width: Theme.launcherMarkerWidth
-          height: Theme.launcherMarkerHeight
-          radius: width / 2
-          color: Theme.accent
-        }
+      highlight: Rectangle {
+        radius: Theme.launcherRowRadius
+        color: Theme.withAlpha(Theme.text, Theme.launcherSelectedAlpha)
       }
 
       delegate: Item {
         id: slot
 
         required property int index
-        required property bool rowHeader
         required property string rowName
         required property string rowDesc
         required property string rowIcon
@@ -484,30 +450,12 @@ Variants {
         required property string rowEmoji
         required property string rowPath
         required property string rowTone
-        required property string rowMatches
 
         width: list.width
-        height: rowHeader ? Theme.launcherHeaderHeight : Theme.launcherRowHeight
-
-        Text {
-          x: Theme.launcherIconLeft - Theme.launcherInset
-          y: parent.height - height - Theme.launcherHeaderPadBottom
-          width: parent.width - x
-          visible: slot.rowHeader
-          text: slot.rowName
-          color: Theme.launcherHeaderColor
-          elide: Text.ElideRight
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.launcherHeaderSize
-          font.weight: Theme.weightSemi
-          font.capitalization: Font.AllUppercase
-          font.letterSpacing: Theme.launcherHeaderTracking
-        }
+        height: Theme.launcherRowHeight
 
         LauncherRow {
           anchors.fill: parent
-          visible: !slot.rowHeader
-          enabled: !slot.rowHeader
           name: slot.rowName
           description: slot.rowDesc
           iconSource: slot.rowIcon
@@ -516,7 +464,6 @@ Variants {
           emoji: slot.rowEmoji
           glyphPath: slot.rowPath
           tone: slot.rowTone
-          matches: slot.rowMatches.length > 0 ? slot.rowMatches.split(",").map(Number) : []
           current: slot.ListView.isCurrentItem
 
           onActivated: function (modifiers) {

@@ -10,43 +10,16 @@ Item {
   property string iconSource: ""
   // A computed answer draws a glyph or a colour swatch in place of an app icon.
   property string glyph: ""
-  // A Lucide stroke glyph (Commons/IconPaths.qml) in place of the font one, tinted by `tone`
+  // A glyph from Commons/IconPaths.qml in place of the Icons one, tinted by `tone`
   // ("love" for something destructive; the accent otherwise).
   property string glyphPath: ""
   property string tone: ""
   property string swatch: ""
   // An emoji is drawn as itself, in colour, on a neutral tile.
   property string emoji: ""
-  // Indices into `name` the query matched, drawn in the match colour.
-  property var matches: []
   property bool current: false
 
   signal activated(int modifiers)
-
-  // The name as styled text: escaped, with each run of matched characters wrapped once.
-  readonly property string styledName: {
-    var hit = {};
-    for (var k = 0; k < matches.length; k++)
-      hit[matches[k]] = true;
-    var esc = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      "\"": "&quot;"
-    };
-    var out = "";
-    var open = false;
-    for (var i = 0; i < name.length; i++) {
-      if (hit[i] && !open)
-        out += "<font color=\"" + Theme.launcherMatchColor + "\">";
-      else if (!hit[i] && open)
-        out += "</font>";
-      open = hit[i] === true;
-      var c = name.charAt(i);
-      out += esc[c] || c;
-    }
-    return open ? out + "</font>" : out;
-  }
 
   activeFocusOnTab: true
   Accessible.role: Accessible.Button
@@ -91,7 +64,7 @@ Item {
       color: root.glyph ? root.toneColor : root.tint
       font.family: root.glyph ? Theme.iconFont : Theme.uiFont
       font.pixelSize: Theme.fontSizeLarge
-      font.weight: Theme.weightBold
+      font.weight: root.glyph ? Theme.weightRegular : Theme.weightBold
     }
 
     StrokeIcon {
@@ -136,8 +109,8 @@ Item {
     x: Theme.launcherTextLeft - Theme.launcherInset
     y: root.twoLine ? 5 : (parent.height - height) / 2
     width: parent.width - x - Theme.launcherInset
-    text: root.styledName
-    textFormat: Text.StyledText
+    text: root.name
+    textFormat: Text.PlainText
     color: Theme.inkPrimary
     elide: Text.ElideRight
     font.family: Theme.uiFont

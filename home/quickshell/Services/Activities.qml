@@ -47,7 +47,7 @@ import qs.Commons
 //   kind        "timer-done"; names it for tests and for sounds to key on
 //   key         optional; a second moment with the same key replaces the first
 //   attention   true for one that wants the user (rank 1); false for information (rank 0)
-//   icon, iconColor   a Lucide path and its role colour, drawn 20 px at the left
+//   icon, iconColor   an IconPaths icon and its role colour, drawn 20 px at the left
 //   title, subtitle   the two lines; elide on the right inside the padding
 //   buttons     [{ text, kind: "primary" | "secondary" | "ghost" | "danger", width?, keep?,
 //               action? }], listed left to right so the last is at the right edge; acting
@@ -58,7 +58,7 @@ import qs.Commons
 //               PluggedBody.qml): an Item with `moment` (this spec) and, if it declares it,
 //               `shown` (the island is showing it), laid out in `width` x `height`
 //   data        anything the body wants; passed through untouched
-//   width, height, radius   the shape; Theme.moment* (420 x 64, r 22) unless asked otherwise
+//   width, height, radius   the shape; Theme.moment* (420 x 64, r 26) unless asked otherwise
 //
 //   var id = Activities.raiseMoment({ ... });
 //   Activities.dismissMoment(id);

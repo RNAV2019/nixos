@@ -40,7 +40,7 @@ QtObject {
 
   // ---- the satellite ----
 
-  // Lucide path data (Commons/IconPaths.qml); drawn centred, `iconSize` high.
+  // An icon from Commons/IconPaths.qml; drawn centred, `iconSize` high.
   property string icon: ""
   property real iconSize: Theme.satelliteGlyphSize
   property color iconColor: Theme.inkPrimary
