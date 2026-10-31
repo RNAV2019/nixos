@@ -487,10 +487,7 @@ Singleton {
   readonly property int controlWidth: panelColumnWidth
   readonly property int controlRadius: panelRadius
   readonly property int controlInset: 13
-  readonly property int controlHeaderHeight: 70
-  readonly property int controlTitleSize: 18
   readonly property int controlBackSize: 36
-  readonly property int controlBackLeft: 20
 
   // Tiles: two rows on a 71 px pitch, each 59 px tall with a 12 px gutter; row one is a
   // narrow beside a wide tile, row two three equal.
@@ -590,11 +587,7 @@ Singleton {
   readonly property int wallpaperHeight: 232
   readonly property int wallpaperRadius: panelRadius
   readonly property int wallpaperInset: 24
-  readonly property int wallpaperTitleSize: 18
   readonly property int wallpaperMetaSize: 12
-  readonly property int wallpaperTitleTop: 28
-  readonly property int wallpaperMetaTop: 32
-  readonly property int wallpaperFooterTop: 196
   readonly property int wallpaperHeaderTop: 4
 
   // The row is a carousel, not a grid: clipped by the panel, running on past both edges.
@@ -686,10 +679,7 @@ Singleton {
   readonly property int calHeight: 600
   readonly property int calRadius: panelRadius
   readonly property int calInset: 24
-  readonly property int calTitleSize: 18
   readonly property int calNavSize: 30
-  readonly property int calNavTop: 24
-  readonly property int calNavGap: 6
   readonly property int calHeaderTop: 4
   readonly property int calNavGlyphSize: 15
   readonly property int calTodayBtnHeight: 28
