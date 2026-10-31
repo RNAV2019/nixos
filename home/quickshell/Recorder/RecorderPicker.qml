@@ -104,13 +104,6 @@ Variants {
     // is still closing, leaves it empty. Starting or clicking away still closes.
     property string returnTo: ""
 
-    function back() {
-      if (win.returnTo === "control")
-        Bus.toggleSurface("control");
-      else
-        win.hide();
-    }
-
     function step(delta) {
       selected = ((selected + delta) % 3 + 3) % 3;
     }
@@ -170,48 +163,45 @@ Variants {
       }
     }
 
-    onKeyPressed: function (event) {
-      switch (event.key) {
-      case Qt.Key_Left:
-      case Qt.Key_H:
-      case Qt.Key_Backtab:
-        win.step(-1);
-        break;
-      case Qt.Key_Right:
-      case Qt.Key_L:
-      case Qt.Key_Tab:
-        win.step(1);
-        break;
-      case Qt.Key_C:
-        Recorder.cursor = !Recorder.cursor;
-        break;
-      case Qt.Key_A:
-        Recorder.desktopAudio = !Recorder.desktopAudio;
-        break;
-      case Qt.Key_M:
-        Recorder.microphone = !Recorder.microphone;
-        break;
-      case Qt.Key_F:
-        win.cycleFps();
-        break;
-      case Qt.Key_Return:
-      case Qt.Key_Enter:
-        win.activate();
-        break;
-      case Qt.Key_Escape:
-      case Qt.Key_Backspace:
-        win.back();
-        break;
-      default:
-        return;
+    Panel {
+      id: panel
+
+      surface: win
+      // Back is the control centre this was opened from; opened any other way there is none,
+      // and Escape closes.
+      backKeys: win.returnTo === "control"
+      takesMove: true
+      takesTab: true
+      takesActivate: true
+
+      onBacked: Bus.toggleSurface("control")
+      onMoved: function (dx, dy) {
+        win.step(dx + dy);
       }
-      event.accepted = true;
-    }
+      onStepped: function (delta) {
+        win.step(delta);
+      }
+      onActivated: win.activate()
 
-    Item {
-      id: body
-
-      anchors.fill: parent
+      onKeyPressed: function (event) {
+        switch (event.key) {
+        case Qt.Key_C:
+          Recorder.cursor = !Recorder.cursor;
+          break;
+        case Qt.Key_A:
+          Recorder.desktopAudio = !Recorder.desktopAudio;
+          break;
+        case Qt.Key_M:
+          Recorder.microphone = !Recorder.microphone;
+          break;
+        case Qt.Key_F:
+          win.cycleFps();
+          break;
+        default:
+          return;
+        }
+        event.accepted = true;
+      }
 
       ChoiceTiles {
         inset: Theme.recorderInset
@@ -228,7 +218,7 @@ Variants {
       Repeater {
         model: win.rows
 
-        Item {
+        RecorderRow {
           id: row
 
           required property int index
@@ -236,75 +226,28 @@ Variants {
 
           readonly property bool value: win.rowValue(modelData.key)
 
-          x: Theme.recorderInset
           y: Theme.recorderRowsTop + index * (Theme.recorderRowHeight + Theme.recorderRowGap)
-          width: Theme.recorderWidth - Theme.recorderInset * 2
-          height: Theme.recorderRowHeight
-
-          Rectangle {
-            anchors.fill: parent
-            radius: Theme.recorderRowRadius
-            color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
-          }
-
-          Text {
-            x: Theme.recorderRowTextLeft
-            y: (parent.height - height) / 2
-            text: row.modelData.label
-            color: row.value ? Theme.text : Theme.muted
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.recorderRowLabelSize
-            font.weight: Theme.weightMedium
-          }
+          label: modelData.label
+          lit: row.value
+          onClicked: win.setRow(modelData.key, !row.value)
 
           Switch {
-            x: parent.width - width - Theme.recorderRowTextLeft
-            y: (parent.height - height) / 2
             checked: row.value
             onToggled: function (value) {
               win.setRow(row.modelData.key, value);
             }
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
-            cursorShape: Qt.PointingHandCursor
-            onClicked: win.setRow(row.modelData.key, !row.value)
-            z: -1
           }
         }
       }
 
       // The frame-rate row: the toggles' shape with three pills where a switch would sit.
       // A muted 120 takes no clicks, and the row cycles through what is live here.
-      Item {
-        id: fpsRow
-
-        x: Theme.recorderInset
+      RecorderRow {
         y: Theme.recorderRowsTop + 3 * (Theme.recorderRowHeight + Theme.recorderRowGap)
-        width: Theme.recorderWidth - Theme.recorderInset * 2
-        height: Theme.recorderRowHeight
-
-        Rectangle {
-          anchors.fill: parent
-          radius: Theme.recorderRowRadius
-          color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
-        }
-
-        Text {
-          x: Theme.recorderRowTextLeft
-          y: (parent.height - height) / 2
-          text: "Frame rate"
-          color: Theme.text
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.recorderRowLabelSize
-          font.weight: Theme.weightMedium
-        }
+        label: "Frame rate"
+        onClicked: win.cycleFps()
 
         Row {
-          x: parent.width - width - Theme.recorderRowTextLeft
-          y: (parent.height - height) / 2
           spacing: Theme.recorderFpsSegmentGap
 
           Repeater {
@@ -352,14 +295,6 @@ Variants {
               }
             }
           }
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          acceptedButtons: Qt.LeftButton
-          cursorShape: Qt.PointingHandCursor
-          onClicked: win.cycleFps()
-          z: -1
         }
       }
     }
