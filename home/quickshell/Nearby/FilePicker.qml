@@ -298,7 +298,7 @@ Item {
     }
     color: Theme.inkSecondary
     font.family: Theme.uiFont
-    font.pixelSize: 11.5
+    font.pixelSize: Theme.nearbyChipSize
     font.weight: Theme.weightMedium
   }
 
@@ -323,7 +323,7 @@ Item {
       text: "Images only"
       color: Theme.inkTertiary
       font.family: Theme.uiFont
-      font.pixelSize: 11.5
+      font.pixelSize: Theme.nearbyChipSize
       font.weight: Theme.weightMedium
     }
   }

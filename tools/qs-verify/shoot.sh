@@ -432,7 +432,7 @@ ph_fixtures() {
     mkdir -p "$pic/Screenshots" "$pic/Wallpapers"
     for name in dusk.jpg forest.jpg IMG_2204.jpg mountains.jpg pier.png sunrise.jpg tokyo.jpg waves.jpg; do
       i=$((i + 1))
-      magick -size 1600x900 "gradient:#$((20 + i * 18))5a7c-#7a$((90 - i * 7))4c" \
+      magick -size 1600x900 "gradient:$(printf '#%02x5a7c-#7a%02x4c' $((20 + i * 18)) $((90 - i * 7)))" \
         -fill '#d8a657' -draw "circle $((300 + i * 90)),300 $((300 + i * 90)),420" "$pic/$name"
     done
     : >"$pic/Screenshots/one.png"
@@ -446,6 +446,7 @@ ph_fixtures() {
 check() { # NAME COMMAND...
   local name=$1
   shift
+  [[ -n $ONLY && $ONLY != "check:$name" ]] && return 0
   if "$@"; then
     log "check $name"
   else
