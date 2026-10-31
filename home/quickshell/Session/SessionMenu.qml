@@ -17,19 +17,9 @@ Variants {
     id: win
 
     key: "session"
-    openWidth: Theme.panelWidth(modelData, tilesGrid.contentWidth)
+    openWidth: Theme.panelWidth(modelData, grid.contentWidth)
     openHeight: Theme.powerHeight
     openRadius: Theme.powerRadius
-
-    // Which tile the keyboard is on.
-    property int current: 0
-
-    // Which tile is armed, or -1.
-    property int armed: -1
-
-    // Which tile's action is queued behind the pill's settle-back, or -1. One slot, so a
-    // second commit cannot queue a second shutdown.
-    property int pending: -1
 
     // Lock is done the moment it is pressed; the other two take the session with them.
     readonly property var tiles: [
@@ -50,122 +40,24 @@ Variants {
       }
     ]
 
-    onOpening: {
-      current = 0;
-      armed = -1;
-      cancel();
-    }
+    ConfirmGrid {
+      id: grid
 
-    // Moving disarms, so an armed tile is never left waiting for a later Return.
-    function move(delta) {
-      armed = -1;
-      current = (current + delta + tilesGrid.count) % tilesGrid.count;
-    }
+      surface: win
+      model: win.tiles
 
-    function activate(i) {
-      current = i;
-
-      if (tiles[i].confirms && armed !== i) {
-        armed = i;
-        return;
-      }
-
-      // A commit for a tile already queued is a no-op, not a second shutdown.
-      if (pending === i)
-        return;
-      pending = i;
-
-      win.hide();
-      settle.restart();
-    }
-
-    // The card is back, so the user is choosing again.
-    function cancel() {
-      pending = -1;
-      settle.stop();
-    }
-
-    function commit(i) {
-      pending = -1;
-      switch (i) {
-      case 0:
-        Bus.lockRequested();
-        break;
-      case 1:
-        Session.reboot();
-        break;
-      case 2:
-        Session.poweroff();
-        break;
-      }
-    }
-
-    Timer {
-      id: settle
-
-      interval: Theme.actionSettleDelay
-      onTriggered: win.commit(win.pending)
-    }
-
-    Connections {
-      target: Bus
-
-      // Another surface taking the island means the user moved on; nothing fires under it.
-      function onIslandClaimed(screen) {
-        if (win.pending >= 0 && win.screen && screen === win.screen.name)
-          win.cancel();
-      }
-    }
-
-    onKeyPressed: function (event) {
-      switch (event.key) {
-      case Qt.Key_Escape:
-        // The first Escape stands an armed tile down; the second closes.
-        if (win.armed >= 0)
-          win.armed = -1;
-        else
-          win.hide();
-        break;
-      case Qt.Key_Left:
-      case Qt.Key_H:
-      case Qt.Key_Backtab:
-        win.move(-1);
-        break;
-      case Qt.Key_Right:
-      case Qt.Key_L:
-      case Qt.Key_Tab:
-        win.move(1);
-        break;
-      case Qt.Key_Return:
-      case Qt.Key_Enter:
-      case Qt.Key_Space:
-        win.activate(win.current);
-        break;
-      default:
-        return;
-      }
-      event.accepted = true;
-    }
-
-    Item {
-      id: body
-
-      anchors.fill: parent
-
-      ChoiceTiles {
-        id: tilesGrid
-
-        model: win.tiles
-        currentIndex: win.current
-        activeIndex: win.armed
-        activeColor: Theme.love
-        activeLabel: "Confirm"
-        activeIsCommitting: true
-        onEntered: function (index) {
-          if (win.armed < 0)
-            win.current = index;
+      onCommitted: function (index) {
+        switch (index) {
+        case 0:
+          Bus.lockRequested();
+          break;
+        case 1:
+          Session.reboot();
+          break;
+        case 2:
+          Session.poweroff();
+          break;
         }
-        onActivated: win.activate(index)
       }
     }
   }
