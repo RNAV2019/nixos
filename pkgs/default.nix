@@ -10,6 +10,8 @@ final: prev: {
   gtk4-live-css = final.callPackage ./gtk4-live-css {};
   # The launcher's emoji table, from nixpkgs' Unicode and CLDR data.
   quickshell-emoji = final.callPackage ./quickshell-emoji {};
+  # Fonts the OpenPencil designs use.
+  design-fonts = final.callPackage ./design-fonts {};
   # The shell's icon font: Material Symbols Rounded, filled, as a static instance.
   material-symbols-filled = final.callPackage ./material-symbols-filled {};
   # Offline dictation: nixpkgs' build, given its typing tools.
@@ -24,6 +26,8 @@ final: prev: {
   claude-statusline = final.callPackage ./claude-statusline {};
   claude-usage = final.callPackage ./claude-usage {};
   t3code = final.callPackage ./t3code {};
+  openpencil = final.callPackage ./openpencil {};
+  openpencil-cli = final.callPackage ./openpencil/cli {};
 
   # Helium extensions
   fetchCrx = final.callPackage ./fetch-crx {};

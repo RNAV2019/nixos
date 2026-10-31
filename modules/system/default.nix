@@ -182,6 +182,11 @@ in {
     noto-fonts
     noto-fonts-color-emoji
     inter
+    # Families the OpenPencil designs name; the Nerd Font variants have names of their own.
+    design-fonts
+    jetbrains-mono
+    cascadia-code
+    poppins
     # The shell's one icon set (home/quickshell/Commons/Icons.qml).
     material-symbols-filled
   ];

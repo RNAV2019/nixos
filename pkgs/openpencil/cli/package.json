@@ -1,0 +1,8 @@
+{
+  "name": "openpencil-cli",
+  "version": "0.16.0",
+  "private": true,
+  "dependencies": {
+    "@open-pencil/cli": "0.16.0"
+  }
+}
