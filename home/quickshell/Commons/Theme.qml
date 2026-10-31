@@ -666,6 +666,22 @@ Singleton {
   readonly property color cameraMark: foam
   readonly property color microphoneMark: gold
 
+  // Moments (Activities/Moments.qml): the sharing pill's row, and an OSD-sized compact one.
+  readonly property int momentWidth: sharingOfferWidth
+  readonly property int momentHeight: sharingOfferHeight
+  readonly property int momentRadius: sharingOfferRadius
+  readonly property int momentCompactWidth: 340
+  readonly property int momentCompactHeight: osdHeight
+  readonly property int momentCompactRadius: osdRadius
+  readonly property int momentButtonHeight: 26
+  readonly property real momentTitleSize: 12.5
+  readonly property real momentSubtitleSize: 10.5
+  readonly property int momentDwell: 8000
+  readonly property int momentPluggedDwell: osdDwell + 900
+  // The moments' buttons (Activities/ActivityButton.qml).
+  readonly property int activityButtonHeight: 30
+  readonly property int activityButtonGap: 8
+
   // The calendar. Board 14: a month grid over an agenda for the chosen day.
   readonly property int calWidth: panelColumnWidth
   readonly property int calHeight: 600

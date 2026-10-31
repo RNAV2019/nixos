@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Activities
 import qs.Auth
 import qs.Bar
 import qs.Calendar
@@ -25,6 +26,10 @@ ShellRoot {
   Component.onCompleted: Displays.restoreAll()
 
   Bar {}
+  Moments {}
+  ActivitySources {
+    id: activitySources
+  }
   AuthPrompt {}
   AuthPreview {}
   CalendarPanel {}
@@ -173,6 +178,33 @@ ShellRoot {
 
     function refresh(): void {
       Bus.clockRefreshed();
+    }
+  }
+
+  // Test and automation hooks for the island's moments.
+  IpcHandler {
+    target: "activities"
+
+    // The plugged-in moment as if the charger had just gone in: `plug 78 80`.
+    // A negative percent shows the real battery.
+    function plug(percent: int, minutes: int): void {
+      activitySources.plugged.simulatePlug(percent, minutes);
+    }
+
+    // The charger as a state change the watcher sees for itself: 1 in, 0 out, -1 the real battery.
+    function charger(state: int): void {
+      activitySources.plugged.fake = state;
+    }
+
+    // NetworkManager's connectivity verdict as the sign-in watcher sees it: "portal", "limited",
+    // "none" or "full"; "" goes back to the real one. `network` is the SSID the moment names.
+    function wifi(state: string, network: string): void {
+      activitySources.wifi.fakeNetwork = network;
+      activitySources.wifi.fake = state;
+    }
+
+    function dismissMoments(): void {
+      Activities.dismissAllMoments();
     }
   }
 }
