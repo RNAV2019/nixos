@@ -442,6 +442,8 @@ Singleton {
   readonly property int sharingOfferHeight: 64
   readonly property int sharingOfferRadius: 26
   readonly property int sharingConfirmDwell: 2500
+  // A failed rebuild holds longer than a finished one; its error is in the terminal.
+  readonly property int rebuildFailedDwell: 8000
 
   // The dictation pill, Handy's recording overlay drawn by the island: an OSD-sized row
   // (mic, the level bars, the time and an ×) that opens into a card once live text arrives,

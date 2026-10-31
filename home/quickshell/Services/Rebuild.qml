@@ -21,11 +21,12 @@ import Quickshell.Io
 // - the first event of a run starts the pill; the nix processes of one rebuild (nixos-rebuild runs
 //   several, one after another) share the file, told apart by the pid in the top half of every
 //   activity id;
-// - "these N derivations will be built" is the total. Nix's own count (the progress of the
-//   `builds` activity, type 104, field 1) is not: it counts evaluation-time builds and swings
-//   up and down, so only its `done` (field 0, a result of type 105) is used, of the activity
-//   started after that message. Until the message there is no total, which is the pill's
-//   evaluating state;
+// - "these N derivations will be built" plus "these M paths will be fetched" is the total, as
+//   Nix's own "x/y built, a/b copied" counts both. Nix's expected counts (field 1 of the progress
+//   of the `builds` activity, type 104, and `copy paths`, 103) are not used: they count
+//   evaluation-time work and swing up and down, so only their `done` (field 0, a result of type
+//   105) is, of the activities started after those messages. Until a message there is no total,
+//   which is the pill's evaluating state;
 // - a message of level 0 that starts "error" (not "error (ignored)") and a build that failed
 //   (field 3) mean failure;
 // - the run is over when none of its processes is alive and the log has been quiet a moment (the
@@ -58,9 +59,16 @@ Job {
   property var _pids: ({})
   property var _open: ({})
   property int _openCount: 0
-  // Activity ids carry the pid in their top half, so they do not fit an int.
+  // The realisation Nix announced last: how many derivations it builds and paths it fetches,
+  // and the activities that count them. Activity ids carry the pid in their top half, so they
+  // do not fit an int.
+  property int _toBuild: 0
+  property int _toFetch: 0
   property real _buildId: 0
-  // A realisation has been announced, so the next builds activity is its.
+  property real _copyId: 0
+  property int _built: 0
+  property int _fetched: 0
+  // A realisation has been announced, so the next builds and copy-paths activities are its.
   property bool _announced: false
   property real _lastEvent: 0
   // When a probe last found one of the run's processes alive.
@@ -82,8 +90,7 @@ Job {
     _lastAlive = 0;
     _open = {};
     _openCount = 0;
-    _buildId = 0;
-    _announced = false;
+    _resetRealisation();
     _failed = false;
   }
 
@@ -116,9 +123,11 @@ Job {
         _open[e.id] = true;
         _openCount++;
       }
-      // The builds of the realisation announced above, not the ones evaluation made.
+      // The builds and fetches of the realisation announced above, not the ones evaluation made.
       if (e.type === 104 && _buildId === 0 && _announced)
         _buildId = e.id;
+      else if (e.type === 103 && _copyId === 0 && _announced)
+        _copyId = e.id;
       break;
     case "stop":
       if (_open[e.id] !== undefined) {
@@ -127,10 +136,16 @@ Job {
       }
       break;
     case "result":
-      // Progress of the builds: [done, expected, running, failed].
-      if (e.type === 105 && e.id === _buildId && _buildId !== 0 && e.fields !== undefined && e.fields.length >= 4) {
-        if (e.fields[0] !== done)
-          done = e.fields[0];
+      // Progress of the builds or the fetches: [done, expected, running, failed].
+      if (e.type === 105 && e.id !== 0 && (e.id === _buildId || e.id === _copyId) && e.fields !== undefined && e.fields.length >= 4) {
+        if (e.id === _buildId)
+          _built = e.fields[0];
+        else
+          _fetched = e.fields[0];
+        // A fetch can pull in a path the announcement did not list, so the count stops at it.
+        var now = Math.min(total, _built + _fetched);
+        if (now !== done)
+          done = now;
         if (e.fields[3] > 0)
           _failed = true;
       }
@@ -146,13 +161,33 @@ Job {
       _failed = true;
       return;
     }
-    var m = /^(?:this derivation|these (\d+) derivations) will be built/.exec(text);
-    if (m !== null) {
-      total = m[1] !== undefined ? parseInt(m[1], 10) : 1;
-      done = 0;
-      _buildId = 0;
-      _announced = true;
-    }
+    // Nix announces what it builds, then what it fetches; an announcement after the last one's
+    // activities started is the next realisation, and replaces it.
+    var built = /^(?:this derivation|these (\d+) derivations) will be built/.exec(text);
+    var fetched = built === null ? /^(?:this path|these (\d+) paths) will be fetched/.exec(text) : null;
+    var m = built || fetched;
+    if (m === null)
+      return;
+    if (_buildId !== 0 || _copyId !== 0)
+      _resetRealisation();
+    var n = m[1] !== undefined ? parseInt(m[1], 10) : 1;
+    if (built !== null)
+      _toBuild = n;
+    else
+      _toFetch = n;
+    total = _toBuild + _toFetch;
+    done = 0;
+    _announced = true;
+  }
+
+  function _resetRealisation() {
+    _toBuild = 0;
+    _toFetch = 0;
+    _buildId = 0;
+    _copyId = 0;
+    _built = 0;
+    _fetched = 0;
+    _announced = false;
   }
 
   // ---- ending ----

@@ -215,17 +215,21 @@ rb_announce() { # N: "these N derivations will be built", then the builds activi
   rb_emit "{\"action\":\"msg\",\"level\":3,\"msg\":\"these $1 derivations will be built:\"}"
   rb_emit "{\"action\":\"start\",\"id\":$(rb_id 2),\"level\":3,\"type\":104,\"text\":\"\",\"fields\":[]}"
 }
+rb_announce_fetch() { # N: "these N paths will be fetched", then the copy-paths activity
+  rb_emit "{\"action\":\"msg\",\"level\":3,\"msg\":\"these $1 paths will be fetched (12.0 MiB download, 48.0 MiB unpacked):\"}"
+  rb_emit "{\"action\":\"start\",\"id\":$(rb_id 3),\"level\":3,\"type\":103,\"text\":\"\",\"fields\":[]}"
+}
 rb_progress() { # DONE TOTAL RUNNING FAILED
   rb_emit "{\"action\":\"result\",\"id\":$(rb_id 2),\"type\":105,\"fields\":[$1,$2,$3,$4]}"
 }
-rb_finish() { # leave the run to end: kill the live process, wait out the quiet period, dismiss
+rb_fetch_progress() { # DONE TOTAL RUNNING FAILED
+  rb_emit "{\"action\":\"result\",\"id\":$(rb_id 3),\"type\":105,\"fields\":[$1,$2,$3,$4]}"
+}
+rb_finish() { # leave the run to end: kill the live process, wait out the quiet period and dwell
   [[ -n $rb_pid ]] && kill "$rb_pid" 2>/dev/null
   rb_pid=
-  sleep 4.6
-  cursor 960 26
-  sleep 0.3
-  click
-  sleep 0.6
+  # The pill takes no pointer, so a failure is waited out (quiet period, then its 8 s dwell).
+  sleep 13
 }
 setup_rebuild_building_unknown() {
   rb_open
@@ -239,6 +243,15 @@ setup_rebuild_building() {
   rb_announce 12
   rb_progress 5 12 1 0
 }
+setup_rebuild_building_mixed() { # 4 built + 8 fetched, 2 and 4 of them done: 6 of 12
+  rb_open
+  rb_spawn
+  rb_eval
+  rb_announce 4
+  rb_announce_fetch 8
+  rb_progress 2 4 1 0
+  rb_fetch_progress 4 8 1 0
+}
 setup_rebuild_done() {
   rb_open
   rb_pid=$RB_DEAD_PID
@@ -250,10 +263,7 @@ setup_rebuild_done() {
   rb_emit "{\"action\":\"stop\",\"id\":$(rb_id 2)}"
   rb_emit "{\"action\":\"stop\",\"id\":$(rb_id 1)}"
   rb_pid=
-  sleep 3.7 # the quiet period, then "Switched"; hold it with the pointer
-  cursor 960 26
-  sleep 0.1
-  cursor 962 28
+  sleep 3.7 # the quiet period, then "Switched", captured inside its 2.5 s dwell
 }
 setup_rebuild_failed() {
   rb_open
@@ -433,6 +443,7 @@ shot osd-mic-on 0.7 0 setup_osd_mic_on teardown_osd_mic
 
 shot rebuild-building-unknown 1.2 0.3 setup_rebuild_building_unknown teardown_rebuild
 shot rebuild-building 1.2 0.3 setup_rebuild_building teardown_rebuild
+shot rebuild-building-mixed 1.2 0.3 setup_rebuild_building_mixed teardown_rebuild
 shot rebuild-done 0.6 0.3 setup_rebuild_done teardown_rebuild
 shot rebuild-failed 0.8 0.3 setup_rebuild_failed teardown_rebuild
 

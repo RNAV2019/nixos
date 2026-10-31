@@ -122,16 +122,10 @@ Item {
     // Smooths a keyboard step or an external change; a drag writes every frame anyway.
     fillDuration: drag.pressed ? 0 : Theme.duration(Theme.morphState)
 
+    // No press scale: the fill would shrink off the track's left edge, and a drag answers the
+    // pointer by moving the fill anyway.
     Behavior on fillColor {
       Tint {}
-    }
-
-    fill.scale: !root.compact && drag.pressed ? Theme.pressScale : 1
-
-    Behavior on fill.scale {
-      Morph {
-        duration: Theme.morphState
-      }
     }
   }
 
