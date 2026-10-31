@@ -328,13 +328,14 @@ Item {
     }
   }
 
-  SegmentedTrack {
+  Segmented {
     id: sourceSwitch
 
     visible: root.images && root.source !== ""
     x: root.width - 24 - width
     y: 17
     compact: true
+    accessibleName: "Source"
     currentIndex: root.source === "laptop" ? 1 : 0
     segments: [
       {

@@ -365,8 +365,12 @@ Variants {
           }
         }
 
-        Header {
+        NearbyHeader {
           y: Theme.nearbyPadTop
+          direction: win.direction
+          onDirectionChosen: function (direction) {
+            win.direction = direction;
+          }
         }
 
         // Board 16a: one full-width accent button while nothing is staged.
@@ -603,8 +607,12 @@ Variants {
           }
         }
 
-        Header {
+        NearbyHeader {
           y: Theme.nearbyPadTop
+          direction: win.direction
+          onDirectionChosen: function (direction) {
+            win.direction = direction;
+          }
         }
 
         RadarView {
@@ -793,53 +801,6 @@ Variants {
         ScrollFade {
           list: receivedList
         }
-      }
-    }
-  }
-
-  // ---- the header both directions share ----
-
-  component Header: Item {
-    width: parent.width
-    height: Theme.nearbyHeaderHeight
-
-    // Labels only: three cells with glyphs would not fit beside the direction control.
-    SegmentedTrack {
-      x: Theme.nearbyHeaderSide
-      fit: true
-      currentIndex: Nearby.platform === "kdeconnect" ? 0 : Nearby.platform === "apple" ? 2 : 1
-      pending: Nearby.busy
-      segments: [
-        {
-          "label": "KDE Connect"
-        },
-        {
-          "label": "Android"
-        },
-        {
-          "label": "Apple"
-        }
-      ]
-      onChosen: function (index) {
-        Nearby.setPlatform(index === 0 ? "kdeconnect" : index === 2 ? "apple" : "android");
-      }
-    }
-
-    SegmentedTrack {
-      x: parent.width - Theme.nearbyHeaderSide - Theme.nearbyTrackWidth
-      currentIndex: win.direction === "receive" ? 1 : 0
-      segments: [
-        {
-          "icon": IconPaths.arrowUp,
-          "label": "Send"
-        },
-        {
-          "icon": IconPaths.arrowDown,
-          "label": "Receive"
-        }
-      ]
-      onChosen: function (index) {
-        win.direction = index === 1 ? "receive" : "send";
       }
     }
   }

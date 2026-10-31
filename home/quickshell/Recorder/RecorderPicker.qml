@@ -247,53 +247,24 @@ Variants {
         label: "Frame rate"
         onClicked: win.cycleFps()
 
-        Row {
-          spacing: Theme.recorderFpsSegmentGap
-
-          Repeater {
-            model: [30, 60, 120]
-
-            Rectangle {
-              id: segment
-
-              required property int modelData
-
-              readonly property bool active: win.effectiveFps === segment.modelData
-              readonly property bool live: segment.modelData !== 120 || win.fps120Live
-
-              width: Theme.recorderFpsSegmentWidth
-              height: Theme.recorderFpsSegmentHeight
-              radius: height / 2
-              opacity: segment.live ? 1 : 0.4
-              color: segment.active ? Theme.accentFill : hover.containsMouse ? Theme.withAlpha(Theme.highlightMed, Theme.powerTileFillAlpha) : "transparent"
-
-              Behavior on color {
-                Tint {}
-              }
-
-              Text {
-                anchors.centerIn: parent
-                text: segment.modelData
-                color: segment.active ? Theme.inkOnAccent : Theme.muted
-                font.family: Theme.uiFont
-                font.pixelSize: Theme.recorderRowLabelSize
-                font.weight: segment.active ? Font.Bold : Font.Medium
-
-                Behavior on color {
-                  Tint {}
-                }
-              }
-
-              MouseArea {
-                id: hover
-
-                anchors.fill: parent
-                enabled: segment.live
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: win.chooseFps(segment.modelData)
-              }
+        Segmented {
+          compact: true
+          accessibleName: "Frame rate"
+          currentIndex: [30, 60, 120].indexOf(win.effectiveFps)
+          segments: [
+            {
+              "label": "30"
+            },
+            {
+              "label": "60"
+            },
+            {
+              "label": "120",
+              "enabled": win.fps120Live
             }
+          ]
+          onChosen: function (index) {
+            win.chooseFps([30, 60, 120][index]);
           }
         }
       }

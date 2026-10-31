@@ -24,7 +24,7 @@ Item {
 
   signal clicked
 
-  readonly property bool hovered: area.containsMouse
+  readonly property bool hovered: area.containsMouse && root.enabled
   readonly property bool pressed: area.pressed
   // Focus that arrived by Tab, not by a click: only that one draws the ring.
   readonly property bool keyFocused: root.activeFocus && !root.pointerFocused

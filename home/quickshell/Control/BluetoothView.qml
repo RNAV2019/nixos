@@ -119,7 +119,7 @@ ControlSubView {
     },
     Switch {
       checked: root.adapter !== null && root.adapter.enabled
-      interactive: root.adapter !== null
+      enabled: root.adapter !== null
 
       Accessible.role: Accessible.CheckBox
       Accessible.name: "Bluetooth"

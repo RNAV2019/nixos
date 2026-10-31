@@ -605,10 +605,6 @@ Singleton {
   readonly property int displaysSnapDistance: 10
   // A dropped monitor keeps at least this share of its shorter edge against the panel.
   readonly property real displaysMinOverlap: 0.15
-  // The alignment controls under the canvas: two segmented pills, each a third per button.
-  readonly property int displaysAlignHeight: 36
-  readonly property int displaysAlignInset: 3
-  readonly property int displaysAlignGlyphSize: 16
   // Marks the row of the screen the panel is open on.
   readonly property int displaysHereDot: 8
 
@@ -670,12 +666,6 @@ Singleton {
   readonly property int recorderRowRadius: 16
   readonly property int recorderRowTextLeft: 12
   readonly property int recorderRowLabelSize: 12
-
-  // The frame-rate row is the toggle rows' shape with three small pills at the right where
-  // a switch would sit; 120 is only live on an output that can carry it.
-  readonly property int recorderFpsSegmentWidth: 46
-  readonly property int recorderFpsSegmentHeight: 22
-  readonly property int recorderFpsSegmentGap: 4
 
   // The recording mark the pill carries: love rather than the accent, so it does not read as
   // one more thing merely on.
@@ -820,14 +810,15 @@ Singleton {
   readonly property int nearbyChosenHeight: 30
   readonly property int nearbyChosenRadius: 15
   readonly property int nearbySegmentGlyph: 16
-  readonly property int nearbySegmentSize: 12
   readonly property int nearbySegmentGap: 8
-  // Label-only cells (the platform control) are their label and this much either side; the
-  // wallpaper picker's source switch is two fixed 54 px cells 22 px tall, 4 apart.
+  // Label-only cells (the platform control) are their label and this much either side.
   readonly property int nearbyFitPad: 12
-  readonly property int nearbySourceHeight: 22
-  readonly property int nearbySourceCell: 54
-  readonly property int nearbySourceGap: 4
+  // The compact row (the wallpaper picker's source, the frame rates) has no track: fixed cells,
+  // 22 px tall and 4 apart.
+  readonly property int segmentCompactWidth: 46
+  readonly property int segmentCompactHeight: 22
+  readonly property int segmentCompactGap: 4
+  readonly property int segmentLabelSize: 12
 
   // The send body (boards 16a, 16e, 16f). With nothing staged it is one full-width accent
   // button; staged files list as 40 px rows under a "Files" section line, and the panel

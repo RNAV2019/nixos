@@ -1,48 +1,41 @@
 import QtQuick
 import qs.Commons
-import qs.Ui
 
-Rectangle {
+// A two-state switch. Off is a highlightMed track that steps up under the pointer; on is the
+// accent, lifted the way a filled pill is. `enabled: false` dims it and ignores its clicks.
+ButtonBase {
   id: root
-
-  property bool checked: false
-  property string accessibleName: ""
-  // Not `enabled`: Item already owns that name.
-  property bool interactive: true
-  readonly property bool pressed: mouse.pressed
 
   signal toggled(bool value)
 
-  implicitWidth: 46
-  implicitHeight: 26
-  radius: height / 2
+  implicitWidth: Theme.switchWidth
+  implicitHeight: Theme.switchHeight
 
-  activeFocusOnTab: true
-  Accessible.role: Accessible.CheckBox
-  Accessible.name: root.accessibleName !== "" ? root.accessibleName : "Switch"
-  Accessible.focusable: true
-  Accessible.focused: root.activeFocus
-  Accessible.onToggleAction: if (root.interactive)
-    root.toggled(!root.checked)
+  accessibleRole: Accessible.CheckBox
+  accessibleName: "Switch"
+  checkable: true
+  Accessible.onToggleAction: root.activate()
+  onClicked: root.toggled(!root.checked)
 
-  opacity: interactive ? 1 : 0.4
-  color: checked ? Theme.accentFill : Theme.withAlpha(Theme.separator, 0.9)
-  scale: pressed ? Theme.pressScale : 1
+  Rectangle {
+    anchors.fill: parent
+    radius: height / 2
+    color: {
+      var lit = root.hovered || root.pressed;
+      if (root.checked)
+        return Qt.lighter(Theme.accentFill, lit ? Theme.fillLift : 1);
+      return Theme.withAlpha(Theme.highlightMed, lit ? Theme.groundHoverAlpha : Theme.groundRestAlpha);
+    }
 
-  Behavior on color {
-    Tint {}
-  }
-
-  Behavior on scale {
-    Morph {
-      duration: Theme.morphState
+    Behavior on color {
+      Tint {}
     }
   }
 
   Rectangle {
-    y: 3
-    x: root.checked ? root.width - width - 3 : 3
-    width: root.height - 6
+    y: Theme.switchInset
+    x: root.checked ? root.width - width - Theme.switchInset : Theme.switchInset
+    width: Theme.switchKnob
     height: width
     radius: height / 2
     color: root.checked ? Theme.inkOnAccent : Theme.inkPrimary
@@ -51,22 +44,6 @@ Rectangle {
       enabled: !Theme.reduceMotion
 
       MicroSpring {}
-    }
-  }
-
-  MouseArea {
-    id: mouse
-    anchors.fill: parent
-    enabled: root.interactive
-    cursorShape: Qt.PointingHandCursor
-    onPressed: root.forceActiveFocus()
-    onClicked: root.toggled(!root.checked)
-  }
-
-  Keys.onPressed: function (event) {
-    if ((event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.interactive) {
-      root.toggled(!root.checked);
-      event.accepted = true;
     }
   }
 }

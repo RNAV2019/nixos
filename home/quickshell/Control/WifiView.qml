@@ -92,7 +92,7 @@ ControlSubView {
     },
     Switch {
       checked: Networking.wifiEnabled
-      interactive: Networking.wifiHardwareEnabled
+      enabled: Networking.wifiHardwareEnabled
 
       Accessible.role: Accessible.CheckBox
       Accessible.name: "Wi-Fi"
@@ -282,13 +282,14 @@ ControlSubView {
           }
         }
 
-        PanelTextField {
+        TextField {
           id: psk
 
           x: Theme.controlRowInset
           width: parent.width - x - join.width - 10
           anchors.verticalCenter: parent.verticalCenter
           placeholder: "Password"
+          echoPassword: true
           accessibleName: "Wi-Fi password"
           onCancelled: {
             root.pendingSsid = "";

@@ -19,7 +19,7 @@ Variants {
 
     key: "launcher"
     hideCursor: true
-    focusTarget: query
+    focusTarget: query.inputItem
     openWidth: Theme.panelWidth(modelData, Theme.launcherWidth)
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
@@ -216,42 +216,24 @@ Variants {
       }
     }
 
-    TextInput {
+    TextField {
       id: query
 
       x: Theme.launcherTextLeft
       y: Theme.launcherSearchHeight / 2 - height / 2
       width: (win.scope ? chip.x - Theme.launcherChipTextGap : win.openWidth - Theme.launcherInset) - x
-      color: Theme.text
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.launcherSearchSize
-      selectByMouse: true
-      selectionColor: Theme.withAlpha(Theme.accent, Theme.fillSelected)
-      clip: true
+      kind: TextField.Bare
+      placeholder: win.scope && win.scope.hint ? win.scope.hint : "Search…"
+      accessibleName: "Search"
 
       onTextChanged: {
         win.userMoved = false;
         Omnibox.query = text;
       }
 
-      cursorDelegate: Rectangle {
-        width: 1.5
-        radius: 0.75
-        color: Theme.accent
-      }
-
-      Text {
-        width: query.width
-        text: win.scope && win.scope.hint ? win.scope.hint : "Search…"
-        color: Theme.muted
-        elide: Text.ElideRight
-        font: query.font
-        visible: query.text.length === 0
-      }
-
       // Down/Up step the list, and Ctrl+N/P or Ctrl+J/K for hands that stay on the home
       // row. Tab is taken and does nothing, so focus never leaves the field.
-      Keys.onPressed: function (event) {
+      onKeyPressed: function (event) {
         var ctrl = (event.modifiers & Qt.ControlModifier) !== 0;
         switch (event.key) {
         case Qt.Key_Backspace:

@@ -377,7 +377,7 @@ ControlSubView {
   // Two segmented controls, one per axis; see canvas.align() for what each press does.
   Item {
     width: parent.width
-    height: Theme.displaysAlignHeight
+    height: Theme.nearbyTrackHeight
     visible: root.external !== null
 
     Repeater {
@@ -426,88 +426,23 @@ ControlSubView {
         }
       ]
 
-      Rectangle {
+      Segmented {
         id: group
 
         required property var modelData
         required property int index
 
-        readonly property string current: canvas.alignment(modelData.horizontal)
-
         x: index === 0 ? 0 : parent.width - width
         width: (parent.width - Theme.controlTileGap) / 2
         height: parent.height
-        radius: height / 2
-        color: Theme.withAlpha(Theme.surfaceSubtle, 0.9)
-        border.width: 1
-        border.color: Theme.withAlpha(Theme.separator, 0.7)
-
-        Accessible.role: Accessible.Grouping
-        Accessible.name: modelData.name
-
-        Row {
-          anchors.fill: parent
-          anchors.margins: Theme.displaysAlignInset
-
-          Repeater {
-            model: group.modelData.marks
-
-            Rectangle {
-              id: cell
-
-              required property var modelData
-
-              readonly property bool chosen: group.current === modelData.mark
-
-              width: parent.width / 3
-              height: parent.height
-              radius: height / 2
-              color: chosen ? Theme.accentFill : Theme.withAlpha(Theme.highlightMed, cellHover.containsMouse ? 0.9 : 0)
-              scale: cellHover.pressed ? Theme.pressScale : 1
-
-              activeFocusOnTab: true
-              Accessible.role: Accessible.Button
-              Accessible.name: modelData.name
-              Accessible.checkable: true
-              Accessible.checked: chosen
-              Accessible.focusable: true
-              Accessible.onPressAction: canvas.align(group.modelData.horizontal, cell.modelData.mark)
-
-              Behavior on color {
-                Tint {}
-              }
-
-              Behavior on scale {
-                Morph {
-                  duration: Theme.morphState
-                }
-              }
-
-              Text {
-                anchors.centerIn: parent
-                text: cell.modelData.glyph
-                color: cell.chosen ? Theme.inkOnAccent : cell.activeFocus ? Theme.focusRing : Theme.inkSecondary
-                font.family: Theme.iconFont
-                font.pixelSize: Theme.displaysAlignGlyphSize
-              }
-
-              MouseArea {
-                id: cellHover
-
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: canvas.align(group.modelData.horizontal, cell.modelData.mark)
-              }
-
-              Keys.onPressed: function (event) {
-                if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                  canvas.align(group.modelData.horizontal, cell.modelData.mark);
-                  event.accepted = true;
-                }
-              }
-            }
-          }
+        accessibleName: modelData.name
+        currentIndex: modelData.marks.findIndex(m => m.mark === canvas.alignment(modelData.horizontal))
+        segments: modelData.marks.map(m => ({
+              "icon": m.glyph,
+              "name": m.name
+            }))
+        onChosen: function (i) {
+          canvas.align(modelData.horizontal, modelData.marks[i].mark);
         }
       }
     }
