@@ -377,21 +377,15 @@ Variants {
               text: modelData.value
             }
 
-            Rectangle {
+            LevelTrack {
               x: 45
               y: 36
               width: parent.width - 45 - 14
               height: 3
-              radius: 1.5
               visible: modelData.level >= 0
               color: Theme.withAlpha("white", 0.08)
-
-              Rectangle {
-                width: parent.width * Math.max(0, modelData.level)
-                height: parent.height
-                radius: parent.radius
-                color: Phone.low ? Theme.love : Theme.accent
-              }
+              fillColor: Phone.low ? Theme.love : Theme.accent
+              value: modelData.level
             }
           }
         }
@@ -698,25 +692,19 @@ Variants {
               hoverEnabled: true
             }
 
-            StrokeIcon {
+            StrokeIconButton {
               id: dismissButton
 
               x: parent.width - 12 - width
               y: 10
               size: 16
               path: Icons.close
-              color: dismissHit.containsMouse ? Theme.text : Theme.subtle
+              baseColor: Theme.subtle
+              hoverColor: Theme.text
+              hitSlop: 6
+              accessibleName: "Dismiss notification"
               visible: noteRow.modelData.dismissable && noteHit.containsMouse
-
-              MouseArea {
-                id: dismissHit
-
-                anchors.fill: parent
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Phone.dismiss(noteRow.modelData.id)
-              }
+              onClicked: Phone.dismiss(noteRow.modelData.id)
             }
           }
         }
