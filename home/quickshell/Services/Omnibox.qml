@@ -4,8 +4,7 @@ import QtQuick
 import Quickshell
 
 // The launcher's search: one query fanned out to every provider, their rows merged into
-// sections. The launcher only draws `results` (or an open provider's view) and calls
-// `activate`.
+// sections. The launcher only draws `results` and calls `activate`.
 //
 // A provider is a Singleton with:
 //   property string query       Written here: the typed text when this provider holds
@@ -24,30 +23,12 @@ import Quickshell
 //   property var emptyResults   Optional; rows for an empty query (apps list them all).
 //   function activate(row, modifiers)   Act on a row; return true to keep the launcher
 //                               open (a multi-step flow), false to close it.
-//   function tab(row)           Optional; Tab on one of its rows. Return true if handled.
-//   function ask(text)          Optional; Tab on a non-empty unscoped query whose selected
-//                               row did not take it hands the text here (the first
-//                               provider that has one wins), Raycast's "Tab to ask AI".
-//   property Component view     Optional; a view drawn in place of the list, see below.
 //
 // Scope. enterScope(provider) runs that provider alone: the field is cleared, the provider
 // gets `scoped = true` and the typed text as its `query`, and the field carries a chip with
 // its `scopeGlyph` and `section`. A typed `prefix` does the same and is consumed into the
 // chip, so the field never shows it. leaveScope() returns to every provider, clearing the
 // field. The launcher leaves the scope on Escape or on Backspace in an empty field.
-//
-// Views. openView(provider) swaps the list for an instance of `provider.view`; closeView()
-// brings the list back, the scope as it was and the field cleared. While a view is open the
-// field is its input and the typed text goes nowhere else. The view's root item:
-//   implicitHeight              What the panel grows to under the field; the panel's height
-//                               morphs with it as it changes. Keep it under `maxHeight`.
-//   property real maxHeight     Written by the launcher: the tallest the view may be on this
-//                               screen. Scroll inside past it.
-//   property string placeholder Optional; the field's placeholder.
-//   function keyPressed(event)  Optional; sees every field key first. Accept to take it.
-//   function submit(text)       Optional; Return. Return true to clear the field.
-// Escape layers: a view (unless it took the key) closes to the list, then a scope is left,
-// then the launcher closes.
 //
 // A row is a plain object:
 //   { id, name, desc, icon, glyph, swatch, score, matches, ...anything else }
@@ -71,15 +52,12 @@ Singleton {
   id: root
 
   // Order is the default section order. Adding a provider is one entry here.
-  readonly property var providers: [AppSearch, Calculator, ClipboardHistory, EmojiSearch, ClaudeChat]
+  readonly property var providers: [AppSearch, Calculator, ClipboardHistory, EmojiSearch]
 
   property string query: ""
 
   // The provider holding the scope, or null when every provider runs.
   property var scope: null
-
-  // The provider whose view is open in place of the list, or null.
-  property var view: null
 
   // Flat, in display order.
   property var results: []
@@ -108,37 +86,8 @@ Singleton {
     root.dispatch();
   }
 
-  function openView(provider) {
-    if (!provider || !provider.view)
-      return;
-    root.view = provider;
-    // The field becomes the view's input, so it starts empty.
-    root.setQuery("");
-  }
-
-  function closeView() {
-    root.view = null;
-    root.setQuery("");
-  }
-
-  // Tab on a non-empty unscoped query: the selected row's provider first, then `ask`.
-  function tab(row, text) {
-    if (row && row.provider && row.provider.tab && row.provider.tab(row) === true)
-      return true;
-    if (root.scope || text.trim().length === 0)
-      return false;
-    for (var i = 0; i < providers.length; i++) {
-      if (providers[i].ask) {
-        providers[i].ask(text);
-        return true;
-      }
-    }
-    return false;
-  }
-
   // Back to a fresh, unscoped launcher, as every open starts.
   function reset() {
-    root.view = null;
     root.scope = null;
     root.setQuery("");
     root.dispatch();

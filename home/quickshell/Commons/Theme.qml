@@ -297,9 +297,6 @@ Singleton {
   readonly property int launcherTextLeft: 66
   readonly property int launcherNameSize: 14
   readonly property int launcherDescSize: 11
-  // The chat view's gutter mark and scroll thumb.
-  readonly property int launcherMarkerWidth: 3
-  readonly property int launcherMarkerHeight: 20
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
   // The selected row is a plain fill; no marker, no accent. The accent stays for the caret.
@@ -313,31 +310,6 @@ Singleton {
   readonly property int launcherChipSize: 13
   readonly property int launcherChipGlyphSize: 16
   readonly property real launcherChipAlpha: 0.08
-  // A provider's view in the list's place grows the panel up to this, then scrolls; the
-  // screen margin keeps it clear of a short screen's bottom edge.
-  readonly property int launcherViewMaxHeight: 520
-  readonly property int launcherViewScreenMargin: 48
-  // The chat view: a quiet meta line, then turns on the field's text column. The gutter
-  // carries an accent marker on the user's turns and a muted glyph on Claude's.
-  readonly property int launcherChatMetaHeight: 22
-  readonly property int launcherChatMetaSize: 11
-  readonly property int launcherChatTurnGap: 14
-  readonly property int launcherChatUserSize: 14
-  readonly property real launcherChatBodySize: 13.5
-  readonly property real launcherChatLeading: 1.3
-  readonly property int launcherChatCodeSize: 12
-  readonly property int launcherChatCodePad: 10
-  readonly property int launcherChatParaGap: 8
-  readonly property int launcherChatItemGap: 3
-  // A list item's hanging indent: the bullet sits on the text column, the words this far in.
-  readonly property int launcherChatIndent: 14
-  readonly property int launcherChatCodeRadius: 8
-  readonly property color launcherChatCodeFill: withAlpha(text, 0.06)
-  readonly property int launcherChatGutterGlyphSize: 15
-  readonly property int launcherChatDotSize: 5
-  readonly property int launcherChatDotGap: 4
-  // A page key moves this share of the visible height, keeping a line of context.
-  readonly property real launcherChatPageStep: 0.85
   // An emoji row draws the character itself in colour, so its tile stays neutral.
   readonly property string emojiFont: "Noto Color Emoji"
   readonly property int launcherEmojiSize: 17

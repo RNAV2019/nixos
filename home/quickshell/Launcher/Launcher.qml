@@ -8,7 +8,7 @@ import qs.Ui
 // The app launcher: the island grown into a 520 px column from the pill's exact size,
 // radius and centre line. The clipped panel uncovers pre-laid rows; reflow animates.
 // What it lists comes from Omnibox, which merges every provider into sections; a provider
-// may scope the field to itself (a chip) or swap the list for its own view.
+// may scope the field to itself (a chip).
 Variants {
   id: root
 
@@ -23,19 +23,10 @@ Variants {
     openHeight: win.contentHeight
     openRadius: Theme.launcherRadius
 
-    // The provider running alone (entered from a row, or by its hidden prefix), and the one
-    // whose view stands in for the list. The chip names whichever is innermost.
+    // The provider running alone (entered from a row, or by its hidden prefix); the chip
+    // names it.
     readonly property var scope: Omnibox.scope
-    readonly property var viewProvider: Omnibox.view
-    readonly property var chip: viewProvider || scope
     readonly property var results: Omnibox.results
-
-    // A view grows the panel to its own height, capped so the panel stays on screen.
-    readonly property real viewMaxHeight: {
-      var screenRoom = modelData && modelData.height > 0 ? modelData.height - Theme.barMarginTop - Theme.launcherListTop - Theme.launcherPadBottom - Theme.launcherViewScreenMargin : Theme.launcherViewMaxHeight;
-      return Math.max(Theme.launcherRowHeight, Math.min(Theme.launcherViewMaxHeight, screenRoom));
-    }
-    readonly property real viewHeight: view.item ? Math.max(Theme.launcherRowHeight, Math.min(win.viewMaxHeight, view.item.implicitHeight)) : Theme.launcherRowHeight
 
     // Set once the selection is moved by hand, so a late answer (qalc, date) does not pull
     // it back to the top.
@@ -47,8 +38,8 @@ Variants {
       var shown = Math.min(Theme.launcherMaxRows, win.results.length);
       return shown > 0 ? shown * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap : 0;
     }
-    readonly property bool listEmpty: !viewProvider && win.results.length === 0
-    readonly property int contentHeight: listEmpty ? Theme.launcherSearchHeight : Theme.launcherListTop + (viewProvider ? viewHeight : listHeight) + Theme.launcherPadBottom
+    readonly property bool listEmpty: win.results.length === 0
+    readonly property int contentHeight: listEmpty ? Theme.launcherSearchHeight : Theme.launcherListTop + listHeight + Theme.launcherPadBottom
 
     onOpening: {
       Omnibox.reset();
@@ -67,11 +58,9 @@ Variants {
       return null;
     }
 
-    // Escape peels one layer: the view, then the scope, then the launcher.
+    // Escape peels one layer: the scope, then the launcher.
     function back() {
-      if (win.viewProvider)
-        Omnibox.closeView();
-      else if (win.scope)
+      if (win.scope)
         Omnibox.leaveScope();
       else
         win.hide();
@@ -209,7 +198,7 @@ Variants {
       height: Theme.launcherChipHeight
       radius: height / 2
       color: Theme.withAlpha(Theme.text, Theme.launcherChipAlpha)
-      visible: win.chip !== null
+      visible: win.scope !== null
 
       Row {
         id: chipRow
@@ -221,7 +210,7 @@ Variants {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           visible: text.length > 0
-          text: win.chip && win.chip.scopeGlyph ? win.chip.scopeGlyph : ""
+          text: win.scope && win.scope.scopeGlyph ? win.scope.scopeGlyph : ""
           color: Theme.accent
           font.family: Theme.iconFont
           font.pixelSize: Theme.launcherChipGlyphSize
@@ -229,7 +218,7 @@ Variants {
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          text: win.chip ? win.chip.section : ""
+          text: win.scope ? win.scope.section : ""
           color: Theme.accent
           font.family: Theme.uiFont
           font.pixelSize: Theme.launcherChipSize
@@ -243,7 +232,7 @@ Variants {
 
       x: Theme.launcherTextLeft
       y: Theme.launcherSearchHeight / 2 - height / 2
-      width: (win.chip ? chip.x - Theme.launcherChipTextGap : win.openWidth - Theme.launcherInset) - x
+      width: (win.scope ? chip.x - Theme.launcherChipTextGap : win.openWidth - Theme.launcherInset) - x
       color: Theme.text
       font.family: Theme.uiFont
       font.pixelSize: Theme.launcherSearchSize
@@ -251,10 +240,7 @@ Variants {
       selectionColor: Theme.withAlpha(Theme.accent, Theme.fillSelected)
       clip: true
 
-      // An open view owns the field as its input; the list's providers never see it.
       onTextChanged: {
-        if (win.viewProvider)
-          return;
         win.userMoved = false;
         Omnibox.query = text;
       }
@@ -267,7 +253,7 @@ Variants {
 
       Text {
         width: query.width
-        text: view.item && view.item.placeholder ? view.item.placeholder : win.scope && win.scope.hint && !win.viewProvider ? win.scope.hint : "Search…"
+        text: win.scope && win.scope.hint ? win.scope.hint : "Search…"
         color: Theme.muted
         elide: Text.ElideRight
         font: query.font
@@ -275,31 +261,9 @@ Variants {
       }
 
       // Down/Up step the list, and Ctrl+N/P or Ctrl+J/K for hands that stay on the home
-      // row. Tab is not a step: it is the selected row's own (Omnibox.tab), else it asks
-      // Claude about the query, as Raycast's "Tab to ask AI".
+      // row. Tab is taken and does nothing, so focus never leaves the field.
       Keys.onPressed: function (event) {
-        if (win.viewProvider && view.item && view.item.keyPressed) {
-          view.item.keyPressed(event);
-          if (event.accepted)
-            return;
-        }
         var ctrl = (event.modifiers & Qt.ControlModifier) !== 0;
-        if (win.viewProvider) {
-          switch (event.key) {
-          case Qt.Key_Escape:
-            win.back();
-            break;
-          case Qt.Key_Return:
-          case Qt.Key_Enter:
-            if (view.item && view.item.submit && view.item.submit(query.text) === true)
-              query.text = "";
-            break;
-          default:
-            return;
-          }
-          event.accepted = true;
-          return;
-        }
         switch (event.key) {
         case Qt.Key_Escape:
           win.back();
@@ -316,8 +280,6 @@ Variants {
           win.step(1);
           break;
         case Qt.Key_Tab:
-          Omnibox.tab(win.selectedRow(), query.text);
-          break;
         case Qt.Key_Backtab:
           break;
         case Qt.Key_P:
@@ -352,26 +314,6 @@ Variants {
       visible: !win.listEmpty
     }
 
-    // A provider's own view, in the list's place. Made when opened and dropped on close, so
-    // each open starts from the provider's own state rather than a stale delegate.
-    Loader {
-      id: view
-
-      x: Theme.launcherInset
-      y: Theme.launcherListTop
-      width: win.openWidth - Theme.launcherInset * 2
-      height: win.viewHeight
-      active: win.viewProvider !== null
-      sourceComponent: win.viewProvider ? win.viewProvider.view : null
-
-      onLoaded: {
-        if (item.maxHeight !== undefined)
-          item.maxHeight = Qt.binding(function () {
-            return win.viewMaxHeight;
-          });
-      }
-    }
-
     ListView {
       id: list
 
@@ -379,7 +321,6 @@ Variants {
       y: Theme.launcherListTop
       width: win.openWidth - Theme.launcherInset * 2
       height: win.listHeight
-      visible: !win.viewProvider
       model: rows
       spacing: Theme.launcherRowGap
       clip: true

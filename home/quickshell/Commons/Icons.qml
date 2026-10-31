@@ -18,8 +18,6 @@ Singleton {
   readonly property string clipboard: "content_paste"
   // Its emoji and symbol picker.
   readonly property string emoji: "mood"
-  // Its Claude chat.
-  readonly property string assistant: "auto_awesome"
 
   readonly property string chevronLeft: "chevron_left"
   readonly property string chevronRight: "chevron_right"
