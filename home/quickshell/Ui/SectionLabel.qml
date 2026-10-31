@@ -19,6 +19,7 @@ Item {
   property real bottomInset: 4
   property string action: ""
   property string actionGlyph: ""
+  property real actionGlyphSize: 12
   default property alias trailing: trailingRow.data
 
   signal actionClicked
@@ -81,7 +82,7 @@ Item {
     StrokeIcon {
       anchors.verticalCenter: parent.verticalCenter
       visible: root.actionGlyph !== ""
-      size: 12
+      size: root.actionGlyphSize
       strokeWidth: 1.8
       path: root.actionGlyph
       color: Theme.accentFill
@@ -106,5 +107,9 @@ Item {
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onClicked: root.actionClicked()
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.action
+    Accessible.onPressAction: root.actionClicked()
   }
 }

@@ -402,30 +402,28 @@ Item {
     }
   }
 
-  Rectangle {
+  Divider {
     x: Theme.pickerSide
     y: Theme.pickerHeaderHeight
     width: root.width - Theme.pickerSide * 2
-    height: 1
-    color: Theme.withAlpha(Theme.separator, 0.6)
   }
 
-  Rectangle {
+  Divider {
     visible: !root.blocked
     x: Theme.pickerRuleOneX
     y: Theme.pickerColumnsTop
-    width: 1
     height: root.height - Theme.pickerColumnsTop - Theme.pickerColumnsBottom
-    color: Theme.withAlpha(Theme.separator, 0.45)
+    vertical: true
+    alpha: 0.45
   }
 
-  Rectangle {
+  Divider {
     visible: !root.blocked
     x: Theme.pickerRuleTwoX
     y: Theme.pickerColumnsTop
-    width: 1
     height: root.height - Theme.pickerColumnsTop - Theme.pickerColumnsBottom
-    color: Theme.withAlpha(Theme.separator, 0.45)
+    vertical: true
+    alpha: 0.45
   }
 
   // One picker row: a glyph, a name, and the size or folder count. `state` styles it.
