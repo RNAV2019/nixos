@@ -46,29 +46,7 @@ Variants {
       return holder !== "" && holder !== win.key && !Bus.isTransient(holder);
     }
 
-    readonly property bool wanted: Polkit.pending && win.mine && !Bus.locking && !win.blocked
-
-    onWantedChanged: evaluateLater.restart()
-    onOpenChanged: {
-      // Closed by anything but the answer (a panel on another output took the island): still
-      // wanted, so it comes back.
-      if (!win.open)
-        evaluateLater.restart();
-    }
-    Component.onCompleted: evaluateLater.restart()
-
-    // Decided a turn later, never inside the change that prompted it; see Ui/TransientSurface.qml.
-    Timer {
-      id: evaluateLater
-
-      interval: 0
-      onTriggered: {
-        if (win.wanted && !win.open)
-          win.show();
-        else if (!win.wanted && win.open)
-          win.hide();
-      }
-    }
+    wanted: Polkit.pending && win.mine && !Bus.locking && !win.blocked
 
     // ---- the request, as the pill says it ----
 

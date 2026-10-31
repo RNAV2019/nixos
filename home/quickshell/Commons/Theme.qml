@@ -990,7 +990,7 @@ Singleton {
   // has a frame on screen under the surface's last one.
   readonly property int surfacePark: 80
 
-  // How long a parked surface keeps its window before letting it go (Ui/IslandSurface.qml).
+  // How long a parked surface keeps its window before letting it go (Ui/IslandSurfaceBase.qml).
   readonly property int surfaceRetain: 300000
 
   // The incoming contents wait, then fade, landing just before the shape settles.

@@ -157,7 +157,7 @@ Variants {
       event.accepted = true;
     }
 
-    // No fade of its own: IslandSurface's bodyHolder carries every panel's open, close and
+    // No fade of its own: IslandSurfaceBase's bodyHolder carries every panel's open, close and
     // handover fade, and a second one inside it compounded into a faster, deeper dissolve.
     Item {
       id: body
