@@ -95,7 +95,10 @@ done
 # Commands the shell runs that must not reach the real machine.
 printf '#!/bin/sh\nexit 0\n' >"$QSV_WORK/bin/brightnessctl"
 printf '#!/bin/sh\nexit 1\n' >"$QSV_WORK/bin/hyprctl"
-chmod +x "$QSV_WORK/bin/brightnessctl" "$QSV_WORK/bin/hyprctl"
+# The real one names the scratch config path in its error, which moves with QS_VERIFY_WORK.
+printf '#!/bin/sh\necho "ical-agenda: no calendar addresses in ~/.config/quickshell-calendar/ical-urls" >&2\nexit 1\n' \
+  >"$QSV_WORK/bin/ical-agenda"
+chmod +x "$QSV_WORK/bin/brightnessctl" "$QSV_WORK/bin/hyprctl" "$QSV_WORK/bin/ical-agenda"
 
 # `nearby`, the CLI of nearbyd: the shell reads one long-lived `nearby events` stream and a
 # `transfers --json` dump. The stub replays a baseline status and then whatever shoot.sh appends
