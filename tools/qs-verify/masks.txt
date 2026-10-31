@@ -22,8 +22,10 @@ auth-long              838  38   14   22
 auth-identities        838  38   14   22
 # The three dots of the sharing pill's "Connecting…".
 sharing-connecting    1054  24   38   14
-# The rebuild pill's progress track while the total is unknown: a segment sweeps across it.
-rebuild-building-unknown  944  25  100  16
+# The rebuild pill's track and percentage: an estimate in time (Services/Rebuild.qml), so they move
+# while it runs, and a failed run stops wherever the clock had it.
+rebuild-building*      944  20  142  22
+rebuild-failed        1030  20   56  22
 # The launcher search field's blinking caret (empty, after "te", after the calculator input).
 panel-launcher         740   30  50  26
 panel-launcher-query   760   30  30  26

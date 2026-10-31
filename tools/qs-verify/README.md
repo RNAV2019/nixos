@@ -46,7 +46,8 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 - The auth prompt, through the `authpreview` ipc stage: pkexec, plain, long name, several
   identities, typing, checking, wrong password.
 - OSDs: brightness, keyboard backlight, volume, volume muted, mic on, mic muted.
-- Rebuild pill: building with an unknown total, building 5 of 12, done, failed.
+- Rebuild pill: evaluating, building (5 of 12, and builds with fetches), done, failed. Its track
+  and percentage are a time estimate, so they are masked.
 - Dictation pill: listening before the mic is up, listening with level bars, live text,
   transcribing, polishing.
 - Sharing pill: connecting, offer, receiving, saved.

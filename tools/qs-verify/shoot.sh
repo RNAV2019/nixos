@@ -225,13 +225,16 @@ rb_progress() { # DONE TOTAL RUNNING FAILED
 rb_fetch_progress() { # DONE TOTAL RUNNING FAILED
   rb_emit "{\"action\":\"result\",\"id\":$(rb_id 3),\"type\":105,\"fields\":[$1,$2,$3,$4]}"
 }
+rb_build() { # a derivation building: the pill says "Building" while one is open
+  rb_emit "{\"action\":\"start\",\"id\":$(rb_id 4),\"level\":3,\"type\":105,\"text\":\"building '/nix/store/x-demo.drv'\",\"fields\":[\"/nix/store/x-demo.drv\",\"\",1,1]}"
+}
 rb_finish() { # leave the run to end: kill the live process, wait out the quiet period and dwell
   [[ -n $rb_pid ]] && kill "$rb_pid" 2>/dev/null
   rb_pid=
   # The pill takes no pointer, so a failure is waited out (quiet period, then its 8 s dwell).
   sleep 13
 }
-setup_rebuild_building_unknown() {
+setup_rebuild_building_unknown() { # evaluating, nothing built yet
   rb_open
   rb_spawn
   rb_eval
@@ -241,6 +244,7 @@ setup_rebuild_building() {
   rb_spawn
   rb_eval
   rb_announce 12
+  rb_build
   rb_progress 5 12 1 0
 }
 setup_rebuild_building_mixed() { # 4 built + 8 fetched, 2 and 4 of them done: 6 of 12
@@ -249,6 +253,7 @@ setup_rebuild_building_mixed() { # 4 built + 8 fetched, 2 and 4 of them done: 6 
   rb_eval
   rb_announce 4
   rb_announce_fetch 8
+  rb_build
   rb_progress 2 4 1 0
   rb_fetch_progress 4 8 1 0
 }
@@ -270,6 +275,7 @@ setup_rebuild_failed() {
   rb_spawn
   rb_eval
   rb_announce 12
+  rb_build
   rb_progress 7 12 1 1
   rb_emit "{\"action\":\"msg\",\"level\":0,\"msg\":\"error: builder for '/nix/store/x-demo.drv' failed with exit code 1\"}"
   [[ -n $rb_pid ]] && kill "$rb_pid"
