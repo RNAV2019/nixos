@@ -732,7 +732,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-phone-picker-phone 1.0 0.3 setup_phone_picker_phone
   shot panel-phone-picker-laptop 1.0 0.3 setup_phone_picker_laptop
   shot panel-phone-picker-blocked 1.0 0.3 setup_phone_picker_blocked teardown_phone_access
-  check browse-opens-nautilus browse_opens_nautilus
+  check phone-browse-nautilus browse_opens_nautilus
   shot panel-nearby-kde-choose 1.5 0.3 setup_nearby_kde_choose
   shot panel-nearby-kde-sending 1.0 0.3 setup_nearby_kde_sending teardown_nearby_kde_job
   shot panel-nearby-kde-sending-quiet 1.0 0.3 setup_nearby_kde_sending_quiet teardown_nearby_kde_job
@@ -744,7 +744,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-nearby-kde-receive 1.8 0.3 setup_nearby_kde_receive teardown_kde_down
   # Last: the chosen picture stays on the phone preview from here on.
   shot panel-phone-wallpaper 1.0 0.3 setup_phone_wallpaper
-  check one-wallpaper-copy one_wallpaper_copy
+  check phone-one-wallpaper-copy one_wallpaper_copy
 fi
 
 reset_ui
