@@ -374,8 +374,10 @@ Singleton {
   // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
   // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
   readonly property int osdWidth: 278
-  readonly property int osdHeight: 48
-  readonly property int osdRadius: 24
+  // The pill hangs from barMarginTop and windows start barHeight + oledShiftMax + gaps_out
+  // below the strip, so 48 reached into the window under it.
+  readonly property int osdHeight: 40
+  readonly property int osdRadius: 20
   readonly property int osdGlyphLeft: 20
   readonly property int osdGlyphSize: 18
   readonly property int osdTrackLeft: 52
@@ -624,8 +626,8 @@ Singleton {
   readonly property int momentHeight: sharingOfferHeight
   readonly property int momentRadius: sharingOfferRadius
   readonly property int momentCompactWidth: 340
-  readonly property int momentCompactHeight: osdHeight
-  readonly property int momentCompactRadius: osdRadius
+  readonly property int momentCompactHeight: 48
+  readonly property int momentCompactRadius: 24
   readonly property int momentButtonHeight: 26
   readonly property real momentTitleSize: 12.5
   readonly property real momentSubtitleSize: 10.5

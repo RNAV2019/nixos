@@ -42,6 +42,7 @@
       rebuild = "sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path \"$XDG_RUNTIME_DIR/rebuild.jsonl\"";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
+      todo = "hx ~/TODO.md";
 
       grep = "rg";
       find = "fd";
