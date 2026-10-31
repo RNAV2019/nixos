@@ -81,16 +81,10 @@ Scope {
     onTriggered: root.showing = false
   }
 
-  readonly property real level: current.value
-  readonly property bool stateOnly: current.stateOnly
-  readonly property string glyph: current.glyph
-  readonly property string reading: current.reading
-  readonly property bool alarming: current.alarming
-
   readonly property color ink: {
-    if (alarming)
+    if (current.alarming)
       return Theme.urgent;
-    if (stateOnly)
+    if (current.stateOnly)
       return Theme.muted;
     return Theme.text;
   }
@@ -110,9 +104,9 @@ Scope {
 
       wanted: root.showing && window.focused && !window.outputBlocked
 
-      openWidth: Theme.osdWidth
-      openHeight: Theme.osdHeight
-      openRadius: Theme.osdRadius
+      openWidth: Theme.islandPillWidth
+      openHeight: Theme.islandPillHeight
+      openRadius: Theme.islandPillRadius
 
       // The whole window is click-through. The island underneath still wants its clicks.
       cardInput: false
@@ -123,69 +117,24 @@ Scope {
         root.showing = false;
       }
 
-      // Board 09's row, at the board's own positions; nothing here moves with the shape.
-      Item {
-        id: readout
-
-        anchors.fill: parent
+      IslandPill {
+        x: (window.surface.width - width) / 2
+        y: (window.surface.height - height) / 2
+        layout: "glyphTrackReading"
+        alert: root.current.alarming
+        reading: root.current.reading
+        readingColor: root.ink
+        value: root.current.value
+        showFill: !root.current.stateOnly
+        fillDuration: Theme.morphFill
+        running: window.open
 
         Text {
-          x: Theme.osdGlyphLeft
-          y: (Theme.osdHeight - height) / 2
-          text: root.glyph
+          anchors.centerIn: parent
+          text: root.current.glyph
           color: root.ink
           font.family: Theme.iconFont
-          font.pixelSize: Theme.osdGlyphSize
-        }
-
-        Rectangle {
-          x: Theme.osdTrackLeft
-          y: (Theme.osdHeight - height) / 2
-          width: Theme.osdTrackWidth
-          height: Theme.osdTrackHeight
-          radius: height / 2
-          color: Theme.highlightLow
-
-          Rectangle {
-            width: parent.width * Math.max(0, Math.min(1, root.level))
-            height: parent.height
-            radius: parent.radius
-            color: Theme.accent
-            visible: !root.stateOnly
-
-            // Held keys repeat about every 40 ms, so a longer tween never finishes.
-            Behavior on width {
-              NumberAnimation {
-                duration: Theme.morphFill
-              }
-            }
-          }
-        }
-
-        Text {
-          x: Theme.osdWidth - Theme.osdValueRight - width
-          y: (Theme.osdHeight - height) / 2
-          text: root.reading
-          color: root.ink
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.osdValueSize
-          font.weight: Theme.weightSemi
-        }
-      }
-
-      Rectangle {
-        anchors.fill: parent
-        radius: window.surface.surfaceRadius
-        color: "transparent"
-        border.width: 1.5
-        border.color: Theme.withAlpha(Theme.urgent, 0.7)
-        opacity: root.alarming ? 1 : 0
-        visible: opacity > 0
-
-        Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          font.pixelSize: Theme.islandPillGlyphSize
         }
       }
     }
