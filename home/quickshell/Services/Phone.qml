@@ -78,58 +78,60 @@ Singleton {
 
   // ---- the bridge process ----
 
-  property int _restart: 5000
-
-  Process {
-    id: bridge
-
+  // Nothing to show once it is gone; it is started again after a pause that doubles up to a
+  // minute, which is also what a shell without phone-bridge on its PATH sees.
+  Stream {
     command: ["phone-bridge", "events"]
-    running: true
+    retryMs: 5000
+    maxRetryMs: 60000
 
-    stdout: SplitParser {
-      onRead: function (line) {
-        var state;
-        try {
-          state = JSON.parse(line);
-        } catch (err) {
-          return;
-        }
-        root._restart = 5000;
-        root._apply(state);
+    onLine: function (text) {
+      var state;
+      try {
+        state = JSON.parse(text);
+      } catch (err) {
+        return;
       }
+      root._apply(state);
     }
 
-    // Nothing to show once it is gone; it is started again after a pause that doubles up to a
-    // minute, which is also what a shell without phone-bridge on its PATH sees.
-    onExited: function (code) {
-      root._apply({});
-      console.warn("phone-bridge exited (" + code + "), restarting in " + root._restart / 1000 + " s");
-      retry.interval = root._restart;
-      root._restart = Math.min(60000, root._restart * 2);
-      retry.start();
-    }
-  }
-
-  Timer {
-    id: retry
-
-    onTriggered: bridge.running = true
+    onConnectedChanged: if (!connected)
+      root._apply({})
   }
 
   // ---- calling kdeconnectd ----
 
-  Component {
-    id: caller
+  Command {
+    id: ringCall
 
-    Command {
-      onExited: destroy(100)
-    }
+    label: "Ring phone"
   }
 
-  function _call(path, iface, member, what, args) {
-    var run = caller.createObject(root, {
-      label: what
-    });
+  Command {
+    id: clipboardCall
+
+    label: "Send clipboard to phone"
+  }
+
+  Command {
+    id: shareCall
+
+    label: "Send files to phone"
+  }
+
+  Command {
+    id: browseCall
+
+    label: "Browse phone"
+  }
+
+  Command {
+    id: dismissCall
+
+    label: "Dismiss phone notification"
+  }
+
+  function _call(run, path, iface, member, args) {
     run.exec(["busctl", "--user", "call", "org.kde.kdeconnect", path, iface, member].concat(args || []));
   }
 
@@ -144,7 +146,7 @@ Singleton {
   function ring() {
     if (!connected)
       return;
-    root._call(_plugin("findmyphone"), "org.kde.kdeconnect.device.findmyphone", "ring", "Ring phone");
+    root._call(ringCall, _plugin("findmyphone"), "org.kde.kdeconnect.device.findmyphone", "ring");
     root.ringing = true;
     ringReset.restart();
   }
@@ -158,7 +160,7 @@ Singleton {
 
   function sendClipboard() {
     if (connected)
-      root._call(_plugin("clipboard"), "org.kde.kdeconnect.device.clipboard", "sendClipboard", "Send clipboard to phone");
+      root._call(clipboardCall, _plugin("clipboard"), "org.kde.kdeconnect.device.clipboard", "sendClipboard");
   }
 
   // Absolute paths; folders are sent as KDE Connect sends them.
@@ -168,18 +170,18 @@ Singleton {
     var urls = paths.map(function (p) {
       return "file://" + encodeURI(p);
     });
-    root._call(_plugin("share"), "org.kde.kdeconnect.device.share", "shareUrls", "Send files to phone", ["as", String(urls.length)].concat(urls));
+    root._call(shareCall, _plugin("share"), "org.kde.kdeconnect.device.share", "shareUrls", ["as", String(urls.length)].concat(urls));
   }
 
   // Mounts the phone's storage over SFTP and opens it in the file manager.
   function browse() {
     if (connected)
-      root._call(_plugin("sftp"), "org.kde.kdeconnect.device.sftp", "startBrowsing", "Browse phone");
+      root._call(browseCall, _plugin("sftp"), "org.kde.kdeconnect.device.sftp", "startBrowsing");
   }
 
   function dismiss(notificationId) {
     if (connected)
-      root._call(_plugin("notifications") + "/" + notificationId, "org.kde.kdeconnect.device.notifications.notification", "dismiss", "Dismiss phone notification");
+      root._call(dismissCall, _plugin("notifications") + "/" + notificationId, "org.kde.kdeconnect.device.notifications.notification", "dismiss");
   }
 
   onConnectedChanged: if (!connected)
@@ -191,15 +193,14 @@ Singleton {
   property var clips: []
 
   function refreshClips() {
-    clipList.running = true;
+    clipList.run();
   }
 
   function copyClip(id) {
-    // The id goes in as an argument, never into the script text.
-    Quickshell.execDetached(["sh", "-c", 'cliphist decode "$1" | wl-copy', "sh", id]);
+    ClipboardHistory.copy(id);
   }
 
-  Process {
+  QueuedProcess {
     id: clipList
 
     command: ["sh", "-c", "cliphist -preview-width 120 list | head -n 30"]

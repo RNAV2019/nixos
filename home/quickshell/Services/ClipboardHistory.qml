@@ -225,9 +225,13 @@ Provider {
       remove.exec(["sh", "-c", 'printf "%s\\n" "$1" | cliphist delete', "sh", row.clipLine]);
       return true;
     }
-    // The id goes in as an argument, never into the script text.
-    Quickshell.execDetached(["sh", "-c", 'cliphist decode "$1" | wl-copy', "sh", row.clipId]);
+    root.copy(row.clipId);
     return false;
+  }
+
+  // Puts a clip back on the clipboard. The id goes in as an argument, never into the script text.
+  function copy(id) {
+    Quickshell.execDetached(["sh", "-c", 'cliphist decode "$1" | wl-copy', "sh", id]);
   }
 
   QueuedProcess {
