@@ -111,38 +111,24 @@ Item {
       root._previewing = false
   }
 
-  Rectangle {
+  LevelTrack {
+    id: track
+
     y: (parent.height - height) / 2
     width: parent.width
     height: root.trackHeight
-    radius: height / 2
-    color: root.compact ? Theme.withAlpha(Theme.text, 0.18) : Theme.withAlpha(Theme.highlightLow, 0.9)
-  }
-
-  Rectangle {
-    id: fill
-
-    y: (parent.height - height) / 2
-    width: root.fillWidth
-    height: root.trackHeight
-    radius: height / 2
-    color: root.dimmed ? Theme.withAlpha(Theme.subtle, root.compact ? 0.5 : 0.35) : Theme.accent
-    scale: !root.compact && drag.pressed ? Theme.pressScale : 1
-
+    value: root.width > 0 ? root.fillWidth / root.width : 0
+    fillColor: root.dimmed ? Theme.withAlpha(Theme.subtle, root.compact ? 0.5 : 0.35) : Theme.accent
     // Smooths a keyboard step or an external change; a drag writes every frame anyway.
-    Behavior on width {
-      enabled: !drag.pressed
+    fillDuration: drag.pressed ? 0 : Theme.duration(Theme.morphState)
 
-      Morph {
-        duration: Theme.duration(Theme.morphState)
-      }
-    }
-
-    Behavior on color {
+    Behavior on fillColor {
       Tint {}
     }
 
-    Behavior on scale {
+    fill.scale: !root.compact && drag.pressed ? Theme.pressScale : 1
+
+    Behavior on fill.scale {
       Morph {
         duration: Theme.morphState
       }
@@ -153,7 +139,7 @@ Item {
     x: Theme.controlSliderGlyphLeft
     y: (parent.height - height) / 2
     text: root.glyph
-    color: fill.width > x + width && !root.dimmed ? Theme.inkOnAccent : Theme.inkSecondary
+    color: track.fill.width > x + width && !root.dimmed ? Theme.inkOnAccent : Theme.inkSecondary
     font.family: Theme.iconFont
     font.pixelSize: Theme.controlTileGlyphSize
   }
