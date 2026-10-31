@@ -428,7 +428,6 @@ Variants {
         fillHoverColor: Theme.withAlpha(Theme.highlightMed, 0.95)
         hitSize: 30
         accessibleName: "Choose phone wallpaper"
-        activeFocusOnTab: true
         onClicked: win.chooseWallpaper()
       }
 

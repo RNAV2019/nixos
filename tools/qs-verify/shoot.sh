@@ -512,7 +512,7 @@ phone_wallpaper_picker() { # open the panel and the wallpaper chooser, then wait
 }
 setup_phone_picker_phone() {
   phone_wallpaper_picker
-  keys -k j -k j -k j -k j -k j
+  type_text "jjjjj"
 }
 setup_phone_picker_laptop() {
   phone_wallpaper_picker
@@ -521,7 +521,7 @@ setup_phone_picker_laptop() {
   click
   sleep 1.5
   cursor 200 900
-  keys -k j -k j -k j -k j -k j
+  type_text "jjjjj"
 }
 setup_phone_picker_blocked() {
   ph '{"op":"sftp","dev":"s24","grant":false}'
@@ -530,7 +530,7 @@ setup_phone_picker_blocked() {
 # Choose mountains.jpg from the phone: the file is copied into the state dir and drawn.
 setup_phone_wallpaper() {
   phone_wallpaper_picker
-  keys -k j -k j -k j -k j -k j
+  type_text "jjjjj"
   sleep 0.4
   keys -k Return
   sleep 2.5
@@ -541,6 +541,7 @@ one_wallpaper_copy() {
   [[ $n -eq 1 ]] && [[ $(cat "$HOME/.local/state/shell/phone-wallpaper") == "$(find "$HOME/.local/state/shell" -maxdepth 1 -name 'phone-wallpaper-*')" ]]
 }
 browse_opens_nautilus() {
+  reset_ui
   : >"$QSV_WORK/launched.log"
   open_panel phone
   sleep 1.6
