@@ -4,7 +4,8 @@ import qs.Commons
 // The board's `Island pill`: the contents of a single 42 px island row in one of its eight
 // layouts. It lays itself out at its final size, so the surface growing around it uncovers placed
 // contents; callers centre it in the TransientSurface. Right-anchored parts follow `width`, the
-// waveform stays centred, so a card row can be wider than a pill.
+// waveform stays centred, as does the caption of `glyphLabelAction`, so a card row can be wider
+// than a pill.
 //
 // The glyph is whatever the caller puts inside (a StrokeIcon, a Text, a Spinner), centred in its
 // slot; the waveform goes in `waveform`. Everything else is the row's own: the label, detail and
@@ -104,7 +105,6 @@ Item {
       });
     case "glyphLabelAction":
       return Object.assign(base, {
-        labelLeft: Theme.islandPillLabelLeftAction,
         labelWidth: Theme.islandPillLabelWidthAction,
         labelSize: Theme.islandPillCaptionSize,
         labelAlign: Text.AlignHCenter
@@ -152,7 +152,7 @@ Item {
   }
 
   Text {
-    x: root.at.labelLeft
+    x: root.layout === "glyphLabelAction" ? Math.round((root.width - width) / 2) : root.at.labelLeft
     y: Theme.islandPillTextTop
     width: root.at.labelWidth
     visible: root.hasLabel

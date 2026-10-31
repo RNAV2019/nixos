@@ -4,9 +4,10 @@ import qs.Services
 import qs.Ui
 import "../Commons/Duration.js" as Duration
 
-// The plugged-in moment (Penpot "Ariadne / Moment / Plugged in"), OSD-sized: a battery whose fill
-// runs up to the charge, "Charging", the percentage, and how long until it is full when UPower
-// can say. Read live, so a "Full in" that UPower only works out a second after the plug appears.
+// The plugged-in moment (Penpot "Ariadne / Moment / Plugged in"), an island pill row: a battery
+// whose fill runs up to the charge, "Charging", the percentage, and how long until it is full when
+// UPower can say. Read live, so a "Full in" that UPower only works out a second after the plug
+// appears.
 Item {
   id: root
 
@@ -44,56 +45,29 @@ Item {
     restoreMode: Binding.RestoreNone
   }
 
-  StrokeIcon {
-    x: 20
-    y: (root.height - size) / 2
-    size: 24
-    strokeWidth: 1.75
-    path: IconPaths.batteryOutline
-    color: Theme.accent
-  }
+  IslandPill {
+    anchors.fill: parent
+    layout: "glyphLabelDetailReading"
+    label: "Charging"
+    detail: Math.round(root.level * 100) + "%"
+    reading: root.toFull > 0 ? "Full in " + Duration.describe(Math.ceil(root.toFull / 60) * 60000) : ""
 
-  // Inside the outline: 13 x 7 on the 24 grid at (3.5, 8.5).
-  Rectangle {
-    x: 23.5
-    y: (root.height - 24) / 2 + 8.5
-    width: 13 * Theme.clamp01(root.fill)
-    height: 7
-    radius: 1
-    color: Theme.accent
-  }
-
-  Text {
-    x: 54
-    y: (root.height - height) / 2
-    text: "Charging"
-    color: Theme.inkPrimary
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.momentTitleSize
-    font.weight: Theme.weightSemi
-  }
-
-  Text {
-    x: 116
-    y: (root.height - height) / 2
-    text: Math.round(root.level * 100) + "%"
-    color: Theme.accent
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.momentTitleSize
-    font.weight: Theme.weightSemi
-    font.features: {
-      "tnum": 1
+    StrokeIcon {
+      anchors.centerIn: parent
+      size: Theme.islandPillGlyphSizeWide
+      strokeWidth: 1.75
+      path: IconPaths.batteryOutline
+      color: Theme.accent
     }
-  }
 
-  // Right-aligned at 320 of 340; left out while UPower has no estimate.
-  Text {
-    x: 320 - width
-    y: (root.height - height) / 2
-    visible: root.toFull > 0
-    text: "Full in " + Duration.describe(Math.ceil(root.toFull / 60) * 60000)
-    color: Theme.inkSecondary
-    font.family: Theme.uiFont
-    font.pixelSize: 11
+    // Inside the outline: 13 x 7 on the 24 grid at (3.5, 8.5).
+    Rectangle {
+      x: 3.5
+      y: 8.5
+      width: 13 * Theme.clamp01(root.fill)
+      height: 7
+      radius: 1
+      color: Theme.accent
+    }
   }
 }

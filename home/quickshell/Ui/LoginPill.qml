@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import Quickshell.Widgets
 import qs.Commons
 import qs.Ui
@@ -346,57 +345,11 @@ Rectangle {
     }
 
     // Checking: a quarter arc turning over a faint track.
-    Shape {
-      id: spinner
-
+    Spinner {
       anchors.centerIn: parent
-      width: root.u(Theme.lockSpinnerSize)
-      height: width
+      size: root.u(Theme.lockSpinnerSize)
+      stroke: 2 * root.ui
       visible: root.busy
-      antialiasing: true
-      preferredRendererType: Shape.CurveRenderer
-
-      readonly property real stroke: 2 * root.ui
-      readonly property real r: (width - stroke) / 2
-
-      ShapePath {
-        fillColor: "transparent"
-        strokeColor: Qt.rgba(Theme.inkTertiary.r, Theme.inkTertiary.g, Theme.inkTertiary.b, 0.35)
-        strokeWidth: spinner.stroke
-
-        PathAngleArc {
-          centerX: spinner.width / 2
-          centerY: spinner.height / 2
-          radiusX: spinner.r
-          radiusY: spinner.r
-          startAngle: 0
-          sweepAngle: 360
-        }
-      }
-
-      ShapePath {
-        fillColor: "transparent"
-        strokeColor: Theme.accent
-        strokeWidth: spinner.stroke
-        capStyle: ShapePath.RoundCap
-
-        PathAngleArc {
-          centerX: spinner.width / 2
-          centerY: spinner.height / 2
-          radiusX: spinner.r
-          radiusY: spinner.r
-          startAngle: -90
-          sweepAngle: 90
-        }
-      }
-
-      RotationAnimator on rotation {
-        from: 0
-        to: 360
-        duration: Theme.lockSpinnerTurn
-        loops: Animation.Infinite
-        running: spinner.visible && !Theme.reduceMotion
-      }
     }
 
     MouseArea {
