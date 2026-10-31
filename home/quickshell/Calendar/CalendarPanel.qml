@@ -84,142 +84,57 @@ Variants {
       layer: dayLayer
     }
 
-    onKeyPressed: function (event) {
-      switch (event.key) {
-      case Qt.Key_Left:
-      case Qt.Key_H:
-        Calendar.step(-1);
-        break;
-      case Qt.Key_Right:
-      case Qt.Key_L:
-        Calendar.step(1);
-        break;
-      case Qt.Key_Up:
-        Calendar.stepDay(-7);
-        break;
-      case Qt.Key_Down:
-        Calendar.stepDay(7);
-        break;
-      case Qt.Key_T:
-      case Qt.Key_Home:
-        Calendar.today();
-        break;
-      case Qt.Key_R:
-        Calendar.refresh();
-        break;
-      default:
-        return;
+    Panel {
+      id: panel
+
+      surface: win
+      title: Qt.formatDateTime(Calendar.anchor, "MMMM yyyy")
+      titleWeight: Theme.weightSemi
+      headerTop: Theme.calHeaderTop
+      takesMove: true
+      header.titleOpacity: monthLayer.opacity
+      header.titleShift: monthLayer.shift
+
+      // Left and right turn the month, up and down the week.
+      onMoved: function (dx, dy) {
+        if (dx !== 0)
+          Calendar.step(dx);
+        else
+          Calendar.stepDay(7 * dy);
       }
-      event.accepted = true;
-    }
 
-    Item {
-      id: body
-
-      anchors.fill: parent
-
-      Rectangle {
-        id: todayBtn
-
-        x: prev.x - width - Theme.calNavGap * 2
-        y: Theme.calNavTop + (Theme.calNavSize - height) / 2
-        width: todayLabel.implicitWidth + 22
-        height: Theme.calTodayBtnHeight
-        radius: height / 2
-        Accessible.role: Accessible.Button
-        Accessible.name: "Today"
-        Accessible.focusable: true
-        Accessible.focused: todayHover.activeFocus
-        Accessible.onPressAction: Calendar.today()
-        color: Theme.withAlpha(Theme.highlightMed, todayHover.containsMouse ? 1 : 0.75)
-        scale: todayHover.pressed ? Theme.pressScale : 1
-
-        Behavior on color {
-          Tint {}
+      onKeyPressed: function (event) {
+        switch (event.key) {
+        case Qt.Key_T:
+        case Qt.Key_Home:
+          Calendar.today();
+          break;
+        case Qt.Key_R:
+          Calendar.refresh();
+          break;
+        default:
+          return;
         }
+        event.accepted = true;
+      }
 
-        Behavior on scale {
-          Morph {
-            duration: Theme.morphState
-          }
-        }
-
-        Text {
-          id: todayLabel
-
-          anchors.centerIn: parent
-          text: "Today"
-          color: Theme.text
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.calTodayBtnSize
-          font.weight: Theme.weightMedium
-        }
-
-        MouseArea {
-          id: todayHover
-
-          anchors.fill: parent
-          hoverEnabled: true
-          activeFocusOnTab: true
-          cursorShape: Qt.PointingHandCursor
-          onPressed: todayHover.forceActiveFocus()
+      headerActions: [
+        HeaderButton {
+          kind: HeaderButton.Label
+          label: "Today"
           onClicked: Calendar.today()
-        }
-      }
-
-      Item {
-        id: prev
-
-        x: next.x - width - Theme.calNavGap
-        y: Theme.calNavTop
-        width: Theme.calNavSize
-        height: width
-
-        IconButton {
-          anchors.centerIn: parent
-          text: Icons.chevronLeft
-          font.family: Theme.iconFont
-          font.pixelSize: Theme.calNavGlyphSize
-          baseColor: Theme.subtle
-          hoverColor: Theme.subtle
-          filled: true
-          fillSize: Theme.calNavSize
-          fillColor: Theme.withAlpha(Theme.highlightLow, 0.9)
-          fillHoverColor: Theme.highlightLow
-          hitSize: Theme.calNavSize
+        },
+        HeaderButton {
+          kind: HeaderButton.Previous
           accessibleName: "Previous month"
-          activeFocusOnTab: true
-
           onClicked: Calendar.step(-1)
-        }
-      }
-
-      Item {
-        id: next
-
-        x: Theme.calWidth - Theme.calInset - width
-        y: Theme.calNavTop
-        width: Theme.calNavSize
-        height: width
-
-        IconButton {
-          anchors.centerIn: parent
-          text: Icons.chevronRight
-          font.family: Theme.iconFont
-          font.pixelSize: Theme.calNavGlyphSize
-          baseColor: Theme.subtle
-          hoverColor: Theme.subtle
-          filled: true
-          fillSize: Theme.calNavSize
-          fillColor: Theme.withAlpha(Theme.highlightLow, 0.9)
-          fillHoverColor: Theme.highlightLow
-          hitSize: Theme.calNavSize
+        },
+        HeaderButton {
+          kind: HeaderButton.Next
           accessibleName: "Next month"
-          activeFocusOnTab: true
-
           onClicked: Calendar.step(1)
         }
-      }
+      ]
 
       Repeater {
         model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
@@ -240,18 +155,6 @@ Variants {
       // The month's title and grid move as one; the nav and weekday header stay put.
       ArrivalLayer {
         id: monthLayer
-
-        // Centred off its measured height, not a constant, so the header stays level whatever
-        // Inter reports for an 18 px cut.
-        Text {
-          x: Theme.calInset
-          y: Theme.calNavTop + (Theme.calNavSize - height) / 2
-          text: Qt.formatDateTime(Calendar.anchor, "MMMM yyyy")
-          color: Theme.text
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.calTitleSize
-          font.weight: Theme.weightSemi
-        }
 
         Repeater {
           model: 42
@@ -328,12 +231,10 @@ Variants {
         }
       }
 
-      Rectangle {
+      Divider {
         x: Theme.calInset
         y: Theme.calDividerTop
-        width: Theme.calWidth - Theme.calInset * 2
-        height: 1
-        color: Theme.withAlpha(Theme.highlightMed, 0.6)
+        width: panel.width - Theme.calInset * 2
       }
 
       // The selected day's heading, agenda and footnote arrive together.
@@ -343,7 +244,7 @@ Variants {
         SectionLabel {
           x: Theme.calInset
           y: Theme.calSectionTop
-          width: Theme.calWidth - Theme.calInset * 2
+          width: panel.width - Theme.calInset * 2
           verticalAlignment: Qt.AlignTop
           title: Qt.formatDateTime(Calendar.selected, "dddd, d MMMM")
         }
@@ -354,7 +255,7 @@ Variants {
 
           x: Theme.calInset
           y: Theme.calAgendaTop
-          width: Theme.calWidth - Theme.calInset * 2
+          width: panel.width - Theme.calInset * 2
           height: Theme.calAgendaBlock
           wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
 
@@ -438,7 +339,7 @@ Variants {
 
           x: Theme.calInset
           y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap * 2
-          width: Theme.calWidth - Theme.calInset * 2
+          width: panel.width - Theme.calInset * 2
           horizontalAlignment: alone ? Text.AlignHCenter : Text.AlignLeft
           elide: Text.ElideRight
           text: {
