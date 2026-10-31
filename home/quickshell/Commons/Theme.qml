@@ -432,47 +432,17 @@ Singleton {
   readonly property real levelTrackSweepShare: 0.25
   readonly property int levelTrackSweep: 1200
 
-  // The on-screen displays: the pill widens in place into a glyph, a bar and a reading, holds,
-  // then melts back. Fixed positions in a fixed-width pill, so growth uncovers placed contents.
-  readonly property int osdWidth: 278
-  // The pill hangs from barMarginTop and windows start barHeight + oledShiftMax + gaps_out
-  // below the strip, so 48 reached into the window under it; 42 leaves 2 px at the orbit low.
-  readonly property int osdHeight: 42
-  readonly property int osdRadius: 21
-  readonly property int osdGlyphLeft: 20
-  readonly property int osdGlyphSize: 18
-  readonly property int osdTrackLeft: 52
-  readonly property int osdTrackWidth: 166
-  readonly property int osdTrackHeight: 8
-  readonly property int osdValueRight: 20
-  readonly property int osdValueSize: 12
+  // The on-screen displays hold the island for this long (the pill itself is an IslandPill).
   // "after about a second and a half, it just melts back into the clock".
   readonly property int osdDwell: 1500
 
   // The sharing pill: a separate transient (not the notification pill) that owns
   // Quick Share consent when the Nearby panel is shut. Offer is a small card with
-  // Accept/Decline; progress collapses to OSD size; confirm holds briefly.
+  // Accept/Decline; progress is an IslandPill row; confirm holds briefly.
   readonly property int sharingOfferWidth: 420
   readonly property int sharingOfferHeight: 64
   readonly property int sharingOfferRadius: 26
-  readonly property int sharingProgressWidth: 278
-  readonly property int sharingProgressHeight: 48
-  readonly property int sharingProgressRadius: 24
   readonly property int sharingConfirmDwell: 2500
-
-  // The rebuild pill (Rebuild/RebuildPill.qml) is the Sharing pill's progress state, 278 x 48,
-  // with the track after a label: what changes is only what is in it.
-  readonly property int rebuildPillWidth: sharingProgressWidth
-  readonly property int rebuildPillHeight: sharingProgressHeight
-  readonly property int rebuildPillRadius: sharingProgressRadius
-  readonly property int rebuildLabelLeft: 52
-  readonly property int rebuildTrackLeft: 128
-  readonly property int rebuildTrackWidth: 91
-  readonly property int rebuildTrackHeight: 8
-  readonly property int rebuildValueRight: 20
-  // While the total is not known: a segment this share of the track, one pass in this long.
-  readonly property real rebuildSweepShare: 0.25
-  readonly property int rebuildSweep: 1200
 
   // The dictation pill, Handy's recording overlay drawn by the island: an OSD-sized row
   // (mic, the level bars, the time and an ×) that opens into a card once live text arrives,
