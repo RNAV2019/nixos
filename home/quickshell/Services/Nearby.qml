@@ -34,10 +34,29 @@ Singleton {
   readonly property string mode: status.mode !== undefined ? status.mode : "android"
 
   // The platform the panel shows: "kdeconnect", "android" or "apple". What the user picked
-  // stays picked for as long as the shell runs; with nothing picked it is KDE Connect while a
-  // phone is connected and Android (nearbyd's mode) when there is none. A KDE Connect pick is
-  // let go when the phone disconnects, so the default applies again.
+  // stays picked; with nothing picked it is KDE Connect while a phone is connected and Android
+  // (nearbyd's mode) when there is none. A KDE Connect pick is let go when the phone
+  // disconnects, so the default applies again.
   property string chosenPlatform: ""
+
+  // Only an Android pick is kept across restarts: a KDE Connect pick is what the default
+  // already gives while the phone is there and is let go when it is not, and Apple is not kept
+  // even from one open to the next.
+  onChosenPlatformChanged: {
+    var kept = root.chosenPlatform === "android" ? "android" : "";
+    if (kept !== platformState.value)
+      platformState.save(kept);
+  }
+
+  PersistedValue {
+    id: platformState
+
+    name: "nearby-platform"
+    onRestored: function (text) {
+      if (text === "android" && root.chosenPlatform === "")
+        root.chosenPlatform = "android";
+    }
+  }
   readonly property string platform: chosenPlatform === "kdeconnect" || (chosenPlatform === "" && Phone.connected) ? "kdeconnect" : mode
   readonly property bool kdeconnect: platform === "kdeconnect"
 

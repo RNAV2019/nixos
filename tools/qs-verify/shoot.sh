@@ -506,6 +506,28 @@ one_wallpaper_copy() {
   n=$(find "$HOME/.local/state/shell" -maxdepth 1 -name 'phone-wallpaper-*' | wc -l)
   [[ $n -eq 1 ]] && [[ $(cat "$HOME/.local/state/shell/phone-wallpaper") == "$(find "$HOME/.local/state/shell" -maxdepth 1 -name 'phone-wallpaper-*')" ]]
 }
+# With the phone there KDE Connect is the default; Android, picked on the header, is written down
+# and the shell restarted on the same state.
+android_pick_kept() {
+  open_panel nearby
+  sleep 1.5
+  cursor 859 47
+  sleep 0.3
+  click
+  sleep 0.6
+  cursor 200 900
+  close_panel nearby
+  sleep 1
+  [[ $(cat "$HOME/.local/state/shell/nearby-platform" 2>/dev/null) == android ]] || return 1
+  QS_VERIFY_WORK=$QSV_WORK "$QSV_DIR/restart.sh" >/dev/null
+}
+setup_nearby_android_kept() { open_panel nearby; }
+# The control: with nothing kept, the same restart comes back on KDE Connect, so the phone is there.
+setup_nearby_kde_after_restart() {
+  rm -f "$HOME/.local/state/shell/nearby-platform"
+  QS_VERIFY_WORK=$QSV_WORK "$QSV_DIR/restart.sh" >/dev/null
+  open_panel nearby
+}
 browse_opens_nautilus() {
   reset_ui
   : >"$QSV_WORK/launched.log"
@@ -698,6 +720,10 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   # Last: the chosen picture stays on the phone preview from here on.
   shot panel-phone-wallpaper 1.0 0.3 setup_phone_wallpaper
   check phone-one-wallpaper-copy one_wallpaper_copy
+  # Last of all, since it restarts the shell: the Android pick outlives it.
+  check nearby-android-kept android_pick_kept
+  shot panel-nearby-android-kept 1.5 0.3 setup_nearby_android_kept
+  shot panel-nearby-kde-after-restart 1.5 0.3 setup_nearby_kde_after_restart
 fi
 
 reset_ui
