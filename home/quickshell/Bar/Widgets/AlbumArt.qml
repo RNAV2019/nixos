@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import qs.Commons
 import qs.Services
+import qs.Ui
 
 Item {
   id: root
@@ -27,15 +28,9 @@ Item {
   implicitWidth: Theme.islandArtSize
   implicitHeight: Theme.islandArtSize
 
-  Item {
-    id: content
-
+  RoundedClip {
     anchors.fill: parent
-    layer.enabled: true
-    layer.effect: MultiEffect {
-      maskEnabled: true
-      maskSource: mask
-    }
+    radius: root.cornerRadius
 
     Rectangle {
       anchors.fill: parent
@@ -95,27 +90,12 @@ Item {
       color: Theme.withAlpha(Theme.canvas, 0.72)
       visible: Media.active
 
-      Text {
+      StrokeIcon {
         anchors.centerIn: parent
-        text: Media.playing ? Icons.pause : Icons.play
+        size: 9
+        path: Media.playing ? Icons.pause : Icons.play
         color: Theme.text
-        font.family: Theme.iconFont
-        font.pixelSize: 9
       }
-    }
-  }
-
-  Item {
-    id: mask
-
-    anchors.fill: parent
-    visible: false
-    layer.enabled: true
-
-    Rectangle {
-      anchors.fill: parent
-      radius: root.cornerRadius
-      color: "black"
     }
   }
 }

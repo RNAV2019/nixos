@@ -129,13 +129,13 @@ Item {
     }
   }
 
-  Text {
+  StrokeIcon {
     x: Theme.controlSliderGlyphLeft
     y: (parent.height - height) / 2
-    text: root.glyph
+    visible: root.glyph !== ""
+    size: Theme.controlTileGlyphSize
+    path: root.glyph
     color: track.fill.width > x + width && !root.dimmed ? Theme.inkOnAccent : Theme.inkSecondary
-    font.family: Theme.iconFont
-    font.pixelSize: Theme.controlTileGlyphSize
   }
 
   MouseArea {

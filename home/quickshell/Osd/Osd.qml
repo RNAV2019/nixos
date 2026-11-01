@@ -129,12 +129,11 @@ Scope {
         fillDuration: Theme.morphFill
         running: window.open
 
-        Text {
+        StrokeIcon {
           anchors.centerIn: parent
-          text: root.current.glyph
+          size: Theme.islandPillGlyphSize
+          path: root.current.glyph
           color: root.ink
-          font.family: Theme.iconFont
-          font.pixelSize: Theme.islandPillGlyphSize
         }
       }
     }

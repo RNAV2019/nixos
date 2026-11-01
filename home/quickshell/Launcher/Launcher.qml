@@ -166,13 +166,12 @@ Variants {
 
     Component.onCompleted: win.syncRows()
 
-    Text {
+    StrokeIcon {
       x: Theme.launcherGlyphLeft
       y: Theme.launcherSearchHeight / 2 - height / 2
-      text: Icons.search
+      size: Theme.launcherGlyphSize
+      path: Icons.search
       color: Theme.muted
-      font.family: Theme.iconFont
-      font.pixelSize: Theme.launcherGlyphSize
     }
 
     // The scope, named at the search row's far end: the provider's glyph and name in the
@@ -196,13 +195,12 @@ Variants {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.launcherChipGap
 
-        Text {
+        StrokeIcon {
           anchors.verticalCenter: parent.verticalCenter
-          visible: text.length > 0
-          text: win.scope && win.scope.scopeGlyph ? win.scope.scopeGlyph : ""
+          visible: path.length > 0
+          size: Theme.launcherChipGlyphSize
+          path: win.scope && win.scope.scopeGlyph ? win.scope.scopeGlyph : ""
           color: Theme.accent
-          font.family: Theme.iconFont
-          font.pixelSize: Theme.launcherChipGlyphSize
         }
 
         Text {

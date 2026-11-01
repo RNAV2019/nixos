@@ -25,15 +25,11 @@ Item {
   }
 
   // Masked together so the blur cannot bleed past the card's corners.
-  Item {
+  RoundedClip {
     id: ground
 
     anchors.fill: parent
-    layer.enabled: true
-    layer.effect: MultiEffect {
-      maskEnabled: true
-      maskSource: mask
-    }
+    radius: Theme.controlMediaRadius
 
     Rectangle {
       anchors.fill: parent
@@ -78,20 +74,6 @@ Item {
     Rectangle {
       anchors.fill: parent
       color: Theme.withAlpha(Theme.canvas, root.hasArt ? 0.58 : 0.2)
-    }
-  }
-
-  Item {
-    id: mask
-
-    anchors.fill: parent
-    visible: false
-    layer.enabled: true
-
-    Rectangle {
-      anchors.fill: parent
-      radius: Theme.controlMediaRadius
-      color: "black"
     }
   }
 
@@ -174,6 +156,9 @@ Item {
 
         kind: Button.Disc
         size: Button.Large
+        // Large enough that play's triangle keeps the ink the hand-drawn one had (about 13 x 15).
+        iconSize: 30
+        icon: Icons.transportGlyph(button.modelData.kind === "toggle" ? (Media.playing ? "pause" : "play") : button.modelData.kind)
         enabled: Media.active
         accessibleName: modelData.kind === "toggle" ? (Media.playing ? "Pause" : "Play") : modelData.name
         onClicked: {
@@ -183,14 +168,6 @@ Item {
             Media.next();
           else
             Media.toggle();
-        }
-
-        TransportGlyph {
-          anchors.centerIn: parent
-          width: implicitWidth
-          height: implicitHeight
-          kind: button.modelData.kind === "toggle" ? (Media.playing ? "pause" : "play") : button.modelData.kind
-          color: button.ink
         }
       }
     }

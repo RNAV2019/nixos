@@ -30,14 +30,14 @@ Gauge {
     return NetworkInfo.activeNetwork.signalStrength;
   }
 
-  // The signal wedge, filled to its strength; its point sits at (24, 31) in the ring.
-  WifiGlyph {
-    x: 24 - centreX
-    y: 31 - centreY
-    strength: root.strength
-    connected: root.connected
-    litColor: Theme.text
-    dimColor: Theme.highlightHigh
+  // The signal wedge, filled to its strength; its point sits at (24, 31) in the ring, 12 and 20
+  // into the glyph's box.
+  StrokeIcon {
+    x: 24 - 12
+    y: 31 - 20
+    size: 24
+    path: Icons.wifiGlyph(root.strength, root.connected)
+    color: root.connected ? Theme.text : Theme.highlightHigh
   }
 
   // The charge, led by a bolt while on the charger.
