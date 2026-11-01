@@ -443,9 +443,9 @@ setup_panel_phone_ringing() {
 }
 
 # Screen positions in the phone panel (opened at 700, 8): the wallpaper disc, and the centres of the
-# action tiles (Ring, Send files, Browse; their row sits 164 px down in the card).
-PH_DISC_X=823 PH_DISC_Y=241
-PH_RING_X=906 PH_SEND_X=1026 PH_BROWSE_X=1146 PH_ACTIONS_Y=210
+# action tiles (Ring, Send files, Browse; their row sits 154 px down in the card, 90 tall).
+PH_DISC_X=776 PH_DISC_Y=222
+PH_RING_X=906 PH_SEND_X=1026 PH_BROWSE_X=1146 PH_ACTIONS_Y=207
 PH_BROWSE_Y=$PH_ACTIONS_Y
 # In the 960 px picker (opened at 480, 8): the Phone and Laptop cells, and the empty state's button.
 PK_PHONE_X=1331 PK_LAPTOP_X=1389 PK_SWITCH_Y=36
@@ -457,6 +457,9 @@ setup_phone_mobile_off() {
   sleep 1
   open_panel phone
 }
+# Charging: the longest reading line, "78% · charging", has to fit its tile without an ellipsis.
+setup_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":true}'; open_panel phone; }
+teardown_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
 teardown_phone_mobile() { ph '{"op":"cellular","dev":"s24","type":"5G","strength":3}'; }
 setup_phone_browse_blocked() {
   ph '{"op":"sftp","dev":"s24","grant":false}'
@@ -720,6 +723,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-phone-hover-tile 1.0 0.3 setup_panel_phone_hover_tile
   shot panel-phone-ringing 1.0 0.3 setup_panel_phone_ringing
   shot panel-phone-low 1.8 0.3 setup_phone_low teardown_phone_low
+  shot panel-phone-charging 1.8 0.3 setup_phone_charging teardown_phone_charging
   shot panel-phone-mobile-off 1.8 0.3 setup_phone_mobile_off teardown_phone_mobile
   shot panel-phone-browse-blocked 1.8 0.3 setup_phone_browse_blocked teardown_phone_access
   shot panel-phone-picker-phone 1.0 0.3 setup_phone_picker_phone

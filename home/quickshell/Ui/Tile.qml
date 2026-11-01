@@ -6,7 +6,8 @@ import qs.Commons
 // of the power menu, the profiles card and the recorder picker, Carousel a picture with a ring
 // (the wallpaper and theme pickers), Device a disc with a progress ring (Nearby). Surfaces step
 // highlightMed to the shell's hover alpha; filled grounds lift by `tileLift`. A Control tile in a
-// narrow cell is `stacked`: the badge above the label and the line instead of beside them.
+// narrow cell is `stacked`: the badge above the label and the line instead of beside them, on
+// even padding.
 ButtonBase {
   id: root
 
@@ -79,6 +80,9 @@ ButtonBase {
   }
   // A tile whose line is a reading rather than a hint lifts it from tertiary ink.
   property color sublabelColor: active ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
+  // A tint for the outline at rest, for a tile that wants to say why it is in trouble (Browse,
+  // while the phone refuses it). Transparent leaves the hairline.
+  property color outlineTint: "transparent"
   readonly property bool hasSub: sublabel !== ""
   readonly property real cornerRadius: {
     switch (kind) {
@@ -106,7 +110,7 @@ ButtonBase {
 
   readonly property color outlineColor: {
     if (isControl)
-      return current ? Theme.focusRing : Theme.withAlpha(Theme.separator, Theme.hairlineAlpha);
+      return current ? Theme.focusRing : outlineTint.a > 0 ? outlineTint : Theme.withAlpha(Theme.separator, Theme.hairlineAlpha);
     if (isChoice) {
       if (active && activeIsCommitting)
         return activeColor;
@@ -209,12 +213,12 @@ ButtonBase {
     id: badge
 
     x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileBadgeLeft
-    y: root.stacked ? Theme.controlTileStackedBadgeTop : (parent.height - height) / 2
+    y: root.stacked ? Theme.controlTileStackedPad : (parent.height - height) / 2
     visible: root.isControl
     width: root.stacked ? Theme.controlTileStackedBadge : Theme.controlTileBadge
     height: width
     radius: height / 2
-    color: root.active ? Theme.withAlpha(Theme.inkOnAccent, root.badgeHovered ? 0.28 : 0.16) : Theme.withAlpha(Theme.inkPrimary, root.badgeHovered ? 0.14 : 0.07)
+    color: root.active ? Theme.withAlpha(Theme.inkOnAccent, root.badgeHovered ? 0.28 : root.stacked ? 0.22 : 0.16) : Theme.withAlpha(Theme.inkPrimary, root.badgeHovered ? 0.14 : 0.07)
 
     Behavior on color {
       Tint {}
@@ -237,7 +241,7 @@ ButtonBase {
 
     x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileTextLeft
     y: root.stacked ? Theme.controlTileStackedLabelTop : 12
-    width: Math.max(0, root.width - x - 10)
+    width: Math.max(0, root.width - x - (root.stacked ? Theme.controlTileStackedTextSlack : 10))
     visible: root.isControl
     text: root.label
     color: root.ink

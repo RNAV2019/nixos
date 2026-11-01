@@ -546,14 +546,16 @@ Singleton {
   readonly property int controlTileLabelSize: 13
   readonly property int controlTileSubSize: 11
   // A tile too narrow for its badge and words side by side (the phone panel's 108 px thirds)
-  // stacks them: the badge above, the label and the line under it, on a rounded rectangle.
-  readonly property int controlTileStackedHeight: 76
-  readonly property int controlTileStackedRadius: 22
+  // stacks them: the badge above, the label and the line under it, on a rounded rectangle. The
+  // padding is even on all four sides, and the radius is the padding plus the badge's radius, so
+  // the badge sits concentric with the corner. The words may run 8 px short of the edge.
+  readonly property int controlTileStackedHeight: 90
+  readonly property int controlTileStackedRadius: 26
   readonly property int controlTileStackedBadge: 28
-  readonly property int controlTileStackedPad: 10
-  readonly property int controlTileStackedBadgeTop: 8
-  readonly property int controlTileStackedLabelTop: 40
-  readonly property int controlTileStackedSubTop: 56
+  readonly property int controlTileStackedPad: 12
+  readonly property int controlTileStackedLabelTop: 48
+  readonly property int controlTileStackedSubTop: 64
+  readonly property int controlTileStackedTextSlack: 8
 
   // Sliders. Thick pills whose fill is the level, with the glyph riding inside the fill.
   readonly property int controlSliderHeight: 40
@@ -1134,24 +1136,52 @@ Singleton {
   // satellite progress: by then the bridge has re-formed and it reads as going in.
   readonly property real phoneOpenAt: 0.5
 
-  // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid of stacked
-  // control tiles beside it (readings above, actions below) with the grid's foot on the phone's,
-  // so the card is the phone and its inset, top and bottom.
+  // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid beside it (readings
+  // above, stacked control tiles for the actions below) with the grid's foot on the phone's, so
+  // the card is the phone and its inset, top and bottom. One rhythm: 20 round the card and
+  // between the phone and the grid, 16 from the header to the grid, 12 between tiles and inside
+  // them, 8 from a badge to its words.
   readonly property int phoneWidth: panelColumnWidth
   readonly property int phoneRadius: panelRadius
   readonly property int phoneInset: 20
-  readonly property int phoneDeviceWidth: 110
-  readonly property int phoneDeviceHeight: 220
+  readonly property int phoneDeviceWidth: 112
+  readonly property int phoneDeviceHeight: 224
   readonly property int phoneDeviceRadius: 9
   readonly property int phoneScreenInset: 4
   readonly property int phoneScreenRadius: 5
-  readonly property int phoneStatusLeft: 152
+  readonly property int phoneStatusLeft: phoneInset + phoneDeviceWidth + phoneInset
   readonly property int phoneRowHeight: 44
   readonly property real phoneCaptionSize: 11.5
-  // The note Browse leaves when the phone refuses: 36 tall, 8 under the grid, and the card
-  // 44 taller while it is up.
+  // The header: the name's box top puts its cap top on the phone's top edge; the status line sits
+  // 4 px under the name's box.
+  readonly property int phoneNameTop: 16
+  readonly property int phoneStatusTop: 40
+  // On the lock screen the date is 11 px at 0.9, and the disc that opens the wallpaper picker
+  // sits at the foot of the screen, on its axis, with the notification stubs 8 above it. The
+  // camera gets a hairline ring so it shows on a black picture.
+  readonly property int phoneDateSize: 11
+  readonly property int phoneDiscSize: 32
+  readonly property int phoneDiscBottom: 10
+  readonly property real phoneCameraRingAlpha: 0.2
+  readonly property real phoneDiscRingAlpha: 0.22
+  // A reading (battery, mobile, Wi-Fi): flat, 72 tall, a bare glyph beside its label (the glyph
+  // row's top, the value's top), and an ink wash that lifts it off the card.
+  readonly property int phoneReadingHeight: 72
+  readonly property int phoneReadingGlyphTop: 14
+  readonly property int phoneReadingValueTop: 38
+  readonly property int phoneReadingGlyphGap: 7
+  readonly property int phoneReadingBarHeight: 3
+  readonly property real phoneReadingWashAlpha: 0.03
+  readonly property real phoneReadingValueAlpha: 0.8
+  // Browse's tile and glyph take the note's gold while the phone refuses it.
+  readonly property real phoneBlockedOutlineAlpha: 0.5
+  readonly property real phoneBlockedGlyphAlpha: 0.9
+  readonly property real phoneActionGlyphAlpha: 0.9
+  // The note Browse leaves when the phone refuses: 36 tall, 12 under the grid, 12 inside, and the
+  // card 48 taller while it is up.
   readonly property int phoneNoteBarHeight: 36
-  readonly property int phoneNoteBarGap: 8
+  readonly property int phoneNoteBarGap: 12
+  readonly property int phoneNotePad: 12
   // How many of the phone's notifications the preview's screen draws as stubs.
   readonly property int phoneNotesMax: 2
 }

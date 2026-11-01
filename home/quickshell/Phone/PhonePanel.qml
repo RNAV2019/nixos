@@ -7,13 +7,13 @@ import qs.Services
 import qs.Ui
 
 // The phone panel (board "Phone panel"), opened from the phone satellite: the phone drawn on
-// the left with its time and notification stubs, and beside it a 3 x 2 grid of control tiles,
-// readings (battery, mobile, Wi-Fi) over actions (ring, send files, browse). The card is as tall
-// as the phone and its inset. "Send files" grows the panel into Nearby's file picker; what it
-// accepts goes to the phone through KDE Connect. The disc on the phone's corner grows it into
-// the same picker to choose the picture drawn on the phone's screen. "Browse" mounts the
-// phone's storage and opens it in the file manager; when the phone refuses, a note under the
-// tiles says what to allow.
+// the left with its time and notification stubs, and beside it a 3 x 2 grid, readings (battery,
+// mobile, Wi-Fi: flat, nothing to press) over actions (ring, send files, browse: control tiles).
+// The card is as tall as the phone and its inset. "Send files" grows the panel into Nearby's file
+// picker; what it accepts goes to the phone through KDE Connect. The disc at the foot of the
+// phone's screen grows it into the same picker to choose the picture drawn there. "Browse"
+// mounts the phone's storage and opens it in the file manager; when the phone refuses, the tile
+// takes the note's gold and a note under the grid says what to allow.
 Variants {
   id: root
 
@@ -243,6 +243,8 @@ Variants {
               height: 5
               radius: 2.5
               color: "black"
+              border.width: 1
+              border.color: Theme.withAlpha(Theme.text, Theme.phoneCameraRingAlpha)
             }
 
             Column {
@@ -262,9 +264,9 @@ Variants {
               Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDateTime(clock.date, "ddd d MMM")
-                color: Theme.withAlpha(Theme.text, 0.7)
+                color: Theme.withAlpha(Theme.text, 0.9)
                 font.family: Theme.uiFont
-                font.pixelSize: 10
+                font.pixelSize: Theme.phoneDateSize
                 font.weight: Theme.weightMedium
               }
             }
@@ -274,7 +276,7 @@ Variants {
               x: 6
               width: parent.width - 12
               anchors.bottom: parent.bottom
-              anchors.bottomMargin: 8
+              anchors.bottomMargin: Theme.phoneDiscBottom + Theme.phoneDiscSize + 8
               spacing: 4
               visible: !Phone.ringing
 
@@ -369,7 +371,7 @@ Variants {
 
               Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                y: 148
+                y: 145
                 text: "Ringing"
                 color: Theme.text
                 font.family: Theme.uiFont
@@ -380,20 +382,24 @@ Variants {
           }
         }
 
-        // The wallpaper action: a disc over the phone's bottom-right corner, with a ring in the
-        // panel's ground cutting it out of the body.
+        // The wallpaper action: a disc at the foot of the phone's screen, on its axis, with the
+        // notification stubs above it. An opaque ground under the button keeps a picture from
+        // showing through the glyph; a hairline ring over it keeps the edge on a busy one.
         Rectangle {
-          x: 106
-          y: 216
-          width: 34
-          height: 34
-          radius: 17
+          id: disc
+
+          x: device.x + (device.width - width) / 2
+          y: device.y + device.height - Theme.phoneScreenInset - Theme.phoneDiscBottom - height
+          width: Theme.phoneDiscSize
+          height: width
+          radius: width / 2
           color: Theme.surface
         }
 
         Button {
-          x: 123 - width / 2
-          y: 233 - height / 2
+          anchors.centerIn: disc
+          width: disc.width
+          height: disc.height
           kind: Button.Disc
           size: Button.Compact
           icon: Icons.image
@@ -403,13 +409,21 @@ Variants {
           onClicked: win.chooseWallpaper()
         }
 
+        Rectangle {
+          anchors.fill: disc
+          radius: disc.radius
+          color: "transparent"
+          border.width: 1
+          border.color: Theme.withAlpha(Theme.text, Theme.phoneDiscRingAlpha)
+        }
+
         // ---- who it is ----
 
         Text {
           id: deviceName
 
           x: Theme.phoneStatusLeft
-          y: 22
+          y: Theme.phoneNameTop
           width: home.width - x - Theme.phoneInset
           elide: Text.ElideRight
           text: Phone.name
@@ -421,7 +435,7 @@ Variants {
 
         Rectangle {
           x: Theme.phoneStatusLeft
-          y: 52
+          y: Theme.phoneStatusTop + 4
           width: 6
           height: 6
           radius: 3
@@ -430,7 +444,7 @@ Variants {
 
         Text {
           x: Theme.phoneStatusLeft + 12
-          y: 48
+          y: Theme.phoneStatusTop
           text: "Connected"
           color: Theme.subtle
           font.family: Theme.uiFont
@@ -438,13 +452,14 @@ Variants {
           font.weight: Theme.weightMedium
         }
 
-        // ---- the tiles: readings above, actions below ----
+        // ---- the grid: readings above, actions below ----
 
         readonly property real tileWidth: Math.floor((width - Theme.phoneStatusLeft - Theme.phoneInset - 2 * Theme.controlTileGap) / 3)
 
         // Browse could not reach the phone's files: what to allow, dismissable, and gone the
         // next time Browse is pressed. The card grows to make room.
-        readonly property real noteSpace: Phone.browseError !== "" ? Theme.phoneNoteBarHeight + Theme.phoneNoteBarGap : 0
+        readonly property bool blocked: Phone.browseError !== ""
+        readonly property real noteSpace: blocked ? Theme.phoneNoteBarHeight + Theme.phoneNoteBarGap : 0
 
         // Arrows and hjkl walk the action tiles, which are the ones that take a press.
         property int keyboardIndex: 0
@@ -464,7 +479,7 @@ Variants {
           x: Theme.phoneStatusLeft
           y: Theme.phoneInset + Theme.phoneDeviceHeight - height
           width: home.width - x - Theme.phoneInset
-          height: 2 * Theme.controlTileStackedHeight + Theme.controlTileGap
+          height: Theme.phoneReadingHeight + Theme.controlTileGap + Theme.controlTileStackedHeight
 
           Repeater {
             model: [
@@ -473,55 +488,38 @@ Variants {
                 glyph: Phone.charging ? Icons.step(Icons.batteryCharging, Phone.charge) : Icons.step(Icons.batteryDefault, Phone.charge),
                 value: !Phone.hasBattery ? "Unknown" : Phone.charge + "%" + (Phone.charging ? " · charging" : ""),
                 level: Phone.hasBattery ? Phone.charge / 100 : -1,
-                muted: false
+                off: false
               },
               {
                 label: "Mobile",
                 glyph: Phone.cellularStrength < 0 ? Icons.cellularOff : Icons.cellular[Math.min(4, Phone.cellularStrength)],
                 value: Phone.cellularType !== "" ? Phone.cellularType : "Off on phone",
                 level: -1,
-                muted: Phone.cellularStrength < 0
+                off: Phone.cellularStrength < 0
               },
               {
                 label: "Wi-Fi",
                 glyph: Icons.wifiOn,
                 value: Phone.wifiName !== "" ? Phone.wifiName : Phone.link === "Bluetooth" ? "Over Bluetooth" : "Not shared",
                 level: -1,
-                muted: false
+                off: false
               }
             ]
 
-            Tile {
-              id: reading
-
+            PhoneReading {
               required property int index
               required property var modelData
 
               x: index * (home.tileWidth + Theme.controlTileGap)
               width: home.tileWidth
-              stacked: true
-              interactive: false
-              // A reading is not a switch.
-              accessibleRole: Accessible.StaticText
-              checkable: false
               label: modelData.label
-              sublabel: modelData.value
-              sublabelColor: modelData.muted ? Theme.inkTertiary : Theme.inkSecondary
+              value: modelData.value
               glyph: modelData.glyph
-              glyphColor: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
-
-              // The groove is highlightMed on the tile's ground; it runs from beside the badge
-              // to the tile's right padding.
-              LevelTrack {
-                x: Theme.controlTileStackedPad + Theme.controlTileStackedBadge + Theme.controlTileStackedPad
-                y: Theme.controlTileStackedBadgeTop + (Theme.controlTileStackedBadge - height) / 2
-                width: parent.width - x - Theme.controlTileStackedPad
-                height: 3
-                visible: reading.modelData.level >= 0
-                color: Theme.highlightMed
-                fillColor: Phone.low ? Theme.love : Theme.accent
-                value: reading.modelData.level
-              }
+              level: modelData.level
+              // Off is the dimmer of the two inks that clear 4.5 : 1 on the ground.
+              glyphColor: modelData.off ? Theme.inkSecondary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
+              valueColor: modelData.off ? Theme.inkSecondary : Theme.withAlpha(Theme.inkPrimary, Theme.phoneReadingValueAlpha)
+              levelColor: Phone.low ? Theme.love : Theme.accent
             }
           }
 
@@ -531,9 +529,10 @@ Variants {
             model: [
               {
                 label: Phone.ringing ? "Ringing…" : "Ring",
-                sub: "Find phone",
+                sub: Phone.ringing ? "Stop on phone" : "Find phone",
                 glyph: Icons.ringVolume,
                 on: Phone.ringing,
+                blocked: false,
                 run: function () {
                   Phone.ring();
                 }
@@ -543,15 +542,17 @@ Variants {
                 sub: "From laptop",
                 glyph: Icons.uploadFile,
                 on: false,
+                blocked: false,
                 run: function () {
                   win.chooseFiles();
                 }
               },
               {
                 label: "Browse",
-                sub: "Phone storage",
+                sub: home.blocked ? "Needs access" : "Phone storage",
                 glyph: Icons.folderOpen,
                 on: false,
+                blocked: home.blocked,
                 run: function () {
                   Phone.browse();
                 }
@@ -563,7 +564,7 @@ Variants {
               required property var modelData
 
               x: index * (home.tileWidth + Theme.controlTileGap)
-              y: Theme.controlTileStackedHeight + Theme.controlTileGap
+              y: Theme.phoneReadingHeight + Theme.controlTileGap
               width: home.tileWidth
               stacked: true
               // Pressed, not toggled: the badge has no state of its own.
@@ -573,6 +574,10 @@ Variants {
               label: modelData.label
               sublabel: modelData.sub
               sublabelColor: active ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkSecondary
+              // Idle actions wear the accent so they do not read as off; Browse wears the note's
+              // gold while the phone refuses it.
+              glyphColor: active ? Theme.inkOnAccent : Theme.withAlpha(modelData.blocked ? Theme.gold : Theme.accent, modelData.blocked ? Theme.phoneBlockedGlyphAlpha : Theme.phoneActionGlyphAlpha)
+              outlineTint: modelData.blocked ? Theme.withAlpha(Theme.gold, Theme.phoneBlockedOutlineAlpha) : "transparent"
               glyph: modelData.glyph
               onOpened: modelData.run()
             }
@@ -590,10 +595,10 @@ Variants {
           color: Theme.withAlpha(Theme.gold, 0.12)
           border.width: 1
           border.color: Theme.withAlpha(Theme.gold, 0.4)
-          visible: Phone.browseError !== ""
+          visible: home.blocked
 
           StrokeIcon {
-            x: 14
+            x: Theme.phoneNotePad
             y: 10
             size: 16
             path: Icons.info
@@ -601,9 +606,9 @@ Variants {
           }
 
           Text {
-            x: 38
+            x: Theme.phoneNotePad + 24
             y: 11
-            width: parent.width - x - 44
+            width: parent.width - x - Theme.phoneNotePad - 28
             elide: Text.ElideRight
             text: Phone.browseError
             color: Theme.text
@@ -613,7 +618,7 @@ Variants {
           }
 
           Button {
-            x: 451
+            x: parent.width - Theme.phoneNotePad - width
             y: 11
             kind: Button.Icon
             iconSize: 14
