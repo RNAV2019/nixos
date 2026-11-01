@@ -130,6 +130,12 @@ STUB
 chmod +x "$QSV_WORK/bin/systemd-run"
 : >"$QSV_WORK/launched.log"
 
+# `wl-screenrec`, which the recorder execs: it says why it cannot capture and leaves no file, so
+# the recorder reports a failed recording, as it does on a compositor without screencopy.
+printf '#!/bin/sh\necho "Error: the compositor offers no screencopy (qs-verify stub)" >&2\nexit 1\n' \
+  >"$QSV_WORK/bin/wl-screenrec"
+chmod +x "$QSV_WORK/bin/wl-screenrec"
+
 # `cliphist`, which the phone panel lists the newest clips from: a fixed history, nothing stored.
 cat >"$QSV_WORK/bin/cliphist" <<STUB
 #!/bin/sh

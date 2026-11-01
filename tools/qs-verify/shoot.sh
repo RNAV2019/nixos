@@ -126,6 +126,14 @@ setup_profiles() { open_panel profiles; }
 setup_theme() { open_panel theme; }
 setup_wallpaper() { open_panel wallpaper; }
 setup_recorder() { open_panel recorder; }
+# The picker starts a screen capture on Return; the stub `wl-screenrec` fails, and the pill says so.
+# It takes no pointer and dwells 8 s, so the next state waits it out.
+setup_recorder_failed() {
+  open_panel recorder
+  sleep 1.3
+  keys -k Return
+}
+teardown_recorder_failed() { sleep 9; }
 
 # ---- the island at rest ----
 
@@ -639,6 +647,7 @@ shot rebuild-building 1.2 0.3 setup_rebuild_building teardown_rebuild
 shot rebuild-building-mixed 1.2 0.3 setup_rebuild_building_mixed teardown_rebuild
 shot rebuild-done 0.6 0.3 setup_rebuild_done teardown_rebuild
 shot rebuild-failed 0.8 0.3 setup_rebuild_failed teardown_rebuild
+shot recorder-failed 2.0 0.3 setup_recorder_failed teardown_recorder_failed
 
 shot dictation-listening 1.2 0.3 setup_dictation_listening teardown_dictation
 shot dictation-ready 1.3 0.1 setup_dictation_ready teardown_dictation

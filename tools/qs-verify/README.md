@@ -48,6 +48,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 - OSDs: brightness, keyboard backlight, volume, volume muted, mic on, mic muted.
 - Rebuild pill: evaluating, building (5 of 12, and builds with fetches), done, failed. Its track
   and percentage are a time estimate, so they are masked.
+- Recording-failed pill: the picker starts a capture and a stub `wl-screenrec` fails.
 - Dictation pill: listening before the mic is up, listening with level bars, live text,
   transcribing, polishing.
 - Sharing pill: connecting, offer, receiving, saved.
@@ -72,6 +73,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | OSD brightness / keyboard | the fake sysfs files the shell reads (bind-mounted over `/sys/class/backlight` and `/sys/class/leds` for quickshell only) |
 | OSD volume / mic | `wpctl` against a private PipeWire + WirePlumber with a null sink and source |
 | rebuild pill | JSON lines appended to `$XDG_RUNTIME_DIR/rebuild.jsonl`, nix `internal-json` style, with a live `sleep` standing in for the nix process |
+| recording-failed pill | a stub `wl-screenrec` on PATH that prints an error and exits 1; the picker's Return starts the capture |
 | dictation pill | JSON lines through a `socat` listener on `$XDG_RUNTIME_DIR/handy/overlay.sock` |
 | sharing pill, nearby panel | a stub `nearby` on PATH replaying `nearby.events` (peers, status, transfers) |
 | moments | the shell's own `activities` ipc (`plug`, `wifi`) |
