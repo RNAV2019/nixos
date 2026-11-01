@@ -62,6 +62,9 @@
 
     NIXOS_OZONE_WL = "1";
     MOZ_ENABLE_WAYLAND = "1";
+
+    # run0 (and so `rebuild`) otherwise tints the terminal background red while root runs.
+    SYSTEMD_TINT_BACKGROUND = "0";
   };
 
   xdg.configFile."uwsm/env".source = "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
