@@ -1,0 +1,15 @@
+#!/bin/sh
+# The launcher's clipboard history, made up: `list` and `decode` over a fixed set of clips.
+clips='5	https://github.com/RNAV2019/nixos
+4	nix flake check
+3	Weekly planning notes for Monday
+2	#4a9a8a
+1	The quick brown fox jumps over the lazy dog'
+case "$1" in
+list | -preview-width) printf '%s\n' "$clips" ;;
+decode)
+  id=${2%%	*}
+  printf '%s\n' "$clips" | awk -F'\t' -v id="$id" '$1 == id { print $2 }'
+  ;;
+esac
+exit 0

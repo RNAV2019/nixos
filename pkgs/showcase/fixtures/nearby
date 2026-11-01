@@ -1,20 +1,43 @@
 #!/usr/bin/env bash
-# Stands in for the nearby daemon's CLI: `nearby events` streams a snapshot and then a few
-# made-up phones and laptops appearing, every other call just answers with the status.
-status='{"mode":"android","visible":true,"remaining":null,"scanning":true,"busy":false,"name":"nixos","download_dir":"/home/ryan/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}'
-peer() { printf '{"event":"peer","peer":{"id":"%s","name":"%s","protocol":"%s","kind":"%s","via":"lan","rssi":null}}\n' "$@"; }
+# Stands in for the nearby daemon's CLI, with a few made-up devices about. `nearby events`
+# streams the status and the devices in range, then whatever else is appended to
+# $SHOWCASE_NEARBY; `nearby mode` switches between Quick Share (Android) and AirDrop (Apple)
+# the way the daemon does, with that side's devices; the rest just succeeds.
+events=${SHOWCASE_NEARBY:?}
+status() { # MODE
+  printf '{"event":"status","status":{"mode":"%s","visible":false,"remaining":null,"scanning":true,"busy":false,"name":"labyrinth","download_dir":"/home/ariadne/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}}\n' "$1"
+}
+peer() { # ID NAME PROTOCOL KIND
+  printf '{"event":"peer","peer":{"id":"%s","name":"%s","protocol":"%s","kind":"%s","via":"lan","rssi":null}}\n' "$@"
+}
+lost() { printf '{"event":"peer_lost","id":"%s"}\n' "$1"; }
+android() {
+  peer qs:A1 "Pixel 9" quickshare phone
+  peer qs:B2 "Galaxy Tab S9" quickshare tablet
+  peer qs:C3 "Surface Laptop" quickshare laptop
+}
+apple() {
+  peer ad:D4 "iPhone 15 Pro" airdrop phone
+  peer ad:E5 "MacBook Air" airdrop laptop
+  peer ad:F6 "iPad Air" airdrop tablet
+}
 case "${1:-}" in
 events)
-  printf '{"event":"status","status":%s}\n' "$status"
-  sleep 0.6
-  peer qs:A1 "Pixel 9" quickshare phone
-  sleep 0.5
-  peer qs:B2 "Galaxy Tab S9" quickshare tablet
-  sleep 0.5
-  peer ad:C3 "MacBook Air" airdrop laptop
-  exec sleep infinity
+  status android
+  android
+  exec tail -n0 -F "$events"
+  ;;
+mode)
+  {
+    status "$2"
+    if [ "$2" = apple ]; then
+      lost qs:A1 && lost qs:B2 && lost qs:C3 && apple
+    else
+      lost ad:D4 && lost ad:E5 && lost ad:F6 && android
+    fi
+  } >>"$events"
   ;;
 transfers | peers) echo '[]' ;;
-status) echo "$status" ;;
+status) status android ;;
 esac
 exit 0

@@ -1,0 +1,6 @@
+#!/bin/sh
+# The shell starts what it opens in a systemd scope of its own; the stage has no user systemd,
+# so this runs the command directly, which is all the scope is for.
+while [ $# -gt 0 ] && [ "$1" != -- ]; do shift; done
+shift
+exec "$@"

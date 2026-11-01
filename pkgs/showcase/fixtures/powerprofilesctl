@@ -1,0 +1,7 @@
+#!/bin/sh
+# The profile picker's `powerprofilesctl get` and `set`, kept in a file of the stage.
+f=${SHOWCASE_PROFILE:?}
+case "$1" in
+get) cat "$f" ;;
+set) printf '%s\n' "$2" >"$f" ;;
+esac

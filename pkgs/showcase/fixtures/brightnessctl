@@ -1,0 +1,3 @@
+#!/bin/sh
+# The stage must never touch the real backlight; the OSD reads the fake one showcase.sh binds.
+exit 0

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Stands in for ical-agenda: a plausible week of made-up events around today, so the
+# Stands in for ical-agenda: a plausible week of made-up events around the stage's today, so the
 # calendar has something to show without reading a real feed.
 # usage: ical-agenda [--refresh] FROM TO   (only the TSV shape matters to the shell)
-day() { date -d "monday this week + $1 days" +%F; }
+# SHOWCASE_DAY is the day the stage's clock is frozen at; its Monday starts the week.
+today=${SHOWCASE_DAY:-$(date +%F)}
+monday=$(date -d "$today - $(($(date -d "$today" +%u) - 1)) days" +%F)
+day() { date -d "$monday + $1 days" +%F; }
 printf 'start_date\tstart_time\tend_date\tend_time\ttitle\tcalendar\tlocation\n'
 row() { printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$@"; }
 row "$(day 0)" 09:30 "$(day 0)" 10:00 "Weekly planning" Work ""

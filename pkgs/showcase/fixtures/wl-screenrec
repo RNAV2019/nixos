@@ -1,0 +1,4 @@
+#!/bin/sh
+# A recording that never writes anything: the stand-in stays up until it is interrupted.
+trap 'exit 0' INT TERM
+while :; do sleep 1; done
