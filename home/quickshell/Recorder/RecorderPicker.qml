@@ -231,7 +231,7 @@ Variants {
           lit: row.value
           onClicked: win.setRow(modelData.key, !row.value)
 
-          Switch {
+          trailing: Switch {
             checked: row.value
             onToggled: function (value) {
               win.setRow(row.modelData.key, value);
@@ -247,7 +247,7 @@ Variants {
         label: "Frame rate"
         onClicked: win.cycleFps()
 
-        Segmented {
+        trailing: Segmented {
           compact: true
           accessibleName: "Frame rate"
           currentIndex: [30, 60, 120].indexOf(win.effectiveFps)

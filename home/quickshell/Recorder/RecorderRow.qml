@@ -1,54 +1,27 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
 // One row under the capture tiles: a quiet pill with the label at the near end and, at the
-// far end, whatever control the row carries (a switch, the frame-rate segments). A click
-// anywhere else on the row is the row's own, for the toggle or the cycle.
-Item {
+// far end, whatever control the row carries (a switch, the frame-rate segments), given as
+// `trailing`. A click anywhere else on the row is the row's own, for the toggle or the cycle.
+ListRow {
   id: root
 
-  property string label: ""
   // A toggle that is off reads muted.
   property bool lit: true
 
-  default property alias trailing: holder.data
-
-  signal clicked
-
   x: Theme.recorderInset
   width: parent.width - Theme.recorderInset * 2
-  height: Theme.recorderRowHeight
+  implicitHeight: Theme.recorderRowHeight
 
-  Rectangle {
-    anchors.fill: parent
-    radius: Theme.recorderRowRadius
-    color: Theme.withAlpha(Theme.highlightLow, Theme.surfaceRestAlpha)
-  }
-
-  Text {
-    x: Theme.recorderRowTextLeft
-    y: (parent.height - height) / 2
-    text: root.label
-    color: root.lit ? Theme.text : Theme.muted
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.recorderRowLabelSize
-    font.weight: Theme.weightMedium
-  }
-
-  Item {
-    id: holder
-
-    x: parent.width - width - Theme.recorderRowTextLeft
-    y: (parent.height - height) / 2
-    width: childrenRect.width
-    height: childrenRect.height
-  }
-
-  MouseArea {
-    anchors.fill: parent
-    acceptedButtons: Qt.LeftButton
-    cursorShape: Qt.PointingHandCursor
-    onClicked: root.clicked()
-    z: -1
-  }
+  kind: ListRow.Grouped
+  // The picker keeps the keyboard (Enter starts the capture, C/A/M/F flip these), so a click
+  // on the row must not take the focus, and Tab must not stop here.
+  activeFocusOnTab: false
+  textLeft: Theme.recorderRowTextLeft
+  trailInset: Theme.recorderRowTextLeft
+  labelSize: Theme.recorderRowLabelSize
+  labelWeight: Theme.weightMedium
+  labelColor: lit ? Theme.inkPrimary : Theme.inkTertiary
 }
