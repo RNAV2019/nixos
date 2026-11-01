@@ -23,6 +23,7 @@ IslandSurfaceBase {
   readonly property bool outranked: Bus.transientOutranked(win.key, win.screenName, win.rank)
 
   waiting: win.outranked
+  centred: true
 
   // Only the open card is ever a target, and only for a surface with something to press. A
   // still, a close and the parked sliver take nothing, so the island underneath keeps its clicks.

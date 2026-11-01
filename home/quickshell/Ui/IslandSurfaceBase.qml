@@ -22,6 +22,10 @@ PanelWindow {
   property real openHeight: 0
   property real openRadius: Theme.controlRadius
 
+  // Grows about the resting pill's midline up to the pill row's height rather than only down,
+  // so a 42 px pill keeps the bar's margins above and below; a taller card carries on from there.
+  property bool centred: false
+
   property bool open: false
   property alias origin: origin
   property alias surface: surface
@@ -366,7 +370,7 @@ PanelWindow {
     }
 
     x: snap((win.width - width) / 2 + origin.offsetX)
-    y: snap(Theme.barMarginTop + origin.offsetY)
+    y: snap(Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(height, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0))
 
     clipContent: true
 
