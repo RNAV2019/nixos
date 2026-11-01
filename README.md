@@ -211,6 +211,7 @@ None of the steps above bring back Bluetooth pairings or T3 Code and opencode hi
 
 ```bash
 rebuild              # nixos-rebuild switch for this hostname; the island shows its progress
+rebuild --sudo       # the same, all under sudo instead of only activation through run0
 nix flake update     # bump inputs
 nix flake check      # tool tests and qmlformat
 nix-clean            # collect old generations

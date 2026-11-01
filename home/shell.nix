@@ -36,10 +36,6 @@
       lt = "eza --tree --level=2 --long --icons --git";
       la = "eza -lha --group-directories-first --icons=auto";
 
-      # Picks nixosConfigurations.<hostname>. The option has Nix append its progress as JSON to a file
-      # the shell's rebuild pill tails (home/quickshell/Services/Rebuild.qml); the terminal is
-      # unchanged, and with no shell running the file is just left behind.
-      rebuild = "sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path \"$XDG_RUNTIME_DIR/rebuild.jsonl\"";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
       todo = "hx ~/TODO.md";
@@ -51,6 +47,20 @@
     };
 
     functions = {
+      # Picks nixosConfigurations.<hostname>. The option has Nix append its progress as JSON to a file
+      # the shell's rebuild pill tails (home/quickshell/Services/Rebuild.qml); the terminal is
+      # unchanged, and with no shell running the file is just left behind. Builds as the user and
+      # elevates only activation, through run0 (polkit); `rebuild --sudo` runs all of it under sudo.
+      # A log a sudo run left is root's, so it goes first, or the user's Nix could not write it.
+      rebuild = ''
+        set -l log "$XDG_RUNTIME_DIR/rebuild.jsonl"
+        if contains -- --sudo $argv
+          sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path $log (string match -v -- --sudo $argv)
+        else
+          rm -f $log
+          nixos-rebuild switch --elevate run0 --flake ${repoDir} --option json-log-path $log $argv
+        end
+      '';
       # Serve typdraw from anywhere without changing the shell's cwd.
       typdraw = "env -C ~/Projects/typdraw aube serve $argv";
     };
@@ -84,12 +94,23 @@
     settings = {
       show_banner = false;
     };
+    # The fish `rebuild`, spelled for nu. --wrapped hands nixos-rebuild's own flags through.
+    extraConfig = ''
+      def --wrapped rebuild [...args] {
+        let log = $"($env.XDG_RUNTIME_DIR? | default ''')/rebuild.jsonl"
+        let rest = $args | where $it != "--sudo"
+        if "--sudo" in $args {
+          sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path $log ...$rest
+        } else {
+          rm -f $log
+          nixos-rebuild switch --elevate run0 --flake ${repoDir} --option json-log-path $log ...$rest
+        }
+      }
+    '';
     # Nu's own ls/find return tables, so only alias what it lacks.
     shellAliases = {
       la = "ls -a";
       lt = "eza --tree --level=2 --long --icons --git";
-      # The same option as in fish, spelled for nu: the log the rebuild pill tails.
-      rebuild = "sudo nixos-rebuild switch --flake ${repoDir} --option json-log-path $\"($env.XDG_RUNTIME_DIR? | default '')/rebuild.jsonl\"";
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
       top = "btop";

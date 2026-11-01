@@ -14,8 +14,8 @@ import Quickshell.Io
 // listens (so a socket the shell dropped would be replaced by a root-owned file, and a stale one
 // makes every Nix process print "error (ignored)"), and a shell that stopped reading would block
 // the build on a full socket. A file can do neither: the rebuild is unchanged whether or not the
-// shell runs, and the shell only ever reads. It is root's (the build is under sudo), in the
-// user's runtime directory, and removed here when a run ends, so it does not grow. A run the
+// shell runs, and the shell only ever reads. It is the user's (root's after `rebuild --sudo`), in
+// the user's runtime directory, and removed here when a run ends, so it does not grow. A run the
 // shell was not there for is left in it and skipped: tailing starts at the end.
 //
 // What is read, of the events Nix writes (one JSON object a line):
