@@ -254,7 +254,9 @@ Singleton {
         var size = text.trim();
         if (size === "") {
           // wl-screenrec says why it gave up, and it says it better than a bare "nothing" would.
-          var said = capture.errText.split("\n")[0];
+          // Its last line: PipeWire's own warnings (RTKit) come first.
+          var lines = capture.errText.split("\n").filter(l => l.trim() !== "");
+          var said = lines.length > 0 ? lines[lines.length - 1] : "";
           var reason = said !== "" ? said : "Nothing was recorded";
           console.warn("Recorder: " + reason);
           root.failure = reason;
