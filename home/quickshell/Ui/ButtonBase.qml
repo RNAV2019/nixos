@@ -39,7 +39,8 @@ Item {
       root.clicked();
   }
 
-  activeFocusOnTab: root.interactive
+  // A tile that starts sending while it holds the keys keeps them until they move on.
+  activeFocusOnTab: root.interactive || root.activeFocus
   Accessible.role: root.accessibleRole
   Accessible.name: root.accessibleName
   Accessible.checkable: root.checkable
