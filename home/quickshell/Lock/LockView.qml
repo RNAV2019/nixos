@@ -187,6 +187,7 @@ Item {
         width: parent.width
         height: canvas.u(Theme.lockPillHeight)
         ui: canvas.ui
+        curveIcons: false
 
         title: view.displayName
         initial: view.displayName

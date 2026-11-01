@@ -13,6 +13,8 @@ Rectangle {
 
   // Board units to pixels.
   property real ui: 1
+  // Off on the lock screen; see StrokeIcon.curve.
+  property bool curveIcons: true
 
   // Line one: the account's name, or who is asking.
   property string title: ""
@@ -343,6 +345,7 @@ Rectangle {
       size: root.u(Theme.lockArrowSize)
       strokeWidth: 2 * root.ui
       color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
+      curve: root.curveIcons
       path: IconPaths.arrowRight
     }
 

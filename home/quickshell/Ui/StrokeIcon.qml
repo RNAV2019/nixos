@@ -16,6 +16,10 @@ Item {
   property color color: "black"
   property real strokeWidth: size * 2 / 24
   property bool filled: false
+  // The curve renderer (see the Shape below) draws nothing at all on the lock surface and its
+  // preview, for a reason not pinned down: the lock's path icons opt back into the geometry
+  // renderer, which draws there as it did before the switch.
+  property bool curve: true
   // Keep a Material glyph's vertical centring off the pixel grid, which anchors.centerIn rounds
   // to; the horizontal one is still rounded.
   property bool fineY: false
@@ -71,7 +75,8 @@ Item {
     // The default geometry renderer only antialiases with multisampling, which the
     // island's clipContent layers don't have, so icons inside one came out stair-stepped.
     // The curve renderer computes its own edge coverage, in or out of a layer.
-    preferredRendererType: Shape.CurveRenderer
+    preferredRendererType: root.curve ? Shape.CurveRenderer : Shape.GeometryRenderer
+    antialiasing: !root.curve
 
     ShapePath {
       // The item's scale carries the geometry; the path is drawn at 24 units.
