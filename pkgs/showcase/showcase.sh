@@ -41,6 +41,11 @@ webp_quality=95
 webp_fps=30
 # The stills: near-lossless WebP, which GitHub draws in a README as it does a PNG.
 still_quality=92
+# Stills whose subject is a small shape at the top of the screen (a pill, an OSD, a toast) are
+# cut to the island's region at full resolution, one box for all, so they stay readable at the
+# README's column width. Everything else keeps the whole frame.
+crop_box=960x270+480+0
+cropped=" volume brightness recording rebuild dictation polkit moment-plugged moment-wifi sharing phone-satellite notification "
 
 # ---- inside the stage ----
 
@@ -179,7 +184,7 @@ if [ "${1:-}" = --inner ]; then
   browser() {
     local before title settled=0
     before=$(clients)
-    dsp 'hl.dsp.exec_cmd("helium --no-first-run --no-default-browser-check --force-dark-mode https://github.com/RNAV2019/nixos")'
+    dsp 'hl.dsp.exec_cmd("helium --no-first-run --no-default-browser-check --force-dark-mode https://nixos.org")'
     wait_window helium "$before"
     for _ in $(seq 150); do
       title=$(hyprctl activewindow -j | jq -r .title)
@@ -188,7 +193,7 @@ if [ "${1:-}" = --inner ]; then
         key -M ctrl -k w -m ctrl
         settled=0
         ;;
-      *RNAV2019*) settled=$((settled + 1)) ;;
+      *Nix*) settled=$((settled + 1)) ;;
       esac
       [ "$settled" -ge 20 ] && break
       sleep 0.1
@@ -361,7 +366,6 @@ if [ "${1:-}" = --inner ]; then
     hold 1.3
     press Return
     hold 1.2
-    glide 960 26
   }
   t_recording() {
     ipc recorder toggle
@@ -1025,7 +1029,11 @@ if [ "$mode" = shots ] || [ "$mode" = all ]; then
   fi
   # Near-lossless WebP: -sharp_yuv keeps small coloured text crisp through its 4:2:0 frames.
   for png in "$stage/out/screenshots/"*.png; do
-    cwebp -quiet -q "$still_quality" -m 6 -sharp_yuv -mt "$png" -o "$out/screenshots/$(basename "$png" .png).webp"
+    name=$(basename "$png" .png)
+    if [[ $cropped == *" $name "* ]]; then
+      magick "$png" -crop "$crop_box" +repage "$png"
+    fi
+    cwebp -quiet -q "$still_quality" -m 6 -sharp_yuv -mt "$png" -o "$out/screenshots/$name.webp"
   done
   echo "showcase: $(find "$stage/out/screenshots" -name '*.png' | wc -l) screenshots in $out/screenshots ($(du -ch "$out/screenshots"/*.webp | tail -n1 | cut -f1))"
   finish_pass

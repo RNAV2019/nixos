@@ -1,6 +1,6 @@
 #!/bin/sh
 # The launcher's clipboard history, made up: `list` and `decode` over a fixed set of clips.
-clips='5	https://github.com/RNAV2019/nixos
+clips='5	https://nixos.org/manual/nixos/stable
 4	nix flake check
 3	Weekly planning notes for Monday
 2	#4a9a8a
