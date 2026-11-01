@@ -5,7 +5,8 @@ import qs.Commons
 // focus ring. Control is the control centre's pill with a badge, Choice the square one-of-three
 // of the power menu, the profiles card and the recorder picker, Carousel a picture with a ring
 // (the wallpaper and theme pickers), Device a disc with a progress ring (Nearby). Surfaces step
-// highlightMed to the shell's hover alpha; filled grounds lift by `tileLift`.
+// highlightMed to the shell's hover alpha; filled grounds lift by `tileLift`. A Control tile in a
+// narrow cell is `stacked`: the badge above the label and the line instead of beside them.
 ButtonBase {
   id: root
 
@@ -31,6 +32,8 @@ ButtonBase {
   // Control: the badge toggles while the body opens a view, when there is one.
   property bool opensView: false
   property bool glyphDimmed: false
+  // Stacked has no badge target of its own: the whole tile is one.
+  property bool stacked: false
   // The grid the badge's glyph is drawn on before it is scaled to the control glyph size: the
   // radios share the Wi-Fi wedge's 24 px grid, so the pair matches.
   property real glyphGrid: Theme.controlTileGlyphSize
@@ -69,15 +72,18 @@ ButtonBase {
   readonly property bool pressedAny: root.pressed || badgeArea.pressed
   readonly property bool lit: (root.hovered || root.badgeHovered || root.pressedAny) && root.interactive
   readonly property color ink: active ? Theme.inkOnAccent : Theme.inkPrimary
-  readonly property color glyphColor: {
+  // A reading that carries a state (a low battery) tints its own glyph.
+  property color glyphColor: {
     var base = active ? Theme.inkOnAccent : Theme.inkSecondary;
     return glyphDimmed ? Theme.withAlpha(base, Theme.controlGlyphDimAlpha) : base;
   }
+  // A tile whose line is a reading rather than a hint lifts it from tertiary ink.
+  property color sublabelColor: active ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
   readonly property bool hasSub: sublabel !== ""
   readonly property real cornerRadius: {
     switch (kind) {
     case Tile.Control:
-      return Theme.controlTileRadius;
+      return stacked ? Theme.controlTileStackedRadius : Theme.controlTileRadius;
     case Tile.Choice:
       return Theme.powerTileRadius;
     case Tile.Carousel:
@@ -122,7 +128,7 @@ ButtonBase {
   }
   implicitHeight: {
     if (isControl)
-      return Theme.controlTileHeight;
+      return stacked ? Theme.controlTileStackedHeight : Theme.controlTileHeight;
     if (isChoice)
       return Theme.powerTileHeight;
     if (isDevice)
@@ -202,11 +208,11 @@ ButtonBase {
   Rectangle {
     id: badge
 
-    x: Theme.controlTileBadgeLeft
-    y: (parent.height - height) / 2
+    x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileBadgeLeft
+    y: root.stacked ? Theme.controlTileStackedBadgeTop : (parent.height - height) / 2
     visible: root.isControl
-    width: Theme.controlTileBadge
-    height: Theme.controlTileBadge
+    width: root.stacked ? Theme.controlTileStackedBadge : Theme.controlTileBadge
+    height: width
     radius: height / 2
     color: root.active ? Theme.withAlpha(Theme.inkOnAccent, root.badgeHovered ? 0.28 : 0.16) : Theme.withAlpha(Theme.inkPrimary, root.badgeHovered ? 0.14 : 0.07)
 
@@ -229,8 +235,8 @@ ButtonBase {
   Text {
     id: name
 
-    x: Theme.controlTileTextLeft
-    y: 12
+    x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileTextLeft
+    y: root.stacked ? Theme.controlTileStackedLabelTop : 12
     width: Math.max(0, root.width - x - 10)
     visible: root.isControl
     text: root.label
@@ -243,11 +249,11 @@ ButtonBase {
 
   Text {
     x: name.x
-    y: 30
+    y: root.stacked ? Theme.controlTileStackedSubTop : 30
     width: name.width
     visible: root.isControl
     text: root.sublabel
-    color: root.active ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
+    color: root.sublabelColor
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlTileSubSize
     elide: Text.ElideRight
@@ -288,7 +294,7 @@ ButtonBase {
 
     width: Theme.controlTileTextLeft
     height: parent.height
-    enabled: root.isControl && root.interactive
+    enabled: root.isControl && root.interactive && !root.stacked
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onPressed: {

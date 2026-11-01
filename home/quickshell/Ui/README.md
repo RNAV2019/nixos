@@ -98,7 +98,8 @@ All pressable controls are on **`ButtonBase`**: hover and press tracking, the pr
   `currentIndex`, `chosen(index)`; `fit` and `compact` are the narrow forms; `pending`.
 - **`Switch`**: `checked`, `toggled(value)`.
 - **`TextField`**: `kind` `Panel` (on a ground) or `Bare`; `accepted`, `cancelled`, `keyPressed`.
-- **`Tile`**: `kind` `Control` (pill with a badge), `Choice` (square one-of-three), `Carousel`
+- **`Tile`**: `kind` `Control` (pill with a badge; `stacked` puts the badge above the words for a
+  narrow cell, as in the phone panel), `Choice` (square one-of-three), `Carousel`
   (picture with a ring), `Device` (disc with a progress ring); `active`, `current`.
 - **`ListRow`**: `kind` `Grouped` (control centre pill; `groupPosition` rounds a stack's outer
   corners), `Hairline` (the board's row) or `Flat` (the file picker's). Lead `glyph`, `label`,

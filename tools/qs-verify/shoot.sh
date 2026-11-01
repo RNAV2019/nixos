@@ -429,22 +429,24 @@ setup_phone_satellite_low() { ph '{"op":"battery","dev":"s24","charge":14,"charg
 teardown_phone_low() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
 setup_phone_satellite_osd() { setup_osd_volume; }
 setup_panel_phone() { open_panel phone; }
-setup_panel_phone_hover_note() {
+setup_panel_phone_hover_tile() {
   open_panel phone
   sleep 1.6
-  cursor 960 524
+  cursor "$PH_SEND_X" "$PH_ACTIONS_Y"
 }
 setup_panel_phone_ringing() {
   open_panel phone
   sleep 1.6
-  cursor 770 288
+  cursor "$PH_RING_X" "$PH_ACTIONS_Y"
   sleep 0.3
   click
 }
 
-# Screen positions in the phone panel (opened at 700, 8): the wallpaper disc, and the Browse button.
+# Screen positions in the phone panel (opened at 700, 8): the wallpaper disc, and the centres of the
+# action tiles (Ring, Send files, Browse; their row sits 164 px down in the card).
 PH_DISC_X=823 PH_DISC_Y=241
-PH_BROWSE_X=1004 PH_BROWSE_Y=288
+PH_RING_X=906 PH_SEND_X=1026 PH_BROWSE_X=1146 PH_ACTIONS_Y=210
+PH_BROWSE_Y=$PH_ACTIONS_Y
 # In the 960 px picker (opened at 480, 8): the Phone and Laptop cells, and the empty state's button.
 PK_PHONE_X=1331 PK_LAPTOP_X=1389 PK_SWITCH_Y=36
 PK_BROWSE_LAPTOP_X=960 PK_BROWSE_LAPTOP_Y=245
@@ -536,6 +538,22 @@ browse_opens_nautilus() {
   cursor "$PH_BROWSE_X" "$PH_BROWSE_Y"
   sleep 0.3
   click
+  sleep 2
+  grep -qx "nautilus $PH_STORAGE" "$QSV_WORK/launched.log"
+}
+
+# The keyboard walks the action tiles (Ring, Send files, Browse): two steps right and Return
+# presses Browse.
+phone_keys_browse() {
+  reset_ui
+  : >"$QSV_WORK/launched.log"
+  open_panel phone
+  sleep 1.6
+  keys -k Right
+  sleep 0.3
+  keys -k Right
+  sleep 0.3
+  keys -k Return
   sleep 2
   grep -qx "nautilus $PH_STORAGE" "$QSV_WORK/launched.log"
 }
@@ -699,7 +717,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot phone-satellite-low 1.2 0.3 setup_phone_satellite_low teardown_phone_low
   shot phone-satellite-osd 0.9 0.15 setup_phone_satellite_osd teardown_osd_volume
   shot panel-phone 1.8 0.3 setup_panel_phone
-  shot panel-phone-hover-note 1.0 0.3 setup_panel_phone_hover_note
+  shot panel-phone-hover-tile 1.0 0.3 setup_panel_phone_hover_tile
   shot panel-phone-ringing 1.0 0.3 setup_panel_phone_ringing
   shot panel-phone-low 1.8 0.3 setup_phone_low teardown_phone_low
   shot panel-phone-mobile-off 1.8 0.3 setup_phone_mobile_off teardown_phone_mobile
@@ -708,6 +726,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-phone-picker-laptop 1.0 0.3 setup_phone_picker_laptop
   shot panel-phone-picker-blocked 1.0 0.3 setup_phone_picker_blocked teardown_phone_access
   check phone-browse-nautilus browse_opens_nautilus
+  check phone-keys-browse phone_keys_browse
   shot panel-nearby-kde-choose 1.5 0.3 setup_nearby_kde_choose
   shot panel-nearby-kde-sending 1.0 0.3 setup_nearby_kde_sending teardown_nearby_kde_job
   shot panel-nearby-kde-sending-quiet 1.0 0.3 setup_nearby_kde_sending_quiet teardown_nearby_kde_job

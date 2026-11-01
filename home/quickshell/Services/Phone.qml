@@ -21,8 +21,8 @@ import qs.Commons
 //
 // What KDE Connect cannot say, the panel does without: the phone's own Wi-Fi is not reported,
 // but a LAN link means it shares this machine's network, so that network's name stands in; a
-// ring cannot be stopped from here; and copies from the phone land on this machine's clipboard
-// with nothing to tell them apart, so the clipboard rows are cliphist's history, unattributed.
+// ring cannot be stopped from here. Text copied on either side reaches the other through KDE
+// Connect's own clipboard sync, so there is nothing to send by hand.
 Singleton {
   id: root
 
@@ -136,12 +136,6 @@ Singleton {
   }
 
   Command {
-    id: clipboardCall
-
-    label: "Send clipboard to phone"
-  }
-
-  Command {
     id: shareCall
 
     label: "Send files to phone"
@@ -155,12 +149,6 @@ Singleton {
     id: cancelCall
 
     label: "Cancel phone transfer"
-  }
-
-  Command {
-    id: dismissCall
-
-    label: "Dismiss phone notification"
   }
 
   function _call(run, path, iface, member, args) {
@@ -188,11 +176,6 @@ Singleton {
 
     interval: 8000
     onTriggered: root.ringing = false
-  }
-
-  function sendClipboard() {
-    if (connected)
-      root._call(clipboardCall, _plugin("clipboard"), "org.kde.kdeconnect.device.clipboard", "sendClipboard");
   }
 
   // The share that has been called and not yet shown by a job, as a transfer of its own.
@@ -390,43 +373,6 @@ Singleton {
     name: "phone-wallpaper"
   }
 
-  function dismiss(notificationId) {
-    if (connected)
-      root._call(dismissCall, _plugin("notifications") + "/" + notificationId, "org.kde.kdeconnect.device.notifications.notification", "dismiss");
-  }
-
   onConnectedChanged: if (!connected)
     root.ringing = false
-
-  // ---- the clipboard rows ----
-
-  // The newest text clips from cliphist, parsed as the launcher parses them.
-  property var clips: []
-
-  function refreshClips() {
-    clipList.run();
-  }
-
-  function copyClip(id) {
-    ClipboardHistory.copy(id);
-  }
-
-  QueuedProcess {
-    id: clipList
-
-    command: ["sh", "-c", "cliphist -preview-width 120 list | head -n 30"]
-
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var out = [];
-        var lines = text.split("\n");
-        for (var i = 0; i < lines.length && out.length < Theme.phoneClipsMax; i++) {
-          var e = lines[i].length > 0 ? ClipboardHistory.parse(lines[i]) : null;
-          if (e && !e.size && e.preview.trim() !== "")
-            out.push(e);
-        }
-        root.clips = out;
-      }
-    }
-  }
 }

@@ -545,6 +545,15 @@ Singleton {
   readonly property int controlTileTextLeft: 54
   readonly property int controlTileLabelSize: 13
   readonly property int controlTileSubSize: 11
+  // A tile too narrow for its badge and words side by side (the phone panel's 108 px thirds)
+  // stacks them: the badge above, the label and the line under it, on a rounded rectangle.
+  readonly property int controlTileStackedHeight: 76
+  readonly property int controlTileStackedRadius: 22
+  readonly property int controlTileStackedBadge: 28
+  readonly property int controlTileStackedPad: 10
+  readonly property int controlTileStackedBadgeTop: 8
+  readonly property int controlTileStackedLabelTop: 40
+  readonly property int controlTileStackedSubTop: 56
 
   // Sliders. Thick pills whose fill is the level, with the glyph riding inside the fill.
   readonly property int controlSliderHeight: 40
@@ -1122,8 +1131,9 @@ Singleton {
   // satellite progress: by then the bridge has re-formed and it reads as going in.
   readonly property real phoneOpenAt: 0.5
 
-  // The panel (board "Phone panel"): the phone drawn on the left, readings beside it, then
-  // actions, clipboard and notifications in a column.
+  // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid of stacked
+  // control tiles beside it (readings above, actions below) with the grid's foot on the phone's,
+  // so the card is the phone and its inset, top and bottom.
   readonly property int phoneWidth: panelColumnWidth
   readonly property int phoneRadius: panelRadius
   readonly property int phoneInset: 20
@@ -1133,20 +1143,12 @@ Singleton {
   readonly property int phoneScreenInset: 4
   readonly property int phoneScreenRadius: 5
   readonly property int phoneStatusLeft: 152
-  readonly property int phoneStatusTop: 80
-  readonly property int phoneStatusHeight: 48
-  readonly property int phoneStatusGap: 8
-  readonly property int phoneActionHeight: 40
-  readonly property int phoneActionGap: 8
   readonly property int phoneRowHeight: 44
-  readonly property int phoneNoteHeight: 56
-  readonly property int phoneRowGap: 8
-  readonly property int phoneSectionGap: 20
   readonly property real phoneCaptionSize: 11.5
-  readonly property int phoneClipsMax: 3
-  // The note Browse leaves when the phone refuses: 36 tall, 8 under the actions, and the rest
-  // of the panel 44 lower while it is up.
+  // The note Browse leaves when the phone refuses: 36 tall, 8 under the grid, and the card
+  // 44 taller while it is up.
   readonly property int phoneNoteBarHeight: 36
   readonly property int phoneNoteBarGap: 8
+  // How many of the phone's notifications the preview's screen draws as stubs.
   readonly property int phoneNotesMax: 2
 }

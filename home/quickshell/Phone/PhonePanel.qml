@@ -7,12 +7,13 @@ import qs.Services
 import qs.Ui
 
 // The phone panel (board "Phone panel"), opened from the phone satellite: the phone drawn on
-// the left with its time and notification stubs, readings beside it, then actions, the
-// clipboard and the phone's notifications. "Send files" grows the panel into Nearby's file
-// picker; what it accepts goes to the phone through KDE Connect. The disc on the phone's corner
-// grows it into the same picker to choose the picture drawn on the phone's screen. "Browse"
-// mounts the phone's storage and opens it in the file manager; when the phone refuses, a note
-// under the actions says what to allow.
+// the left with its time and notification stubs, and beside it a 3 x 2 grid of control tiles,
+// readings (battery, mobile, Wi-Fi) over actions (ring, send files, browse). The card is as tall
+// as the phone and its inset. "Send files" grows the panel into Nearby's file picker; what it
+// accepts goes to the phone through KDE Connect. The disc on the phone's corner grows it into
+// the same picker to choose the picture drawn on the phone's screen. "Browse" mounts the
+// phone's storage and opens it in the file manager; when the phone refuses, a note under the
+// tiles says what to allow.
 Variants {
   id: root
 
@@ -38,7 +39,7 @@ Variants {
     onOpening: {
       picking = false;
       Phone.browseError = "";
-      Phone.refreshClips();
+      home.keyboardIndex = 0;
     }
 
     // Nothing to show once the phone is gone.
@@ -116,22 +117,18 @@ Variants {
       return Icons.notifications;
     }
 
-    // "now", "5 min", "2 h"; empty for a notification from before the bridge started.
-    function ago(ms) {
-      if (!ms)
-        return "";
-      var mins = Math.floor((clock.date.getTime() - ms) / 60000);
-      if (mins < 1)
-        return "now";
-      if (mins < 60)
-        return mins + " min";
-      return Math.floor(mins / 60) + " h";
-    }
-
     Panel {
       id: panel
 
       surface: win
+      // The picker has its own keys; the home view moves across the action tiles.
+      takesMove: !win.picking
+      takesActivate: !win.picking
+
+      onMoved: function (dx, dy) {
+        home.keyboardMove(dx + dy);
+      }
+      onActivated: home.keyboardActivate()
 
       onKeyPressed: function (event) {
         if (win.picking)
@@ -155,7 +152,7 @@ Variants {
         }
 
         readonly property real inner: width - 2 * Theme.phoneInset
-        readonly property real contentHeight: (notes.visible ? notes.y + notes.height : clips.y + clips.height) + Theme.phoneInset
+        readonly property real contentHeight: 2 * Theme.phoneInset + Theme.phoneDeviceHeight + noteSpace
 
         // ---- the phone ----
 
@@ -434,20 +431,40 @@ Variants {
         Text {
           x: Theme.phoneStatusLeft + 12
           y: 48
-          text: Phone.link === "Wi-Fi" ? "Connected · same Wi-Fi" : Phone.link !== "" ? "Connected · " + Phone.link : "Connected"
+          text: "Connected"
           color: Theme.subtle
           font.family: Theme.uiFont
           font.pixelSize: Theme.phoneCaptionSize
           font.weight: Theme.weightMedium
         }
 
-        // ---- readings ----
+        // ---- the tiles: readings above, actions below ----
 
-        Column {
+        readonly property real tileWidth: Math.floor((width - Theme.phoneStatusLeft - Theme.phoneInset - 2 * Theme.controlTileGap) / 3)
+
+        // Browse could not reach the phone's files: what to allow, dismissable, and gone the
+        // next time Browse is pressed. The card grows to make room.
+        readonly property real noteSpace: Phone.browseError !== "" ? Theme.phoneNoteBarHeight + Theme.phoneNoteBarGap : 0
+
+        // Arrows and hjkl walk the action tiles, which are the ones that take a press.
+        property int keyboardIndex: 0
+
+        function keyboardMove(delta) {
+          keyboardIndex = (keyboardIndex + delta + actionTiles.count) % actionTiles.count;
+        }
+
+        function keyboardActivate() {
+          actionTiles.itemAt(keyboardIndex).opened();
+        }
+
+        // Two rows of three with the control centre's gutter; the foot sits on the phone's.
+        Item {
+          id: tiles
+
           x: Theme.phoneStatusLeft
-          y: Theme.phoneStatusTop
+          y: Theme.phoneInset + Theme.phoneDeviceHeight - height
           width: home.width - x - Theme.phoneInset
-          spacing: Theme.phoneStatusGap
+          height: 2 * Theme.controlTileStackedHeight + Theme.controlTileGap
 
           Repeater {
             model: [
@@ -474,51 +491,99 @@ Variants {
               }
             ]
 
-            ListRow {
+            Tile {
+              id: reading
+
+              required property int index
               required property var modelData
 
-              kind: ListRow.Hairline
+              x: index * (home.tileWidth + Theme.controlTileGap)
+              width: home.tileWidth
+              stacked: true
               interactive: false
-              width: parent.width
-              height: Theme.phoneStatusHeight
-              glyph: modelData.glyph
-              glyphSize: 18
-              glyphColor: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
-              // A row with a level is label, gap and bar as one block centred on the row; the
-              // bar runs from the label's edge to the reading's.
+              // A reading is not a switch.
+              accessibleRole: Accessible.StaticText
+              checkable: false
               label: modelData.label
-              textLeft: 45
-              labelTop: modelData.level >= 0 ? 12 : 16
-              value: modelData.value
-              valueColor: modelData.muted ? Theme.inkTertiary : Theme.subtle
-              valueTop: modelData.level >= 0 ? 12 : 16
+              sublabel: modelData.value
+              sublabelColor: modelData.muted ? Theme.inkTertiary : Theme.inkSecondary
+              glyph: modelData.glyph
+              glyphColor: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
 
-              // The row's own ground is highlightLow, so the groove is the next step up.
+              // The groove is highlightMed on the tile's ground; it runs from beside the badge
+              // to the tile's right padding.
               LevelTrack {
-                x: 45
-                y: 33
-                width: parent.width - 45 - 14
+                x: Theme.controlTileStackedPad + Theme.controlTileStackedBadge + Theme.controlTileStackedPad
+                y: Theme.controlTileStackedBadgeTop + (Theme.controlTileStackedBadge - height) / 2
+                width: parent.width - x - Theme.controlTileStackedPad
                 height: 3
-                visible: modelData.level >= 0
+                visible: reading.modelData.level >= 0
                 color: Theme.highlightMed
                 fillColor: Phone.low ? Theme.love : Theme.accent
-                value: modelData.level
+                value: reading.modelData.level
               }
             }
           }
+
+          Repeater {
+            id: actionTiles
+
+            model: [
+              {
+                label: Phone.ringing ? "Ringing…" : "Ring",
+                sub: "Find phone",
+                glyph: Icons.ringVolume,
+                on: Phone.ringing,
+                run: function () {
+                  Phone.ring();
+                }
+              },
+              {
+                label: "Send files",
+                sub: "From laptop",
+                glyph: Icons.uploadFile,
+                on: false,
+                run: function () {
+                  win.chooseFiles();
+                }
+              },
+              {
+                label: "Browse",
+                sub: "Phone storage",
+                glyph: Icons.folderOpen,
+                on: false,
+                run: function () {
+                  Phone.browse();
+                }
+              }
+            ]
+
+            Tile {
+              required property int index
+              required property var modelData
+
+              x: index * (home.tileWidth + Theme.controlTileGap)
+              y: Theme.controlTileStackedHeight + Theme.controlTileGap
+              width: home.tileWidth
+              stacked: true
+              // Pressed, not toggled: the badge has no state of its own.
+              opensView: true
+              active: modelData.on
+              current: home.keyboardIndex === index
+              label: modelData.label
+              sublabel: modelData.sub
+              sublabelColor: active ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkSecondary
+              glyph: modelData.glyph
+              onOpened: modelData.run()
+            }
+          }
         }
-
-        // ---- actions ----
-
-        // Browse could not reach the phone's files: what to allow, dismissable, and gone the
-        // next time Browse is pressed. The rest of the panel moves down to make room.
-        readonly property real noteSpace: Phone.browseError !== "" ? Theme.phoneNoteBarHeight + Theme.phoneNoteBarGap : 0
 
         Rectangle {
           id: browseNote
 
           x: Theme.phoneInset
-          y: actions.y + actions.height + Theme.phoneNoteBarGap
+          y: tiles.y + tiles.height + Theme.phoneNoteBarGap
           width: home.inner
           height: Theme.phoneNoteBarHeight
           radius: Theme.rowRadius
@@ -556,243 +621,6 @@ Variants {
             hitSlop: 6
             accessibleName: "Dismiss"
             onClicked: Phone.browseError = ""
-          }
-        }
-
-        Row {
-          id: actions
-
-          x: Theme.phoneInset
-          y: Theme.phoneInset + Theme.phoneDeviceHeight + Theme.phoneSectionGap
-          spacing: Theme.phoneActionGap
-
-          Repeater {
-            model: [
-              {
-                label: Phone.ringing ? "Ringing…" : "Ring",
-                glyph: Icons.ringVolume,
-                width: 100,
-                on: Phone.ringing,
-                run: function () {
-                  Phone.ring();
-                }
-              },
-              {
-                label: "Send files",
-                glyph: Icons.uploadFile,
-                width: 116,
-                on: false,
-                run: function () {
-                  win.chooseFiles();
-                }
-              },
-              {
-                label: "Browse",
-                glyph: Icons.folderOpen,
-                width: 104,
-                on: false,
-                run: function () {
-                  Phone.browse();
-                }
-              },
-              {
-                label: "Send clipboard",
-                glyph: Icons.clipboard,
-                width: 136,
-                on: false,
-                run: function () {
-                  Phone.sendClipboard();
-                }
-              }
-            ]
-
-            Button {
-              id: action
-
-              required property var modelData
-
-              width: modelData.width
-              height: Theme.phoneActionHeight
-              kind: modelData.on ? Button.Primary : Button.Neutral
-              text: modelData.label
-              icon: modelData.glyph
-              iconSize: 16
-              iconColor: modelData.on ? ink : Theme.accent
-              onClicked: modelData.run()
-            }
-          }
-        }
-
-        // ---- the clipboard ----
-
-        SectionLabel {
-          id: clipsLabel
-
-          x: Theme.phoneInset
-          y: actions.y + actions.height + home.noteSpace + Theme.phoneSectionGap
-          width: home.inner
-          implicitHeight: 13
-          verticalAlignment: Qt.AlignTop
-          title: "Clipboard"
-
-          Text {
-            text: "Synced both ways"
-            color: Theme.accent
-            font.family: Theme.uiFont
-            font.pixelSize: Theme.sectionSize
-            font.weight: Theme.weightMedium
-          }
-        }
-
-        // The id of the clip last copied back, for its check.
-        property string copied: ""
-
-        Timer {
-          id: copiedReset
-
-          interval: 1200
-          onTriggered: home.copied = ""
-        }
-
-        Column {
-          id: clips
-
-          x: Theme.phoneInset
-          y: clipsLabel.y + clipsLabel.height + 7
-          width: home.inner
-          spacing: Theme.phoneRowGap
-
-          Repeater {
-            model: Phone.clips
-
-            ListRow {
-              id: clipRow
-
-              required property var modelData
-
-              readonly property bool isLink: /^[a-z]+:\/\/\S+$/i.test(modelData.preview)
-
-              kind: ListRow.Hairline
-              width: parent.width
-              height: Theme.phoneRowHeight
-              glyph: clipRow.isLink ? Icons.link : Icons.notes
-              glyphSize: 18
-              label: modelData.preview
-              textLeft: 47
-              textGap: 14
-              onClicked: {
-                Phone.copyClip(clipRow.modelData.id);
-                home.copied = clipRow.modelData.id;
-                copiedReset.restart();
-              }
-              trailing: StrokeIcon {
-                size: 16
-                path: home.copied === clipRow.modelData.id ? Icons.check : Icons.copy
-                color: home.copied === clipRow.modelData.id ? Theme.accent : Theme.text
-                opacity: clipRow.hovered || home.copied === clipRow.modelData.id ? 1 : 0
-
-                Behavior on opacity {
-                  Morph {
-                    duration: Theme.morphState
-                  }
-                }
-              }
-            }
-          }
-
-          ListRow {
-            kind: ListRow.Hairline
-            interactive: false
-            width: parent.width
-            height: Theme.phoneRowHeight
-            visible: Phone.clips.length === 0
-            value: "Nothing copied yet"
-            valueCentred: true
-          }
-        }
-
-        // ---- the phone's notifications ----
-
-        SectionLabel {
-          id: notesLabel
-
-          x: Theme.phoneInset
-          y: clips.y + clips.height + Theme.phoneSectionGap
-          width: home.inner
-          implicitHeight: 13
-          verticalAlignment: Qt.AlignTop
-          visible: notes.visible
-          title: "On your phone"
-          note: Phone.notifications.length === 1 ? "1 notification" : Phone.notifications.length + " notifications"
-        }
-
-        Column {
-          id: notes
-
-          x: Theme.phoneInset
-          y: notesLabel.y + notesLabel.height + 7
-          width: home.inner
-          spacing: Theme.phoneRowGap
-          visible: Phone.notifications.length > 0
-
-          Repeater {
-            model: Phone.notifications.slice(0, Theme.phoneNotesMax)
-
-            ListRow {
-              id: noteRow
-
-              required property var modelData
-
-              readonly property bool dismissShown: modelData.dismissable && (noteRow.hovered || dismissButton.hovered)
-
-              kind: ListRow.Hairline
-              interactive: false
-              hoverTint: true
-              width: parent.width
-              height: Theme.phoneNoteHeight
-              label: [modelData.app, modelData.title].filter(s => s !== "").join(" · ")
-              labelWeight: Theme.weightSemi
-              sublabel: modelData.text
-              sublabelSize: 12
-              sublabelColor: Theme.subtle
-              textLeft: 55
-              textRight: 64
-              subRight: 20
-              value: noteRow.dismissShown ? "" : win.ago(modelData.time)
-              valueTop: 11
-
-              Rectangle {
-                x: 13
-                anchors.verticalCenter: parent.verticalCenter
-                width: 30
-                height: 30
-                radius: 15
-                color: Theme.withAlpha(Theme.accent, 0.12)
-
-                StrokeIcon {
-                  anchors.centerIn: parent
-                  size: 16
-                  path: win.noteGlyph(noteRow.modelData)
-                  color: Theme.accent
-                }
-              }
-
-              Button {
-                id: dismissButton
-
-                x: parent.width - 12 - width
-                y: 10
-                kind: Button.Icon
-                iconSize: 16
-                icon: Icons.close
-                hitSlop: 6
-                accessibleName: "Dismiss notification"
-                visible: noteRow.modelData.dismissable
-                // Shown by the row, then held by itself; see ButtonBase.revealed.
-                revealed: noteRow.dismissShown
-                onClicked: Phone.dismiss(noteRow.modelData.id)
-              }
-            }
           }
         }
       }
