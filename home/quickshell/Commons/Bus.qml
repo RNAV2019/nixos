@@ -71,8 +71,20 @@ Singleton {
   }
 
   function finishUnlock() {
-    locking = false;
+    // Ready first: for one assignment both would be false, and what shows for "ready or
+    // locking" (the bar, the phone satellite) would drop out and come back.
     sessionReady = true;
+    locking = false;
+  }
+
+  // What is still coming to rest when a lock is asked for (the phone satellite returning from
+  // behind a panel the lock closed), keyed by holder. The lock's snapshot waits for these, up
+  // to Theme.lockSettleMax, so the blurred desktop behind the lock shows them in place.
+  property var lockHolds: ({})
+  readonly property bool lockHeld: Object.keys(lockHolds).length > 0
+
+  function holdLock(key, held) {
+    lockHolds = writeMap(lockHolds, key, held ? true : null);
   }
 
   signal lockRequested

@@ -55,6 +55,7 @@ Scope {
     if (snapshotPending || snapshotCapture.running)
       root.snapshotPath = "";
     snapshotDelay.stop();
+    settleCap.stop();
     snapshotPending = false;
     Bus.prepareForLock();
     root.password = "";
@@ -74,6 +75,12 @@ Scope {
     pamWatchdog.restart();
   }
 
+  function captureSnapshot() {
+    settleCap.stop();
+    root.snapshotPending = false;
+    snapshotCapture.running = true;
+  }
+
   function requestManualLock() {
     if (Bus.locking || lockContext.locked || snapshotCapture.running || snapshotPending)
       return;
@@ -82,6 +89,7 @@ Scope {
     Bus.prepareForLock();
     root.snapshotPath = root.snapshotFile;
     snapshotPending = true;
+    settleCap.restart();
     snapshotDelay.restart();
   }
 
@@ -144,6 +152,11 @@ Scope {
     function onLockRequested() {
       root.requestManualLock();
     }
+
+    function onLockHeldChanged() {
+      if (!Bus.lockHeld && root.snapshotPending && settleCap.running)
+        snapshotDelay.restart();
+    }
   }
 
   // Capture before the session-lock protocol takes the output. Boot locks bypass this.
@@ -154,8 +167,21 @@ Scope {
     // the layer has no_anim, so there is no fade to wait out.
     interval: 32
     onTriggered: {
-      root.snapshotPending = false;
-      snapshotCapture.running = true;
+      // Something is still coming to rest (Bus.lockHeld): its release starts these two frames
+      // again, or settleCap gives up on it.
+      if (Bus.lockHeld && settleCap.running)
+        return;
+      root.captureSnapshot();
+    }
+  }
+
+  Timer {
+    id: settleCap
+
+    interval: Theme.lockSettleMax
+    onTriggered: {
+      if (root.snapshotPending && !snapshotDelay.running)
+        root.captureSnapshot();
     }
   }
 

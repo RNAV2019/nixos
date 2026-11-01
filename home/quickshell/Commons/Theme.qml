@@ -755,6 +755,9 @@ Singleton {
   readonly property int lockDateSize: 20
   readonly property int lockClockTop: 175
   readonly property int lockClockSize: 112
+  // The longest a manual lock waits for something still coming to rest (Bus.lockHeld) before
+  // it captures the desktop anyway: the phone satellite's return takes about 400 ms.
+  readonly property int lockSettleMax: 700
 
   // The login pill: avatar, name over the password line, submit disc. Offsets are from the
   // pill's own top-left; the radius is height / 2.

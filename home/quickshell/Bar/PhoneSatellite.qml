@@ -49,7 +49,9 @@ Item {
   property bool panelAsked: false
 
   readonly property bool panelUp: Bus.islandCovered(screenName) || Bus.islandOpenFor(screenName)
-  readonly property bool wantOut: Phone.connected && Bus.sessionReady && !Bus.locking && !panelUp && !retreating
+  // A lock does not draw it in: like the bar it stays, so the snapshot behind the lock screen
+  // carries it where it sat.
+  readonly property bool wantOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp && !retreating
 
   // Unlike the island's morphs, this one overshoots a little; see Theme.phoneSpringDamping.
   MorphSpring {
@@ -62,6 +64,15 @@ Item {
   }
 
   readonly property real p: progress.value
+
+  // Locking from a panel (the session menu's Lock) closes the panel, and the disc comes back
+  // out: the lock's snapshot waits until it has stopped (the overshoot included), not merely
+  // until the spring's last thousandth.
+  readonly property bool settling: Bus.locking && progress.running && !(Math.abs(p - progress.target) < 0.005 && Math.abs(progress.velocity) < 0.05)
+  readonly property string holdKey: "phone-satellite:" + screenName
+
+  onSettlingChanged: Bus.holdLock(holdKey, settling)
+  Component.onDestruction: Bus.holdLock(holdKey, false)
 
   // Docked: out, settled near enough to take a click.
   readonly property bool docked: wantOut && p > 0.9
