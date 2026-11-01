@@ -23,8 +23,8 @@ so there is one per output.
   island, takes its turn by `rank` and melts back when `wanted` drops. `cardInput: false` makes
   the window click-through. It never takes the keyboard. Ranks in use: OSD 4, dictation 3,
   sharing request 2, notification toast and attention moment 1, sharing progress, informational
-  moment and rebuild 0. One that is outranked waits, and takes over as a handover when the
-  higher one lets go.
+  moment, rebuild and a failed recording 0. One that is outranked waits, and takes over as a
+  handover when the higher one lets go.
 
 Both register on `Bus` when they are created (`registerSurface`), so there is no list to edit.
 

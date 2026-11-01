@@ -8,10 +8,10 @@ import qs.Commons
 // still and the presentation handshake are Ui/IslandSurfaceBase.qml; see the notes there.
 //
 // They take turns by `rank` (Bus.transientWants): OSD 4, dictation 3, a sharing request 2, a
-// toast 1, sharing progress 0. The highest wanting an output has the island, and one outranked
-// waits rather than being knocked out. When the higher one lets go, the waiting one takes over
-// from it as a handover, growing out of the shape it leaves, rather than the first shrinking to
-// the pill and the second growing back out of it.
+// toast 1, sharing progress, the rebuild and a failed recording 0. The highest wanting an output
+// has the island, and one outranked waits rather than being knocked out. When the higher one lets
+// go, the waiting one takes over from it as a handover, growing out of the shape it leaves,
+// rather than the first shrinking to the pill and the second growing back out of it.
 IslandSurfaceBase {
   id: win
 

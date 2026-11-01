@@ -52,6 +52,11 @@ Singleton {
     return "Off";
   }
 
+  // Why the last recording left nothing, until it is dismissed or the next one starts; "" for
+  // none. Recorder/RecordingFailedPill.qml shows that there is one, and the reason, which is
+  // wl-screenrec's own and too long for a pill, goes to the log.
+  property string failure: ""
+
   signal saved(string path)
   signal failed(string reason)
 
@@ -79,7 +84,12 @@ Singleton {
     pick.running = true;
   }
 
+  function dismissFailure() {
+    root.failure = "";
+  }
+
   function begin(geometry) {
+    root.failure = "";
     var stamp = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH-mm-ss");
     root.file = root.directory + "/" + stamp + ".mp4";
 
@@ -245,7 +255,10 @@ Singleton {
         if (size === "") {
           // wl-screenrec says why it gave up, and it says it better than a bare "nothing" would.
           var said = capture.errText.split("\n")[0];
-          root.failed(said !== "" ? said : "Nothing was recorded");
+          var reason = said !== "" ? said : "Nothing was recorded";
+          console.warn("Recorder: " + reason);
+          root.failure = reason;
+          root.failed(reason);
           return;
         }
         root.saved(confirm.target);

@@ -177,7 +177,8 @@ Singleton {
   // island through owners, only through a transient screen, so a real panel covers it.
   // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
   // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml);
-  // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml).
+  // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml); "recording" is a
+  // recording that failed (Recorder/RecordingFailedPill.qml).
   readonly property var transientKeys: Object.keys(transientCounts)
 
   function isTransient(key) {

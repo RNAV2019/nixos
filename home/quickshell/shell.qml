@@ -30,6 +30,7 @@ ShellRoot {
   Bar {}
   Moments {}
   RebuildPill {}
+  RecordingFailedPill {}
   ActivitySources {
     id: activitySources
   }
