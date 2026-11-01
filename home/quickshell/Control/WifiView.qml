@@ -132,6 +132,7 @@ ControlSubView {
 
     width: parent.width
     visible: root.activeNetwork !== null
+    glyphGrid: 24
     glyph: Icons.wifiGlyph(root.activeNetwork ? root.activeNetwork.signalStrength : 0, true)
     label: root.activeNetwork ? root.activeNetwork.name : ""
     sublabel: {
@@ -202,6 +203,7 @@ ControlSubView {
 
         width: parent.width
         // Any network in range lights the dot and inner bar, as the island does for a link.
+        glyphGrid: 24
         glyph: Icons.wifiGlyph(entry.strength, true)
         label: entry.name
         onClicked: {

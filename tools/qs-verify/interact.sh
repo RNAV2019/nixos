@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # interact.sh OUT_DIR — with the harness running (run.sh), drive the pointer and keys through the
 # shared controls and capture what shoot.sh's settled frames cannot show: hover, pressed, a
-# click, Space and Enter on a focused control, and Left and Right on a segmented control.
+# click, Space and Enter on a focused control, Left and Right on a segmented control, and the
+# tiles and rows: a tile of each kind, a grouped row, and the hairline rows of the phone panel.
 #
 # One PNG per step (ix-NAME.png), a single frame each: they are for looking at, not for compare.sh.
 # Run it on a harness that has not been shot (notification history and mute state carry over).
@@ -14,6 +15,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 mkdir -p "$1"
 OUT=$(cd "$1" && pwd)
 load_env
+PH_CALLS=$QSV_WORK/phone-calls.log
+PH_STORAGE=$QSV_WORK/phone-storage
+NB_SEND=$HOME/send-fixtures
 
 log() { printf '%s\n' "$*" >&2; }
 grab() { # NAME [SETTLE]
@@ -139,3 +143,102 @@ seq_keys Left Right Right
 grab nearby-left 0.9
 grab nearby-right 1.4
 grab nearby-right2 1.4
+
+# ---- the control centre's tiles: off, lit, disabled, the badge's own hover, Space ----
+reset
+qsipc control toggle >/dev/null
+sleep 1.3
+grab tile-control-rest 0.8
+hover_press 958 178 tile-control-peace
+cursor 908 178
+grab tile-control-peace-badge-hover 0.6
+hover_press 1044 107 tile-control-audio-lit
+cursor 1128 178
+grab tile-control-night-disabled-hover 0.6
+cursor 958 178
+sleep 0.3
+click
+away
+grab tile-control-peace-clicked 0.8
+keys -k space
+grab tile-control-peace-space 0.8
+
+# ---- a choice tile (the recorder's capture row): hover and press; the click would start a capture ----
+reset
+qsipc recorder toggle >/dev/null
+grab tile-choice-rest 1.3
+hover_press 960 64 tile-choice-window
+hover_press 858 64 tile-choice-selected
+
+# ---- a carousel tile: pressed ----
+reset
+qsipc wallpaper toggle >/dev/null
+grab tile-carousel-rest 1.3
+hover_press 888 138 tile-carousel
+
+# ---- rows: a grouped row (the audio view's output), pressed ----
+reset
+qsipc control toggle >/dev/null
+sleep 1.3
+keys -k Tab
+sleep 0.2
+keys -k Return
+sleep 1
+hover_press 960 129 row-grouped-output
+
+# ---- Nearby over KDE Connect: the device tile disabled, then ready, pressed, sending ----
+reset
+ph_up
+qsipc nearby toggle >/dev/null
+sleep 1.3
+# The earlier steps left Android chosen; KDE Connect is the segment at the far left.
+cursor 773 47
+sleep 0.3
+click
+away
+grab tile-device-rest 1.5
+cursor 960 208
+grab tile-device-disabled-hover 0.6
+away
+nb_kde_stage
+grab tile-device-ready 1.0
+hover_press 960 361 tile-device
+cursor 960 361
+sleep 0.3
+click
+away
+ph '{"op":"job_start","job":"up","dev":"s24","direction":"out","files":["IMG_2041.jpg"],"total":18400000}'
+sleep 0.4
+ph '{"op":"job_update","job":"up","processed":11400000,"percent":62}'
+grab tile-device-sending-62 0.9
+ph '{"op":"job_end","job":"up"}'
+sleep 6
+# The send cleared the staged files; stage them again, and send with no reading.
+nb_kde_stage
+cursor 960 361
+sleep 0.3
+click
+away
+ph '{"op":"job_start","job":"up2","dev":"s24","direction":"out","files":["IMG_2041.jpg"]}'
+grab tile-device-sending-indeterminate 0.9
+ph '{"op":"job_end","job":"up2"}'
+sleep 4
+
+# ---- hairline rows (the phone panel): a status row that only reports, a clip row, a notification row
+# whose dismiss shows under the pointer ----
+reset
+qsipc phone toggle >/dev/null
+sleep 1.6
+grab row-phone-rest 0.6
+cursor 1025 108
+grab row-status-hover 0.6
+hover_press 960 370 row-clip
+cursor 960 370
+sleep 0.3
+click
+grab row-clip-copied 0.5
+cursor 800 564
+grab row-note-hover 0.6
+cursor 1172 554
+grab row-note-dismiss-hover 0.6
+away

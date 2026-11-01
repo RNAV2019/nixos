@@ -109,6 +109,7 @@ Item {
     // The same third the second row divides the span into; the remainder lands on Audio.
     width: root.thirdWidth
     label: "Wi-Fi"
+    glyphGrid: NetworkInfo.onEthernet ? Theme.controlTileGlyphSize : 24
     glyph: NetworkInfo.onEthernet ? Icons.ethernet : Icons.wifiGlyph(NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.signalStrength : 0, Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
     glyphDimmed: !NetworkInfo.onEthernet && !(Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
     sublabel: {
@@ -154,6 +155,7 @@ Item {
     y: root.tilesTop + Theme.controlTileHeight + Theme.controlTileGap
     width: root.thirdWidth
     label: "Bluetooth"
+    glyphGrid: 24
     glyph: Icons.bluetoothGlyph(!root.adapter || !root.adapter.enabled, root.connectedDevice !== null)
     sublabel: {
       if (!root.adapter)

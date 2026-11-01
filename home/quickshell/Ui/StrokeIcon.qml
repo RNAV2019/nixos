@@ -16,6 +16,9 @@ Item {
   property color color: "black"
   property real strokeWidth: size * 2 / 24
   property bool filled: false
+  // Keep a Material glyph's vertical centring off the pixel grid, which anchors.centerIn rounds
+  // to; the horizontal one is still rounded.
+  property bool fineY: false
   // Centre a Material glyph on its ink rather than its advance, for glyphs that pad or overhang
   // their cell (the volume ladder pads two steps with a trailing space).
   property bool inkCentred: false
@@ -36,13 +39,27 @@ Item {
   Text {
     id: glyphText
 
-    x: root.inkCentred ? (root.width - ink.tightBoundingRect.width) / 2 - ink.tightBoundingRect.x : (root.width - width) / 2
-    y: (root.height - height) / 2
+    anchors.centerIn: root.inkCentred || root.fineY ? undefined : parent
+    anchors.horizontalCenter: root.fineY && !root.inkCentred ? parent.horizontalCenter : undefined
     visible: root.isGlyph
     text: root.isGlyph ? root.path : ""
     color: root.color
     font.family: Theme.iconFont
     font.pixelSize: root.size
+  }
+
+  Binding {
+    target: glyphText
+    property: "x"
+    value: (root.width - ink.tightBoundingRect.width) / 2 - ink.tightBoundingRect.x
+    when: root.inkCentred
+  }
+
+  Binding {
+    target: glyphText
+    property: "y"
+    value: (root.height - glyphText.height) / 2
+    when: root.inkCentred || root.fineY
   }
 
   Shape {

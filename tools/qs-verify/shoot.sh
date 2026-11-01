@@ -14,6 +14,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 mkdir -p "$1"
 OUT=$(cd "$1" && pwd)
 load_env
+PH_CALLS=$QSV_WORK/phone-calls.log
+PH_STORAGE=$QSV_WORK/phone-storage
+NB_SEND=$HOME/send-fixtures
 TMP=$(mktemp -d "$QSV_WORK/shoot.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 RT=$XDG_RUNTIME_DIR
@@ -398,51 +401,6 @@ setup_control_notifications() {
   open_panel control
 }
 
-# ---- the phone: a mock kdeconnectd on the private session bus, read by the real phone-bridge ----
-
-PH_CALLS=$QSV_WORK/phone-calls.log
-ph() { busctl --user call org.mock.Control /control org.mock.Control Apply s "$1" >/dev/null; }
-ph_up() { # the mock daemon and a phone with two notifications; kept for the states after it
-  ph_fixtures
-  busctl --user list 2>/dev/null | grep -q org.mock.Control || {
-    setsid "$(mock_python)/bin/python" "$QSV_REPO/pkgs/phone-bridge/tests/mock-kdeconnectd.py" "$PH_CALLS" \
-      >"$QSV_WORK/mock-kdeconnectd.log" 2>&1 &
-    until busctl --user list 2>/dev/null | grep -q org.mock.Control; do sleep 0.2; done
-  }
-  ph '{"op":"device","id":"s24","name":"Galaxy S24 Ultra","type":"phone","battery":{"charge":78,"charging":false}}'
-  ph '{"op":"cellular","dev":"s24","type":"5G","strength":3}'
-  ph "{\"op\":\"sftp\",\"dev\":\"s24\",\"grant\":true,\"mount\":\"$PH_STORAGE\"}"
-  ph '{"op":"notify","dev":"s24","id":"n1","app":"WhatsApp","title":"Maya","text":"Dinner on Friday?"}'
-  ph '{"op":"notify","dev":"s24","id":"n2","app":"Gmail","title":"Weekly digest","text":"Seven new things in your inbox"}'
-  sleep 3
-}
-# The phone's storage as the mock mounts it, and the laptop's Pictures: the same eight pictures
-# (and a PDF and an archive the images-only picker must not list), so the wallpaper pickers have
-# something to show and to choose.
-PH_STORAGE=$QSV_WORK/phone-storage
-ph_fixtures() {
-  local root pic i name
-  for root in "$PH_STORAGE" "$HOME"; do
-    i=0
-    if [[ $root == "$HOME" ]]; then
-      mkdir -p "$root"/{Desktop,Documents,Downloads,Music,nixos,Projects,Videos}
-    else
-      mkdir -p "$root"/{DCIM,Documents,Download,Movies,Music,Recordings,Wallpapers}
-    fi
-    pic=$root/Pictures
-    mkdir -p "$pic/Screenshots" "$pic/Wallpapers"
-    for name in dusk.jpg forest.jpg IMG_2204.jpg mountains.jpg pier.png sunrise.jpg tokyo.jpg waves.jpg; do
-      i=$((i + 1))
-      magick -size 1600x900 "gradient:$(printf '#%02x5a7c-#7a%02x4c' $((20 + i * 18)) $((90 - i * 7)))" \
-        -fill '#d8a657' -draw "circle $((300 + i * 90)),300 $((300 + i * 90)),420" "$pic/$name"
-    done
-    : >"$pic/Screenshots/one.png"
-    : >"$pic/Screenshots/two.png"
-    head -c 3000 /dev/zero >"$pic/notes.pdf"
-    head -c 9000 /dev/zero >"$pic/backup.zip"
-  done
-}
-
 # A check the screenshots cannot make: PASS or FAIL in the log, and FAIL fails the run.
 check() { # NAME COMMAND...
   local name=$1
@@ -554,21 +512,6 @@ browse_opens_nautilus() {
 
 # ---- Nearby over KDE Connect (the phone is up, so KDE Connect is the default platform) ----
 
-NB_SEND=$HOME/send-fixtures
-nb_kde_files() {
-  mkdir -p "$NB_SEND"
-  head -c 2400000 /dev/zero >"$NB_SEND/IMG_2041.jpg"
-  head -c 612000 /dev/zero >"$NB_SEND/itinerary.pdf"
-  head -c 15400000 /dev/zero >"$NB_SEND/photos-oct.zip"
-}
-nb_kde_stage() {
-  nb_kde_files
-  qsipc nearby send "$NB_SEND/IMG_2041.jpg" >/dev/null
-  sleep 0.5
-  qsipc nearby send "$NB_SEND/itinerary.pdf" >/dev/null
-  qsipc nearby send "$NB_SEND/photos-oct.zip" >/dev/null
-  sleep 1.2
-}
 # The phone's tile, with three files staged (the panel at 700, 8; the tile column's centre).
 NB_TILE_X=960 NB_TILE_Y=361
 nb_kde_tap() {

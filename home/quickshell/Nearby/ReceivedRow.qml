@@ -41,6 +41,8 @@ ListRow {
   interactive: done
   accented: fresh
   fillProgress: done ? -1 : progress
+  // The edge sits over the masked ground, as the board draws it.
+  edgeOver: true
   implicitWidth: Theme.nearbyWidth - Theme.nearbyInset * 2
   implicitHeight: Theme.nearbyRowHeight
   glyph: Nearby.glyphFor(fileKind)

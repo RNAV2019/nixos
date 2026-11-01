@@ -29,6 +29,8 @@ ButtonBase {
   property bool showCheck: false
   // Hairline: 0..1 of the row washed in accent from the left, or -1 for none.
   property real fillProgress: -1
+  // Hairline: draw the edge over a progress fill, not as part of the ground.
+  property bool edgeOver: fillProgress >= 0
   // Flat: the row's ground, whatever the feature says it is.
   property color flatColor: "transparent"
   // Whether the ground steps to the hover colour. A row that reports can still be hovered.
@@ -38,6 +40,8 @@ ButtonBase {
   property color glyphColor: selected ? Theme.inkOnAccent : kind === ListRow.Grouped ? Theme.inkSecondary : Theme.accent
   property real glyphSize: Theme.controlTileGlyphSize
   property real glyphStroke: 1.75
+  // As on Tile: the grid the glyph is drawn on before it is scaled to `glyphSize`.
+  property real glyphGrid: glyphSize
   property real glyphLeft: kind === ListRow.Grouped ? Theme.controlRowInset : 15
 
   property string label: ""
@@ -73,8 +77,10 @@ ButtonBase {
 
   readonly property real groupRadius: Theme.controlRowGroupRadius
   readonly property real cornerRadius: kind === ListRow.Grouped ? Theme.controlRowRadius : kind === ListRow.Hairline ? Theme.rowRadius : Theme.pickerRowRadius
+  readonly property color edgeColor: accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.withAlpha(Theme.highlightMed, Theme.rowBorderAlpha)
   readonly property bool tinted: hovered && hoverTint
   readonly property real farEdge: Math.min(valueText.visible ? valueText.x : Infinity, slot.x)
+  readonly property real textRoom: Math.max(0, farEdge - textLeft - textGap)
 
   implicitHeight: kind === ListRow.Grouped ? Theme.controlRowHeight : kind === ListRow.Hairline ? Theme.phoneRowHeight : Theme.pickerRowHeight
   ringRadius: cornerRadius
@@ -88,6 +94,8 @@ ButtonBase {
     topRightRadius: topLeftRadius
     bottomLeftRadius: root.kind !== ListRow.Grouped || root.groupPosition === "single" ? radius : root.groupPosition === "last" || root.groupPosition === "only" ? root.groupRadius : 0
     bottomRightRadius: bottomLeftRadius
+    border.width: root.kind === ListRow.Hairline && !root.edgeOver ? 1 : 0
+    border.color: root.edgeColor
     color: {
       if (root.kind === ListRow.Flat)
         return root.flatColor;
@@ -100,6 +108,10 @@ ButtonBase {
     }
 
     Behavior on color {
+      Tint {}
+    }
+
+    Behavior on border.color {
       Tint {}
     }
   }
@@ -126,11 +138,11 @@ ButtonBase {
 
   Rectangle {
     anchors.fill: parent
-    visible: root.kind === ListRow.Hairline
+    visible: root.kind === ListRow.Hairline && root.edgeOver
     radius: root.cornerRadius
     color: "transparent"
     border.width: 1
-    border.color: root.accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.withAlpha(Theme.highlightMed, Theme.rowBorderAlpha)
+    border.color: root.edgeColor
 
     Behavior on border.color {
       Tint {}
@@ -138,10 +150,11 @@ ButtonBase {
   }
 
   StrokeIcon {
-    x: root.glyphLeft
+    x: root.glyphLeft + (root.glyphSize - size) / 2
     y: (root.height - size) / 2
     visible: root.glyph !== ""
-    size: root.glyphSize
+    size: root.glyphGrid
+    scale: root.glyphSize / root.glyphGrid
     strokeWidth: root.glyphStroke
     path: root.glyph
     color: root.glyphColor
@@ -152,7 +165,7 @@ ButtonBase {
 
     x: root.textLeft
     y: root.labelTop >= 0 ? root.labelTop : root.sublabel !== "" ? root.height / 2 - 17 : (root.height - height) / 2
-    width: Math.max(0, root.textRight >= 0 ? root.width - x - root.textRight : root.farEdge - x - root.textGap)
+    width: Math.min(implicitWidth, root.textRight >= 0 ? Math.max(0, root.width - x - root.textRight) : root.textRoom)
     text: root.label
     color: root.labelColor
     font.family: Theme.uiFont
@@ -164,7 +177,7 @@ ButtonBase {
   Text {
     x: root.textLeft
     y: root.height / 2 + 1
-    width: Math.max(0, root.subRight >= 0 ? root.width - x - root.subRight : labelText.width)
+    width: Math.min(implicitWidth, root.subRight >= 0 ? Math.max(0, root.width - x - root.subRight) : root.textRoom)
     visible: root.sublabel !== ""
     text: root.sublabel
     color: root.sublabelColor

@@ -31,6 +31,9 @@ ButtonBase {
   // Control: the badge toggles while the body opens a view, when there is one.
   property bool opensView: false
   property bool glyphDimmed: false
+  // The grid the badge's glyph is drawn on before it is scaled to the control glyph size: the
+  // radios share the Wi-Fi wedge's 24 px grid, so the pair matches.
+  property real glyphGrid: Theme.controlTileGlyphSize
   // Choice: love where the machine's whole stance changes, accent where it is one pick of three.
   property color activeColor: kind === Tile.Choice ? Theme.accent : Theme.accentFill
   // An active tile must not wear the ring a current one wears (the armed power tile).
@@ -214,11 +217,12 @@ ButtonBase {
     StrokeIcon {
       anchors.centerIn: parent
       visible: root.glyph !== ""
-      size: Theme.controlTileGlyphSize
+      size: root.glyphGrid
+      scale: Theme.controlTileGlyphSize / root.glyphGrid
       strokeWidth: 1.75
       path: root.glyph
       color: root.glyphColor
-      inkCentred: true
+      inkCentred: root.glyphGrid === Theme.controlTileGlyphSize
     }
   }
 
@@ -254,6 +258,7 @@ ButtonBase {
     y: Theme.powerGlyphTop - Theme.powerTileTop
     visible: root.isChoice
     size: Theme.powerGlyphSize
+    fineY: true
     path: root.glyph
     color: root.ink
 
