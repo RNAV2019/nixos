@@ -203,7 +203,7 @@ ControlSubView {
         note: slot.note
       }
 
-      DeviceRow {
+      ListRow {
         id: deviceRow
 
         anchors.fill: parent
@@ -213,30 +213,30 @@ ControlSubView {
         sublabel: slot.sub
         selected: slot.isConnected
         onClicked: slot.activate()
+        trailing: [
+          Button {
+            size: Button.Compact
+            kind: slot.isConnected ? Button.OnAccent : Button.Plain
+            text: slot.isConnected ? "Disconnect" : slot.isPaired ? "Connect" : slot.pairing ? "Cancel" : "Pair"
+            onClicked: slot.activate()
+          },
+          Button {
+            id: forget
 
-        Button {
-          size: Button.Compact
-          kind: slot.isConnected ? Button.OnAccent : Button.Plain
-          text: slot.isConnected ? "Disconnect" : slot.isPaired ? "Connect" : slot.pairing ? "Cancel" : "Pair"
-          onClicked: slot.activate()
-        }
-
-        Button {
-          id: forget
-
-          visible: slot.isConnected || slot.isPaired
-          size: Button.Compact
-          kind: slot.isConnected ? Button.OnAccent : Button.Plain
-          text: "Forget"
-          destructive: slot.isPaired
-          // A paired row's is revealed by the row, then held by itself; see ButtonBase.revealed.
-          revealed: slot.isConnected || deviceRow.hovered || forget.hovered
-          onClicked: {
-            var device = devices.objectFor(slot.key);
-            if (device)
-              device.forget();
+            visible: slot.isConnected || slot.isPaired
+            size: Button.Compact
+            kind: slot.isConnected ? Button.OnAccent : Button.Plain
+            text: "Forget"
+            destructive: slot.isPaired
+            // A paired row's is revealed by the row, then held by itself; see ButtonBase.revealed.
+            revealed: slot.isConnected || deviceRow.hovered || forget.hovered
+            onClicked: {
+              var device = devices.objectFor(slot.key);
+              if (device)
+                device.forget();
+            }
           }
-        }
+        ]
       }
     }
   }

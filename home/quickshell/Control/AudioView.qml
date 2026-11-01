@@ -111,7 +111,7 @@ ControlSubView {
     width: parent.width
     animated: root.active
 
-    delegate: DeviceRow {
+    delegate: ListRow {
       required property string key
       required property int nodeId
       required property string text
@@ -152,7 +152,7 @@ ControlSubView {
     width: parent.width
     animated: root.active
 
-    delegate: DeviceRow {
+    delegate: ListRow {
       required property string key
       required property int nodeId
       required property string text
@@ -227,37 +227,37 @@ ControlSubView {
         title: slot.text
       }
 
-      DeviceRow {
+      ListRow {
         anchors.fill: parent
         visible: !slot.isHeader
         label: slot.text
+        trailing: [
+          BigSlider {
+            id: streamVolume
 
-        BigSlider {
-          id: streamVolume
-
-          compact: true
-          anchors.verticalCenter: parent.verticalCenter
-          width: 200
-          height: 20
-          accessibleName: slot.text + " volume"
-          glyph: ""
-          value: slot.volume
-          dimmed: slot.muted
-          onMoved: function (v) {
-            if (slot.node && slot.node.audio)
-              slot.node.audio.volume = v;
+            compact: true
+            anchors.verticalCenter: parent.verticalCenter
+            width: 200
+            height: 20
+            accessibleName: slot.text + " volume"
+            glyph: ""
+            value: slot.volume
+            dimmed: slot.muted
+            onMoved: function (v) {
+              if (slot.node && slot.node.audio)
+                slot.node.audio.volume = v;
+            }
+          },
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 34
+            horizontalAlignment: Text.AlignRight
+            text: Math.round(Math.max(0, Math.min(1, streamVolume.displayValue)) * 100) + "%"
+            color: Theme.muted
+            font.family: Theme.monoFont
+            font.pixelSize: Theme.sectionSize
           }
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          width: 34
-          horizontalAlignment: Text.AlignRight
-          text: Math.round(Math.max(0, Math.min(1, streamVolume.displayValue)) * 100) + "%"
-          color: Theme.muted
-          font.family: Theme.monoFont
-          font.pixelSize: Theme.sectionSize
-        }
+        ]
       }
     }
   }

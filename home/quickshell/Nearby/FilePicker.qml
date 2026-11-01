@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import qs.Commons
 import qs.Services
@@ -427,106 +426,7 @@ Item {
     alpha: 0.45
   }
 
-  // One picker row: a glyph, a name, and the size or folder count. `state` styles it.
-  component PickerRow: Item {
-    id: row
-
-    property var entry: null
-    property bool current: false
-    property bool focusedRow: false
-    property bool markedRow: false
-    property bool showMeta: true
-    property bool quiet: false
-
-    signal clicked
-    signal doubleClicked
-
-    height: Theme.pickerRowHeight
-
-    readonly property string kind: entry ? (entry.dir ? "dir" : Nearby.fileKind(entry.name)) : "file"
-
-    Rectangle {
-      anchors.fill: parent
-      radius: Theme.pickerRowRadius
-      color: row.markedRow ? Theme.withAlpha(Theme.accentFill, row.focusedRow ? 0.16 : 0.09) : row.focusedRow || row.current ? Theme.withAlpha(Theme.inkPrimary, 0.06) : "transparent"
-
-      Behavior on color {
-        Tint {}
-      }
-    }
-
-    Rectangle {
-      visible: row.focusedRow
-      x: 0
-      y: (parent.height - height) / 2
-      width: Theme.pickerFocusMarkWidth
-      height: Theme.pickerFocusMarkHeight
-      radius: width / 2
-      color: Theme.accentFill
-    }
-
-    StrokeIcon {
-      x: Theme.pickerGlyphLeft
-      y: (parent.height - size) / 2
-      size: Theme.pickerGlyph
-      strokeWidth: 1.75
-      path: Nearby.glyphFor(row.kind)
-      color: Nearby.inkFor(row.kind)
-    }
-
-    Text {
-      x: Theme.pickerTextLeft
-      y: (parent.height - height) / 2
-      width: meta.x - x - 10
-      elide: Text.ElideRight
-      text: row.entry ? row.entry.name : ""
-      color: row.markedRow ? Theme.accentFill : row.quiet && !row.current ? Theme.inkSecondary : Theme.inkPrimary
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.pickerNameSize
-      font.weight: row.focusedRow || row.current ? Theme.weightSemi : Theme.weightRegular
-    }
-
-    StrokeIcon {
-      visible: row.markedRow
-      x: row.width - Theme.pickerMetaRight - size
-      y: (parent.height - size) / 2
-      size: Theme.pickerMarkSize
-      strokeWidth: 1.9
-      path: IconPaths.check
-      color: Theme.accentFill
-    }
-
-    Text {
-      id: meta
-
-      visible: row.showMeta
-      x: row.width - Theme.pickerMetaRight - (row.markedRow ? Theme.pickerMarkSize + 8 : 0) - width
-      y: (parent.height - height) / 2
-      text: !row.entry ? "" : row.entry.dir ? String(row.entry.size) : Nearby.sizeLabel(row.entry.size)
-      color: Theme.inkTertiary
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.pickerMetaSize
-      font.weight: Theme.weightMedium
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: row.clicked()
-      onDoubleClicked: row.doubleClicked()
-    }
-  }
-
-  // A column of rows on the 32 px pitch, kept scrolled so the focused row stays in view.
-  component Column_: ListView {
-    clip: true
-    spacing: Theme.pickerRowPitch - Theme.pickerRowHeight
-    boundsBehavior: Flickable.StopAtBounds
-    highlightFollowsCurrentItem: false
-    interactive: contentHeight > height
-  }
-
-  Column_ {
+  RowList {
     id: parentColumn
 
     visible: !root.blocked
@@ -534,6 +434,7 @@ Item {
     y: Theme.pickerColumnsTop
     width: Theme.pickerParentWidth
     height: root.columnsHeight
+    spacing: Theme.pickerRowPitch - Theme.pickerRowHeight
     model: parentList.entries
     currentIndex: {
       for (var i = 0; i < parentList.entries.length; i++) {
@@ -558,7 +459,7 @@ Item {
     }
   }
 
-  Column_ {
+  RowList {
     id: currentColumn
 
     visible: !root.blocked
@@ -566,6 +467,7 @@ Item {
     y: Theme.pickerColumnsTop
     width: Theme.pickerCurrentWidth
     height: root.columnsHeight
+    spacing: Theme.pickerRowPitch - Theme.pickerRowHeight
     model: root.entries
     currentIndex: root.focusIndex
     onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
@@ -603,7 +505,7 @@ Item {
     text: current.error !== "" ? current.error : "Empty folder"
     color: Theme.inkTertiary
     font.family: Theme.uiFont
-    font.pixelSize: Theme.pickerNameSize
+    font.pixelSize: Theme.rowLabelSize
   }
 
   // ---- the phone would not share its files ----
@@ -669,6 +571,7 @@ Item {
         width: preview.width
         entry: modelData
         markedRow: root.markedSet[modelData.path] === true
+        interactive: false
       }
     }
 
@@ -679,11 +582,11 @@ Item {
       text: previewList.error !== "" ? previewList.error : "Empty folder"
       color: Theme.inkTertiary
       font.family: Theme.uiFont
-      font.pixelSize: Theme.pickerNameSize
+      font.pixelSize: Theme.rowLabelSize
     }
 
     // A file previews as its picture, or a tile with its glyph (and, for text, its first lines).
-    Item {
+    RoundedClip {
       id: tile
 
       visible: preview.entry !== null && preview.kind !== "dir"
@@ -691,11 +594,7 @@ Item {
       y: root.images ? Theme.pickerWallpaperPreviewTop : 0
       width: root.images ? Theme.pickerWallpaperPreviewWidth : parent.width
       height: root.images ? Theme.pickerWallpaperPreviewHeight : Theme.pickerPreviewImageHeight
-      layer.enabled: true
-      layer.effect: MultiEffect {
-        maskEnabled: true
-        maskSource: tileMask
-      }
+      radius: root.images ? Theme.pickerWallpaperPreviewRadius : Theme.pickerPreviewRadius
 
       Rectangle {
         anchors.fill: parent
@@ -738,21 +637,6 @@ Item {
         strokeWidth: 2
         path: Nearby.glyphFor(preview.kind)
         color: Nearby.inkFor(preview.kind)
-      }
-    }
-
-    Item {
-      id: tileMask
-
-      width: tile.width
-      height: tile.height
-      visible: false
-      layer.enabled: true
-
-      Rectangle {
-        anchors.fill: parent
-        radius: root.images ? Theme.pickerWallpaperPreviewRadius : Theme.pickerPreviewRadius
-        color: "black"
       }
     }
 

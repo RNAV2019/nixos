@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import qs.Commons
@@ -18,35 +17,6 @@ Variants {
   id: root
 
   model: Quickshell.screens
-
-  // A row's ground: board rows are highlightLow under a highlightMed hairline, and take the
-  // shell's one hover step.
-  component RowGround: Rectangle {
-    property bool hovered: false
-
-    radius: Theme.phoneRowRadius
-    color: Theme.withAlpha(hovered ? Theme.highlightMed : Theme.highlightLow, hovered ? 0.6 : 0.85)
-    border.width: 1
-    border.color: Theme.withAlpha(Theme.highlightMed, 0.55)
-
-    Behavior on color {
-      Tint {}
-    }
-  }
-
-  component Label: Text {
-    color: Theme.text
-    font.family: Theme.uiFont
-    font.pixelSize: Theme.phoneLabelSize
-    elide: Text.ElideRight
-  }
-
-  component Reading: Text {
-    color: Theme.subtle
-    font.family: Theme.uiFont
-    font.pixelSize: 12
-    font.weight: Theme.weightMedium
-  }
 
   IslandSurface {
     id: win
@@ -233,14 +203,10 @@ Variants {
               }
             }
 
-            Item {
+            RoundedClip {
               anchors.fill: parent
               visible: screen.pictured
-              layer.enabled: visible
-              layer.effect: MultiEffect {
-                maskEnabled: true
-                maskSource: wallpaperMask
-              }
+              radius: screen.radius
 
               Image {
                 id: wallpaperImage
@@ -271,20 +237,6 @@ Variants {
                     color: Theme.withAlpha(Theme.base, 0.6)
                   }
                 }
-              }
-            }
-
-            Item {
-              id: wallpaperMask
-
-              anchors.fill: parent
-              visible: false
-              layer.enabled: true
-
-              Rectangle {
-                anchors.fill: parent
-                radius: screen.radius
-                color: "black"
               }
             }
 
@@ -524,34 +476,24 @@ Variants {
               }
             ]
 
-            RowGround {
+            ListRow {
               required property var modelData
 
+              kind: ListRow.Hairline
+              interactive: false
               width: parent.width
               height: Theme.phoneStatusHeight
-
-              StrokeIcon {
-                x: 15
-                anchors.verticalCenter: parent.verticalCenter
-                size: 18
-                path: modelData.glyph
-                color: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
-              }
-
+              glyph: modelData.glyph
+              glyphSize: 18
+              glyphColor: modelData.muted ? Theme.inkTertiary : modelData.level >= 0 && Phone.low ? Theme.love : Theme.accent
               // A row with a level is label, gap and bar as one block centred on the row; the
               // bar runs from the label's edge to the reading's.
-              Label {
-                x: 45
-                y: modelData.level >= 0 ? 12 : 16
-                text: modelData.label
-              }
-
-              Reading {
-                x: parent.width - 14 - width
-                y: modelData.level >= 0 ? 12 : 16
-                text: modelData.value
-                color: modelData.muted ? Theme.inkTertiary : Theme.subtle
-              }
+              label: modelData.label
+              textLeft: 45
+              labelTop: modelData.level >= 0 ? 12 : 16
+              value: modelData.value
+              valueColor: modelData.muted ? Theme.inkTertiary : Theme.subtle
+              valueTop: modelData.level >= 0 ? 12 : 16
 
               // The row's own ground is highlightLow, so the groove is the next step up.
               LevelTrack {
@@ -581,7 +523,7 @@ Variants {
           y: actions.y + actions.height + Theme.phoneNoteBarGap
           width: home.inner
           height: Theme.phoneNoteBarHeight
-          radius: Theme.phoneRowRadius
+          radius: Theme.rowRadius
           color: Theme.withAlpha(Theme.gold, 0.12)
           border.width: 1
           border.color: Theme.withAlpha(Theme.gold, 0.4)
@@ -725,39 +667,31 @@ Variants {
           Repeater {
             model: Phone.clips
 
-            RowGround {
+            ListRow {
               id: clipRow
 
               required property var modelData
 
-              width: parent.width
-              height: Theme.phoneRowHeight
-              hovered: clipHit.containsMouse
-
               readonly property bool isLink: /^[a-z]+:\/\/\S+$/i.test(modelData.preview)
 
-              StrokeIcon {
-                x: 15
-                anchors.verticalCenter: parent.verticalCenter
-                size: 18
-                path: clipRow.isLink ? Icons.link : Icons.notes
-                color: Theme.accent
+              kind: ListRow.Hairline
+              width: parent.width
+              height: Theme.phoneRowHeight
+              glyph: clipRow.isLink ? Icons.link : Icons.notes
+              glyphSize: 18
+              label: modelData.preview
+              textLeft: 47
+              textGap: 14
+              onClicked: {
+                Phone.copyClip(clipRow.modelData.id);
+                home.copied = clipRow.modelData.id;
+                copiedReset.restart();
               }
-
-              Label {
-                x: 47
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - x - 44
-                text: modelData.preview
-              }
-
-              StrokeIcon {
-                x: parent.width - 14 - width
-                anchors.verticalCenter: parent.verticalCenter
+              trailing: StrokeIcon {
                 size: 16
-                path: home.copied === modelData.id ? Icons.check : Icons.copy
-                color: home.copied === modelData.id ? Theme.accent : Theme.text
-                opacity: clipHit.containsMouse || home.copied === modelData.id ? 1 : 0
+                path: home.copied === clipRow.modelData.id ? Icons.check : Icons.copy
+                color: home.copied === clipRow.modelData.id ? Theme.accent : Theme.text
+                opacity: clipRow.hovered || home.copied === clipRow.modelData.id ? 1 : 0
 
                 Behavior on opacity {
                   Morph {
@@ -765,31 +699,17 @@ Variants {
                   }
                 }
               }
-
-              MouseArea {
-                id: clipHit
-
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  Phone.copyClip(clipRow.modelData.id);
-                  home.copied = clipRow.modelData.id;
-                  copiedReset.restart();
-                }
-              }
             }
           }
 
-          RowGround {
+          ListRow {
+            kind: ListRow.Hairline
+            interactive: false
             width: parent.width
             height: Theme.phoneRowHeight
             visible: Phone.clips.length === 0
-
-            Reading {
-              anchors.centerIn: parent
-              text: "Nothing copied yet"
-            }
+            value: "Nothing copied yet"
+            valueCentred: true
           }
         }
 
@@ -820,14 +740,28 @@ Variants {
           Repeater {
             model: Phone.notifications.slice(0, Theme.phoneNotesMax)
 
-            RowGround {
+            ListRow {
               id: noteRow
 
               required property var modelData
 
+              readonly property bool dismissShown: modelData.dismissable && (noteRow.hovered || dismissButton.hovered)
+
+              kind: ListRow.Hairline
+              interactive: false
+              hoverTint: true
               width: parent.width
               height: Theme.phoneNoteHeight
-              hovered: noteHit.containsMouse
+              label: [modelData.app, modelData.title].filter(s => s !== "").join(" · ")
+              labelWeight: Theme.weightSemi
+              sublabel: modelData.text
+              sublabelSize: 12
+              sublabelColor: Theme.subtle
+              textLeft: 55
+              textRight: 64
+              subRight: 20
+              value: noteRow.dismissShown ? "" : win.ago(modelData.time)
+              valueTop: 11
 
               Rectangle {
                 x: 13
@@ -845,39 +779,6 @@ Variants {
                 }
               }
 
-              Label {
-                x: 55
-                y: 11
-                width: parent.width - x - 64
-                text: [noteRow.modelData.app, noteRow.modelData.title].filter(s => s !== "").join(" · ")
-                font.weight: Theme.weightSemi
-              }
-
-              Text {
-                x: 55
-                y: 29
-                width: parent.width - x - 20
-                elide: Text.ElideRight
-                text: noteRow.modelData.text
-                color: Theme.subtle
-                font.family: Theme.uiFont
-                font.pixelSize: 12
-              }
-
-              Reading {
-                x: parent.width - 14 - width
-                y: 11
-                visible: !dismissButton.visible
-                text: win.ago(noteRow.modelData.time)
-              }
-
-              MouseArea {
-                id: noteHit
-
-                anchors.fill: parent
-                hoverEnabled: true
-              }
-
               Button {
                 id: dismissButton
 
@@ -888,7 +789,9 @@ Variants {
                 icon: Icons.close
                 hitSlop: 6
                 accessibleName: "Dismiss notification"
-                visible: noteRow.modelData.dismissable && noteHit.containsMouse
+                visible: noteRow.modelData.dismissable
+                // Shown by the row, then held by itself; see ButtonBase.revealed.
+                revealed: noteRow.dismissShown
                 onClicked: Phone.dismiss(noteRow.modelData.id)
               }
             }

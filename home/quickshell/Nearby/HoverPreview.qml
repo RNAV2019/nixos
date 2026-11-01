@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -113,15 +112,9 @@ Item {
     }
   }
 
-  Item {
-    id: content
-
+  RoundedClip {
     anchors.fill: parent
-    layer.enabled: true
-    layer.effect: MultiEffect {
-      maskEnabled: true
-      maskSource: mask
-    }
+    radius: Theme.rowRadius
 
     Rectangle {
       anchors.fill: parent
@@ -180,24 +173,10 @@ Item {
     }
   }
 
-  Item {
-    id: mask
-
-    anchors.fill: parent
-    visible: false
-    layer.enabled: true
-
-    Rectangle {
-      anchors.fill: parent
-      radius: Theme.nearbyRowRadius
-      color: "black"
-    }
-  }
-
   // The edge rides on top of the masked content, so the mask never cuts it.
   Rectangle {
     anchors.fill: parent
-    radius: Theme.nearbyRowRadius
+    radius: Theme.rowRadius
     color: "transparent"
     border.width: 1
     border.color: Theme.withAlpha(Theme.separator, 0.7)

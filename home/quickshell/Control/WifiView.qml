@@ -112,7 +112,7 @@ ControlSubView {
     title: "Wired"
   }
 
-  DeviceRow {
+  ListRow {
     width: parent.width
     visible: root.wired !== null
     glyph: Icons.ethernet
@@ -127,18 +127,12 @@ ControlSubView {
     title: "Wi-Fi network"
   }
 
-  DeviceRow {
+  ListRow {
     id: activeRow
 
     width: parent.width
     visible: root.activeNetwork !== null
-    icon: Component {
-      WifiMark {
-        strength: root.activeNetwork ? root.activeNetwork.signalStrength : 0
-        connected: true
-        color: activeRow.glyphColor
-      }
-    }
+    glyph: Icons.wifiGlyph(root.activeNetwork ? root.activeNetwork.signalStrength : 0, true)
     label: root.activeNetwork ? root.activeNetwork.name : ""
     sublabel: {
       if (!root.activeNetwork)
@@ -149,20 +143,20 @@ ControlSubView {
       return parts.join(" · ");
     }
     selected: true
-
-    Button {
-      size: Button.Compact
-      text: "Disconnect"
-      kind: Button.OnAccent
-      onClicked: NetworkInfo.disconnect(root.activeNetwork)
-    }
-
-    Button {
-      size: Button.Compact
-      text: "Forget"
-      kind: Button.OnAccent
-      onClicked: NetworkInfo.forget(root.activeNetwork)
-    }
+    trailing: [
+      Button {
+        size: Button.Compact
+        text: "Disconnect"
+        kind: Button.OnAccent
+        onClicked: NetworkInfo.disconnect(root.activeNetwork)
+      },
+      Button {
+        size: Button.Compact
+        text: "Forget"
+        kind: Button.OnAccent
+        onClicked: NetworkInfo.forget(root.activeNetwork)
+      }
+    ]
   }
 
   SectionLabel {
@@ -203,18 +197,12 @@ ControlSubView {
       width: networks.width
       spacing: Theme.controlRowGap
 
-      DeviceRow {
+      ListRow {
         id: row
 
         width: parent.width
         // Any network in range lights the dot and inner bar, as the island does for a link.
-        icon: Component {
-          WifiMark {
-            strength: entry.strength
-            connected: true
-            color: row.glyphColor
-          }
-        }
+        glyph: Icons.wifiGlyph(entry.strength, true)
         label: entry.name
         onClicked: {
           if (entry.needsPassword)
@@ -223,26 +211,26 @@ ControlSubView {
             networks.objectFor(entry.key).connectWithSettings();
         }
 
-        Button {
-          size: Button.Compact
-          kind: Button.Plain
-          text: entry.busy ? "…" : "Connect"
-          onClicked: {
-            if (entry.needsPassword)
-              root.pendingSsid = entry.name;
-            else
-              networks.objectFor(entry.key).connectWithSettings();
+        trailing: [
+          Button {
+            size: Button.Compact
+            kind: Button.Plain
+            text: entry.busy ? "…" : "Connect"
+            onClicked: {
+              if (entry.needsPassword)
+                root.pendingSsid = entry.name;
+              else
+                networks.objectFor(entry.key).connectWithSettings();
+            }
+          },
+          StrokeIcon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: entry.secured
+            size: Theme.sectionSize
+            path: Icons.lock
+            color: Theme.muted
           }
-        }
-
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          visible: entry.secured
-          text: Icons.lock
-          color: Theme.muted
-          font.family: Theme.iconFont
-          font.pixelSize: Theme.sectionSize
-        }
+        ]
       }
 
       Item {

@@ -1,0 +1,230 @@
+import QtQuick
+import qs.Commons
+
+// The shell's list row, on ButtonBase. Grouped is the control centre's: a pill, or a stack of
+// them rounding only the group's outer corners, that fills with accent when chosen. Hairline is
+// the board's row: highlightLow under a 1 px highlightMed edge, radius 14. Flat has no ground of
+// its own, for the file picker's columns. All three step highlightMed to the shell's hover alpha
+// and press like any control; a row that only reports sets `interactive: false`.
+//
+// A row lays out a lead glyph, a label with an optional line under it, a reading at the far end
+// and a trailing slot; anything else a feature draws is a child, placed by hand.
+ButtonBase {
+  id: root
+
+  enum Kind {
+    Grouped,
+    Hairline,
+    Flat
+  }
+
+  property int kind: ListRow.Grouped
+
+  // Rows stacked as one group round only the group's outer corners: "first", "middle",
+  // "last", "only" for a group of one, or "single" for a row on its own (the default, a full pill).
+  property string groupPosition: "single"
+  // Grouped: chosen, in accent. Hairline: wearing the arrival accent.
+  property bool selected: false
+  property bool accented: false
+  property bool showCheck: false
+  // Hairline: 0..1 of the row washed in accent from the left, or -1 for none.
+  property real fillProgress: -1
+  // Flat: the row's ground, whatever the feature says it is.
+  property color flatColor: "transparent"
+  // Whether the ground steps to the hover colour. A row that reports can still be hovered.
+  property bool hoverTint: interactive
+
+  property string glyph: ""
+  property color glyphColor: selected ? Theme.inkOnAccent : kind === ListRow.Grouped ? Theme.inkSecondary : Theme.accent
+  property real glyphSize: Theme.controlTileGlyphSize
+  property real glyphStroke: 1.75
+  property real glyphLeft: kind === ListRow.Grouped ? Theme.controlRowInset : 15
+
+  property string label: ""
+  property string sublabel: ""
+  property string value: ""
+  property color labelColor: selected ? Theme.inkOnAccent : Theme.inkPrimary
+  property color valueColor: Theme.subtle
+  property real labelSize: kind === ListRow.Grouped ? Theme.controlTileLabelSize : Theme.rowLabelSize
+  property int labelWeight: sublabel !== "" ? Theme.weightSemi : Theme.weightRegular
+  property real valueSize: 12
+  property real sublabelSize: Theme.controlTileSubSize
+  property color sublabelColor: selected ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
+  property int valueWeight: Theme.weightMedium
+  property int elide: Text.ElideRight
+  // Where the text starts, and the room it leaves at the far end: the reading's or the slot's
+  // edge less `textGap`, unless `textRight` says how much to leave. -1 and the label's top
+  // centre it (or lay it over its second line).
+  property real textLeft: glyph !== "" ? glyphLeft + 30 : glyphLeft + 6
+  property real textGap: 12
+  property real textRight: -1
+  property real subRight: textRight
+  property real labelTop: -1
+  property real valueTop: -1
+  property real valueInset: 14
+  property bool valueCentred: false
+  // Space between the reading and a trailing slot.
+  property real valueGap: 8
+  property real trailInset: kind === ListRow.Grouped ? 8 : 14
+
+  // What sits at the far end: buttons, a switch, a mark. Laid out right to left.
+  property alias trailing: slot.data
+  default property alias content: body.data
+
+  readonly property real groupRadius: Theme.controlRowGroupRadius
+  readonly property real cornerRadius: kind === ListRow.Grouped ? Theme.controlRowRadius : kind === ListRow.Hairline ? Theme.rowRadius : Theme.pickerRowRadius
+  readonly property bool tinted: hovered && hoverTint
+  readonly property real farEdge: Math.min(valueText.visible ? valueText.x : Infinity, slot.x)
+
+  implicitHeight: kind === ListRow.Grouped ? Theme.controlRowHeight : kind === ListRow.Hairline ? Theme.phoneRowHeight : Theme.pickerRowHeight
+  ringRadius: cornerRadius
+  Accessible.name: accessibleName !== "" ? accessibleName : label
+  Accessible.description: sublabel
+
+  Rectangle {
+    anchors.fill: parent
+    radius: root.cornerRadius
+    topLeftRadius: root.kind !== ListRow.Grouped || root.groupPosition === "single" ? radius : root.groupPosition === "first" || root.groupPosition === "only" ? root.groupRadius : 0
+    topRightRadius: topLeftRadius
+    bottomLeftRadius: root.kind !== ListRow.Grouped || root.groupPosition === "single" ? radius : root.groupPosition === "last" || root.groupPosition === "only" ? root.groupRadius : 0
+    bottomRightRadius: bottomLeftRadius
+    color: {
+      if (root.kind === ListRow.Flat)
+        return root.flatColor;
+      if (root.selected && root.kind === ListRow.Grouped)
+        return Theme.accent;
+      if (root.accented)
+        return Theme.withAlpha(Theme.accentFill, 0.1);
+      var alpha = root.kind === ListRow.Grouped ? Theme.surfaceRestAlpha : Theme.hairlineGroundAlpha;
+      return Theme.withAlpha(root.tinted ? Theme.highlightMed : Theme.highlightLow, root.tinted ? Theme.groundHoverAlpha : alpha);
+    }
+
+    Behavior on color {
+      Tint {}
+    }
+  }
+
+  RoundedClip {
+    anchors.fill: parent
+    visible: root.fillProgress >= 0
+    radius: root.cornerRadius
+
+    Rectangle {
+      width: parent.width * Theme.clamp01(root.fillProgress)
+      height: parent.height
+      color: Theme.withAlpha(Theme.accentFill, 0.16)
+
+      Behavior on width {
+        enabled: !Theme.reduceMotion
+
+        Morph {
+          duration: Theme.duration(Theme.morphProgress)
+        }
+      }
+    }
+  }
+
+  Rectangle {
+    anchors.fill: parent
+    visible: root.kind === ListRow.Hairline
+    radius: root.cornerRadius
+    color: "transparent"
+    border.width: 1
+    border.color: root.accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.withAlpha(Theme.highlightMed, Theme.rowBorderAlpha)
+
+    Behavior on border.color {
+      Tint {}
+    }
+  }
+
+  StrokeIcon {
+    x: root.glyphLeft
+    y: (root.height - size) / 2
+    visible: root.glyph !== ""
+    size: root.glyphSize
+    strokeWidth: root.glyphStroke
+    path: root.glyph
+    color: root.glyphColor
+  }
+
+  Text {
+    id: labelText
+
+    x: root.textLeft
+    y: root.labelTop >= 0 ? root.labelTop : root.sublabel !== "" ? root.height / 2 - 17 : (root.height - height) / 2
+    width: Math.max(0, root.textRight >= 0 ? root.width - x - root.textRight : root.farEdge - x - root.textGap)
+    text: root.label
+    color: root.labelColor
+    font.family: Theme.uiFont
+    font.pixelSize: root.labelSize
+    font.weight: root.labelWeight
+    elide: root.elide
+  }
+
+  Text {
+    x: root.textLeft
+    y: root.height / 2 + 1
+    width: Math.max(0, root.subRight >= 0 ? root.width - x - root.subRight : labelText.width)
+    visible: root.sublabel !== ""
+    text: root.sublabel
+    color: root.sublabelColor
+    font.family: Theme.uiFont
+    font.pixelSize: root.sublabelSize
+    elide: Text.ElideRight
+  }
+
+  Text {
+    id: valueText
+
+    x: root.valueCentred ? (root.width - width) / 2 : (slot.width > 0 ? slot.x - root.valueGap : root.width - root.valueInset) - width
+    y: root.valueTop >= 0 ? root.valueTop : (root.height - height) / 2
+    visible: text !== ""
+    text: root.value
+    color: root.valueColor
+    font.family: Theme.uiFont
+    font.pixelSize: root.valueSize
+    font.weight: root.valueWeight
+  }
+
+  Item {
+    id: body
+
+    anchors.fill: parent
+  }
+
+  Row {
+    id: slot
+
+    anchors.right: check.visible ? check.left : parent.right
+    anchors.rightMargin: root.trailInset
+    anchors.verticalCenter: parent.verticalCenter
+    layoutDirection: Qt.RightToLeft
+    spacing: 6
+  }
+
+  StrokeIcon {
+    id: check
+
+    anchors.right: parent.right
+    anchors.rightMargin: Theme.controlRowInset
+    anchors.verticalCenter: parent.verticalCenter
+    visible: root.showCheck && root.selected
+    opacity: visible ? 1 : 0
+    scale: visible ? 1 : 0.5
+    size: 16
+    path: Icons.check
+    color: Theme.inkOnAccent
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.duration(Theme.morphState)
+      }
+    }
+
+    Behavior on scale {
+      Morph {
+        duration: Theme.morphState
+      }
+    }
+  }
+}

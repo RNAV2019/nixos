@@ -180,7 +180,7 @@ Scope {
           text: root.offer && root.offer.peer ? root.offer.peer : "Unknown device"
           color: Theme.inkPrimary
           font.family: Theme.uiFont
-          font.pixelSize: Theme.nearbyRowNameSize
+          font.pixelSize: Theme.rowLabelSize
           font.weight: Theme.weightSemi
         }
 

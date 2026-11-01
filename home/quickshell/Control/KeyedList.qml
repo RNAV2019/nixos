@@ -17,6 +17,9 @@ Item {
   // that its plain fields cannot: connecting, pairing, choosing a default.
   property var objects: ({})
 
+  // The space between rows; the control centre's lists keep its row gap.
+  property real gap: Theme.controlRowGap
+
   // False while the view is off screen: rows then change without moving, as they always did.
   property bool animated: true
 
@@ -79,7 +82,7 @@ Item {
     width: root.width
     height: 4096
     model: root.store
-    spacing: Theme.controlRowGap
+    spacing: root.gap
     interactive: false
     // No current row: a view with one hands it the focus whenever the rows around it change,
     // which closed a password field that was being typed in.

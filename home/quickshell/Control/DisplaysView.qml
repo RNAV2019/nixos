@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 import qs.Control
 import qs.Services
@@ -464,7 +463,7 @@ ControlSubView {
 
       model: [root.panel, root.external].filter(m => m !== null)
 
-      DeviceRow {
+      ListRow {
         required property var modelData
         required property int index
 
@@ -477,23 +476,24 @@ ControlSubView {
         accessibleName: label + (modelData.name === root.hostScreen ? ", showing this panel" : "")
 
         // The slot runs right to left: the dot sits at the far end, the workspaces before it.
-        Rectangle {
-          anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-          width: Theme.displaysHereDot
-          height: width
-          radius: width / 2
-          color: modelData.name === root.hostScreen ? Theme.accent : "transparent"
-        }
-
-        Text {
-          anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-          rightPadding: 4
-          text: root.workspacesFor(modelData)
-          color: Theme.subtle
-          font.family: Theme.uiFont
-          font.pixelSize: 12
-          font.weight: Theme.weightMedium
-        }
+        trailing: [
+          Rectangle {
+            anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+            width: Theme.displaysHereDot
+            height: width
+            radius: width / 2
+            color: modelData.name === root.hostScreen ? Theme.accent : "transparent"
+          },
+          Text {
+            anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+            rightPadding: 4
+            text: root.workspacesFor(modelData)
+            color: Theme.subtle
+            font.family: Theme.uiFont
+            font.pixelSize: 12
+            font.weight: Theme.weightMedium
+          }
+        ]
       }
     }
   }
@@ -542,13 +542,9 @@ ControlSubView {
       MicroSpring {}
     }
 
-    Item {
+    RoundedClip {
       anchors.fill: parent
-      layer.enabled: true
-      layer.effect: MultiEffect {
-        maskEnabled: true
-        maskSource: tileMask
-      }
+      radius: Theme.displaysTileRadius
 
       Rectangle {
         anchors.fill: parent
@@ -568,20 +564,6 @@ ControlSubView {
       Rectangle {
         anchors.fill: parent
         color: Theme.withAlpha(Theme.surface, Theme.displaysTileVeil)
-      }
-    }
-
-    Item {
-      id: tileMask
-
-      anchors.fill: parent
-      visible: false
-      layer.enabled: true
-
-      Rectangle {
-        anchors.fill: parent
-        radius: Theme.displaysTileRadius
-        color: "black"
       }
     }
 
