@@ -105,6 +105,20 @@ Singleton {
   readonly property var batteryCharging: ["battery_android_bolt"]
   readonly property var batteryDefault: ["battery_android_0", "battery_android_1", "battery_android_2", "battery_android_3", "battery_android_4", "battery_android_5", "battery_android_6", "battery_android_full"]
 
+  // The Wi-Fi wedge filled to a signal strength (0..1), or struck through with no link.
+  function wifiGlyph(strength, connected) {
+    return connected ? step(wifi, strength * 100) : networkOff;
+  }
+
+  function bluetoothGlyph(off, connected) {
+    return off ? bluetoothOff : connected ? bluetoothConnected : bluetoothOn;
+  }
+
+  // The media card's transport marks: "play", "pause", "next" or "previous".
+  function transportGlyph(kind) {
+    return kind === "pause" ? pause : kind === "next" ? next : kind === "previous" ? previous : play;
+  }
+
   function step(icons, percent) {
     if (!icons || icons.length === 0)
       return "";

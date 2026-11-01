@@ -109,9 +109,8 @@ Item {
     // The same third the second row divides the span into; the remainder lands on Audio.
     width: root.thirdWidth
     label: "Wi-Fi"
-    // Ethernet keeps its font glyph; every Wi-Fi state draws the island's arcs.
-    glyph: NetworkInfo.onEthernet ? Icons.ethernet : ""
-    icon: NetworkInfo.onEthernet ? null : wifiGlyph
+    glyph: NetworkInfo.onEthernet ? Icons.ethernet : Icons.wifiGlyph(NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.signalStrength : 0, Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
+    glyphDimmed: !NetworkInfo.onEthernet && !(Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
     sublabel: {
       if (NetworkInfo.onEthernet)
         return "Ethernet";
@@ -119,22 +118,11 @@ Item {
         return "Off";
       return NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.name : "Not connected";
     }
-    on: NetworkInfo.onEthernet || (Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
-    keyFocused: root.keyboardIndex === 0
+    active: NetworkInfo.onEthernet || (Networking.wifiEnabled && NetworkInfo.activeNetwork !== null)
+    current: root.keyboardIndex === 0
     opensView: true
     onToggled: Networking.wifiEnabled = !Networking.wifiEnabled
     onOpened: root.opened("wifi")
-  }
-
-  // The island's Wi-Fi mark at the tile's glyph size, inked like the glyph it replaces.
-  Component {
-    id: wifiGlyph
-
-    WifiMark {
-      strength: NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.signalStrength : 0
-      connected: Networking.wifiEnabled && NetworkInfo.activeNetwork !== null
-      color: wifi.glyphColor
-    }
   }
 
   Tile {
@@ -146,8 +134,8 @@ Item {
     label: "Audio"
     glyph: Volume.glyphFor(root.sink)
     sublabel: root.sink ? (root.sink.nickname || root.sink.description || root.sink.name) : "No output"
-    on: root.sink !== null && root.sink.audio !== null && !root.sink.audio.muted
-    keyFocused: root.keyboardIndex === 1
+    active: root.sink !== null && root.sink.audio !== null && !root.sink.audio.muted
+    current: root.keyboardIndex === 1
     opensView: true
     onToggled: {
       if (root.sink && root.sink.audio)
@@ -166,7 +154,7 @@ Item {
     y: root.tilesTop + Theme.controlTileHeight + Theme.controlTileGap
     width: root.thirdWidth
     label: "Bluetooth"
-    icon: bluetoothGlyph
+    glyph: Icons.bluetoothGlyph(!root.adapter || !root.adapter.enabled, root.connectedDevice !== null)
     sublabel: {
       if (!root.adapter)
         return "No adapter";
@@ -174,24 +162,12 @@ Item {
         return "Off";
       return root.connectedDevice ? root.connectedDevice.name : "On";
     }
-    on: root.adapter !== null && root.adapter.enabled
-    keyFocused: root.keyboardIndex === 2
+    active: root.adapter !== null && root.adapter.enabled
+    current: root.keyboardIndex === 2
     opensView: true
     onToggled: if (root.adapter)
       root.adapter.enabled = !root.adapter.enabled
     onOpened: root.opened("bluetooth")
-  }
-
-  // Drawn on the Wi-Fi mark's grid and scale, so the tiles' two radios match.
-  Component {
-    id: bluetoothGlyph
-
-    BluetoothGlyph {
-      scale: Theme.controlTileGlyphSize / implicitWidth
-      color: bluetooth.glyphColor
-      off: !root.adapter || !root.adapter.enabled
-      connected: root.connectedDevice !== null
-    }
   }
 
   Tile {
@@ -203,8 +179,8 @@ Item {
     label: "Peace"
     glyph: NotificationStore.peace ? Icons.peaceOn : Icons.peaceOff
     sublabel: NotificationStore.peace ? "On" : "Off"
-    on: NotificationStore.peace
-    keyFocused: root.keyboardIndex === 3
+    active: NotificationStore.peace
+    current: root.keyboardIndex === 3
     onToggled: NotificationStore.peace = !NotificationStore.peace
   }
 
@@ -221,9 +197,9 @@ Item {
         return "Unavailable";
       return NightLight.enabled ? NightLight.temperature + "K" : "Off";
     }
-    on: NightLight.enabled
-    keyFocused: root.keyboardIndex === 4
-    opacity: NightLight.available ? 1 : 0.5
+    active: NightLight.enabled
+    current: root.keyboardIndex === 4
+    enabled: NightLight.available
     onToggled: if (NightLight.available)
       NightLight.toggle()
   }
@@ -237,8 +213,8 @@ Item {
     label: Recorder.recording ? "Recording" : "Record"
     glyph: Recorder.recording ? Icons.stop : Icons.record
     sublabel: Recorder.status
-    on: Recorder.busy
-    keyFocused: root.keyboardIndex === 7
+    active: Recorder.busy
+    current: root.keyboardIndex === 7
     onToggled: {
       if (Recorder.busy)
         Recorder.stop();
@@ -257,7 +233,7 @@ Item {
     label: "Displays"
     glyph: Icons.monitor
     sublabel: Displays.external ? Displays.count + (Displays.count === 1 ? " display" : " displays") : "Built-in"
-    keyFocused: root.keyboardIndex === 5
+    current: root.keyboardIndex === 5
     opensView: true
     onToggled: root.opened("displays")
     onOpened: root.opened("displays")
@@ -272,36 +248,25 @@ Item {
     y: displays.y
     width: root.thirdWidth
     label: "Charging"
-    icon: chargeGlyph
+    glyph: {
+      switch (ChargeMode.mode) {
+      case "Fast":
+        return IconPaths.zap;
+      case "Long_Life":
+        return IconPaths.leaf;
+      default:
+        return IconPaths.battery;
+      }
+    }
     sublabel: ChargeMode.available ? ChargeMode.label : "Unavailable"
-    on: ChargeMode.limiting
-    keyFocused: root.keyboardIndex === 6
-    opacity: ChargeMode.available ? 1 : 0.5
+    active: ChargeMode.limiting
+    current: root.keyboardIndex === 6
+    enabled: ChargeMode.available
     accessibleName: "Charging mode"
     Accessible.role: Accessible.Button
     Accessible.checkable: false
     Accessible.description: ChargeMode.limiting ? "Long life: stops charging at about 80 % to preserve the battery" : ChargeMode.label
     onToggled: ChargeMode.cycle()
-  }
-
-  Component {
-    id: chargeGlyph
-
-    StrokeIcon {
-      size: Theme.controlTileGlyphSize
-      strokeWidth: 1.75
-      color: charge.glyphColor
-      path: {
-        switch (ChargeMode.mode) {
-        case "Fast":
-          return IconPaths.zap;
-        case "Long_Life":
-          return IconPaths.leaf;
-        default:
-          return IconPaths.battery;
-        }
-      }
-    }
   }
 
   VolumeRow {

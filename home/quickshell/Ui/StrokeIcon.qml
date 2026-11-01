@@ -16,6 +16,9 @@ Item {
   property color color: "black"
   property real strokeWidth: size * 2 / 24
   property bool filled: false
+  // Centre a Material glyph on its ink rather than its advance, for glyphs that pad or overhang
+  // their cell (the volume ladder pads two steps with a trailing space).
+  property bool inkCentred: false
 
   // Path data always starts with a moveto; a ligature name never does.
   readonly property bool isGlyph: /^[a-z0-9_]+$/.test(path)
@@ -23,8 +26,18 @@ Item {
   implicitWidth: size
   implicitHeight: size
 
+  TextMetrics {
+    id: ink
+
+    font: glyphText.font
+    text: glyphText.text
+  }
+
   Text {
-    anchors.centerIn: parent
+    id: glyphText
+
+    x: root.inkCentred ? (root.width - ink.tightBoundingRect.width) / 2 - ink.tightBoundingRect.x : (root.width - width) / 2
+    y: (root.height - height) / 2
     visible: root.isGlyph
     text: root.isGlyph ? root.path : ""
     color: root.color

@@ -54,9 +54,9 @@ Variants {
           label: modelData.label
           colors: modelData.palette
           glide: panel.carousel.glide
-          selected: index === panel.selected
+          current: index === panel.selected
           active: index === Themes.index
-          onActivated: panel.choose(index)
+          onClicked: panel.choose(index)
         }
       }
     }

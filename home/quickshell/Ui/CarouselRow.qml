@@ -13,7 +13,7 @@ Item {
   property var model: []
   property int selected: 0
 
-  // The tile, as a Component whose root is a TileBase. The row leaves placement, selection
+  // The tile, as a Component whose root is a carousel Tile. The row leaves placement, selection
   // state and activation to the picker, since what Enter does differs per picker.
   property Component tile
 

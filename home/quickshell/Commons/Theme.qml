@@ -120,7 +120,6 @@ Singleton {
 
   readonly property real fillNormal: 0.04
   readonly property real fillSelected: 0.18
-  readonly property real fillPressed: 0.22
   readonly property real borderNormal: 0.4
   readonly property real borderSelected: 1.0
 
@@ -198,6 +197,17 @@ Singleton {
   readonly property real hairlineAlpha: 0.7
   // A control that cannot be used is the same control at this opacity.
   readonly property real disabledAlpha: 0.4
+  // Tiles and grouped rows rest at `surfaceRestAlpha` and hover to `groundHoverAlpha`; a hairline
+  // row or a device disc rests a little lower, under its own edge. Filled tiles lift their fill by
+  // `tileLift`, and a chosen tile darkens by `tileDim` while pressed.
+  readonly property real surfaceRestAlpha: 0.9
+  readonly property real hairlineGroundAlpha: 0.85
+  readonly property real rowBorderAlpha: 0.55
+  readonly property real tileLift: 1.08
+  readonly property real tileDim: 1.12
+  // A hairline row's corner and a list's label size, wherever the shell draws one.
+  readonly property int rowRadius: 14
+  readonly property real rowLabelSize: 12.5
   readonly property int pillHeightCompact: 26
   readonly property int pillHeightRegular: 30
   readonly property int pillHeightLarge: 44
@@ -422,8 +432,6 @@ Singleton {
   readonly property int powerGlyphSize: 22
   readonly property int powerLabelTop: 68
   readonly property int powerLabelSize: 12
-  readonly property real powerTileFillAlpha: 0.9
-  readonly property real powerTileBorderAlpha: 0.7
 
   // The island pill row (Ui/IslandPill.qml): every pill that is a single 42 px line, in the
   // eight layouts of the board's `Island pill` set. Left edges and widths are in px from the
@@ -830,7 +838,6 @@ Singleton {
   readonly property int nearbySectionTop: 22
   readonly property int nearbySectionToRows: 6
   readonly property int nearbyFileHeight: 40
-  readonly property int nearbyFileRadius: 14
   readonly property int nearbyFileGap: 6
   readonly property int nearbyFileThumb: 28
   readonly property int nearbyFileThumbRadius: 8
@@ -838,7 +845,6 @@ Singleton {
   readonly property int nearbyFileTextLeft: 48
   readonly property int nearbyFileRemove: 12
   readonly property int nearbyFileRemoveRight: 16
-  readonly property int nearbyFileSizeRight: 40
   // Staged rows past this many scroll inside the list rather than growing the panel.
   readonly property int nearbyFilesMax: 4
 
@@ -855,7 +861,7 @@ Singleton {
   readonly property real nearbyDeviceSubSize: 10.5
   readonly property real nearbyDeviceSubGap: 2
   readonly property int nearbyDeviceSubHeight: 13
-  readonly property real nearbyDeviceDim: 0.35
+  readonly property int nearbyDeviceNameLine: 14
   readonly property int nearbyRingSize: 64
   readonly property real nearbyRingWidth: 2.5
   readonly property int nearbyCancelSize: 20
@@ -891,7 +897,6 @@ Singleton {
   readonly property int pickerTextLeft: 36
   readonly property int pickerMetaRight: 12
   readonly property int pickerMarkSize: 13
-  readonly property real pickerNameSize: 12.5
   readonly property int pickerMetaSize: 11
   readonly property int pickerFocusMarkWidth: 3
   readonly property int pickerFocusMarkHeight: 16
@@ -938,9 +943,7 @@ Singleton {
   readonly property int nearbyReceivedGap: 24
   readonly property int nearbyReceivedAfterCard: 22
   readonly property int nearbyRowHeight: 44
-  readonly property int nearbyRowRadius: 14
   readonly property int nearbyRowGap: 8
-  readonly property real nearbyRowNameSize: 12.5
   readonly property int nearbyRowMetaSize: 12
   readonly property int nearbyRowGlyph: 18
   readonly property int nearbyRowTextLeft: 48
@@ -1138,9 +1141,7 @@ Singleton {
   readonly property int phoneRowHeight: 44
   readonly property int phoneNoteHeight: 56
   readonly property int phoneRowGap: 8
-  readonly property int phoneRowRadius: 14
   readonly property int phoneSectionGap: 20
-  readonly property real phoneLabelSize: 12.5
   readonly property real phoneCaptionSize: 11.5
   readonly property int phoneClipsMax: 3
   // The note Browse leaves when the phone refuses: 36 tall, 8 under the actions, and the rest

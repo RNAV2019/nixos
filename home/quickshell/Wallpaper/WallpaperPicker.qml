@@ -44,7 +44,7 @@ Variants {
       }
 
       tile: Component {
-        WallpaperTile {
+        Tile {
           required property int index
           required property var modelData
 
@@ -52,11 +52,14 @@ Variants {
           y: panel.carousel.tileY(index)
           width: panel.carousel.tileWidth(index)
           height: panel.carousel.tileHeight(index)
-          source: "file://" + modelData.real
+          kind: Tile.Carousel
+          noun: "wallpaper"
+          accessibleName: image
+          image: "file://" + modelData.real
           glide: panel.carousel.glide
-          selected: index === panel.selected
+          current: index === panel.selected
           active: index === Wallpapers.index
-          onActivated: panel.choose(index)
+          onClicked: panel.choose(index)
         }
       }
     }

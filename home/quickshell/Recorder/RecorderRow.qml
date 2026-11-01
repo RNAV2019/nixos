@@ -22,7 +22,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: Theme.recorderRowRadius
-    color: Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha)
+    color: Theme.withAlpha(Theme.highlightLow, Theme.surfaceRestAlpha)
   }
 
   Text {

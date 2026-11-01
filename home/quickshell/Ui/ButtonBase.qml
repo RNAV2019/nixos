@@ -9,6 +9,9 @@ Item {
 
   property string accessibleName: ""
   property int accessibleRole: Accessible.Button
+  // False for a control that only reports: it still tracks the pointer, but takes no click, no
+  // press, no key and no tab stop, and shows the arrow.
+  property bool interactive: true
   property bool checkable: false
   property bool checked: false
 
@@ -23,6 +26,7 @@ Item {
   property bool revealed: true
 
   signal clicked
+  signal doubleClicked
 
   readonly property bool hovered: area.containsMouse && root.enabled
   readonly property bool pressed: area.pressed
@@ -31,11 +35,11 @@ Item {
   property bool pointerFocused: false
 
   function activate() {
-    if (root.enabled && root.revealed)
+    if (root.enabled && root.revealed && root.interactive)
       root.clicked();
   }
 
-  activeFocusOnTab: true
+  activeFocusOnTab: root.interactive
   Accessible.role: root.accessibleRole
   Accessible.name: root.accessibleName
   Accessible.checkable: root.checkable
@@ -83,12 +87,15 @@ Item {
     anchors.fill: parent
     anchors.margins: -root.hitSlop
     hoverEnabled: true
-    cursorShape: root.enabled && root.revealed ? Qt.PointingHandCursor : Qt.ArrowCursor
+    acceptedButtons: root.interactive ? Qt.LeftButton : Qt.NoButton
+    cursorShape: root.interactive && root.enabled && root.revealed ? Qt.PointingHandCursor : Qt.ArrowCursor
     onPressed: if (root.activeFocusOnTab) {
       root.pointerFocused = true;
       root.forceActiveFocus();
     }
     onClicked: root.activate()
+    onDoubleClicked: if (root.interactive && root.enabled && root.revealed)
+      root.doubleClicked()
   }
 
   Keys.onPressed: function (event) {

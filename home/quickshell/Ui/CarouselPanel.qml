@@ -10,7 +10,7 @@ Panel {
   property var entries: []
   // The entry that is up, or -1 while that is not yet known.
   property int current: -1
-  // A Component whose root is a TileBase, placed by the row (see CarouselRow.tileX).
+  // A Component whose root is a carousel Tile, placed by the row (see CarouselRow.tileX).
   property Component tile
 
   property string footerPath: ""

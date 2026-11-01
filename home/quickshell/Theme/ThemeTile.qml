@@ -4,16 +4,16 @@ import qs.Ui
 
 // One theme in the carousel: its wallpaper, cropped, with a mini island pill of dots in the
 // theme's own colours. Pill and dots come from `colors`, never Theme, so each tile is itself.
-TileBase {
+Tile {
   id: root
 
   property string source: ""
-  property string label: ""
   property var colors: ({})
 
-  kind: "theme"
-  title: root.label
-  imageSource: root.source !== "" ? "file://" + root.source : ""
+  kind: Tile.Carousel
+  noun: "theme"
+  accessibleName: root.label
+  image: root.source !== "" ? "file://" + root.source : ""
 
   // The theme's own ground, so a tile whose wallpaper has not loaded still reads as it.
   placeholderColor: root.colors.base !== undefined ? root.colors.base : Theme.overlay

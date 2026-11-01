@@ -39,116 +39,26 @@ Item {
   Repeater {
     model: root.model
 
-    Item {
+    Tile {
       id: tile
 
       required property int index
       required property var modelData
 
-      readonly property bool isActive: root.activeIndex === tile.index
-      readonly property bool isCurrent: root.currentIndex === tile.index
-      readonly property bool ink: isActive
-
+      kind: Tile.Choice
       x: root.tileX(index)
       y: Theme.powerTileTop
-      width: Theme.powerTileWidth
-      height: Theme.powerTileHeight
-
-      activeFocusOnTab: true
-      Accessible.role: Accessible.RadioButton
-      Accessible.name: tile.modelData.label
-      Accessible.checked: tile.isActive
-      Accessible.focusable: true
-      Accessible.focused: tile.isCurrent
-      Accessible.onPressAction: root.activated(tile.index)
-
-      Rectangle {
-        anchors.fill: parent
-        radius: Theme.powerTileRadius
-
-        color: {
-          if (tile.isActive)
-            return hover.pressed ? Qt.darker(root.activeColor, 1.12) : root.activeColor;
-          if (hover.pressed)
-            return Theme.withAlpha(Theme.text, Theme.fillPressed);
-          if (hover.containsMouse)
-            return Theme.withAlpha(Theme.highlightMed, Theme.powerTileFillAlpha);
-          return Theme.withAlpha(Theme.highlightLow, Theme.powerTileFillAlpha);
-        }
-
-        border.width: 1
-        border.color: {
-          if (tile.isActive && root.activeIsCommitting)
-            return root.activeColor;
-          if (tile.isCurrent || hover.containsMouse)
-            return Theme.accent;
-          if (tile.isActive)
-            return root.activeColor;
-          return Theme.withAlpha(Theme.highlightMed, Theme.powerTileBorderAlpha);
-        }
-
-        scale: hover.pressed ? Theme.pressScale : 1
-
-        Behavior on scale {
-          Morph {
-            duration: Theme.morphState
-          }
-        }
-
-        Behavior on color {
-          Tint {}
-        }
-
-        Behavior on border.color {
-          Tint {}
-        }
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: Theme.powerGlyphTop - Theme.powerTileTop - height / 2 + Theme.powerGlyphSize / 2
-        text: tile.modelData.glyph
-        color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
-        font.family: Theme.iconFont
-        font.pixelSize: Theme.powerGlyphSize
-
-        Behavior on color {
-          Tint {}
-        }
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: Theme.powerLabelTop - Theme.powerTileTop
-        text: tile.isActive && root.activeLabel !== "" ? root.activeLabel : tile.modelData.label
-        color: tile.ink ? Theme.inkOnAccent : Theme.inkPrimary
-        font.family: Theme.uiFont
-        font.pixelSize: Theme.powerLabelSize
-        font.weight: tile.ink ? Font.Bold : Font.Medium
-
-        Behavior on color {
-          Tint {}
-        }
-      }
-
-      MouseArea {
-        id: hover
-
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onPressed: tile.forceActiveFocus()
-        // Hovering moves the keyboard's place too, so the hovered tile is the one Return fires.
-        onEntered: root.entered(tile.index)
-        onClicked: root.activated(tile.index)
-      }
-
-      Keys.onPressed: function (event) {
-        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-          root.activated(tile.index);
-          event.accepted = true;
-        }
-      }
+      active: root.activeIndex === tile.index
+      current: root.currentIndex === tile.index
+      activeColor: root.activeColor
+      activeIsCommitting: root.activeIsCommitting
+      glyph: tile.modelData.glyph
+      label: tile.active && root.activeLabel !== "" ? root.activeLabel : tile.modelData.label
+      accessibleName: tile.modelData.label
+      onClicked: root.activated(tile.index)
+      // Hovering moves the keyboard's place too, so the hovered tile is the one Return fires.
+      onHoveredChanged: if (tile.hovered)
+        root.entered(tile.index)
     }
   }
 }
