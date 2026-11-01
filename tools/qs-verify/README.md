@@ -14,6 +14,7 @@ even the live one: it is only read, and the patches go on a copy.
 tools/qs-verify/run.sh home/quickshell            # start (a copy of the config, patched)
 tools/qs-verify/shoot.sh /tmp/shots-new           # ~6 minutes, one PNG per state + meta.txt
 tools/qs-verify/compare.sh BASE_DIR /tmp/shots-new [ALLOW_FILE]
+tools/qs-verify/restart.sh                        # quit and restart the shell on the same state
 tools/qs-verify/stop.sh                           # tear everything down
 ```
 

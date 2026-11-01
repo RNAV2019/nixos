@@ -68,12 +68,7 @@ printf '%s' "$THEME" >"$SCRATCH_HOME/.local/state/theme/name"
 # Quickshell insists on this one for the lock's "is it secured" probe; harmless otherwise.
 : >"$RT/quickshell-secured-"
 
-# Nothing of the live session may leak in: every XDG_*, the compositor and bus variables.
-for v in $(compgen -e); do
-  case $v in
-    XDG_* | HYPRLAND_* | SWAYSOCK | DISPLAY | WAYLAND_DISPLAY | DBUS_* | LD_LIBRARY_PATH | LD_PRELOAD | NIRI_* | I3SOCK | QUICKSHELL_* | QS_*) unset "$v" ;;
-  esac
-done
+scrub_live_env
 
 export HOME=$SCRATCH_HOME
 export XDG_RUNTIME_DIR=$RT
@@ -297,40 +292,27 @@ read -r EXT_W EXT_H < <(awk -v s="$SCALE" 'BEGIN { printf "%f %f\n", 1920 / s, 1
 
 # ---- the environment the other scripts use ----
 
+# The shell's own, kept in env.sh so restart.sh starts it the same way.
+export QS_EMOJI_DATA=$REAL_EMOJI
+export QUICKSHELL_CHARGE_TYPES=$QSV_WORK/fake/power/charge_types
+QSV_BWRAP=$(tool bwrap)
+QSV_CFG=$CFG
+
 {
   echo "# written by run.sh; sourced by shoot.sh"
   for v in HOME XDG_RUNTIME_DIR XDG_CACHE_HOME XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_DATA_DIRS \
-    TZ LANG PATH DBUS_SESSION_BUS_ADDRESS DBUS_SYSTEM_BUS_ADDRESS WAYLAND_DISPLAY SWAYSOCK; do
+    TZ LANG PATH DBUS_SESSION_BUS_ADDRESS DBUS_SYSTEM_BUS_ADDRESS WAYLAND_DISPLAY SWAYSOCK \
+    QS_EMOJI_DATA QUICKSHELL_CHARGE_TYPES; do
     printf 'export %s=%q\n' "$v" "${!v}"
   done
   printf 'export QSV_CFG=%q QSV_SCALE=%q QSV_THEME=%q QSV_SRC=%q\n' "$CFG" "$SCALE" "$THEME" "$SRC"
+  printf 'export QSV_BWRAP=%q\n' "$QSV_BWRAP"
   printf 'unset LD_LIBRARY_PATH\n'
 } >"$QSV_ENV"
 
 # ---- the shell ----
 
-QS_EMOJI_DATA=${REAL_EMOJI}
-export QS_EMOJI_DATA
-export QUICKSHELL_CHARGE_TYPES=$QSV_WORK/fake/power/charge_types
-BWRAP=$(tool bwrap)
-"$BWRAP" --dev-bind / / \
-  --bind "$QSV_WORK/fake/backlight" /sys/class/backlight \
-  --bind "$QSV_WORK/fake/leds" /sys/class/leds \
-  --bind "$QSV_WORK/fake/proc/stat" /proc/stat \
-  --bind "$QSV_WORK/fake/proc/meminfo" /proc/meminfo \
-  quickshell --no-color -p "$CFG" >"$QSV_WORK/quickshell.log" 2>&1 &
-echo $! >"$QSV_WORK/quickshell.pid"
-
-# Ready when ipc answers.
-ready=
-for _ in $(seq 150); do
-  if qs -p "$CFG" ipc show >/dev/null 2>&1; then
-    ready=1
-    break
-  fi
-  sleep 0.2
-done
-if [[ -z $ready ]]; then
+if ! start_shell; then
   cat "$QSV_WORK/quickshell.log" >&2
   die "quickshell never answered ipc"
 fi

@@ -24,6 +24,34 @@ load_env() {
   source "$QSV_ENV"
 }
 
+# Nothing of the live session may leak in: every XDG_*, the compositor and bus variables.
+scrub_live_env() {
+  local v
+  for v in $(compgen -e); do
+    case $v in
+      XDG_* | HYPRLAND_* | SWAYSOCK | DISPLAY | WAYLAND_DISPLAY | DBUS_* | LD_LIBRARY_PATH | LD_PRELOAD | NIRI_* | I3SOCK | QUICKSHELL_* | QS_*) unset "$v" ;;
+    esac
+  done
+}
+
+# Start quickshell on the harness (its environment loaded) inside the bubblewrap namespace that
+# swaps sysfs and /proc for the fakes, and wait for ipc. A restart appends to the same log.
+start_shell() {
+  "$QSV_BWRAP" --dev-bind / / \
+    --bind "$QSV_WORK/fake/backlight" /sys/class/backlight \
+    --bind "$QSV_WORK/fake/leds" /sys/class/leds \
+    --bind "$QSV_WORK/fake/proc/stat" /proc/stat \
+    --bind "$QSV_WORK/fake/proc/meminfo" /proc/meminfo \
+    quickshell --no-color -p "$QSV_CFG" >>"$QSV_WORK/quickshell.log" 2>&1 &
+  echo $! >"$QSV_WORK/quickshell.pid"
+  local _
+  for _ in $(seq 150); do
+    qs -p "$QSV_CFG" ipc show >/dev/null 2>&1 && return 0
+    sleep 0.2
+  done
+  return 1
+}
+
 # Resolve the tools from the repo's own nixpkgs pin, so a baseline and a later run use the same
 # sway, grim and ImageMagick. Prints their store paths, one per line.
 tool_paths() {
