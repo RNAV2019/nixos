@@ -65,9 +65,16 @@ Singleton {
   readonly property bool charging: hasBattery && phone.battery.charging
   readonly property bool low: hasBattery && !charging && charge <= Theme.phoneLowBattery
 
-  // "5G", "LTE"... and 0-4 bars, -1 before the phone has reported any.
-  readonly property string cellularType: phone && phone.cellular ? phone.cellular.type : ""
+  // "5G", "LTE"... and 0-4 bars, -1 before the phone has reported any. KDE Connect sends the type
+  // as "Unknown" when Android will not let it read the network (its phone-state permission), but
+  // the bars still come through: that type is dropped, so the reading falls back on the bars.
+  readonly property string cellularType: {
+    var type = phone && phone.cellular ? phone.cellular.type : "";
+    return type === "Unknown" ? "" : type;
+  }
   readonly property int cellularStrength: phone && phone.cellular ? phone.cellular.strength : -1
+  // What the Mobile reading says: the network when the phone names it, else the signal in words.
+  readonly property string cellularLabel: cellularStrength < 0 ? "Off on phone" : cellularType !== "" ? cellularType : ["No signal", "Weak signal", "Fair signal", "Good signal", "Strong signal"][Math.min(4, cellularStrength)]
 
   // The network the phone is on, when the link says it is this machine's.
   readonly property string wifiName: link === "Wi-Fi" && NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.name : ""

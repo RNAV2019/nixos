@@ -547,10 +547,10 @@ Singleton {
   readonly property int controlTileSubSize: 11
   // A tile too narrow for its badge and words side by side (the phone panel's 108 px thirds)
   // stacks them: the badge above, the label and the line under it, on a rounded rectangle. The
-  // padding is even on all four sides, and the radius is the padding plus the badge's radius, so
-  // the badge sits concentric with the corner. The words may run 8 px short of the edge.
+  // padding is even on all four sides. The radius is the shell's middle step (rows, power tiles):
+  // at the card's own 26 the grid read as soft pills. The words may run 8 px short of the edge.
   readonly property int controlTileStackedHeight: 90
-  readonly property int controlTileStackedRadius: 26
+  readonly property int controlTileStackedRadius: 14
   readonly property int controlTileStackedBadge: 28
   readonly property int controlTileStackedPad: 12
   readonly property int controlTileStackedLabelTop: 48

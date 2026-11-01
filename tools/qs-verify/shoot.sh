@@ -457,6 +457,12 @@ setup_phone_mobile_off() {
   sleep 1
   open_panel phone
 }
+# KDE Connect without the phone-state permission: the type comes as "Unknown", the bars still do.
+setup_phone_mobile_unknown() {
+  ph '{"op":"cellular","dev":"s24","type":"Unknown","strength":4}'
+  sleep 1
+  open_panel phone
+}
 # Charging: the longest reading line, "78% · charging", has to fit its tile without an ellipsis.
 setup_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":true}'; open_panel phone; }
 teardown_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
@@ -725,6 +731,7 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot panel-phone-low 1.8 0.3 setup_phone_low teardown_phone_low
   shot panel-phone-charging 1.8 0.3 setup_phone_charging teardown_phone_charging
   shot panel-phone-mobile-off 1.8 0.3 setup_phone_mobile_off teardown_phone_mobile
+  shot panel-phone-mobile-unknown 1.8 0.3 setup_phone_mobile_unknown teardown_phone_mobile
   shot panel-phone-browse-blocked 1.8 0.3 setup_phone_browse_blocked teardown_phone_access
   shot panel-phone-picker-phone 1.0 0.3 setup_phone_picker_phone
   shot panel-phone-picker-laptop 1.0 0.3 setup_phone_picker_laptop

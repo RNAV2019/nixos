@@ -493,7 +493,7 @@ Variants {
               {
                 label: "Mobile",
                 glyph: Phone.cellularStrength < 0 ? Icons.cellularOff : Icons.cellular[Math.min(4, Phone.cellularStrength)],
-                value: Phone.cellularType !== "" ? Phone.cellularType : "Off on phone",
+                value: Phone.cellularLabel,
                 level: -1,
                 off: Phone.cellularStrength < 0
               },
