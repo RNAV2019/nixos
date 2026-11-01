@@ -161,48 +161,6 @@ shred -u /tmp/hash.json && sudo chown ryan:users secrets/secrets.yaml
 </details>
 
 <details>
-<summary><b>Polkit prompts</b></summary>
-
-The shell is the session's polkit agent (`PolkitAgent` in
-[`Services/Polkit.qml`](home/quickshell/Services/Polkit.qml), `security.polkit.enable` in
-`modules/system/default.nix` only runs `polkitd`). Anything that asks for admin rights through
-polkit (`pkexec`, Nautilus' admin actions, fwupd, NetworkManager) grows the login pill out of the
-island: your picture, "`<program>` needs permission" and a password field, the lock screen's pill
-([`Ui/LoginPill.qml`](home/quickshell/Ui/LoginPill.qml), drawn by
-[`Auth/AuthPrompt.qml`](home/quickshell/Auth/AuthPrompt.qml)). **Enter** authenticates and **Esc**
-cancels. A wrong password shakes the pill and says "Wrong password · try N" until the next
-keystroke. When several administrators may approve it asks for your own account, else the first
-one listed; there is no choice and no details. The prompt holds the keyboard exclusively, goes
-away on approval, Esc, polkitd withdrawing the request or the session locking, and steps aside
-(then returns) when another panel takes the island.
-
-The Quickshell the flake pins hands over the action id, message and accounts but not polkit's
-`details` map, so the program is read back out of the message (else the action's owner) and the
-caller isn't known.
-
-Rehearse every state without a real request: `qs ipc call authpreview ask pkexec` (also `plain`,
-`long`, `identities`), then `checking`, `fail ""`, `hide`. Polkit allows one agent
-per session, so don't start a second shell to test it: `nix build .#checks.x86_64-linux.polkit-agent -L`
-runs the real agent against a real `polkitd` and PAM in a VM of its own.
-
-</details>
-
-<details>
-<summary><b>Rebuild pill</b></summary>
-
-`rebuild` is a plain `sudo nixos-rebuild switch`, plus `--option json-log-path
-"$XDG_RUNTIME_DIR/rebuild.jsonl"` ([`home/shell.nix`](home/shell.nix)), which has Nix append its progress
-as JSON to that file and changes nothing in the terminal. [`Services/Rebuild.qml`](home/quickshell/Services/Rebuild.qml)
-tails it, and [`Rebuild/RebuildPill.qml`](home/quickshell/Rebuild/RebuildPill.qml) grows the island's
-progress pill: "Rebuilding" with n of m derivations (a sliding segment until the total is known),
-then "Switched" and the time taken, or "Rebuild failed" with how far it got, which stays until
-clicked or the next rebuild. "Switched" waits for nixos-rebuild itself to exit, so it comes after
-the activation (whether that worked is in the terminal). With the shell not running the file is
-just left behind, and ignored when the shell starts. To try it without rebuilding, run any `nix build` with that option.
-
-</details>
-
-<details>
 <summary><b>Backups</b></summary>
 
 Borg pushes an archive every day to an append-only server on the NAS, through a Cloudflare
