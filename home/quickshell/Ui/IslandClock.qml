@@ -48,9 +48,7 @@ Item {
     Behavior on opacity {
       enabled: !clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held && clockRoot.origin.fromClock)
 
-      Morph {
-        duration: Theme.morphContent
-      }
+      ContentFade {}
     }
   }
 }

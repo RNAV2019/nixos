@@ -10,11 +10,6 @@ import qs.Ui
 FrostedSurface {
   id: root
 
-  // The three cross-fades between shut pill and open card share one duration.
-  component Fade: Morph {
-    duration: Theme.morphContent
-  }
-
   // A pin holds the card open after the pointer leaves; clicking again drops it.
   property bool pinned: false
 
@@ -268,7 +263,7 @@ FrostedSurface {
     opacity: root.expanded || root.dropArmed ? 0 : 1
 
     Behavior on opacity {
-      Fade {}
+      ContentFade {}
     }
   }
 
@@ -281,7 +276,7 @@ FrostedSurface {
     visible: opacity > 0
 
     Behavior on opacity {
-      Fade {}
+      ContentFade {}
     }
 
     // One scaled frame carries every block drawn at open metrics: placing the children here
@@ -419,7 +414,7 @@ FrostedSurface {
     visible: opacity > 0
 
     Behavior on opacity {
-      Fade {}
+      ContentFade {}
     }
 
     // Set at the open size and scaled down rather than animating pixel size, so the digits are
@@ -451,7 +446,7 @@ FrostedSurface {
     visible: opacity > 0
 
     Behavior on opacity {
-      Fade {}
+      ContentFade {}
     }
 
     Rectangle {

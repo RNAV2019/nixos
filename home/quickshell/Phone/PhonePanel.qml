@@ -151,9 +151,7 @@ Variants {
         enabled: !win.picking
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         readonly property real inner: width - 2 * Theme.phoneInset
@@ -812,9 +810,7 @@ Variants {
         enabled: win.picking && win.pickKind === "files"
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         onDirChanged: win.lastDir = dir
@@ -840,9 +836,7 @@ Variants {
         enabled: win.picking && win.pickKind === "wallpaper"
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         onSourceChosen: function (source) {

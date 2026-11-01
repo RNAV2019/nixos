@@ -128,6 +128,8 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   target changes (the control centre's views, Nearby, carousel tiles).
 - **`MicroSpring`**: the shorter, non-bouncy one for small controls (the switch knob).
 - **`Morph`**: a `NumberAnimation` for state changes that are not spatial (fades, fills).
+- **`ContentFade`**: the `Morph` for a cross-fade between two contents in one place (the shut
+  pill and the open card, one panel view and the next).
 - **`Tint`**: a `ColorAnimation`, so colour never overshoots.
 
 All of them follow `Theme.reduceMotion` (`QUICKSHELL_REDUCE_MOTION=1`). A raw duration goes
@@ -168,9 +170,9 @@ The contracts a service file follows; a singleton file takes the contract as its
   theme is generated from too; Theme reads it live.
 - **The boards come first.** Design in `~/Designs/NixOSQuickshell.fig` (three pages, one per
   theme, with variant sets built on the primitives above), then implement from it.
-- **No new inline `component` declarations.** They break hot reload and cannot see their file's
-  ids. A new type is a file of its own. (`Calendar/CalendarPanel.qml`, `Bar/Island.qml` and
-  `Notifications/Notifications.qml` still have the old ones.)
+- **No inline `component` declarations.** They break hot reload and cannot see their file's
+  ids. A new type is a file of its own, in its feature's directory or, once two features use
+  it, in `Ui/`.
 - **Match the neighbours.** Short comments that say why, in full sentences; 2-space
   `qmlformat` (`nix build .#checks.x86_64-linux.quickshell-qmlformat`).
 - **Verify with `tools/qs-verify`** (see its README): it runs the shell headless in its own

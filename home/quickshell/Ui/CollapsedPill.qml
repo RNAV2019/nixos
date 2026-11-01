@@ -47,9 +47,7 @@ Item {
     Behavior on opacity {
       enabled: !root.cut
 
-      Morph {
-        duration: Theme.morphContent
-      }
+      ContentFade {}
     }
   }
 }

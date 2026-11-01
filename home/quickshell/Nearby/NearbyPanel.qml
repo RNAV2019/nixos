@@ -360,9 +360,7 @@ Variants {
         readonly property bool phoneAbsent: Nearby.kdeconnect && !Phone.connected
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         NearbyHeader {
@@ -406,9 +404,7 @@ Variants {
           visible: opacity > 0
 
           Behavior on opacity {
-            Morph {
-              duration: Theme.morphContent
-            }
+            ContentFade {}
           }
         }
 
@@ -565,9 +561,7 @@ Variants {
         enabled: win.picking
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         onDirChanged: win.lastDir = dir
@@ -602,9 +596,7 @@ Variants {
         readonly property real contentHeight: rowCount > 0 ? rowsY + rowsHeight + Theme.nearbyReceiveBottom : cardsTop + (cards.height > 0 ? cards.height + Theme.nearbyPadBottom : Theme.nearbyPadBottom + 4)
 
         Behavior on opacity {
-          Morph {
-            duration: Theme.morphContent
-          }
+          ContentFade {}
         }
 
         NearbyHeader {

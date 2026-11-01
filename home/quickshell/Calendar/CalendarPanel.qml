@@ -365,41 +365,4 @@ Variants {
       }
     }
   }
-
-  component Arrival: ParallelAnimation {
-    id: arrival
-
-    property Item layer
-    property real travel: 0
-
-    NumberAnimation {
-      target: arrival.layer
-      property: "opacity"
-      from: 0
-      to: 1
-      duration: Theme.duration(Theme.morphEnter)
-      easing.type: Easing.OutCubic
-    }
-
-    NumberAnimation {
-      target: arrival.layer
-      property: "shift"
-      from: arrival.travel
-      to: 0
-      duration: Theme.duration(Theme.morphEnter)
-      easing.type: Easing.OutCubic
-    }
-  }
-
-  // A layer the arrival moves, without disturbing its children's own coordinates.
-  component ArrivalLayer: Item {
-    id: layer
-
-    property real shift: 0
-
-    anchors.fill: parent
-    transform: Translate {
-      x: layer.shift
-    }
-  }
 }
