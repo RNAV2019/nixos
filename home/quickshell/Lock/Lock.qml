@@ -238,12 +238,6 @@ Scope {
     command: ["sh", "-c", ": > \"$XDG_RUNTIME_DIR/quickshell-secured-$HYPRLAND_INSTANCE_SIGNATURE\""]
   }
 
-  Process {
-    id: submapReset
-
-    command: ["hyprctl", "dispatch", "hl.dsp.submap(\"reset\")"]
-  }
-
   PamContext {
     id: passwordPam
 
@@ -327,10 +321,8 @@ Scope {
     id: lockContext
 
     onSecureChanged: {
-      if (secure) {
+      if (secure)
         markerWrite.running = true;
-        submapReset.running = true;
-      }
     }
 
     WlSessionLockSurface {

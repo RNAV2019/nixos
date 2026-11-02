@@ -110,6 +110,9 @@
       # NixOS VM: the shell's polkit agent against a real polkitd and PAM, in a session of its own.
       polkit-agent = import ./tests/polkit-agent.nix {inherit pkgs;};
 
+      # NixOS VM: tty1 autologin into Hyprland --locked-cmd, real Hyprland on virtio-gpu DRM.
+      locked-login = import ./tests/locked-login.nix {inherit pkgs;};
+
       # qmlformat reads home/quickshell/.qmlformat.ini; any file it would change fails.
       quickshell-qmlformat =
         pkgs.runCommand "quickshell-qmlformat" {

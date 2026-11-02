@@ -3,18 +3,11 @@
   lib,
   pkgs,
   fenix,
-  user,
   ...
-}: let
-  start-hyprland = pkgs.writeShellApplication {
-    name = "start-hyprland";
-    text = ''
-      exec uwsm start hyprland-uwsm.desktop >/dev/null 2>&1
-    '';
-  };
-in {
+}: {
   imports = [
     ./boot.nix
+    ./session.nix
     ./users.nix
     ./secrets.nix
     ./wifi.nix
@@ -128,22 +121,11 @@ in {
     }
   ];
 
-  programs.uwsm.enable = true;
-
   # The phone satellite and panel (Services/Phone.qml, through pkgs/phone-bridge). The daemon
   # starts on first D-Bus use through the package's service file and shows no tray icon. The
   # module opens TCP and UDP 1714-1764. Phone notifications also arrive as ordinary desktop
   # notifications, which the shell turns into toasts.
   programs.kdeconnect.enable = true;
-
-  # Quickshell locks the autologin session before desktop helpers start.
-  services.greetd = {
-    enable = true;
-    settings.default_session = {
-      command = "${start-hyprland}/bin/start-hyprland";
-      inherit user;
-    };
-  };
 
   programs.fish.enable = true;
 
@@ -152,7 +134,6 @@ in {
     wget
     curl
     vim
-    start-hyprland
     # The Hyprland wrapper override above skips the script's PATH suffix, so the
     # dialog helpers Hyprland probes for (hyprland-dialog) must be on PATH here.
     hyprland-qtutils

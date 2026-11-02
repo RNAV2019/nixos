@@ -432,14 +432,14 @@ in {
         }
       ];
 
-      # Block bindings and helpers until Quickshell secures every output.
+      # Hyprland starts locked (--locked-cmd, modules/system/session.nix), so the helpers can
+      # start straight away. Safe mode after a crash skips this config, and with it the helpers.
       on = [
         {
           _args = [
             "hyprland.start"
             (mkLuaInline ''
               function()
-                hl.dispatch(hl.dsp.submap("lockdown"))
                 hl.exec_cmd("start-desktop")
               end'')
           ];
@@ -490,11 +490,6 @@ in {
         }
       ];
     };
-
-    # The catchall registers lockdown and blocks normal startup bindings.
-    submaps.lockdown.settings.bind = [
-      (bind "catchall" "hl.dsp.no_op()")
-    ];
   };
 
   # mpv's controls scale with window height, and the window.open hook above opens
@@ -509,6 +504,8 @@ in {
         # before_sleep_cmd raises the event that runs lock_cmd.
         lock_cmd = "lock-session";
         before_sleep_cmd = "loginctl lock-session";
+        # Hold suspend until Hyprland reports the session locked (auto only does for hyprlock).
+        inhibit_sleep = 3;
         after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' && qs ipc call clock refresh";
       };
     };
