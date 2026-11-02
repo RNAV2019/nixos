@@ -372,6 +372,9 @@ in {
           (bind "XF86AudioNext" (exec "playerctl next"))
           (bind "XF86AudioPrev" (exec "playerctl previous"))
 
+          # A short press locks; logind powers off on a long press (modules/system/session.nix).
+          (bind "XF86PowerOff" (exec "lock-session"))
+
           (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
           (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
 
@@ -501,9 +504,9 @@ in {
     enable = true;
     settings = {
       general = {
-        # before_sleep_cmd raises the event that runs lock_cmd.
         lock_cmd = "lock-session";
-        before_sleep_cmd = "loginctl lock-session";
+        # Not loginctl lock-session: logind won't lock greetd's greeter-class session.
+        before_sleep_cmd = "lock-session";
         # Hold suspend until Hyprland reports the session locked (auto only does for hyprlock).
         inhibit_sleep = 3;
         after_sleep_cmd = "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })' && qs ipc call clock refresh";

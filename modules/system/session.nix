@@ -35,4 +35,12 @@
         + " >/dev/null 2>&1";
     };
   };
+
+  # Holding the power key for about 5 s powers off; Hyprland binds a short press to
+  # lock-session. logind's "lock" action skips this greetd default_session, whose class
+  # is greeter. The default powers off on any press.
+  services.logind.settings.Login = {
+    HandlePowerKey = "ignore";
+    HandlePowerKeyLongPress = "poweroff";
+  };
 }
