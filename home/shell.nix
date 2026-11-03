@@ -39,6 +39,7 @@
       nix-clean = "sudo nix-collect-garbage -d";
       cx = "claude --dangerously-skip-permissions";
       todo = "hx ~/TODO.md";
+      dcs = "herdr --remote dcs";
 
       grep = "rg";
       find = "fd";
