@@ -52,6 +52,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Lectern lecture-notes reader. git+file so only tracked files are copied (not node_modules
+    # or target/). Switch to its github: URL once the repo is pushed.
+    lectern = {
+      url = "git+file:///home/ryan/Projects/lectern";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Decryption key lives at /etc/nixos-secrets/age.key, never in this repo.
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -71,6 +78,7 @@
     fenix,
     sops-nix,
     nearby,
+    lectern,
     ...
   }: let
     system = "x86_64-linux";
@@ -168,6 +176,7 @@
             {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
+              home-manager.sharedModules = [lectern.homeManagerModules.default];
               # Preserve unmanaged files during activation.
               home-manager.backupFileExtension = "hm-backup";
               home-manager.users.${user} = import ./home/default.nix;

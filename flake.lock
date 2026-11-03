@@ -158,6 +158,26 @@
         "type": "github"
       }
     },
+    "lectern": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793747345,
+        "narHash": "sha256-xU0CTtrtmjHv7XWo6pJuecjf0E63iGFnem+Plid08Lg=",
+        "ref": "refs/heads/feat/reader",
+        "rev": "341601b5bda33f6c91f001d0ea13200ab658bc2b",
+        "revCount": 16,
+        "type": "git",
+        "url": "file:///home/ryan/Projects/lectern"
+      },
+      "original": {
+        "type": "git",
+        "url": "file:///home/ryan/Projects/lectern"
+      }
+    },
     "llm-agents": {
       "inputs": {
         "bun2nix": "bun2nix",
@@ -297,6 +317,7 @@
         "helium-browser": "helium-browser",
         "helix-steel": "helix-steel",
         "home-manager": "home-manager",
+        "lectern": "lectern",
         "llm-agents": "llm-agents",
         "nearby": "nearby",
         "nixpkgs": "nixpkgs",

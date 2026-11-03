@@ -22,6 +22,7 @@
     ./opencode.nix
     ./sonora.nix
     ./dictation.nix
+    ./lectern.nix
   ];
 
   home.username = user;
