@@ -95,23 +95,34 @@ Item {
     id: plate
 
     visible: root.currentIndex >= 0
-    x: root.plateX
+    x: xSpring.value
     y: root.pad
-    width: root.plateWidth
+    width: wSpring.value
     height: root.cellHeight
     radius: height / 2
     color: Theme.accentFill
 
-    Behavior on x {
-      enabled: root.settled
+    // x and width share an omega, so the plate reaches rest on one frame. The label is the
+    // control's own address (its toString), unique per instance: Segmented lives in several
+    // places at once and one label is one spring in the motion log.
+    MorphSpring {
+      id: xSpring
 
-      MicroSpring {}
+      readonly property string who: root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
+
+      target: root.plateX
+      omega: Theme.microOmega
+      animate: root.settled
+      label: "seg." + who + ".x"
     }
 
-    Behavior on width {
-      enabled: root.settled
+    MorphSpring {
+      id: wSpring
 
-      MicroSpring {}
+      target: root.plateWidth
+      omega: Theme.microOmega
+      animate: root.settled
+      label: "seg." + xSpring.who + ".w"
     }
 
     // The soft pulse while a mode switch is in flight; not a bounce, so plain opacity.

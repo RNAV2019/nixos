@@ -512,34 +512,45 @@ ControlSubView {
 
     readonly property bool held: draggable && area !== null && area.dragging
 
-    x: rect ? rect.x * tile.area.fit + tile.area.originX + (held ? tile.area.dragX : 0) : 0
-    y: rect ? rect.y * tile.area.fit + tile.area.originY + (held ? tile.area.dragY : 0) : 0
-    width: rect ? rect.w * tile.area.fit : 0
-    height: rect ? rect.h * tile.area.fit : 0
+    x: xSpring.value
+    y: ySpring.value
+    width: wSpring.value
+    height: hSpring.value
     z: selected ? 1 : 0
 
-    Behavior on x {
-      enabled: !tile.held && !Theme.reduceMotion
+    // Four springs on one omega, so a tile's edges arrive together. Labels carry the monitor name.
+    MorphSpring {
+      id: xSpring
 
-      MicroSpring {}
+      target: tile.rect ? tile.rect.x * tile.area.fit + tile.area.originX + (tile.held ? tile.area.dragX : 0) : 0
+      omega: Theme.microOmega
+      animate: !tile.held
+      label: "disp." + tile.label.replace(/\s+/g, "_") + ".x"
     }
 
-    Behavior on y {
-      enabled: !tile.held && !Theme.reduceMotion
+    MorphSpring {
+      id: ySpring
 
-      MicroSpring {}
+      target: tile.rect ? tile.rect.y * tile.area.fit + tile.area.originY + (tile.held ? tile.area.dragY : 0) : 0
+      omega: Theme.microOmega
+      animate: !tile.held
+      label: "disp." + tile.label.replace(/\s+/g, "_") + ".y"
     }
 
-    Behavior on width {
-      enabled: !Theme.reduceMotion
+    MorphSpring {
+      id: wSpring
 
-      MicroSpring {}
+      target: tile.rect ? tile.rect.w * tile.area.fit : 0
+      omega: Theme.microOmega
+      label: "disp." + tile.label.replace(/\s+/g, "_") + ".w"
     }
 
-    Behavior on height {
-      enabled: !Theme.reduceMotion
+    MorphSpring {
+      id: hSpring
 
-      MicroSpring {}
+      target: tile.rect ? tile.rect.h * tile.area.fit : 0
+      omega: Theme.microOmega
+      label: "disp." + tile.label.replace(/\s+/g, "_") + ".h"
     }
 
     RoundedClip {

@@ -34,16 +34,18 @@ ButtonBase {
 
   Rectangle {
     y: Theme.switchInset
-    x: root.checked ? root.width - width - Theme.switchInset : Theme.switchInset
+    x: Theme.switchInset + knob.value * (root.width - width - Theme.switchInset * 2)
     width: Theme.switchKnob
     height: width
     radius: height / 2
     color: root.checked ? Theme.inkOnAccent : Theme.inkPrimary
 
-    Behavior on x {
-      enabled: !Theme.reduceMotion
+    ProgressSpring {
+      id: knob
 
-      MicroSpring {}
+      target: root.checked ? 1 : 0
+      omega: Theme.microOmega
+      label: "switch." + root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
     }
   }
 }

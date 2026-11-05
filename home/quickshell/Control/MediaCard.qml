@@ -333,12 +333,15 @@ Item {
       color: Qt.darker(Theme.accent, Theme.controlMediaThumbShade)
       border.width: scrubArea.activeFocus ? Theme.controlMediaThumbRing : 0
       border.color: Theme.focusRing
-      scale: scrub.dragging ? Theme.controlMediaThumbPressScale : 1
+      scale: thumbScale.value
 
-      Behavior on scale {
-        enabled: !Theme.reduceMotion
+      MorphSpring {
+        id: thumbScale
 
-        MicroSpring {}
+        target: scrub.dragging ? Theme.controlMediaThumbPressScale : 1
+        omega: Theme.microOmega
+        epsilon: 0.001
+        label: "media.thumb"
       }
     }
 
