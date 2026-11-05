@@ -31,7 +31,9 @@ Item {
   // ---- what it rides ----
 
   readonly property var transientShape: Bus.transientOnScreen(screenName) ? Bus.transientSurfaceFor(screenName) : null
-  readonly property var follow: transientShape && transientShape.visible ? transientShape : pill
+  // A lock takes the transients' windows away, so while it is up the bar carries it, as it
+  // carries the pill.
+  readonly property var follow: transientShape && transientShape.visible && !Bus.locking ? transientShape : pill
   readonly property bool followingTransient: follow !== pill
 
   // What `f` is just now, in this window's coordinates. The pill's edge is the springs' own,
@@ -71,6 +73,17 @@ Item {
     onValueChanged: root.syncEff()
   }
 
+  // The edge it rides has not moved for a moment.
+  property real lastEdge: 0
+  property real lastTop: 0
+  readonly property bool edgeStill: !edgeQuiet.running
+
+  Timer {
+    id: edgeQuiet
+
+    interval: 60
+  }
+
   function syncEff() {
     var r = raw;
     if (!r || !r.follow)
@@ -90,6 +103,10 @@ Item {
       }
     }
     var b = blend.value;
+    if (eff === null || Math.abs(r.edge - lastEdge) > 0.01 || Math.abs(r.top - lastTop) > 0.01)
+      edgeQuiet.restart();
+    lastEdge = r.edge;
+    lastTop = r.top;
     eff = {
       transient: r.transient,
       edge: r.edge + delta.edge * b,
@@ -129,7 +146,7 @@ Item {
   // Locking from a panel (the session menu's Lock) closes the panel, and the disc comes back
   // out: the lock's snapshot waits until it has stopped (the overshoot included), not merely
   // until the spring's last thousandth.
-  readonly property bool settling: Bus.locking && progress.running && !(Math.abs(p - progress.target) < 0.005 && Math.abs(progress.velocity) < 0.05)
+  readonly property bool settling: Bus.locking && (blend.running || (progress.running && !(Math.abs(p - progress.target) < 0.005 && Math.abs(progress.velocity) < 0.05)))
   readonly property string holdKey: "phone-satellite:" + screenName
 
   onSettlingChanged: Bus.holdLock(holdKey, settling)
@@ -182,6 +199,10 @@ Item {
   // free position to the snapped one over the last 0.3 px of motion, so settling neither
   // jumps nor leaves it between pixels. The overshoot's turning points count as motion, not rest.
   function settled(v, remaining) {
+    // Not while the edge it follows is moving or a hand-over is carried: it would step against
+    // a smooth edge.
+    if (blend.running || !edgeStill)
+      return v;
     var s = Motion.snap(v - satRadius, ratio) + satRadius;
     if (!progress.running)
       return s;
@@ -246,23 +267,16 @@ Item {
   // ---- drawing ----
 
   // The bar draws it unless a transient covers the island, where the transient's window does,
-  // over its outline. At each hand-over both draw for a moment, the same picture in the same
-  // place, so there is never a frame with neither.
-  Timer {
-    id: barLinger
-
-    interval: 40
-  }
-
-  onFollowingTransientChanged: if (followingTransient)
-    barLinger.restart()
-
+  // over its outline. At each hand-over the one giving up keeps drawing until the taker has a
+  // frame on screen (Ui/SatelliteLayer.qml), so there is never a frame with neither.
   SatelliteLayer {
     id: layer
 
     g: root.geo
     interactive: true
-    shown: !root.followingTransient || barLinger.running
+    screenName: root.screenName
+    hostId: "bar"
+    wanted: !root.followingTransient
     onClicked: root.openPanel()
   }
 

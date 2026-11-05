@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell.Wayland
-import qs.Bar
 import qs.Commons
 
 // One transient island surface: the OSD, a notification toast, the sharing pill, the dictation
@@ -38,19 +37,12 @@ IslandSurfaceBase {
   readonly property var satelliteGeometry: Bus.satelliteFor(win.screenName)
   readonly property bool hostsSatellite: win.tall && satelliteGeometry !== null && satelliteGeometry.follow === "transient" && Bus.transientSurfaceFor(win.screenName) === surface
 
-  onHostsSatelliteChanged: if (!hostsSatellite)
-    satelliteLinger.restart()
-
-  Timer {
-    id: satelliteLinger
-
-    interval: 40
-  }
-
   overlayData: SatelliteLayer {
     g: win.satelliteGeometry
     yOffset: win.satelliteGeometry ? win.satelliteGeometry.windowTop : 0
-    shown: win.tall && (win.hostsSatellite || satelliteLinger.running)
+    screenName: win.screenName
+    hostId: "transient:" + win.key
+    wanted: win.hostsSatellite
   }
 
   // ---- turns ----

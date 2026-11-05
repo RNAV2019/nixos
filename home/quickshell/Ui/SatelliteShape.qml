@@ -7,7 +7,7 @@ import qs.Commons
 // the room the neck's fillet can bulge into) plus `aa`, so the window is never covered whole.
 //
 // The bar draws it while the satellite rides the pill or the open card, and a transient surface's
-// window draws it while the satellite rides that transient (Bar/SatelliteLayer.qml hosts both).
+// window draws it while the satellite rides that transient (Ui/SatelliteLayer.qml hosts both).
 ShaderEffect {
   id: root
 

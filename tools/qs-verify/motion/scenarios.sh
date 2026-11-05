@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -203,6 +203,21 @@ sc_satellite_click() {
   sleep 1.8
   qsipc phone close >/dev/null 2>&1
   sleep 1.0
+}
+
+# A lock taken while the OSD is up: the bar carries the satellite (phone.blend runs, Bus.lockHeld waits on it).
+sc_lock_osd_satellite() {
+  ph_up
+  sleep 1.2
+  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.40
+  sleep 0.2
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.65
+  sleep 0.6
+  # The real lock (ext-session-lock under the harness's sway); nothing here can unlock it, so run
+  # it last, alone: the harness is torn down after.
+  qsipc lock lock >/dev/null
+  sleep 2.5
 }
 
 # The satellite on the lock screen's rehearsal surface.

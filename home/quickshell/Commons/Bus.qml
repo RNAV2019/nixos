@@ -150,7 +150,7 @@ Singleton {
   // moves: { edgeX, midY (the disc's row), shapeY, halfH, capR (the shape it leaves), disc (cx, cy,
   // r), neck (smooth-min k), follow ("pill" or "transient"), windowTop, p, docked, ring, hover }, all
   // in the bar window's coordinates. A transient surface's window draws the bud while it follows
-  // that transient (Bar/SatelliteLayer.qml), so it lies over the transient's outline.
+  // that transient (Ui/SatelliteLayer.qml), so it lies over the transient's outline.
   property var satellite: ({})
 
   function setSatellite(name, geometry) {
@@ -160,6 +160,36 @@ Singleton {
 
   function satelliteFor(name) {
     return lookup(satellite, name, null);
+  }
+
+  // Which window draws the satellite on each output, and whether it has a frame on screen. A host
+  // claims it when it takes over; the one it took over from keeps drawing while the claim is not
+  // ready (Ui/SatelliteLayer.qml), so a hand-over never has a frame with neither.
+  property var satelliteHosts: ({})
+  property var satelliteReady: ({})
+
+  function claimSatelliteHost(name, id) {
+    if (name === "")
+      return;
+    satelliteReady = writeMap(satelliteReady, name, "");
+    satelliteHosts = writeMap(satelliteHosts, name, id);
+  }
+
+  function reportSatelliteReady(name, id) {
+    if (name !== "" && lookup(satelliteHosts, name, "") === id)
+      satelliteReady = writeMap(satelliteReady, name, id);
+  }
+
+  function releaseSatelliteHost(name, id) {
+    if (lookup(satelliteHosts, name, "") === id) {
+      satelliteHosts = writeMap(satelliteHosts, name, "");
+      satelliteReady = writeMap(satelliteReady, name, "");
+    }
+  }
+
+  function satelliteHandoverPending(name) {
+    var h = lookup(satelliteHosts, name, "");
+    return h !== "" && lookup(satelliteReady, name, "") !== h;
   }
 
   function transientOnScreen(name) {

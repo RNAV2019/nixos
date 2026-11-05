@@ -46,7 +46,7 @@ take the pill's clock and marks off their timed fade while closing.
   handover when the higher one lets go.
 
 `IslandSurfaceBase.overlayData` takes items drawn over the card and outside its clip, in the window's
-coordinates: the one user is the phone satellite (`Bar/SatelliteLayer.qml`), drawn there while it rides
+coordinates: the one user is the phone satellite (`Ui/SatelliteLayer.qml`), drawn there while it rides
 a transient so its neck lies over the transient's outline (`Bar/PhoneSatellite.qml` writes its geometry
 to `Bus.satellite[screen]`; the body is the one shader, `Shaders/satellite.frag`).
 
@@ -145,6 +145,14 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
 `ButtonBase` or the primitive.
 
 ## Motion and colour
+
+- **`SatelliteShape` / `SatelliteLayer`**: the phone satellite's drawing. `SatelliteShape` is the
+  ShaderEffect for `Shaders/satellite.frag` (pill cap and disc, smooth union, 1 px outline; properties
+  are the shader's uniforms in the parent's coordinates). `SatelliteLayer` adds the disc's face and the
+  hand-over protocol: a host (the bar, or a transient's window via `overlayData`) claims the satellite
+  with `wanted`, and the host giving it up keeps drawing until the taker's frame is swapped
+  (`Bus.claimSatelliteHost`), with `Theme.morphPresentFallback` as the bound. Geometry comes from
+  `Bus.satellite[screen]`, written by `Bar/PhoneSatellite.qml`.
 
 - **`MorphSpring`**: the island's shape spring. Critically damped, solved exactly per frame so
   it lands on one curve at any refresh rate, and a new `target` keeps the velocity. Bind
