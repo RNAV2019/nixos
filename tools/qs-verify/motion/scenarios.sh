@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -410,5 +410,33 @@ sc_wifi_pass() {
   keys -k Return
   sleep 4.0
   qsipc control close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# The launcher's list scrolling: a query with more rows than fit, arrowed down past the window
+# and back up (the selection keeps itself on screen through launcher.scroll), and held down.
+sc_launcher_scroll() {
+  local n
+  # The fixture apps are few; twelve more that match one query make the list longer than its window.
+  for n in 01 02 03 04 05 06 07 08 09 10 11 12; do
+    printf '[Desktop Entry]\nType=Application\nName=Scroll Test %s\nExec=true\nIcon=utilities-terminal\n' "$n" \
+      >"$QSV_WORK/share/applications/scroll-test-$n.desktop"
+  done
+  sleep 1.0
+  toggle launcher
+  sleep 1.2
+  type_text "scroll test"
+  sleep 0.8
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    keys -k Down
+    sleep 0.12
+  done
+  sleep 0.8
+  for _ in 1 2 3 4 5 6; do
+    keys -k Up
+    sleep 0.12
+  done
+  sleep 0.8
+  qsipc launcher close >/dev/null 2>&1
   sleep 1.0
 }

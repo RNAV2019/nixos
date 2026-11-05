@@ -231,79 +231,37 @@ Item {
           scrub.shown = Math.min(Media.length, scrub.shown + frameTime);
         if (!Theme.reduceMotion)
           scrub.phase += frameTime;
-        hills.requestPaint();
       }
     }
 
     // Three layers in darker shades of the accent, each two slow sine waves under an envelope
     // that rises from the start of the track and eases off into the thumb. Positions are taken
     // against the whole track, so the waves stay put as the played part grows, not stretching.
-    Canvas {
+    // Drawn on the GPU (Shaders/hills.frag); the waves' frequencies and speeds live there.
+    ShaderEffect {
       id: hills
 
       x: scrub.trackX
       y: scrub.trackCentre - Theme.controlMediaHillHeight
       width: scrub.trackW
       height: Theme.controlMediaHillHeight
-      visible: scrub.swell > 0.001
+      visible: scrub.swell > 0.001 && scrub.thumbX - scrub.trackX >= 4
 
-      readonly property var layers: [
-        {
-          ink: Qt.darker(Theme.accent, 1.5),
-          alpha: 0.85,
-          f1: 0.045,
-          f2: 0.11,
-          s1: 0.9,
-          s2: -1.3,
-          k: 1
-        },
-        {
-          ink: Qt.darker(Theme.accent, 2),
-          alpha: 0.8,
-          f1: 0.07,
-          f2: 0.031,
-          s1: -0.7,
-          s2: 1.1,
-          k: 0.8
-        },
-        {
-          ink: Qt.darker(Theme.accent, 2.6),
-          alpha: 0.75,
-          f1: 0.028,
-          f2: 0.083,
-          s1: 1.4,
-          s2: 0.6,
-          k: 0.62
-        }
-      ]
+      property real phase: scrub.phase
+      property size itemSize: Qt.size(width, height)
+      property real amplitude: scrub.swell
+      property real progress: (scrub.thumbX - scrub.trackX) / Math.max(1, scrub.trackW)
+      property color ink0: shade(1.5, 0.85)
+      property color ink1: shade(2, 0.8)
+      property color ink2: shade(2.6, 0.75)
 
-      function ease(edge0, edge1, x) {
-        var t = Math.max(0, Math.min(1, (x - edge0) / Math.max(1, edge1 - edge0)));
-        return t * t * (3 - 2 * t);
+      // The accent darkened, with the layer's own opacity (the shader takes straight alpha).
+      function shade(by, alpha) {
+        var c = Qt.darker(Theme.accent, by);
+        return Qt.rgba(c.r, c.g, c.b, alpha);
       }
 
-      onPaint: {
-        var ctx = getContext("2d");
-        ctx.reset();
-        var w = scrub.thumbX - scrub.trackX;
-        if (w < 4 || scrub.swell <= 0.001)
-          return;
-        for (var i = 0; i < layers.length; i++) {
-          var l = layers[i];
-          ctx.fillStyle = "rgba(" + Math.round(l.ink.r * 255) + "," + Math.round(l.ink.g * 255) + "," + Math.round(l.ink.b * 255) + "," + l.alpha + ")";
-          ctx.beginPath();
-          ctx.moveTo(0, height);
-          for (var x = 0; x <= w; x += 2) {
-            var envelope = ease(0, w * 0.3, x) * (1 - 0.6 * ease(w - 36, w, x));
-            var wave = (Math.sin(x * l.f1 + scrub.phase * l.s1) + Math.sin(x * l.f2 + scrub.phase * l.s2)) / 2;
-            var h = height * l.k * scrub.swell * envelope * (0.55 + 0.45 * wave);
-            ctx.lineTo(x, height - h);
-          }
-          ctx.lineTo(w, height);
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
+      fragmentShader: Qt.resolvedUrl("../Shaders/hills.frag.qsb")
     }
 
     Rectangle {

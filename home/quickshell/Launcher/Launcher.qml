@@ -293,7 +293,8 @@ Variants {
       flickableDirection: Flickable.VerticalFlick
 
       // Keep the selection on screen without pinning it to a fixed row. By hand, so the
-      // scroll rides the same Morph as everything else.
+      // scroll rides a per-frame spring (launcher.scroll), which a key held down retargets
+      // without a restart.
       onCurrentIndexChanged: Qt.callLater(list.reveal, false)
 
       function reveal(settle) {
@@ -302,7 +303,7 @@ Variants {
           return;
         var top = item.y;
         var bottom = item.y + item.height;
-        var y = scroll.running ? scroll.to : list.contentY;
+        var y = scroll.following ? scroll.target : list.contentY;
         if (top < y)
           y = top;
         else if (bottom > y + list.height)
@@ -315,17 +316,38 @@ Variants {
           list.contentY = y;
           return;
         }
-        scroll.stop();
-        scroll.to = y;
-        scroll.start();
+        if (!scroll.following) {
+          // Start from where the list is, in place, then travel.
+          scroll.animate = false;
+          scroll.target = list.contentY;
+          scroll.animate = true;
+        }
+        scroll.following = true;
+        scroll.target = y;
+        if (!scroll.running) {
+          // Motion off: nothing travels.
+          scroll.following = false;
+          list.contentY = y;
+        }
       }
 
-      Morph {
+      MorphSpring {
         id: scroll
 
-        target: list
-        property: "contentY"
-        onFinished: list.reveal(true)
+        // The spring owns contentY from a reveal until it lands.
+        property bool following: false
+
+        label: "launcher.scroll"
+        onValueChanged: {
+          if (following)
+            list.contentY = value;
+        }
+        onRunningChanged: {
+          if (!running && following) {
+            following = false;
+            list.reveal(true);
+          }
+        }
       }
       highlightMoveDuration: Theme.duration(Theme.morphSurface)
       highlightMoveVelocity: -1

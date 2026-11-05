@@ -341,13 +341,13 @@ Variants {
                     loops: Animation.Infinite
 
                     PauseAnimation {
-                      duration: pulse.index * 600
+                      duration: Theme.duration(pulse.index * Theme.phoneRingStagger)
                     }
 
                     NumberAnimation {
                       from: 1
                       to: 2
-                      duration: 1200
+                      duration: Theme.duration(Theme.phoneRingPulse)
                       easing.type: Easing.OutCubic
                     }
                   }

@@ -1109,6 +1109,12 @@ Singleton {
   // The Nearby hover preview fading in, and a staged file row appearing.
   readonly property int nearbyPreviewFade: 140
   readonly property int nearbyFileAppear: 160
+  // A Nearby device card's progress catching up: live (with a small overshoot) and dismissed.
+  readonly property int nearbyCardLive: 260
+  readonly property int nearbyCardDismiss: 200
+  // The phone panel's ringing pulse: one ring's expansion, and the wait between rings.
+  readonly property int phoneRingPulse: 1200
+  readonly property int phoneRingStagger: 600
 
   // The island's equaliser: each bar rises on its own tween, then falls, staggered across
   // the row so the set waves rather than jumps.

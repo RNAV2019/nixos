@@ -704,7 +704,7 @@ Variants {
 
                 Behavior on shown {
                   NumberAnimation {
-                    duration: Theme.duration(cardSlot.live ? 260 : 200)
+                    duration: Theme.duration(cardSlot.live ? Theme.nearbyCardLive : Theme.nearbyCardDismiss)
                     easing.type: cardSlot.live ? Easing.OutBack : Easing.InCubic
                     easing.overshoot: 1.2
                   }

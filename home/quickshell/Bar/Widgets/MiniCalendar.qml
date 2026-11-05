@@ -94,16 +94,19 @@ Item {
           return Theme.subtle;
         }
         font.family: Theme.uiFont
-        font.pixelSize: column.isToday ? Theme.islandCalTodaySize : Theme.islandCalDaySize
+        // Laid out once at today's size; the difference between the two is a scale, which
+        // moves no text and re-lays out nothing while it animates.
+        font.pixelSize: Theme.islandCalTodaySize
+        scale: column.isToday ? 1 : Theme.islandCalDaySize / Theme.islandCalTodaySize
         font.weight: column.isToday ? Font.DemiBold : Font.Medium
 
         Behavior on color {
           Tint {}
         }
 
-        Behavior on font.pixelSize {
+        Behavior on scale {
           Morph {
-            duration: Theme.morphState
+            duration: Theme.duration(Theme.morphState)
           }
         }
       }

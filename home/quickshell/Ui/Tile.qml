@@ -374,7 +374,7 @@ ButtonBase {
       value: root.progress
       animated: true
       // Events arrive at most every 250 ms, so the arc eases for that long.
-      duration: 250
+      duration: Theme.duration(Theme.morphProgress)
     }
 
     // The quarter arc that turns where the total is not known, over the ring's own track.

@@ -46,7 +46,7 @@ Item {
       id: scrollTo
       target: view
       property: "contentY"
-      duration: Theme.morphState
+      duration: Theme.duration(Theme.morphState)
       easing.type: Easing.OutCubic
     }
 
@@ -66,19 +66,9 @@ Item {
     radius: width / 2
     color: Theme.withAlpha(Theme.text, Theme.fillSelected)
     visible: view.interactive
+    // Bound straight to the view, so the thumb is where the content is on every frame; the
+    // wheel's own animation (scrollTo) already eases it.
     y: view.visibleArea.yPosition * root.height
     height: Math.max(20, view.visibleArea.heightRatio * root.height)
-
-    Behavior on y {
-      Morph {
-        duration: Theme.duration(Theme.morphState)
-      }
-    }
-
-    Behavior on height {
-      Morph {
-        duration: Theme.duration(Theme.morphState)
-      }
-    }
   }
 }

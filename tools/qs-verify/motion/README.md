@@ -121,3 +121,17 @@ and an item (200x160) larger than the box (100x60 at origin 40,50) so `itemSize`
 are exercised. Prints `PASS` or `FAIL <case> ...`. Frames go to a per-run temp dir that is removed.
 The shader's uniforms: `boxSize`, `boxOrigin`, `itemSize` (all item px), `radius`, `aa`
 (1/devicePixelRatio). Copy the pattern to smoke-test later shaders.
+
+## Media card: `media-cpu.sh`, `mock-mpris.py`
+
+`tools/qs-verify/mock-mpris.py` is a stand-in player (`org.mpris.MediaPlayer2.mock`, a four-minute
+track fixed at 90 s) that `lib.sh`'s `mpris_up [Playing|Paused]` starts on the private session bus. It
+is not part of `shoot.sh`, so the committed screenshot baselines are unchanged; the media card has no
+player there. `motion/media-cpu.sh TREE OUT_DIR [SECONDS]` opens the control centre with it playing,
+saves a still of the card and prints the shell's CPU jiffies (`/proc` utime+stime) over the window:
+the Task 5 method, since `QSG_RENDER_TIMING` is too coarse. Software GL (llvmpipe) puts the whole shell
+near two cores here, so the figures only compare two trees run back to back. To compare stills,
+freeze the waves in a scratch copy of each tree (a literal phase in place of `scrub.phase`).
+
+The `launcher-scroll` scenario adds twelve fixture apps matching one query and arrows through the list
+(label `launcher.scroll`).
