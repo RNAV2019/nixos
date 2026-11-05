@@ -8,7 +8,8 @@ layout(std140, binding = 0) uniform buf {
     mat4 qt_Matrix;
     float qt_Opacity;
     vec2 boxSize;   // clip rectangle size, item px
-    vec2 boxOrigin; // its top-left inside the source, item px
+    vec2 boxOrigin; // its top-left inside the item, item px
+    vec2 itemSize;  // the ShaderEffect item size, item px (maps qt_TexCoord0 to px)
     float radius;
     float aa;       // antialias width, item px (1 / devicePixelRatio)
 };
@@ -21,7 +22,7 @@ float sdRoundBox(vec2 p, vec2 halfSize, float r) {
 }
 
 void main() {
-    vec2 p = qt_TexCoord0 * boxSize - boxOrigin - boxSize * 0.5;
+    vec2 p = qt_TexCoord0 * itemSize - boxOrigin - boxSize * 0.5;
     float d = sdRoundBox(p, boxSize * 0.5, radius);
     float a = smoothstep(aa, -aa, d);
     vec4 c = texture(source, qt_TexCoord0);
