@@ -24,6 +24,15 @@ is the moving card; they take their size from the box (`parent.width`) or from t
 Only the open size changing (a panel gaining a row) re-allocates the texture. Things that are
 the surface's own size, like the shut pill carried over, go in `FrostedSurface.fillData`.
 
+**Contents fade on the shape's clock.** `IslandSurfaceBase.morphProgress` is how far the shape has
+travelled from the shape it left (re-based on every retarget) to the one it is going to, along the
+axis that travels further (`Motion.progress`; a short spring of its own when neither does). The
+contents' opacity (`bodyOpacity`) and the collapsed pill's share while closing (`pillAmount`) are
+smoothsteps of it over the `Theme.fadeOpenIn`, `fadeEnterIn`, `fadeCloseOut` and `fadePillIn`
+ranges, with no timers. A retarget carries the opacity and it only moves toward the end its intent
+points at. A held still is cut instead (its own two fades). `CollapsedPill.progressDriven/amount`
+take the pill's clock and marks off their timed fade while closing.
+
 - **`IslandSurface`**: a panel the user opens. A key on the bus toggles it, it takes the
   keyboard, a click off the card closes it, and Escape closes it unless the contents take the key
   first. Give it `key`, `openWidth`, `openHeight`, `openRadius` and a body (a `Panel`).

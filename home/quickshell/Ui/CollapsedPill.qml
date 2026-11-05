@@ -13,6 +13,10 @@ Item {
   property bool camera: Privacy.camera
   property bool microphone: Privacy.microphone
   property bool shown: true
+  // Closing, how far the clock and marks have arrived (0..1), read off the closing surface's
+  // shape progress; while `progressDriven`, this replaces the timed fade of `shown`.
+  property bool progressDriven: false
+  property real amount: 1
   property real clockShift: 0
   property var origin: null
 
@@ -29,6 +33,8 @@ Item {
     anchors.fill: parent
     origin: root.origin
     shown: root.shown
+    progressDriven: root.progressDriven
+    amount: root.amount
     clockShift: root.clockShift
   }
 
@@ -42,10 +48,10 @@ Item {
     camera: root.camera
     microphone: root.microphone
     visible: leftExtent + rightExtent > 0 && opacity > 0
-    opacity: root.shown ? 1 : 0
+    opacity: root.progressDriven && !root.cut ? root.amount : root.shown ? 1 : 0
 
     Behavior on opacity {
-      enabled: !root.cut
+      enabled: !root.cut && !root.progressDriven
 
       ContentFade {}
     }

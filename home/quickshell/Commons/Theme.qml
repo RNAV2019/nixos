@@ -1041,9 +1041,19 @@ Singleton {
   // How long a parked surface keeps its window before letting it go (Ui/IslandSurfaceBase.qml).
   readonly property int surfaceRetain: 300000
 
-  // The incoming contents wait, then fade, landing just before the shape settles.
-  readonly property int morphEnterDelay: reduceMotion ? 0 : 45
   readonly property int morphEnter: reduceMotion ? 1 : 90
+
+  // Contents fade as a function of the card's shape progress (0 at the shape the card left,
+  // 1 at the one it is going to; Ui/Motion.js progress), so a retarget can never pull them
+  // apart from the shape. Each is [start, end]: the progress where the fade begins and ends.
+  // Out of the pill: about as quick as the 50 ms fade they replace.
+  readonly property var fadeOpenIn: [0.0, 0.2]
+  // Panel to panel: the entering contents start late, as the 45 ms delay did, and land before the shape settles.
+  readonly property var fadeEnterIn: [0.15, 0.45]
+  // Closing: the contents are gone early.
+  readonly property var fadeCloseOut: [0.0, 0.15]
+  // Closing: the collapsed pill's clock and marks arrive as the card nears the pill.
+  readonly property var fadePillIn: [0.7, 1.0]
 
   // They settle through a few pixels in the direction the height travels, so a switch between
   // two same-width columns has an axis to read.

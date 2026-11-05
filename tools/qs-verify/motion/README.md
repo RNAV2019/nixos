@@ -14,7 +14,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `record.sh TREE OUT_DIR SCENARIO...` starts the harness (its own sway, buses and scratch HOME;
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
-`open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite reduce`
+`open-close abc retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.
 
@@ -48,6 +48,10 @@ empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one
 - **static** (`--expect-static GLOB[,GLOB]`): a label that must not move while its surface's springs run,
   e.g. `surface.*.contentX` (where the contents sit on screen; logged only during a morph). Fails when the
   value changes by more than 0.01 inside one run of samples (less than 100 ms apart).
+- **monotonic** (`--expect-monotonic GLOB[,GLOB]`): an opacity logged against its intent (`surface.<key>.body`:
+  target 1 while the contents should be up, 0 while they should go). Within one run of samples sharing a
+  target the value never turns back by more than the printed quantum; a re-toggle (new target) starts a new
+  run. The first sample of a run is not judged: it can still carry the last frame of the previous intent.
 - **anim-length** (`--max-anim-ms N` only): a segment that takes longer than N ms to reach its target.
 
 Exit 1 with `<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>` per failure.

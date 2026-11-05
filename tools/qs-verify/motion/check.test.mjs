@@ -86,3 +86,17 @@ test("static: a contentX that follows the card fails, one that stays put passes"
   const two = [...still, ...still.map((r) => [r[0], String(Number(r[1]) + 5000), "640.0000", r[3], "640.0000"])];
   assert.deepEqual(checkText(log(two), opts), []);
 });
+
+test("monotonic: a restart that jumps back fails, a carried fade and a re-toggle pass", () => {
+  const row = (t, v, tg) => ["surface.control.body", String(t), v.toFixed(4), "0.0000", tg.toFixed(4)];
+  const opts = { expectMonotonic: [/^surface\..*\.body$/] };
+  // open to 0.6, intent flips to close, falls to 0, then a deliberate re-toggle opens again
+  const carried = [row(0, 0, 1), row(8, 0.3, 1), row(16, 0.6, 1), row(25, 0.6, 0), row(33, 0.3, 0), row(41, 0, 0), row(50, 0.2, 1), row(58, 0.9, 1)];
+  assert.deepEqual(checkText(log(carried), opts), []);
+  // the close restarts from 1 (a Behavior's restart), then the open climbs and dips
+  const jumped = [row(0, 0, 1), row(8, 0.6, 1), row(16, 0.6, 0), row(25, 1, 0), row(33, 0.5, 0)];
+  assert.ok(checkText(log(jumped), opts).some((x) => x.rule === "monotonic"));
+  const dipped = [row(0, 0, 1), row(8, 0.6, 1), row(16, 0.5, 1), row(25, 1, 1)];
+  assert.ok(checkText(log(dipped), opts).some((x) => x.rule === "monotonic"));
+  assert.ok(!checkText(log(dipped)).some((x) => x.rule === "monotonic"), "only labels asked for");
+});

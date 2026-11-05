@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
+// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
@@ -16,6 +16,8 @@
 //              target changes (a spring starts at rest) and the last frame of a log.
 //   static     labels matched by --expect-static must not change within a run of samples (the logger
 //              only prints them while the surface's springs run)
+//   monotonic  labels matched by --expect-monotonic (an opacity whose target is its intent, 1 or 0): within a
+//              run of samples sharing a target the value never reverses direction. A new target starts a new run.
 //   anim-length (only with --max-anim-ms N) a segment that travels longer than N ms
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -128,6 +130,31 @@ export const RULES = [
     },
   },
   {
+    name: "monotonic",
+    enabled: (o, label) => o.expectMonotonic.some((re) => re.test(label)),
+    // Segments share a target (the intent, 1 or 0), so a deliberate re-toggle starts a new one. Inside one,
+    // the value may rest but never turn back by more than the printed quantum.
+    check(s) {
+      const bad = [];
+      for (const seg of segments(s)) {
+        const dir = Math.sign(seg.target - s[seg.start].value);
+        if (!dir) continue;
+        const tol = Math.pow(10, -Math.max(s[seg.start].dec, 3)) * 1.5;
+        // The segment's first sample may still carry the last frame of the previous intent (the
+        // log is sampled once per frame, the intent flips between two), so the direction is read
+        // from the second sample on.
+        for (let i = seg.start + 1; i <= seg.end; i++) {
+          const prev = s[i - 1].value;
+          if ((s[i].value - prev) * dir < -tol) {
+            bad.push({ frame: i, t: s[i].t, detail: `value ${prev} then ${s[i].value}, against its direction to ${seg.target}` });
+            break;
+          }
+        }
+      }
+      return bad;
+    },
+  },
+  {
     name: "anim-length",
     enabled: (o) => o.maxAnimMs != null,
     check(s, o) {
@@ -153,23 +180,24 @@ export function checkSeries(label, s, opts) {
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], expectStatic: [], maxAnimMs: null, resolution: null, ...opts };
+  const o = { expect: [], expectStatic: [], expectMonotonic: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
   for (const [label, s] of parseLog(text)) out.push(...checkSeries(label, s, o));
   return out;
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], expectStatic: [], maxAnimMs: null, resolution: null };
+  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
     else if (argv[i] === "--expect-static") o.expectStatic = argv[++i].split(",").map(globToRe);
+    else if (argv[i] === "--expect-monotonic") o.expectMonotonic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);
     else if (!o.dir) o.dir = argv[i];
     else throw new Error(`unexpected argument ${argv[i]}`);
   }
-  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]");
+  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]");
   return o;
 }
 

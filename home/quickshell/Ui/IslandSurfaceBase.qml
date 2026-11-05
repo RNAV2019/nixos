@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 import qs.Services
+import "Motion.js" as Motion
 
 // What every island surface shares: the window, the shape, and the handover. How a surface
 // comes to be open is the policy of the file that derives from this: Ui/IslandSurface.qml is
@@ -235,6 +236,126 @@ PanelWindow {
     onTriggered: console.info("motion surface." + win.key + ".contentX " + Date.now() + " " + win.contentBox.mapToItem(null, 0, 0).x.toFixed(4) + " 0.0000 " + win.contentBox.mapToItem(null, 0, 0).x.toFixed(4))
   }
 
+  // ---- one clock for shape and contents ----
+  //
+  // The contents' opacity and the collapsed pill's are functions of how far the shape has
+  // travelled, not of timers of their own, so a retarget cannot pull them apart from the shape.
+
+  // Where the shape travels from, re-based to the current shape on every retarget.
+  property real fromW: 0
+  property real fromH: 0
+
+  // Along the axis that travels further; NaN while neither does.
+  readonly property real shapeProgress: Motion.progress(win.fromW, win.fromH, widthSpring.target, heightSpring.target, widthSpring.value, heightSpring.value)
+
+  // A shape that does not travel (the same size, other contents) has a short spring of its own,
+  // restarted on every change of intent.
+  ProgressSpring {
+    id: progressFallback
+
+    label: "surface." + win.key + ".p"
+    target: 1
+    animate: !win.parked
+  }
+
+  readonly property real morphProgress: isNaN(win.shapeProgress) ? (Theme.reduceMotion ? 1 : progressFallback.value) : win.shapeProgress
+
+  // What the contents are on their way to: up, or gone.
+  readonly property bool bodyWanted: (win.open && origin.presented) || (origin.held && win.stillCarriesBody)
+
+  // Carried across retargets: moves only toward the end its intent points at.
+  property real bodyOpacity: 0
+
+  // The collapsed pill's share while the surface closes (CollapsedPill.amount).
+  property real pillAmount: 1
+
+  // A change of intent or of target arrives in several property writes that settle within one
+  // turn; it is read once they have (a read in between sees the old shape against the new intent).
+  property bool bodyPending: false
+
+  function updateBody() {
+    if (origin.held || Theme.reduceMotion || win.parked) {
+      bodyOpacity = win.bodyWanted ? 1 : 0;
+      pillAmount = win.open ? 0 : 1;
+      return;
+    }
+    var p = win.morphProgress;
+    if (win.bodyWanted) {
+      var r = win.entering ? Theme.fadeEnterIn : Theme.fadeOpenIn;
+      bodyOpacity = Math.max(bodyOpacity, Motion.ramp(p, r[0], r[1]));
+      pillAmount = 0;
+    } else {
+      bodyOpacity = Math.min(bodyOpacity, 1 - Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]));
+      if (!win.open)
+        pillAmount = Math.max(pillAmount, Motion.ramp(p, Theme.fadePillIn[0], Theme.fadePillIn[1]));
+    }
+  }
+
+  function settleBody() {
+    // A held still is cut, not faded: its two fades are the surface's own.
+    if (origin.held || Theme.reduceMotion) {
+      bodyPending = false;
+      updateBody();
+      return;
+    }
+    bodyPending = true;
+    bodyTurn.restart();
+  }
+
+  Timer {
+    id: bodyTurn
+
+    interval: 0
+    onTriggered: {
+      win.bodyPending = false;
+      // Only a shape that stays put needs it; one that travels is read off its own size.
+      if (isNaN(win.shapeProgress)) {
+        progressFallback.value = 0;
+        progressFallback.kick(0);
+      }
+      win.updateBody();
+    }
+  }
+
+  onBodyWantedChanged: settleBody()
+  onMorphProgressChanged: if (!bodyPending)
+    updateBody()
+
+  Connections {
+    target: origin
+
+    function onHeldChanged() {
+      win.settleBody();
+    }
+  }
+
+  Connections {
+    target: widthSpring
+
+    function onTargetChanged() {
+      win.fromW = widthSpring.value;
+      win.fromH = heightSpring.value;
+      win.settleBody();
+    }
+  }
+
+  Connections {
+    target: heightSpring
+
+    function onTargetChanged() {
+      win.fromW = widthSpring.value;
+      win.fromH = heightSpring.value;
+      win.settleBody();
+    }
+  }
+
+  // With QS_MOTION_LOG=1: the contents' opacity against the intent (1 open, 0 closed), which
+  // check.mjs --expect-monotonic wants to see never turn back inside one intent.
+  FrameAnimation {
+    running: Theme.motionLog && win.tall && (win.morphRunning || (bodyHolder.opacity > 0 && bodyHolder.opacity < 1))
+    onTriggered: console.info("motion surface." + win.key + ".body " + Date.now() + " " + bodyHolder.opacity.toFixed(4) + " 0.0000 " + ((win.open && origin.presented) || (origin.held && win.stillCarriesBody) ? "1.0000" : "0.0000"))
+  }
+
   // ---- the window ----
   //
   // Quickshell destroys a layer surface's window when it is hidden and builds a new one on
@@ -407,16 +528,20 @@ PanelWindow {
       anchors.fill: parent
       origin: origin
       shown: !origin.held && !(win.open && (origin.presented || origin.handedOver || !origin.fromClock))
+      // Closing, the clock and marks arrive with the shape rather than on a timer of their own.
+      progressDriven: !win.open && !origin.held
+      amount: win.pillAmount
     }
 
     // Everything the surface draws, cross-faded against that clock; nothing inside fades on
-    // its own. Out of another panel there is no clip, so contents arrive late and settle a few px.
+    // its own. Its opacity is read off the shape's progress (updateBody), so out of another panel,
+    // where there is no clip, contents arrive late in the travel and settle a few px.
     // Both wait for the first frame, so a slow one cannot eat the choreography.
     Item {
       id: bodyHolder
 
       anchors.fill: parent
-      opacity: (win.open && origin.presented) || (origin.held && win.stillCarriesBody) ? 1 : 0
+      opacity: win.bodyOpacity
       visible: opacity > 0
       Keys.forwardTo: win.contentKeyTargets
 
@@ -424,20 +549,6 @@ PanelWindow {
       // the reveal out of the pill, where the travel is zero, is left untouched.
       transform: Translate {
         y: (1 - bodyHolder.opacity) * win.enterTravel
-      }
-
-      Behavior on opacity {
-        enabled: !origin.held
-
-        SequentialAnimation {
-          PauseAnimation {
-            duration: win.entering ? Theme.duration(Theme.morphEnterDelay) : 0
-          }
-
-          Morph {
-            duration: win.entering ? Theme.duration(Theme.morphEnter) : Theme.duration(Theme.morphContent)
-          }
-        }
       }
     }
   }

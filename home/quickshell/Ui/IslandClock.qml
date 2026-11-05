@@ -13,6 +13,9 @@ Item {
 
   // False while the surface's own contents are up.
   property bool shown: true
+  // See CollapsedPill: closing, the amount replaces the timed fade of `shown`.
+  property bool progressDriven: false
+  property real amount: 1
   property real clockShift: 0
   property alias date: clock.date
   readonly property real clockWidth: clockLabel.width
@@ -42,11 +45,11 @@ Item {
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandClockSize + (clockRoot.origin ? clockRoot.origin.fromOpenness : 0) * (Theme.islandDisplaySize - Theme.islandClockSize)
     font.weight: Theme.weightSemi
-    opacity: clockRoot.shown ? 1 : 0
+    opacity: clockRoot.progressDriven && (!clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held && clockRoot.origin.fromClock)) ? clockRoot.amount : clockRoot.shown ? 1 : 0
     visible: opacity > 0
 
     Behavior on opacity {
-      enabled: !clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held && clockRoot.origin.fromClock)
+      enabled: !clockRoot.progressDriven && (!clockRoot.origin || (!clockRoot.origin.handedOver && !clockRoot.origin.held && clockRoot.origin.fromClock))
 
       ContentFade {}
     }

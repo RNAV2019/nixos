@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
+SCENARIOS="open-close abc retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 toggle() { qsipc "$1" toggle >/dev/null; }
@@ -227,5 +227,23 @@ sc_subview_keys() {
   sleep 1.4
   grim "$shot-phone-home.png"
   qsipc phone close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# The control centre toggled five times, 30 ms apart, so each turn lands inside the last one's
+# fade (run after another scenario: a cold window swallows the toggles before its first frame).
+sc_retoggle_fast() {
+  sleep 0.5
+  toggle control
+  sleep 0.03
+  toggle control
+  sleep 0.03
+  toggle control
+  sleep 0.03
+  toggle control
+  sleep 0.03
+  toggle control
+  sleep 1.4
+  qsipc control close >/dev/null 2>&1
   sleep 1.0
 }
