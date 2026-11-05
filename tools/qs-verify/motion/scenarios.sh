@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -342,5 +342,73 @@ sc_click_through() {
   click
   sleep 1.2
   cursor 200 900
+  sleep 1.0
+}
+
+# A moment replaced by another inside the open pill, then interrupted mid-swap: charger, the
+# Wi-Fi sign-in over it, and the charger again 120 ms into that swap (the stage spring retargets).
+sc_moment_swap() {
+  sleep 0.5
+  qsipc activities plug 78 80 >/dev/null
+  sleep 1.4
+  qsipc activities wifi portal "Campus WiFi" >/dev/null
+  sleep 1.4
+  qsipc activities plug 41 20 >/dev/null
+  sleep 0.12
+  qsipc activities wifi portal "Campus WiFi" >/dev/null
+  sleep 1.6
+  qsipc activities dismissMoments >/dev/null 2>&1
+  sleep 1.2
+}
+
+# Notification toasts: one, a second crossfading in over it, a third 150 ms behind the second
+# (the two slots take turns), then let them time out. notify-send needs the harness' private bus.
+sc_toast_stack() {
+  local n=(env -u LD_LIBRARY_PATH notify-send -t 2500)
+  sleep 0.5
+  "${n[@]}" -a Mail "New message" "Ada: lunch at noon?"
+  sleep 0.9
+  "${n[@]}" -a Chat "Second toast" "Arrives while the first is up."
+  sleep 0.15
+  "${n[@]}" -a Calendar "Third toast" "A beat behind the second."
+  sleep 5.5
+}
+
+# Dictation: the mic comes up, the level bars follow bursts of changing levels (about 30 a
+# second, as Handy sends them), then hold steady (the bars must settle), then it ends.
+sc_dictation_levels() {
+  local ev=$QSV_WORK/dictation.events i
+  dict() { printf '%s\n' "$1" >>"$ev"; }
+  sleep 0.5
+  dict '{"event":"state","state":"recording"}'
+  sleep 1.2
+  dict '{"event":"ready"}'
+  for i in $(seq 45); do
+    if ((i % 8 < 4)); then
+      dict '{"event":"levels","levels":[0.9,0.8,0.7,0.6,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.08,0.05,0.02]}'
+    else
+      dict '{"event":"levels","levels":[0.2,0.35,0.5,0.3,0.15,0.6,0.8,0.4,0.1,0.05,0.3,0.5,0.2,0.1,0.3,0.4]}'
+    fi
+    sleep 0.033
+  done
+  for i in $(seq 60); do
+    dict '{"event":"levels","levels":[0.6,0.6,0.5,0.5,0.4,0.4,0.3,0.3,0.2,0.2,0.1,0.1,0.1,0.1,0.1,0.1]}'
+    sleep 0.033
+  done
+  sleep 0.6
+  dict '{"event":"hide"}'
+  sleep 1.2
+}
+
+# The password row of a secured, unknown network opening and closing. The harness has no
+# networks (see the README), so this opens the Wi-Fi view and leaves the row to a tree that
+# fakes a scan; the springs log as wifi.pass.<name>.
+sc_wifi_pass() {
+  sleep 0.5
+  toggle control
+  sleep 1.3
+  keys -k Return
+  sleep 4.0
+  qsipc control close >/dev/null 2>&1
   sleep 1.0
 }

@@ -49,29 +49,33 @@ Variants {
     onShownChanged: {
       if (win.drawn === null || !win.open || win.drawn === win.shown)
         return;
-      swap.restart();
+      win.swapping = true;
     }
 
-    SequentialAnimation {
-      id: swap
+    // The stage fades out, the contents change under it, and it fades back in: one spring that
+    // a moment arriving mid-swap simply retargets (down again if it was coming back up), with
+    // whatever speed it has. The swap lands once the stage is as good as clear (a spring only
+    // reaches 0 in the limit), and it takes the newest moment, whichever arrived meanwhile.
+    property bool swapping: false
 
-      NumberAnimation {
-        target: stage
-        property: "opacity"
-        to: 0
-        duration: Theme.morphContent
-      }
+    ProgressSpring {
+      id: fade
 
-      ScriptAction {
-        script: win.drawn = win.shown
-      }
+      target: win.swapping ? 0 : 1
+      omega: Theme.momentFadeOmega
+      label: "moment.stage"
 
-      NumberAnimation {
-        target: stage
-        property: "opacity"
-        to: 1
-        duration: Theme.morphEnter
+      onValueChanged: {
+        if (win.swapping && value <= Theme.momentSwapOpacity) {
+          win.drawn = win.shown;
+          win.swapping = false;
+        }
       }
+    }
+
+    onOpenChanged: {
+      if (!win.open)
+        win.swapping = false;
     }
 
     // ---- dwell ----
@@ -110,6 +114,8 @@ Variants {
     // Laid out at the moment's final size and centred, so the growing shape uncovers it.
     Item {
       id: stage
+
+      opacity: fade.value
 
       x: (parent.width - width) / 2
       y: (parent.height - height) / 2

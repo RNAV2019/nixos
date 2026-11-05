@@ -512,6 +512,16 @@ Singleton {
   readonly property real dictationBarWidth: 3
   readonly property real dictationBarGap: 3.5
   readonly property real dictationBarMin: 3
+  // The level bars' spring (Ui/MorphSpring.qml): critically damped, quicker than the island's
+  // morphOmega (21) since levels land about 30 times a second and the bars must follow them
+  // (a tenth of a second to 90%: 3.89 / 40). A bar is at rest within a tenth of a pixel.
+  readonly property real levelOmega: 40
+
+  // A moment swapped for another inside the open pill (Activities/Moments.qml): the stage's fade
+  // spring, twice the island's pace so the two halves together take about what the old 140 ms
+  // pair did (to 2% in about 160 ms), and the opacity at which the contents change.
+  readonly property real momentFadeOmega: 42
+  readonly property real momentSwapOpacity: 0.02
   readonly property int dictationTextInset: 20
   readonly property int dictationTextTop: 44
   readonly property int dictationTextSize: 13

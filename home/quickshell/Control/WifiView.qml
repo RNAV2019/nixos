@@ -239,24 +239,22 @@ ControlSubView {
         id: passwordRow
 
         readonly property bool open: root.pendingSsid === entry.name
+        // The row's own height; the field and the button keep their 40 px inside the clip,
+        // so the row uncovers them rather than squeezing them.
+        readonly property real fullHeight: 40
 
         width: parent.width
-        height: open ? 40 : 0
-        opacity: open ? 1 : 0
+        height: heightSpring.value
+        opacity: passwordRow.height / passwordRow.fullHeight
         // Stays drawn through the collapse so the fade-out is seen, not just the pop-in.
         visible: open || height > 0
         clip: true
 
-        Behavior on height {
-          Morph {
-            duration: Theme.duration(Theme.morphState)
-          }
-        }
+        MorphSpring {
+          id: heightSpring
 
-        Behavior on opacity {
-          Morph {
-            duration: Theme.duration(Theme.morphState)
-          }
+          target: passwordRow.open ? passwordRow.fullHeight : 0
+          label: "wifi.pass." + entry.name.replace(/\s+/g, "_")
         }
 
         onOpenChanged: {
@@ -272,38 +270,43 @@ ControlSubView {
           }
         }
 
-        TextField {
-          id: psk
+        Item {
+          width: parent.width
+          height: passwordRow.fullHeight
 
-          x: Theme.controlRowInset
-          width: parent.width - x - join.width - 10
-          anchors.verticalCenter: parent.verticalCenter
-          placeholder: "Password"
-          echoPassword: true
-          accessibleName: "Wi-Fi password"
-          onCancelled: {
-            root.pendingSsid = "";
-            psk.text = "";
+          TextField {
+            id: psk
+
+            x: Theme.controlRowInset
+            width: parent.width - x - join.width - 10
+            anchors.verticalCenter: parent.verticalCenter
+            placeholder: "Password"
+            echoPassword: true
+            accessibleName: "Wi-Fi password"
+            onCancelled: {
+              root.pendingSsid = "";
+              psk.text = "";
+            }
+            onAccepted: function (text) {
+              networks.objectFor(entry.key).connectWithPsk(text);
+              root.pendingSsid = "";
+              psk.text = "";
+            }
           }
-          onAccepted: function (text) {
-            networks.objectFor(entry.key).connectWithPsk(text);
-            root.pendingSsid = "";
-            psk.text = "";
-          }
-        }
 
-        Button {
-          id: join
+          Button {
+            id: join
 
-          size: Button.Compact
-          anchors.right: parent.right
-          anchors.verticalCenter: parent.verticalCenter
-          kind: Button.Plain
-          text: "Join"
-          onClicked: {
-            networks.objectFor(entry.key).connectWithPsk(psk.text);
-            root.pendingSsid = "";
-            psk.text = "";
+            size: Button.Compact
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            kind: Button.Plain
+            text: "Join"
+            onClicked: {
+              networks.objectFor(entry.key).connectWithPsk(psk.text);
+              root.pendingSsid = "";
+              psk.text = "";
+            }
           }
         }
       }

@@ -243,6 +243,7 @@ Variants {
     Toast {
       id: slotA
 
+      slot: "A"
       host: win
       clockDate: clock.date
       live: win.front === 0
@@ -251,6 +252,7 @@ Variants {
     Toast {
       id: slotB
 
+      slot: "B"
       host: win
       clockDate: clock.date
       live: win.front === 1

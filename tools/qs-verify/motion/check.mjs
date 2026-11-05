@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--expect-fade-frames GLOB:N] [--expect-continuity GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
+// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--expect-fade-frames GLOB:N] [--expect-continuity GLOB[,GLOB]] [--overshoot-tol GLOB:PX] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
@@ -18,6 +18,7 @@
 //   stepping   running spring whose value repeats between two consecutive frames although its velocity
 //              implies movement clearly above the logged precision (--resolution Q overrides it)
 //   overshoot  value past the target in the direction of travel (labels not prefixed "phone.")
+//              --overshoot-tol GLOB:PX[,GLOB:PX] lets matching labels run PX past a target.
 //   stall      velocity 0 while the target still differs, for labels matched by --expect FILE
 //              (one glob per line, # comments), except at a deliberate stop: the frame where the
 //              target changes (a spring starts at rest) and the last frame of a log.
@@ -92,15 +93,18 @@ export const RULES = [
   {
     name: "overshoot",
     enabled: (_o, label) => !label.startsWith("phone."),
-    check(s) {
+    check(s, o, label) {
       const bad = [];
+      // A spring that is retargeted ~30 times a second (the dictation bars) carries its speed
+      // past a target that lands just behind it; --overshoot-tol GLOB:PX allows that much.
+      const extra = Math.max(0, ...(o.overshootTol ?? []).filter((t) => t.re.test(label)).map((t) => t.px));
       for (const seg of segments(s)) {
         const range = seg.target - seg.startValue;
         if (range === 0) continue;
         const dir = Math.sign(range);
         for (let i = seg.start; i <= seg.end; i++) {
           const past = (s[i].value - seg.target) * dir;
-          if (past > tolFor(range)) {
+          if (past > tolFor(range) + extra) {
             bad.push({ frame: i, t: s[i].t, detail: `value ${s[i].value} is ${past.toFixed(4)} past target ${seg.target}` });
             break;
           }
@@ -241,7 +245,7 @@ export function checkSeries(label, s, opts) {
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], maxAnimMs: null, resolution: null, ...opts };
+  const o = { expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], overshootTol: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
   const series = parseLog(text);
   for (const [label, s] of series) out.push(...checkSeries(label, s, o));
@@ -250,13 +254,14 @@ export function checkText(text, opts = {}) {
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], maxAnimMs: null, resolution: null };
+  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], overshootTol: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
     else if (argv[i] === "--expect-static") o.expectStatic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--expect-fade-frames") o.expectFadeFrames = argv[++i].split(",").map((a) => ({ re: globToRe(a.slice(0, a.lastIndexOf(":"))), n: Number(a.slice(a.lastIndexOf(":") + 1)) }));
     else if (argv[i] === "--expect-continuity") o.expectContinuity = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--expect-monotonic") o.expectMonotonic = argv[++i].split(",").map(globToRe);
+    else if (argv[i] === "--overshoot-tol") o.overshootTol = argv[++i].split(",").map((a) => ({ re: globToRe(a.slice(0, a.lastIndexOf(":"))), px: Number(a.slice(a.lastIndexOf(":") + 1)) }));
     else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);
     else if (!o.dir) o.dir = argv[i];

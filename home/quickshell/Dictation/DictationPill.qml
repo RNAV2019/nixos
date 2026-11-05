@@ -135,17 +135,19 @@ Scope {
 
                   anchors.verticalCenter: parent.verticalCenter
                   width: Theme.dictationBarWidth
-                  height: Dictation.ready ? Theme.dictationBarMin + Math.pow(Theme.clamp01(level), 0.7) * (Theme.islandPillWaveformHeight - Theme.dictationBarMin) : Theme.dictationBarMin
+                  height: barSpring.value
                   radius: width / 2
                   color: Dictation.ready ? Theme.accent : Theme.inkTertiary
 
-                  // Levels land about 30 times a second; this carries them across the frames between.
-                  Behavior on height {
-                    enabled: !Theme.reduceMotion
+                  // Levels land about 30 times a second; the spring carries them across the
+                  // frames between and retargets on each, keeping its speed.
+                  MorphSpring {
+                    id: barSpring
 
-                    NumberAnimation {
-                      duration: 60
-                    }
+                    target: Dictation.ready ? Theme.dictationBarMin + Math.pow(Theme.clamp01(level), 0.7) * (Theme.islandPillWaveformHeight - Theme.dictationBarMin) : Theme.dictationBarMin
+                    omega: Theme.levelOmega
+                    epsilon: 0.1
+                    label: "dict.bar" + index
                   }
                 }
               }

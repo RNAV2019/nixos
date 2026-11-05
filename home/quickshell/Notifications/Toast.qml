@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Services
 import qs.Ui
+import "../Ui/Motion.js" as Motion
 
 // One notification's card contents, at the board's positions.
 Item {
@@ -14,6 +15,8 @@ Item {
   property var n: null
   // The slot the card is showing. Only it takes input.
   property bool live: false
+  // Names its spring in the motion log ("A", "B").
+  property string slot: ""
 
   readonly property bool urgent: toast.n ? toast.n.urgent : false
   readonly property string appName: toast.n ? toast.n.appName : ""
@@ -43,13 +46,17 @@ Item {
 
   anchors.fill: parent
   enabled: toast.live
-  opacity: toast.live ? 1 : 0
+  // The card's presence is one spring (0 hidden, 1 shown) that a toast taking over or giving
+  // way retargets with its speed. In, the opacity is the progress itself; out, it is spent over
+  // the first 0.6 of the travel, so a card leaving clears before the next one is fully there.
+  opacity: toast.live ? present.value : Math.min(present.value, Motion.ramp(present.value, 0.4, 1))
   visible: opacity > 0 && toast.n !== null
 
-  Behavior on opacity {
-    Morph {
-      duration: Theme.duration(Theme.morphEnter)
-    }
+  ProgressSpring {
+    id: present
+
+    target: toast.live ? 1 : 0
+    label: "toast." + toast.slot
   }
 
   // The sender's icon, or its initial on a colour picked off the name.
