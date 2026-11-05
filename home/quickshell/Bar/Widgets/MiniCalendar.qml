@@ -83,6 +83,8 @@ Item {
       }
 
       Text {
+        id: dayText
+
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.islandCalDayMid - height / 2
         text: column.day.getDate()
@@ -94,20 +96,32 @@ Item {
           return Theme.subtle;
         }
         font.family: Theme.uiFont
-        // Laid out once at today's size; the difference between the two is a scale, which
-        // moves no text and re-lays out nothing while it animates.
-        font.pixelSize: Theme.islandCalTodaySize
-        scale: column.isToday ? 1 : Theme.islandCalDaySize / Theme.islandCalTodaySize
+        // At rest the numeral is a native glyph run at its own size, scale 1. A change of size
+        // starts the scale at the old look and eases it to 1, so no text is re-laid out per frame.
+        readonly property real size: column.isToday ? Theme.islandCalTodaySize : Theme.islandCalDaySize
+        property real lastSize: size
+
+        font.pixelSize: size
+
+        onSizeChanged: {
+          sizeEase.stop();
+          scale = lastSize * scale / size;
+          lastSize = size;
+          sizeEase.restart();
+        }
         font.weight: column.isToday ? Font.DemiBold : Font.Medium
 
         Behavior on color {
           Tint {}
         }
 
-        Behavior on scale {
-          Morph {
-            duration: Theme.duration(Theme.morphState)
-          }
+        Morph {
+          id: sizeEase
+
+          target: dayText
+          property: "scale"
+          to: 1
+          duration: Theme.duration(Theme.morphState)
         }
       }
     }
