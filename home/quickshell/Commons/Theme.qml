@@ -273,6 +273,8 @@ Singleton {
   // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation; an
   // environment switch, not a theme, so it applies to both.
   readonly property bool reduceMotion: Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
+  // QS_MOTION_LOG=1 makes labelled MorphSprings print a line per frame (see Ui/MorphSpring.qml).
+  readonly property bool motionLog: Quickshell.env("QS_MOTION_LOG") === "1"
 
   function duration(ms) {
     return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
@@ -296,6 +298,12 @@ Singleton {
   readonly property real microDamping: 0.6
   readonly property real microMass: 0.8
   readonly property real microEpsilon: 0.005
+  // MicroSpring's pace as a per-frame MorphSpring omega. MicroSpring is a Qt SpringAnimation
+  // (spring 5.0, damping 0.6, mass 0.8), whose 0 -> 1 step reaches 90% at about 249 ms. Measured
+  // 2026-11-05 by running that SpringAnimation in the Qt 6.12 qml runtime (offscreen, 60 Hz) and
+  // logging the value at every change: 0.890 at 241 ms, 0.906 at 256 ms. A critically damped
+  // spring reaches 90% at omega * t = 3.89, so omega = 3.89 / 0.249 s = 15.6.
+  readonly property real microOmega: 15.6
 
   // Every panel grows from the same column width and corner radius; the per-surface tokens
   // below alias these so each keeps its own name. (The `panelWidth(screen, desired)` clamp

@@ -155,12 +155,14 @@ FrostedSurface {
   MorphSpring {
     id: widthSpring
 
+    label: "island.w"
     target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.collapsedWidth
   }
 
   MorphSpring {
     id: heightSpring
 
+    label: "island.h"
     target: root.targetHeight
   }
 

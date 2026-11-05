@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import "Motion.js" as Motion
 
 // The island's shape spring: one critically damped spring, so it never overshoots, solved
 // exactly for each frame's own time step.
@@ -12,6 +13,10 @@ import qs.Commons
 //
 // A `damping` ratio below one makes it underdamped: the value runs a little past its target and
 // settles back. Only the phone satellite asks for that; the shell's surfaces have no overshoot.
+//
+// With QS_MOTION_LOG=1 (Theme.motionLog) and a `label`, every frame prints
+// `motion <label> <t_ms> <value> <velocity> <target>` for tools/qs-verify/motion/check.mjs.
+// One label is one spring, so a spring per Repeater item needs an index in its label.
 QtObject {
   id: spring
 
@@ -27,7 +32,10 @@ QtObject {
 
   // At rest once within a tenth of a pixel and all but still; a value that is not in pixels
   // sets its own.
-  property real epsilon: 0.1
+  property real epsilon: 0.3
+
+  // Names this spring in the motion log; empty keeps it out.
+  property string label: ""
 
   readonly property bool running: driver.running
 
@@ -49,6 +57,19 @@ QtObject {
       driver.start();
   }
 
+  // Sets the velocity (a handover from something that was already moving) and wakes the driver.
+  function kick(v) {
+    velocity = v;
+    if (value !== target && ready && animate && !Theme.reduceMotion)
+      driver.start();
+  }
+
+  function log() {
+    // Guarded before the string is built: nothing is formatted when the log is off.
+    if (Theme.motionLog && label !== "")
+      console.info("motion " + label + " " + Date.now() + " " + value.toFixed(4) + " " + velocity.toFixed(4) + " " + target.toFixed(4));
+  }
+
   function step(dt) {
     // The gate and the target often turn on one change (a still letting go drops `held`, which
     // both read), in either order; a target taken while the gate was still up must not keep
@@ -66,24 +87,13 @@ QtObject {
       driver.stop();
       velocity = 0;
       value = target;
+      log();
       return;
     }
-    var w = omega;
-    if (damping < 1) {
-      // x'' = -2 z w x' - w^2 x, from (x, v), over dt.
-      var z = damping;
-      var wd = w * Math.sqrt(1 - z * z);
-      var ed = Math.exp(-z * w * dt);
-      var c = Math.cos(wd * dt);
-      var s = Math.sin(wd * dt);
-      value = target + ed * (x * c + (v + z * w * x) / wd * s);
-      velocity = ed * (v * c - (z * w * v + w * w * x) / wd * s);
-      return;
-    }
-    var e = Math.exp(-w * dt);
-    var k = v + w * x;
-    velocity = (k - w * (x + k * dt)) * e;
-    value = target + (x + k * dt) * e;
+    var r = Motion.springStep(x, v, omega, damping, dt);
+    value = target + r.x;
+    velocity = r.v;
+    log();
   }
 
   property FrameAnimation driver: FrameAnimation {

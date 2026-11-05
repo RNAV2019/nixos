@@ -125,6 +125,10 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   it lands on one curve at any refresh rate, and a new `target` keeps the velocity. Bind
   `target`, read `value`; `animate: false` snaps. `damping` below 1 overshoots; only the phone
   satellite asks for that.
+  `kick(v)` sets a starting velocity; `label` names it in the motion log (`QS_MOTION_LOG=1`, read by
+  `tools/qs-verify/motion`), one unique label per instance. `Motion.js` holds the maths
+  (`springStep`, `seedVelocity`, `progress`, `ramp`, `snap`).
+- **`ProgressSpring`**: a `MorphSpring` for a 0..1 progress (`ProgressSpring { target: shown ? 1 : 0 }`).
 - **`SurfaceSpring`**: a `SpringAnimation` for geometry that must keep its velocity when the
   target changes (the control centre's views, Nearby, carousel tiles).
 - **`MicroSpring`**: the shorter, non-bouncy one for small controls (the switch knob).

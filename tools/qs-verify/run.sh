@@ -302,6 +302,9 @@ read -r EXT_W EXT_H < <(awk -v s="$SCALE" 'BEGIN { printf "%f %f\n", 1920 / s, 1
 # The shell's own, kept in env.sh so restart.sh starts it the same way.
 export QS_EMOJI_DATA=$REAL_EMOJI
 export QUICKSHELL_CHARGE_TYPES=$QSV_WORK/fake/power/charge_types
+# The recorder switches reach the shell itself (env.sh keeps them for restart.sh).
+[[ -z $MOTION_LOG ]] || export QS_MOTION_LOG=$MOTION_LOG
+[[ -z $REDUCE_MOTION ]] || export QUICKSHELL_REDUCE_MOTION=$REDUCE_MOTION
 QSV_BWRAP=$(tool bwrap)
 QSV_CFG=$CFG
 

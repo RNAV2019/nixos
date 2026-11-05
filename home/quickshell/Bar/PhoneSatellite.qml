@@ -57,6 +57,7 @@ Item {
   MorphSpring {
     id: progress
 
+    label: "phone.p"
     target: root.wantOut ? 1 : 0
     omega: Theme.phoneSpringOmega
     damping: Theme.phoneSpringDamping

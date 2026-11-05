@@ -212,6 +212,7 @@ PanelWindow {
   MorphSpring {
     id: widthSpring
 
+    label: "surface." + win.key + ".w"
     animate: win.geometryAnimEnabled
     target: origin.held ? origin.heldWidth : win.open && origin.presented ? win.openWidth : origin.originWidth
   }
@@ -219,6 +220,7 @@ PanelWindow {
   MorphSpring {
     id: heightSpring
 
+    label: "surface." + win.key + ".h"
     animate: win.geometryAnimEnabled
     target: origin.held ? origin.heldHeight : win.open && origin.presented ? win.openHeight : origin.originHeight
   }
