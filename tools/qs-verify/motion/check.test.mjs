@@ -74,3 +74,15 @@ test("coarse precision still catches real stepping early in the travel", () => {
   for (let i = 3; i < 15; i += 2) rows[i][2] = rows[i - 1][2];
   assert.ok(checkText(log(rows)).some((x) => x.rule === "stepping"));
 });
+
+test("static: a contentX that follows the card fails, one that stays put passes", () => {
+  const still = Array.from({ length: 30 }, (_, i) => ["surface.osd.contentX", (i * 8.3).toFixed(1), "812.0000", "0.0000", "812.0000"]);
+  const riding = still.map((r, i) => [r[0], r[1], (812 - i * 2).toFixed(4), "0.0000", (812 - i * 2).toFixed(4)]);
+  const opts = { expectStatic: [/^surface\..*\.contentX$/] };
+  assert.deepEqual(checkText(log(still), opts), []);
+  assert.ok(checkText(log(riding), opts).some((x) => x.rule === "static"));
+  assert.ok(!checkText(log(riding)).some((x) => x.rule === "static"), "only labels asked for");
+  // a second open elsewhere (gap in time) is another run, not a move
+  const two = [...still, ...still.map((r) => [r[0], String(Number(r[1]) + 5000), "640.0000", r[3], "640.0000"])];
+  assert.deepEqual(checkText(log(two), opts), []);
+});

@@ -30,6 +30,9 @@ PanelWindow {
   property alias origin: origin
   property alias surface: surface
 
+  // The fixed box the contents are laid out in (see FrostedSurface.contentWidth).
+  readonly property Item contentBox: surface.contentBox
+
   // Everything the surface draws, laid out at its final metrics from the first frame and
   // uncovered by the growing shape, which makes the open read as a reveal rather than a fade.
   default property alias content: bodyHolder.data
@@ -225,6 +228,13 @@ PanelWindow {
     target: origin.held ? origin.heldHeight : win.open && origin.presented ? win.openHeight : origin.originHeight
   }
 
+  // With QS_MOTION_LOG=1: where the contents sit on screen while the shape moves, which
+  // tools/qs-verify/motion/check.mjs --expect-static wants to find unchanging.
+  FrameAnimation {
+    running: Theme.motionLog && win.morphRunning && win.tall
+    onTriggered: console.info("motion surface." + win.key + ".contentX " + Date.now() + " " + win.contentBox.mapToItem(null, 0, 0).x.toFixed(4) + " 0.0000 " + win.contentBox.mapToItem(null, 0, 0).x.toFixed(4))
+  }
+
   // ---- the window ----
   //
   // Quickshell destroys a layer surface's window when it is hidden and builds a new one on
@@ -376,6 +386,13 @@ PanelWindow {
 
     clipContent: true
 
+    // Contents are laid out at the open size, in a box that stays where the open card will sit,
+    // so the growing card uncovers them. The open card's top, as the y below works it out.
+    contentWidth: win.openWidth
+    contentHeight: win.openHeight
+    contentLeft: (win.width - contentWidth) / 2 + origin.offsetX
+    contentTop: Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(contentHeight, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0)
+
     implicitWidth: widthSpring.value
     implicitHeight: heightSpring.value
 
@@ -386,7 +403,7 @@ PanelWindow {
     // The complete collapsed pill carried over from the shape this surface grew out of. Up on
     // the first frame of an open out of the island, so that frame matches the pill it covers;
     // a shape from another surface or the drop well had no clock, so none is brought.
-    CollapsedPill {
+    fillData: CollapsedPill {
       anchors.fill: parent
       origin: origin
       shown: !origin.held && !(win.open && (origin.presented || origin.handedOver || !origin.fromClock))

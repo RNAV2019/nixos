@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N] [--resolution Q]
+// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
@@ -14,6 +14,8 @@
 //   stall      velocity 0 while the target still differs, for labels matched by --expect FILE
 //              (one glob per line, # comments), except at a deliberate stop: the frame where the
 //              target changes (a spring starts at rest) and the last frame of a log.
+//   static     labels matched by --expect-static must not change within a run of samples (the logger
+//              only prints them while the surface's springs run)
 //   anim-length (only with --max-anim-ms N) a segment that travels longer than N ms
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -108,6 +110,24 @@ export const RULES = [
     },
   },
   {
+    name: "static",
+    enabled: (o, label) => o.expectStatic.some((re) => re.test(label)),
+    // A label that must not move while its surface's springs run (it is only logged then). One run is
+    // samples less than 100 ms apart; a new run (another open) may sit elsewhere.
+    check(s) {
+      const bad = [];
+      let first = 0;
+      for (let i = 1; i <= s.length; i++) {
+        if (i < s.length && s[i].t - s[i - 1].t < 100) continue;
+        const run = s.slice(first, i);
+        const lo = Math.min(...run.map((f) => f.value)), hi = Math.max(...run.map((f) => f.value));
+        if (hi - lo > 0.01) bad.push({ frame: first, t: run[0].t, detail: `moved ${(hi - lo).toFixed(4)} (${lo} to ${hi}) while its surface was moving` });
+        first = i;
+      }
+      return bad;
+    },
+  },
+  {
     name: "anim-length",
     enabled: (o) => o.maxAnimMs != null,
     check(s, o) {
@@ -133,22 +153,23 @@ export function checkSeries(label, s, opts) {
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], maxAnimMs: null, resolution: null, ...opts };
+  const o = { expect: [], expectStatic: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
   for (const [label, s] of parseLog(text)) out.push(...checkSeries(label, s, o));
   return out;
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], maxAnimMs: null, resolution: null };
+  const o = { dir: null, expect: [], expectStatic: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
+    else if (argv[i] === "--expect-static") o.expectStatic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);
     else if (!o.dir) o.dir = argv[i];
     else throw new Error(`unexpected argument ${argv[i]}`);
   }
-  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N] [--resolution Q]");
+  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]");
   return o;
 }
 

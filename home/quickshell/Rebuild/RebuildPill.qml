@@ -44,8 +44,8 @@ Variants {
     Item {
       id: stage
 
-      x: (win.surface.width - width) / 2
-      y: (win.surface.height - height) / 2
+      x: (parent.width - width) / 2
+      y: (parent.height - height) / 2
       width: Theme.islandPillWidth
       height: Theme.islandPillHeight
 

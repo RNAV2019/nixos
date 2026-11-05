@@ -14,6 +14,16 @@ Everything that grows out of the island is a window of one of two kinds, both on
 handover to another surface). It must be the delegate of a `Variants { model: Quickshell.screens }`,
 so there is one per output.
 
+**Contents are in a fixed box.** Whatever a surface holds is laid out at the open size
+(`openWidth` x `openHeight`) in a box that never changes during a morph, centred where the open
+card will sit (`win.contentBox`, `FrostedSurface.contentWidth/contentHeight`). The growing card
+uncovers the contents and does not move them: `FrostedSurface` renders the box to a texture
+(1:1 with device pixels, so it is crisp at rest) and crops it to the card with
+`Shaders/roundedclip.frag`. So contents never bind to `win.surface.width` or `.height`, which
+is the moving card; they take their size from the box (`parent.width`) or from the open size.
+Only the open size changing (a panel gaining a row) re-allocates the texture. Things that are
+the surface's own size, like the shut pill carried over, go in `FrostedSurface.fillData`.
+
 - **`IslandSurface`**: a panel the user opens. A key on the bus toggles it, it takes the
   keyboard, a click off the card closes it, and Escape closes it unless the contents take the key
   first. Give it `key`, `openWidth`, `openHeight`, `openRadius` and a body (a `Panel`).
@@ -35,7 +45,7 @@ handlers (recorder, theme, session, nearby, auth).
 
 **To add a pill:** a file with a `Variants` over `TransientSurface { key, rank, wanted,
 openWidth/Height/Radius }`, an instance in `shell.qml`. Lay its contents out at their final size
-in an `Item` centred on `win.surface`, so the growing shape uncovers them. `wanted` should also
+in an `Item` centred in the content box (`x: (parent.width - width) / 2`), so the growing shape uncovers them. `wanted` should also
 check `win.focused && !Bus.islandOpenFor(win.screenName)` where the pill should not cover an
 open panel; see `Rebuild/RebuildPill.qml`, the simplest one. Count the dwell on screen only
 (`Timer { running: win.open }`).

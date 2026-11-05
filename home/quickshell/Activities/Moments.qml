@@ -111,8 +111,8 @@ Variants {
     Item {
       id: stage
 
-      x: (win.surface.width - width) / 2
-      y: (win.surface.height - height) / 2
+      x: (parent.width - width) / 2
+      y: (parent.height - height) / 2
       width: win.drawn ? win.drawn.width : Theme.momentWidth
       height: win.drawn ? win.drawn.height : Theme.momentHeight
 

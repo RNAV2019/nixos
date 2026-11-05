@@ -45,6 +45,9 @@ empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one
 - **stall**: velocity 0 while the target still differs, for labels matched by `--expect FILE` (globs,
   one per line, `#` comments). The frame where the target changes and the last sample of a log are
   deliberate stops and not flagged.
+- **static** (`--expect-static GLOB[,GLOB]`): a label that must not move while its surface's springs run,
+  e.g. `surface.*.contentX` (where the contents sit on screen; logged only during a morph). Fails when the
+  value changes by more than 0.01 inside one run of samples (less than 100 ms apart).
 - **anim-length** (`--max-anim-ms N` only): a segment that takes longer than N ms to reach its target.
 
 Exit 1 with `<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>` per failure.

@@ -71,11 +71,11 @@ Scope {
       //
       // Two rows of the island pill, crossing over when Handy hands the mic over to its model:
       // the mic and level bars, and the spinner with what is being done. The row is as wide as
-      // the surface, so the × stays at the card's corner as it grows.
+      // the open card, so the × stays at its corner as the card grows to it.
       Item {
         id: row
 
-        width: win.surface.width
+        width: parent.width
         height: Theme.islandPillHeight
 
         // The time since the mic came up, as Handy's own overlay counts it.
@@ -181,7 +181,7 @@ Scope {
 
         readonly property real textWidth: Theme.dictationLiveWidth - 2 * Theme.dictationTextInset
 
-        x: (win.surface.width - Theme.dictationLiveWidth) / 2 + Theme.dictationTextInset
+        x: (parent.width - Theme.dictationLiveWidth) / 2 + Theme.dictationTextInset
         y: Theme.dictationTextTop
         width: textWidth
         height: Math.min(transcript.implicitHeight, Theme.dictationTextLines * Theme.dictationTextLineHeight)

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import qs.Commons
 
@@ -13,7 +12,8 @@ Item {
   property real screenOffsetX: 0
   property real screenOffsetY: 0
 
-  // Only needed where contents are laid out at final size and revealed as the pill grows.
+  // Where contents are laid out at final size and revealed as the pill grows; a shader crops
+  // them to the card (Shaders/roundedclip.frag).
   property bool clipContent: false
 
   // Ground and contents fade separately during handoff, so the old panel's text is gone
@@ -22,6 +22,20 @@ Item {
   property real contentOpacity: 1
 
   default property alias content: contentHolder.data
+
+  // The box the contents are laid out in.
+  readonly property Item contentBox: contentHolder
+
+  // The shut pill and the like: sized to the surface, not to the contents' box.
+  property alias fillData: fillHolder.data
+
+  // The size the contents are laid out at, which is the open size. Set, the contents sit in a
+  // box of exactly this size at (contentLeft, contentTop) in the parent's coordinates, however
+  // big the card is just now. Left at 0, they fill the card.
+  property real contentWidth: 0
+  property real contentHeight: 0
+  property real contentLeft: x + (width - contentWidth) / 2
+  property real contentTop: y
 
   // At a fractional scale most logical coordinates fall between device pixels, and the
   // clipContent layer is then resampled, softening every glyph in it. Size lands on the
@@ -77,32 +91,62 @@ Item {
     visible: opacity > 0
   }
 
+  // Fills the surface under the contents and fades with them; the shut pill carried over
+  // lives here, since it is the surface's own size and needs no fixed box.
   Item {
-    id: mask
-
-    anchors.fill: parent
-    visible: false
-    layer.enabled: true
-
-    Rectangle {
-      anchors.fill: parent
-      radius: root.surfaceRadius
-      color: "black"
-    }
-  }
-
-  // The layer's texture is only as big as this item, so contents outside the pill are
-  // dropped before the mask runs.
-  Item {
-    id: contentHolder
+    id: fillHolder
 
     anchors.fill: parent
     opacity: root.contentOpacity
     visible: opacity > 0
-    layer.enabled: root.clipContent
-    layer.effect: MultiEffect {
-      maskEnabled: true
-      maskSource: mask
-    }
+  }
+
+  // The contents' own box. Clipping, it is the open size and never changes during a morph: the
+  // contents are laid out in it once, and the card uncovers them as it grows, so what is drawn
+  // stays put on screen rather than riding an edge. A shader crops the texture it renders to
+  // the card's rounded rectangle, so nothing is allocated per frame. Not clipping, or with no
+  // open size, it simply fills the surface.
+  Item {
+    id: contentHolder
+
+    readonly property bool boxed: root.clipContent && root.contentWidth > 0 && root.contentHeight > 0
+
+    x: boxed ? root.snap(root.contentLeft) - root.x : 0
+    y: boxed ? root.snap(root.contentTop) - root.y : 0
+    width: boxed ? root.snap(root.contentWidth) : root.width
+    height: boxed ? root.snap(root.contentHeight) : root.height
+    opacity: root.clipContent ? 1 : root.contentOpacity
+    visible: opacity > 0
+  }
+
+  ShaderEffectSource {
+    id: contentTexture
+
+    // 1:1 with the device pixels, so a settled card shows the contents exactly as drawn.
+    textureSize: Qt.size(Math.round(contentHolder.width * root.pixelRatio), Math.round(contentHolder.height * root.pixelRatio))
+    sourceItem: root.clipContent ? contentHolder : null
+    hideSource: root.clipContent
+    live: true
+    smooth: false
+    visible: false
+  }
+
+  ShaderEffect {
+    // Where the box sits is where the contents are; the card is cut out of it.
+    x: contentHolder.x
+    y: contentHolder.y
+    width: contentHolder.width
+    height: contentHolder.height
+    visible: root.clipContent && root.contentOpacity > 0
+    opacity: root.contentOpacity
+
+    property variant source: contentTexture
+    property size boxSize: Qt.size(root.width, root.height)
+    property point boxOrigin: Qt.point(-contentHolder.x, -contentHolder.y)
+    property size itemSize: Qt.size(width, height)
+    property real radius: root.surfaceRadius
+    property real aa: 1 / root.pixelRatio
+
+    fragmentShader: Qt.resolvedUrl("../Shaders/roundedclip.frag.qsb")
   }
 }
