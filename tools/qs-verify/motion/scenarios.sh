@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite"
+SCENARIOS="open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite controls"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 toggle() { qsipc "$1" toggle >/dev/null; }
@@ -148,4 +148,33 @@ sc_lock_satellite() {
   sleep 0.6
   qsipc lockpreview preview false >/dev/null
   sleep 1.2
+}
+
+# Small controls: the recorder's three switches by key (c, a, m), then the control centre's
+# Displays view (five Tabs and Return). The workspaces pill is not driven: the harness runs under
+# sway, where Quickshell.Hyprland has no workspaces to change.
+sc_controls() {
+  sleep 0.5
+  toggle recorder
+  sleep 1.4
+  keys -k c
+  sleep 0.5
+  keys -k a
+  sleep 0.5
+  keys -k m
+  sleep 0.5
+  keys -k c
+  sleep 0.8
+  qsipc recorder close >/dev/null 2>&1
+  sleep 1.0
+  toggle control
+  sleep 1.3
+  for _ in 1 2 3 4 5; do
+    keys -k Tab
+    sleep 0.2
+  done
+  keys -k Return
+  sleep 1.5
+  qsipc control close >/dev/null 2>&1
+  sleep 1.0
 }

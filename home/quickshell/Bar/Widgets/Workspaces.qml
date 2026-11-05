@@ -41,21 +41,10 @@ FrostedSurface {
     Hyprland.dispatch("hl.dsp.focus({ workspace = " + id + " })");
   }
 
-  // The pill springs to the width the slots add up to; the slots themselves change at once, so
-  // the dots are not animated a second time while the pill moves.
-  property real pillW: pillSpring.value
-
-  implicitWidth: pillW
+  // The pill follows the row, and each slot springs its own width, so pill and dots move on one clock.
+  implicitWidth: row.implicitWidth + Theme.workspacePadding * 2
   implicitHeight: Theme.barHeight
   surfaceRadius: Theme.workspaceRadius
-
-  MorphSpring {
-    id: pillSpring
-
-    target: row.implicitWidth + Theme.workspacePadding * 2
-    omega: Theme.microOmega
-    label: "ws.w"
-  }
 
   Row {
     id: row
@@ -75,7 +64,7 @@ FrostedSurface {
         readonly property bool isActive: ws !== null && ws.active
         readonly property bool isUrgent: ws !== null && ws.urgent
 
-        width: isActive ? Theme.workspaceSlotActiveWidth : Theme.workspaceSlotWidth
+        width: slotSpring.value
         height: Theme.workspaceSlotHeight
         radius: Theme.workspaceSlotRadius
         activeFocusOnTab: true
@@ -84,6 +73,14 @@ FrostedSurface {
         Accessible.focusable: true
         Accessible.focused: slot.activeFocus
         Accessible.onPressAction: root.focus(slot.modelData)
+        MorphSpring {
+          id: slotSpring
+
+          target: slot.isActive ? Theme.workspaceSlotActiveWidth : Theme.workspaceSlotWidth
+          omega: Theme.microOmega
+          label: "ws.slot." + slot.modelData
+        }
+
         color: {
           if (isActive)
             return Theme.accent;

@@ -510,6 +510,8 @@ ControlSubView {
     // Inline components cannot see the file's ids, so the canvas is handed in.
     property var area: null
 
+    // The label as the motion log can carry it.
+    readonly property string tag: label.replace(/\s+/g, "_")
     readonly property bool held: draggable && area !== null && area.dragging
 
     x: xSpring.value
@@ -525,7 +527,7 @@ ControlSubView {
       target: tile.rect ? tile.rect.x * tile.area.fit + tile.area.originX + (tile.held ? tile.area.dragX : 0) : 0
       omega: Theme.microOmega
       animate: !tile.held
-      label: "disp." + tile.label.replace(/\s+/g, "_") + ".x"
+      label: "disp." + tile.tag + ".x"
     }
 
     MorphSpring {
@@ -534,7 +536,7 @@ ControlSubView {
       target: tile.rect ? tile.rect.y * tile.area.fit + tile.area.originY + (tile.held ? tile.area.dragY : 0) : 0
       omega: Theme.microOmega
       animate: !tile.held
-      label: "disp." + tile.label.replace(/\s+/g, "_") + ".y"
+      label: "disp." + tile.tag + ".y"
     }
 
     MorphSpring {
@@ -542,7 +544,7 @@ ControlSubView {
 
       target: tile.rect ? tile.rect.w * tile.area.fit : 0
       omega: Theme.microOmega
-      label: "disp." + tile.label.replace(/\s+/g, "_") + ".w"
+      label: "disp." + tile.tag + ".w"
     }
 
     MorphSpring {
@@ -550,7 +552,7 @@ ControlSubView {
 
       target: tile.rect ? tile.rect.h * tile.area.fit : 0
       omega: Theme.microOmega
-      label: "disp." + tile.label.replace(/\s+/g, "_") + ".h"
+      label: "disp." + tile.tag + ".h"
     }
 
     RoundedClip {
