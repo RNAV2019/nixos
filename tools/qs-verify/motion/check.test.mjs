@@ -12,13 +12,13 @@ const line = (l, t, v, vel, tg) => `motion ${l} ${t} ${v} ${vel} ${tg}`;
 const log = (rows) => rows.map((r) => line(...r)).join("\n");
 
 // critically damped spring from 0 to 100, omega 21, sampled at 120 Hz
-function clean(label = "island.w", n = 90) {
-  const w = 21, rows = [];
+function clean(label = "island.w", n = 90, range = 100, dec = 4) {
+  const w = 21, rows = [], A = range;
   for (let i = 0; i < n; i++) {
     const t = i * (1000 / 120), s = t / 1000;
-    const x = 100 - 100 * (1 + w * s) * Math.exp(-w * s);
-    const v = 100 * w * w * s * Math.exp(-w * s);
-    rows.push([label, t.toFixed(1), x.toFixed(4), v.toFixed(3), 100]);
+    const x = A - A * (1 + w * s) * Math.exp(-w * s);
+    const v = A * w * w * s * Math.exp(-w * s);
+    rows.push([label, t.toFixed(1), x.toFixed(dec), v.toFixed(3), A]);
   }
   return rows;
 }
@@ -57,4 +57,20 @@ test("clean critically damped trace: no failures, exit 0 from the CLI", () => {
   const bad = spawnSync("node", [join(here, "check.mjs"), d]);
   assert.equal(bad.status, 1);
   assert.match(bad.stdout.toString(), /b\.log: island\.w: overshoot at frame/);
+});
+
+test("coarse precision: a long clean tail with repeated printed values is not stepping", () => {
+  for (const [dec, range] of [[2, 100], [2, 1000], [3, 100], [3, 1000], [4, 1000]]) {
+    const rows = clean("island.w", 150, range, dec);
+    assert.deepEqual(checkText(log(rows)), [], `decimals ${dec}, range ${range}`);
+    const d = mkdtempSync(join(tmpdir(), "check-"));
+    writeFileSync(join(d, "a.log"), log(rows));
+    assert.equal(spawnSync("node", [join(here, "check.mjs"), d]).status, 0);
+  }
+});
+
+test("coarse precision still catches real stepping early in the travel", () => {
+  const rows = clean("island.w", 150).map((r) => [r[0], r[1], Number(r[2]).toFixed(2), r[3], 100]);
+  for (let i = 3; i < 15; i += 2) rows[i][2] = rows[i - 1][2];
+  assert.ok(checkText(log(rows)).some((x) => x.rule === "stepping"));
 });

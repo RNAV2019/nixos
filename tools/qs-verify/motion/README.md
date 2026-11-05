@@ -80,3 +80,13 @@ Verified with a synthetic clip (5 frames boxed out of a real capture): reports `
   uses `env -u XDG_RUNTIME_DIR`.
 - Compare against a capture of the parent commit made in the same conditions (see memory
   `qs-verify-timing-and-motion`); the 120 Hz clock and wf-recorder add noise of a frame or two.
+
+## What Task 1's log must provide
+
+- **Precision:** print the value with at least 4 decimals (velocity with 3 or more). `check.mjs`
+  infers the printed quantum from the value's decimals and flags a repeated value as stepping only when
+  the movement the velocity implies for that frame (|v| x dt) exceeds 3 quanta, so a converging tail at
+  coarse precision is tolerated; the coarser the log, the less the stepping rule can see. At 2-3
+  decimals the late tail goes unchecked. `--resolution Q` overrides the inferred quantum.
+- **Labels:** one label is one spring. Per-instance springs (Repeater delegates, one per tile) need a
+  unique label each (e.g. `tile.3.x`), or their samples interleave and every rule misfires.

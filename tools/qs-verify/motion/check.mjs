@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N]
+// check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
@@ -8,8 +8,8 @@
 //
 // Rules live in the RULES table below (name, enabled(opts), check(series, opts) -> failures).
 // A later rule is one more entry plus its option in parseArgs.
-//   stepping   running spring (|velocity| > 0, not at target) whose value did not change between
-//              two consecutive frames
+//   stepping   running spring whose value repeats between two consecutive frames although its velocity
+//              implies movement clearly above the logged precision (--resolution Q overrides it)
 //   overshoot  value past the target in the direction of travel (labels not prefixed "phone.")
 //   stall      velocity 0 while the target still differs, for labels matched by --expect FILE
 //              (one glob per line, # comments), except at a deliberate stop: the frame where the
@@ -26,7 +26,7 @@ export function parseLog(text) {
     const [t, value, velocity, target] = m.slice(2).map(Number);
     if ([t, value, velocity, target].some(Number.isNaN)) continue;
     if (!series.has(m[1])) series.set(m[1], []);
-    series.get(m[1]).push({ t, value, velocity, target });
+    series.get(m[1]).push({ t, value, velocity, target, dec: (m[3].split(".")[1] ?? "").length });
   }
   for (const s of series.values()) s.sort((a, b) => a.t - b.t);
   return series;
@@ -36,7 +36,6 @@ const globToRe = (g) =>
   new RegExp("^" + g.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
 
 const tolFor = (range) => Math.max(1e-3, 1e-3 * Math.abs(range));
-const VEL_EPS = 1e-3;
 
 // Segments: runs of samples that share a target.
 function segments(s) {
@@ -57,13 +56,19 @@ export const RULES = [
   {
     name: "stepping",
     enabled: () => true,
-    check(s) {
+    // A repeat only counts when the movement the velocity implies for that frame (|v| * dt) is
+    // clearly more than the printed quantum: a converging tail at coarse precision repeats values
+    // legitimately. The quantum is 10^-decimals of the value as logged, or --resolution.
+    check(s, o) {
       const bad = [];
       for (let i = 1; i < s.length; i++) {
         const a = s[i - 1], b = s[i];
+        if (b.target !== a.target || b.value !== a.value) continue;
+        const quantum = o.resolution ?? Math.pow(10, -Math.max(a.dec, b.dec));
+        const expected = Math.abs(b.velocity) * (b.t - a.t) / 1000;
         const dist = Math.abs(b.target - b.value);
-        if (b.target === a.target && Math.abs(b.velocity) > VEL_EPS && dist > tolFor(dist) && b.value === a.value)
-          bad.push({ frame: i, t: b.t, detail: `value ${b.value} unchanged with velocity ${b.velocity}` });
+        if (expected > 3 * quantum && dist > 3 * quantum)
+          bad.push({ frame: i, t: b.t, detail: `value ${b.value} unchanged though velocity ${b.velocity} implies ${expected.toPrecision(3)} of movement` });
       }
       return bad;
     },
@@ -128,21 +133,22 @@ export function checkSeries(label, s, opts) {
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], maxAnimMs: null, ...opts };
+  const o = { expect: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
   for (const [label, s] of parseLog(text)) out.push(...checkSeries(label, s, o));
   return out;
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], maxAnimMs: null };
+  const o = { dir: null, expect: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
+    else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);
     else if (!o.dir) o.dir = argv[i];
     else throw new Error(`unexpected argument ${argv[i]}`);
   }
-  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N]");
+  if (!o.dir) throw new Error("usage: check.mjs OUT_DIR [--expect FILE] [--max-anim-ms N] [--resolution Q]");
   return o;
 }
 
