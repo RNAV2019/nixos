@@ -151,7 +151,7 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   `omega: Theme.microOmega` gives the small controls' shorter pace.
   In-pill choreography uses them too: a moment swap (`Activities/Moments.qml`, `Theme.momentFadeOmega`;
   the contents change at `Theme.momentSwapOpacity`), a toast slot's presence (`Notifications/Toast.qml`;
-  out, the opacity is spent over the first 0.6 of the travel), the Wi-Fi password row's height
+  out, the opacity is spent over the first 0.3 of the travel), the Wi-Fi password row's height
   (`Control/WifiView.qml`, content kept at 40 px inside a clip) and the dictation level bars
   (`MorphSpring` per bar, `Theme.levelOmega` 40, epsilon 0.1 px).
 - **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view

@@ -49,7 +49,7 @@ Item {
   // The card's presence is one spring (0 hidden, 1 shown) that a toast taking over or giving
   // way retargets with its speed. The opacity is read off it in a hurry so the island's pace
   // does not slow the toast: in, it is up over the first 0.4 of the travel (about 90 ms, as the
-  // old fade was); out, it is spent over the first 0.6 of the travel, quicker than in. Either
+  // old fade was); out, it is spent over the first 0.3 of the travel, measurably quicker than in. Either
   // starts from the opacity the card has when its direction turns, so a card leaving mid-enter
   // (or coming back mid-exit) goes on from there rather than jumping. `held` is that opacity.
   opacity: toast.held
@@ -73,7 +73,7 @@ Item {
     if (toast.live)
       o = toast.fromValue >= 1 ? 1 : toast.fromOpacity + (1 - toast.fromOpacity) * Motion.ramp(v, toast.fromValue, toast.fromValue + 0.4 * (1 - toast.fromValue));
     else
-      o = toast.fromValue <= 0 ? 0 : toast.fromOpacity * Motion.ramp(v, 0.4 * toast.fromValue, toast.fromValue);
+      o = toast.fromValue <= 0 ? 0 : toast.fromOpacity * Motion.ramp(v, 0.7 * toast.fromValue, toast.fromValue);
     toast.held = o;
     // The opacity the card shows, against its intent, for check.mjs --expect-monotonic.
     if (Theme.motionLog)
