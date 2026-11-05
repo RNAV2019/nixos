@@ -138,6 +138,24 @@
           [ "$status" -eq 0 ] && touch "$out"
         '';
 
+      # Committed .qsb files must match a fresh qsb compile of their sources.
+      quickshell-shaders =
+        pkgs.runCommand "quickshell-shaders" {
+          nativeBuildInputs = [pkgs.qt6.qtshadertools];
+        } ''
+          status=0
+          for src in ${./home/quickshell/Shaders}/*.frag ${./home/quickshell/Shaders}/*.vert; do
+            [ -e "$src" ] || continue
+            name=$(basename "$src")
+            qsb --qt6 -o "$name.qsb" "$src"
+            if ! cmp -s "$name.qsb" "$src.qsb"; then
+              echo "stale or missing: $name.qsb" >&2
+              status=1
+            fi
+          done
+          [ "$status" -eq 0 ] && touch "$out"
+        '';
+
       nix-format =
         pkgs.runCommand "nix-format" {
           nativeBuildInputs = [pkgs.alejandra];

@@ -90,3 +90,11 @@ Verified with a synthetic clip (5 frames boxed out of a real capture): reports `
   decimals the late tail goes unchecked. `--resolution Q` overrides the inferred quantum.
 - **Labels:** one label is one spring. Per-instance springs (Repeater delegates, one per tile) need a
   unique label each (e.g. `tile.3.x`), or their samples interleave and every rule misfires.
+
+## Shader smoke test
+
+`shader-smoke.sh` loads `home/quickshell/Shaders/roundedclip.frag.qsb` in a real Qt scene graph
+(headless sway, because the offscreen QPA plugin has no GL and falls back to the software
+backend, where ShaderEffect does nothing) and checks the clip: corner alpha 0, centre and edge
+midpoint alpha 255. Prints `PASS` or `FAIL ...`. The frame is left at `/tmp/qs-shader-smoke.png`.
+Copy the pattern to smoke-test later shaders.
