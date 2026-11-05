@@ -4,10 +4,14 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through warm-watch"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
-toggle() { qsipc "$1" toggle >/dev/null; }
+# MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
+toggle() {
+  [[ -z ${MARKS:-} ]] || printf "toggle %s %s\n" "$1" "$(date +%s%3N)" >>"$MARKS"
+  qsipc "$1" toggle >/dev/null
+}
 
 # Close everything and park the pointer, as shoot.sh does between states.
 reset_ui() {
@@ -29,6 +33,12 @@ sc_open_close() {
   sleep 1.2
   toggle control
   sleep 1.0
+}
+
+# The same twice: the first open is cold (nothing warmed it), the second is not.
+sc_open_twice() {
+  sc_open_close
+  sc_open_close
 }
 
 # One panel opened over another, 60 ms apart: control, then calendar, then nearby.
@@ -293,4 +303,50 @@ sc_retoggle_fast() {
   sleep 1.4
   qsipc control close >/dev/null 2>&1
   sleep 1.0
+}
+
+# A click off the card while it is still opening dismisses it, as it does at rest: the input
+# region is the final card shape from the first frame. The pointer is set first, so the click is
+# the only thing that happens 200 ms into the open. Check: surface.control.h ends back at the pill.
+sc_click_off_early() {
+  sleep 0.5
+  # Once first, so the window is not cold and the click lands mid-morph.
+  toggle control
+  sleep 1.2
+  qsipc control close >/dev/null 2>&1
+  sleep 1.0
+  cursor 200 900
+  sleep 0.3
+  toggle control
+  sleep 0.2
+  click
+  sleep 1.4
+  # Control: the same click at rest dismisses too.
+  toggle control
+  sleep 1.2
+  click
+  sleep 1.2
+}
+
+# A transient with cardInput false (the volume flash) passes clicks through to the island under
+# it: the click on the pill pins it open (surface-less, so look for island.* motion lines).
+sc_click_through() {
+  sleep 0.5
+  wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.40
+  sleep 0.5
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.60
+  sleep 0.4
+  cursor 960 18
+  sleep 0.2
+  click
+  sleep 1.2
+  cursor 200 900
+  sleep 1.0
+}
+
+# Nothing is driven: record the start with QS_SETTLE=0 QS_VIDEO=1 to see the surfaces warm
+# (Theme.surfaceWarmStagger apart). No frame may differ from the idle desktop.
+sc_warm_watch() {
+  sleep 4
 }

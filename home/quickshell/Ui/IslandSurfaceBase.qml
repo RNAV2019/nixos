@@ -457,6 +457,22 @@ PanelWindow {
   // waits out its first frame with the pill still up, which is slower but never bare.
   property bool retained: false
 
+  // Warmed once the session is ready, staggered: the window is mapped as a parked sliver, which
+  // builds it and presents its first frame in the background (nothing is drawn, no input, no
+  // focus: the keyboard mode is None while not open). It then obeys surfaceRetain like any other.
+  property int warmTicket: 0
+
+  Component.onCompleted: warmTicket = Bus.takeWarmTicket()
+
+  Timer {
+    interval: Theme.surfaceWarmStagger * (win.warmTicket + 1)
+    running: Bus.sessionReady && !Bus.locking
+    onTriggered: if (win.parked && !win.showing && !win.retained) {
+      win.retained = true;
+      retainTimer.restart();
+    }
+  }
+
   Timer {
     id: retainTimer
 
@@ -498,13 +514,24 @@ PanelWindow {
     id: emptyMask
   }
 
+  // The open card's final shape, centred and snapped as the surface will sit at rest, from the
+  // first frame of an open: a click off a card still opening dismisses it, and the region does
+  // not change every tick of the morph.
   Region {
     id: cardMask
 
-    item: surface
+    readonly property real w: surface.snap(win.openWidth)
+    readonly property real h: surface.snap(win.openHeight)
+
+    x: surface.snap((win.width - w) / 2 + origin.offsetX)
+    y: surface.snap(Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(h, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0))
+    width: w
+    height: h
   }
 
   onShowingChanged: {
+    if (Theme.motionLog)
+      console.info("motion surface." + win.key + ".showing " + Date.now() + " " + (showing ? "1.0000" : "0.0000") + " 0.0000 " + (showing ? "1.0000" : "0.0000"));
     if (showing) {
       parkDelay.stop();
       retainTimer.stop();

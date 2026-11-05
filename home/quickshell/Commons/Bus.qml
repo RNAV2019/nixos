@@ -52,6 +52,14 @@ Singleton {
     return map[key] !== undefined ? map[key] : fallback;
   }
 
+  // The order island surfaces are warmed in after the session is ready (Ui/IslandSurfaceBase.qml):
+  // each takes the next number when it is created.
+  property int warmTickets: 0
+
+  function takeWarmTicket() {
+    return warmTickets++;
+  }
+
   function prepareForLock() {
     if (locking)
       return;
