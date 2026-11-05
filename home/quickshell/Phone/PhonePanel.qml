@@ -135,21 +135,24 @@ Variants {
           (win.pickKind === "wallpaper" ? wallpaperPicker : picker).handleKey(event);
       }
 
+      // The pickers slide in from the right over the home view (Ui/SubviewSlide.qml).
+      SubviewSlide {
+        anchors.fill: parent
+        home: home
+        sub: pickers
+        name: "phone"
+        subShown: win.picking
+        homeBase: (width - win.columnWidth) / 2
+      }
+
       // ================= Home =================
 
       Item {
         id: home
 
-        x: (parent.width - width) / 2
         width: win.columnWidth
         height: contentHeight
-        opacity: win.picking ? 0 : 1
-        visible: opacity > 0
         enabled: !win.picking
-
-        Behavior on opacity {
-          ContentFade {}
-        }
 
         readonly property real inner: width - 2 * Theme.phoneInset
         readonly property real contentHeight: 2 * Theme.phoneInset + Theme.phoneDeviceHeight + noteSpace
@@ -630,56 +633,53 @@ Variants {
         }
       }
 
-      // ================= File picker =================
+      // ================= File pickers =================
 
-      FilePicker {
-        id: picker
+      Item {
+        id: pickers
 
-        x: (parent.width - Theme.pickerWidth) / 2
-        width: Theme.pickerWidth
-        height: Theme.pickerHeight
-        opacity: win.picking && win.pickKind === "files" ? 1 : 0
-        visible: opacity > 0
-        enabled: win.picking && win.pickKind === "files"
+        width: parent.width
+        height: parent.height
 
-        Behavior on opacity {
-          ContentFade {}
+        FilePicker {
+          id: picker
+
+          x: (parent.width - Theme.pickerWidth) / 2
+          width: Theme.pickerWidth
+          height: Theme.pickerHeight
+          visible: win.pickKind === "files"
+          enabled: win.picking && win.pickKind === "files"
+
+          onDirChanged: win.lastDir = dir
+          onAccepted: function (paths) {
+            Phone.share(paths);
+            win.hide();
+          }
+          onCancelled: win.picking = false
         }
 
-        onDirChanged: win.lastDir = dir
-        onAccepted: function (paths) {
-          Phone.share(paths);
-          win.hide();
-        }
-        onCancelled: win.picking = false
-      }
+        // The same picker for one picture, with the phone's storage and the laptop's to choose
+        // between.
+        FilePicker {
+          id: wallpaperPicker
 
-      // The same picker for one picture, with the phone's storage and the laptop's to choose
-      // between.
-      FilePicker {
-        id: wallpaperPicker
+          x: (parent.width - Theme.pickerWidth) / 2
+          width: Theme.pickerWidth
+          height: Theme.pickerHeight
+          images: true
+          title: "Choose phone wallpaper"
+          visible: win.pickKind === "wallpaper"
+          enabled: win.picking && win.pickKind === "wallpaper"
 
-        x: (parent.width - Theme.pickerWidth) / 2
-        width: Theme.pickerWidth
-        height: Theme.pickerHeight
-        images: true
-        title: "Choose phone wallpaper"
-        opacity: win.picking && win.pickKind === "wallpaper" ? 1 : 0
-        visible: opacity > 0
-        enabled: win.picking && win.pickKind === "wallpaper"
-
-        Behavior on opacity {
-          ContentFade {}
+          onSourceChosen: function (source) {
+            win.chooseSource(source);
+          }
+          onAccepted: function (paths) {
+            Phone.setWallpaper(paths[0]);
+            win.picking = false;
+          }
+          onCancelled: win.picking = false
         }
-
-        onSourceChosen: function (source) {
-          win.chooseSource(source);
-        }
-        onAccepted: function (paths) {
-          Phone.setWallpaper(paths[0]);
-          win.picking = false;
-        }
-        onCancelled: win.picking = false
       }
     }
   }

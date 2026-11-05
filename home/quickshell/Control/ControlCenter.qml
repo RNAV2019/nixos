@@ -72,10 +72,12 @@ Variants {
       }
     }
 
-    // The view being left stays drawn until it is wholly past the card's right edge, which
-    // the clip hides; a fixed timer cut it off mid-travel whenever the spring ran long.
+    // The view being left stays drawn until the slide has settled back home, which parks it
+    // past the card's right edge; a fixed timer cut it off mid-travel whenever the spring ran
+    // long. Only once progress is back at 0: a `view` change can reach here before the spring
+    // has taken its new target, while it still reads settled at the sub-view.
     function unloadIfParked() {
-      if (view === "" && loadedView !== "" && subLoader.x >= openWidth - 0.5)
+      if (view === "" && loadedView !== "" && slide.settled && slide.progress === 0)
         loadedView = "";
     }
 
@@ -161,12 +163,24 @@ Variants {
       anchors.fill: parent
       enabled: win.open
 
-      // The push travels a full column, so it rides the shape's own spring (half-pixel rest)
-      // rather than MicroSpring, whose unit-scale epsilon kept a 520 px slide alive for ~1.5 s.
+      // The push is one per-frame spring at the island's pace (Ui/SubviewSlide.qml); it waits for
+      // the sub-view to be built, so the home view holds still rather than sliding out to nothing.
+      SubviewSlide {
+        id: slide
+
+        anchors.fill: parent
+        home: home
+        sub: subLoader
+        name: "control"
+        travel: win.openWidth
+        subShown: win.view !== "" && win.loadedView === win.view
+        subReady: subLoader.status === Loader.Ready
+        onSettledChanged: win.unloadIfParked()
+      }
+
       HomeView {
         id: home
 
-        x: win.subShown ? -win.openWidth : 0
         y: 0
         width: win.openWidth
         height: contentHeight
@@ -182,31 +196,16 @@ Variants {
           win.recorderOut = true;
           Bus.recorderRequested();
         }
-
-        Behavior on x {
-          enabled: !Theme.reduceMotion
-
-          SurfaceSpring {}
-        }
       }
 
       Loader {
         id: subLoader
 
-        x: win.subShown ? 0 : win.openWidth
         y: 0
         width: win.openWidth
         height: item ? item.contentHeight : 0
         active: win.loadedView !== ""
         asynchronous: true
-
-        onXChanged: win.unloadIfParked()
-
-        Behavior on x {
-          enabled: !Theme.reduceMotion
-
-          SurfaceSpring {}
-        }
 
         sourceComponent: {
           switch (win.loadedView) {

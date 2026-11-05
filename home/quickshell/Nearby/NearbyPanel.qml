@@ -334,216 +334,454 @@ Variants {
         }
       }
 
-      // ================= Send =================
+      // The file picker slides in over Send and Receive, and Receive slides in over Send
+      // (Ui/SubviewSlide.qml).
+      SubviewSlide {
+        anchors.fill: parent
+        home: modes
+        sub: picker
+        name: "nearby.picker"
+        subShown: win.picking
+        subBase: (width - Theme.pickerWidth) / 2
+      }
 
       Item {
-        id: sendView
+        id: modes
 
-        x: (parent.width - width) / 2
-        width: win.columnWidth
-        height: contentHeight
-        opacity: win.direction === "send" && !win.picking ? 1 : 0
-        visible: opacity > 0
-        enabled: visible
+        width: parent.width
+        height: parent.height
 
-        readonly property int shownPeers: peerModel.count
-        readonly property int visibleRows: Math.min(win.files.length, Theme.nearbyFilesMax)
-        readonly property real rowsHeight: visibleRows > 0 ? visibleRows * Theme.nearbyFileHeight + (visibleRows - 1) * Theme.nearbyFileGap : 0
-
-        // Board 16a: button 74-118, Nearby at 138, tiles at 160; 16e: Files at 80, rows from
-        // 100 on a 46 px pitch, Nearby 20 below the last row.
-        readonly property real nearbyY: win.hasFiles ? Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows + rowsHeight + 20 : Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap + Theme.nearbyChooseHeight + 20
-        readonly property real tilesY: nearbyY + 22
-        readonly property real tileHeight: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap + 14 + (win.hasFiles ? Theme.nearbyDeviceSubGap + Theme.nearbyDeviceSubHeight : 0)
-        readonly property real contentHeight: phoneAbsent ? Theme.nearbyAbsentHeight : tilesY + tileHeight + Theme.nearbyPadBottom
-        // KDE Connect is picked and there is no phone to send to.
-        readonly property bool phoneAbsent: Nearby.kdeconnect && !Phone.connected
-
-        Behavior on opacity {
-          ContentFade {}
+        SubviewSlide {
+          anchors.fill: parent
+          home: sendView
+          sub: receiveView
+          name: "nearby.direction"
+          subShown: win.direction === "receive"
+          homeBase: (width - win.columnWidth) / 2
+          subBase: (width - win.columnWidth) / 2
         }
 
-        NearbyHeader {
-          y: Theme.nearbyPadTop
-          direction: win.direction
-          onDirectionChosen: function (direction) {
-            win.direction = direction;
-          }
-        }
+        // ================= Send =================
 
-        // Board 16a: one full-width accent button while nothing is staged.
-        Button {
-          id: chooseButton
+        Item {
+          id: sendView
 
-          x: Theme.nearbyInset
-          y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap
-          width: sendView.width - Theme.nearbyInset * 2
-          kind: Button.Primary
-          size: Button.Large
-          text: "Choose files"
-          icon: IconPaths.plus
-          iconStroke: 2.1
-          revealed: !win.hasFiles && !sendView.phoneAbsent
-          visible: opacity > 0
-          onClicked: win.chooseFiles()
-        }
+          width: win.columnWidth
+          height: contentHeight
+          enabled: win.direction === "send" && !win.picking
 
-        // Board 16e: "Files 3 · 18.4 MB" with an accent "+ Add", then one row per file.
-        SectionLabel {
-          y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop
-          width: sendView.width
-          height: 14
-          inset: Theme.nearbySectionSide
-          verticalAlignment: Qt.AlignVCenter
-          title: "Files"
-          detail: win.files.length + (win.filesBytes > 0 ? " · " + Nearby.sizeLabel(win.filesBytes) : "")
-          action: "Add"
-          actionGlyph: IconPaths.plus
-          onActionClicked: win.chooseFiles()
-          opacity: win.hasFiles && !sendView.phoneAbsent ? 1 : 0
-          visible: opacity > 0
+          readonly property int shownPeers: peerModel.count
+          readonly property int visibleRows: Math.min(win.files.length, Theme.nearbyFilesMax)
+          readonly property real rowsHeight: visibleRows > 0 ? visibleRows * Theme.nearbyFileHeight + (visibleRows - 1) * Theme.nearbyFileGap : 0
 
-          Behavior on opacity {
-            ContentFade {}
-          }
-        }
+          // Board 16a: button 74-118, Nearby at 138, tiles at 160; 16e: Files at 80, rows from
+          // 100 on a 46 px pitch, Nearby 20 below the last row.
+          readonly property real nearbyY: win.hasFiles ? Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows + rowsHeight + 20 : Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap + Theme.nearbyChooseHeight + 20
+          readonly property real tilesY: nearbyY + 22
+          readonly property real tileHeight: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap + 14 + (win.hasFiles ? Theme.nearbyDeviceSubGap + Theme.nearbyDeviceSubHeight : 0)
+          readonly property real contentHeight: phoneAbsent ? Theme.nearbyAbsentHeight : tilesY + tileHeight + Theme.nearbyPadBottom
+          // KDE Connect is picked and there is no phone to send to.
+          readonly property bool phoneAbsent: Nearby.kdeconnect && !Phone.connected
 
-        ListView {
-          id: fileList
-
-          x: Theme.nearbyInset
-          y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows
-          width: sendView.width - Theme.nearbyInset * 2
-          height: sendView.rowsHeight
-          visible: win.hasFiles && !sendView.phoneAbsent
-          clip: true
-          spacing: Theme.nearbyFileGap
-          interactive: win.files.length > Theme.nearbyFilesMax
-          boundsBehavior: Flickable.StopAtBounds
-          model: win.files
-
-          delegate: StagedFileRow {
-            required property string modelData
-
-            width: fileList.width
-            path: modelData
-            bytes: win.fileBytes[modelData] !== undefined ? win.fileBytes[modelData] : -1
-            onRemoveClicked: win.removeFile(modelData)
-          }
-
-          add: Transition {
-            NumberAnimation {
-              property: "opacity"
-              from: 0
-              to: 1
-              duration: Theme.duration(Theme.nearbyFileAppear)
+          NearbyHeader {
+            y: Theme.nearbyPadTop
+            direction: win.direction
+            onDirectionChosen: function (direction) {
+              win.direction = direction;
             }
           }
-        }
 
-        ScrollFade {
-          list: fileList
-        }
+          // Board 16a: one full-width accent button while nothing is staged.
+          Button {
+            id: chooseButton
 
-        // "Nearby", and what the stack is doing on the right: a daemon notice, the gold Wi-Fi
-        // note in Apple mode (16f), or Scanning… (16a).
-        SectionLabel {
-          visible: !sendView.phoneAbsent
-          y: sendView.nearbyY
-          width: sendView.width
-          height: 14
-          inset: Theme.nearbySectionSide
-          verticalAlignment: Qt.AlignVCenter
-          title: Nearby.kdeconnect ? "Your phone" : "Nearby"
+            x: Theme.nearbyInset
+            y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap
+            width: sendView.width - Theme.nearbyInset * 2
+            kind: Button.Primary
+            size: Button.Large
+            text: "Choose files"
+            icon: IconPaths.plus
+            iconStroke: 2.1
+            revealed: !win.hasFiles && !sendView.phoneAbsent
+            visible: opacity > 0
+            onClicked: win.chooseFiles()
+          }
 
+          // Board 16e: "Files 3 · 18.4 MB" with an accent "+ Add", then one row per file.
+          SectionLabel {
+            y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop
+            width: sendView.width
+            height: 14
+            inset: Theme.nearbySectionSide
+            verticalAlignment: Qt.AlignVCenter
+            title: "Files"
+            detail: win.files.length + (win.filesBytes > 0 ? " · " + Nearby.sizeLabel(win.filesBytes) : "")
+            action: "Add"
+            actionGlyph: IconPaths.plus
+            onActionClicked: win.chooseFiles()
+            opacity: win.hasFiles && !sendView.phoneAbsent ? 1 : 0
+            visible: opacity > 0
+
+            Behavior on opacity {
+              ContentFade {}
+            }
+          }
+
+          ListView {
+            id: fileList
+
+            x: Theme.nearbyInset
+            y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbySectionTop + 14 + Theme.nearbySectionToRows
+            width: sendView.width - Theme.nearbyInset * 2
+            height: sendView.rowsHeight
+            visible: win.hasFiles && !sendView.phoneAbsent
+            clip: true
+            spacing: Theme.nearbyFileGap
+            interactive: win.files.length > Theme.nearbyFilesMax
+            boundsBehavior: Flickable.StopAtBounds
+            model: win.files
+
+            delegate: StagedFileRow {
+              required property string modelData
+
+              width: fileList.width
+              path: modelData
+              bytes: win.fileBytes[modelData] !== undefined ? win.fileBytes[modelData] : -1
+              onRemoveClicked: win.removeFile(modelData)
+            }
+
+            add: Transition {
+              NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: Theme.duration(Theme.nearbyFileAppear)
+              }
+            }
+          }
+
+          ScrollFade {
+            list: fileList
+          }
+
+          // "Nearby", and what the stack is doing on the right: a daemon notice, the gold Wi-Fi
+          // note in Apple mode (16f), or Scanning… (16a).
+          SectionLabel {
+            visible: !sendView.phoneAbsent
+            y: sendView.nearbyY
+            width: sendView.width
+            height: 14
+            inset: Theme.nearbySectionSide
+            verticalAlignment: Qt.AlignVCenter
+            title: Nearby.kdeconnect ? "Your phone" : "Nearby"
+
+            StrokeIcon {
+              visible: Nearby.noticeText === "" && Nearby.wifiPaused
+              anchors.verticalCenter: parent.verticalCenter
+              size: 14
+              strokeWidth: 1.8
+              path: IconPaths.wifiOff
+              color: Theme.gold
+            }
+
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: Math.min(implicitWidth, sendView.width - 120)
+              elide: Text.ElideRight
+              text: Nearby.noticeText !== "" ? Nearby.noticeText : Nearby.kdeconnect ? "" : Nearby.busy ? (Nearby.mode === "apple" ? "Starting AirDrop…" : "Switching…") : Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
+              color: Nearby.noticeText !== "" ? (Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary) : Nearby.wifiPaused ? Theme.gold : Theme.accentFill
+              font.family: Theme.uiFont
+              font.pixelSize: Theme.nearbySectionSize
+              font.weight: Theme.weightMedium
+
+              Behavior on color {
+                Tint {}
+              }
+            }
+          }
+
+          // KDE Connect picked with no phone connected.
           StrokeIcon {
-            visible: Nearby.noticeText === "" && Nearby.wifiPaused
-            anchors.verticalCenter: parent.verticalCenter
-            size: 14
-            strokeWidth: 1.8
-            path: IconPaths.wifiOff
-            color: Theme.gold
+            visible: sendView.phoneAbsent
+            x: (sendView.width - size) / 2
+            y: 86
+            size: 28
+            strokeWidth: 1.75
+            path: IconPaths.phoneOff
+            color: Theme.inkTertiary
           }
 
           Text {
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, sendView.width - 120)
+            visible: sendView.phoneAbsent
+            y: 128
+            width: sendView.width
+            horizontalAlignment: Text.AlignHCenter
+            text: "No phone connected"
+            color: Theme.inkPrimary
+            font.family: Theme.uiFont
+            font.pixelSize: 13
+            font.weight: Theme.weightMedium
+          }
+
+          Button {
+            visible: sendView.phoneAbsent
+            x: (sendView.width - width) / 2
+            y: 160
+            size: Button.Compact
+            text: "Switch to Android"
+            onClicked: Nearby.setPlatform("android")
+          }
+
+          // The tiles: 56 px discs centred on 120 px columns, the row centred on the panel.
+          Row {
+            visible: !sendView.phoneAbsent
+            x: tilesX.value
+            y: sendView.tilesY
+
+            MorphSpring {
+              id: tilesX
+
+              target: (sendView.width - sendView.shownPeers * Theme.nearbyDeviceSlot) / 2
+              label: "nearby.tiles"
+            }
+
+            Repeater {
+              model: peerModel
+
+              DeviceTile {
+                required property string key
+
+                readonly property var peerData: Nearby.peerById(key)
+
+                width: Theme.nearbyDeviceSlot
+                peer: peerData
+                filesReady: win.hasFiles
+                transfer: Nearby.outgoingFor(peerData, win.ignoreIds)
+                onTapped: if (peerData)
+                  Nearby.send(win.files, peerData.id)
+                onCancelTapped: {
+                  if (transfer && transfer.id)
+                    Nearby.cancel(transfer.id);
+                }
+              }
+            }
+          }
+        }
+
+        // ================= Receive =================
+
+        Item {
+          id: receiveView
+
+          width: win.columnWidth
+          height: contentHeight
+          enabled: win.direction === "receive" && !win.picking
+
+          readonly property int rowCount: rowModel.count
+          readonly property int visibleRows: Math.min(rowCount, Theme.nearbyRowsMax)
+          readonly property real radarY: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyRadarTop
+          readonly property real chipsBottom: radarY + radar.implicitHeight
+          readonly property real noticeHeight: Nearby.noticeText !== "" ? 22 : 0
+          readonly property real cardsTop: chipsBottom + noticeHeight
+          readonly property real receivedY: cardsTop + (cards.height > 0 ? cards.height + Theme.nearbyReceivedAfterCard : Theme.nearbyReceivedGap)
+          readonly property real rowsY: receivedY + 14 + 6
+          readonly property real rowsHeight: visibleRows > 0 ? visibleRows * Theme.nearbyRowHeight + (visibleRows - 1) * Theme.nearbyRowGap : 0
+          readonly property real contentHeight: rowCount > 0 ? rowsY + rowsHeight + Theme.nearbyReceiveBottom : cardsTop + (cards.height > 0 ? cards.height + Theme.nearbyPadBottom : Theme.nearbyPadBottom + 4)
+
+          NearbyHeader {
+            y: Theme.nearbyPadTop
+            direction: win.direction
+            onDirectionChosen: function (direction) {
+              win.direction = direction;
+            }
+          }
+
+          RadarView {
+            id: radar
+
+            y: receiveView.radarY
+            width: receiveView.width
+            deviceName: Nearby.deviceName !== "" ? Nearby.deviceName : Nearby.kdeconnect ? "This laptop" : ""
+            remainingLabel: Nearby.remainingLabel
+            receivable: Nearby.kdeconnect ? Phone.connected : Nearby.receivable
+            wifiPaused: Nearby.wifiPaused
+            peerName: Nearby.kdeconnect ? Phone.name : ""
+            onTimerClicked: Nearby.receivable ? Nearby.turnOff() : Nearby.turnOnForever()
+          }
+
+          Text {
+            visible: Nearby.noticeText !== ""
+            x: Theme.nearbySectionSide
+            y: receiveView.chipsBottom + 8
+            width: receiveView.width - Theme.nearbySectionSide * 2
+            horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
-            text: Nearby.noticeText !== "" ? Nearby.noticeText : Nearby.kdeconnect ? "" : Nearby.busy ? (Nearby.mode === "apple" ? "Starting AirDrop…" : "Switching…") : Nearby.wifiPaused ? "Wi-Fi paused" : Nearby.scanning ? "Scanning…" : ""
-            color: Nearby.noticeText !== "" ? (Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary) : Nearby.wifiPaused ? Theme.gold : Theme.accentFill
+            text: Nearby.noticeText
+            color: Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary
             font.family: Theme.uiFont
             font.pixelSize: Theme.nearbySectionSize
             font.weight: Theme.weightMedium
-
-            Behavior on color {
-              Tint {}
-            }
-          }
-        }
-
-        // KDE Connect picked with no phone connected.
-        StrokeIcon {
-          visible: sendView.phoneAbsent
-          x: (sendView.width - size) / 2
-          y: 86
-          size: 28
-          strokeWidth: 1.75
-          path: IconPaths.phoneOff
-          color: Theme.inkTertiary
-        }
-
-        Text {
-          visible: sendView.phoneAbsent
-          y: 128
-          width: sendView.width
-          horizontalAlignment: Text.AlignHCenter
-          text: "No phone connected"
-          color: Theme.inkPrimary
-          font.family: Theme.uiFont
-          font.pixelSize: 13
-          font.weight: Theme.weightMedium
-        }
-
-        Button {
-          visible: sendView.phoneAbsent
-          x: (sendView.width - width) / 2
-          y: 160
-          size: Button.Compact
-          text: "Switch to Android"
-          onClicked: Nearby.setPlatform("android")
-        }
-
-        // The tiles: 56 px discs centred on 120 px columns, the row centred on the panel.
-        Row {
-          visible: !sendView.phoneAbsent
-          x: (sendView.width - sendView.shownPeers * Theme.nearbyDeviceSlot) / 2
-          y: sendView.tilesY
-
-          Behavior on x {
-            enabled: !Theme.reduceMotion
-
-            SurfaceSpring {}
           }
 
-          Repeater {
-            model: peerModel
+          // Consent cards (board 16g). A request animates in and stays until it is answered - or
+          // until the transfer behind it fails, when it animates out on its own. The model keeps a
+          // card a moment past its request so the way out can be seen.
+          ListModel {
+            id: cardModel
+          }
 
-            DeviceTile {
-              required property string key
-
-              readonly property var peerData: Nearby.peerById(key)
-
-              width: Theme.nearbyDeviceSlot
-              peer: peerData
-              filesReady: win.hasFiles
-              transfer: Nearby.outgoingFor(peerData, win.ignoreIds)
-              onTapped: if (peerData)
-                Nearby.send(win.files, peerData.id)
-              onCancelTapped: {
-                if (transfer && transfer.id)
-                  Nearby.cancel(transfer.id);
+          function syncCards() {
+            var live = {};
+            var pending = Nearby.pendingInbound;
+            for (var i = 0; i < pending.length; i++)
+              live[pending[i].id] = pending[i];
+            for (var j = 0; j < cardModel.count; j++) {
+              var id = cardModel.get(j).tid;
+              if (live[id]) {
+                cardModel.setProperty(j, "snapshot", JSON.stringify(live[id]));
+                cardModel.setProperty(j, "live", true);
+                delete live[id];
+              } else if (cardModel.get(j).live) {
+                cardModel.setProperty(j, "live", false);
               }
             }
+            for (var k in live)
+              cardModel.append({
+                "tid": k,
+                "live": true,
+                "snapshot": JSON.stringify(live[k])
+              });
+          }
+
+          Connections {
+            target: Nearby
+
+            function onPendingInboundChanged() {
+              receiveView.syncCards();
+            }
+          }
+
+          Component.onCompleted: syncCards()
+
+          Column {
+            id: cards
+
+            y: receiveView.cardsTop
+            width: receiveView.width
+
+            Repeater {
+              model: cardModel
+
+              Item {
+                id: cardSlot
+
+                required property string tid
+                required property bool live
+                required property string snapshot
+                required property int index
+
+                width: receiveView.width
+                clip: true
+
+                // 0 -> 1 as the card arrives, back to 0 as it leaves; the slot's height rides it,
+                // so the list below slides rather than jumps.
+                property real shown: 0
+                readonly property real full: Theme.nearbyIncomingTop + Theme.nearbyIncomingHeight
+
+                height: full * shown
+                Component.onCompleted: shown = live ? 1 : 0
+                onLiveChanged: shown = live ? 1 : 0
+                onShownChanged: if (!live && shown <= 0.001)
+                  Qt.callLater(function () {
+                    for (var i = 0; i < cardModel.count; i++) {
+                      if (cardModel.get(i).tid === cardSlot.tid && !cardModel.get(i).live) {
+                        cardModel.remove(i);
+                        break;
+                      }
+                    }
+                  })
+
+                Behavior on shown {
+                  NumberAnimation {
+                    duration: Theme.duration(cardSlot.live ? 260 : 200)
+                    easing.type: cardSlot.live ? Easing.OutBack : Easing.InCubic
+                    easing.overshoot: 1.2
+                  }
+                }
+
+                IncomingCard {
+                  x: Theme.nearbyInset
+                  y: Theme.nearbyIncomingTop
+                  transfer: JSON.parse(cardSlot.snapshot)
+                  opacity: Math.min(1, cardSlot.shown * 1.4)
+                  scale: 0.96 + 0.04 * Math.min(1, cardSlot.shown)
+                  enabled: cardSlot.live
+                  onAccepted: Nearby.accept(cardSlot.tid)
+                  onDeclined: Nearby.decline(cardSlot.tid)
+                }
+              }
+            }
+          }
+
+          SectionLabel {
+            y: receiveView.receivedY
+            width: receiveView.width
+            height: 14
+            inset: Theme.nearbySectionSide
+            verticalAlignment: Qt.AlignVCenter
+            title: "Received"
+            action: "Downloads"
+            actionGlyph: IconPaths.folder
+            actionGlyphSize: 14
+            onActionClicked: Nearby.openDownloads()
+            visible: receiveView.rowCount > 0
+          }
+
+          ListView {
+            id: receivedList
+
+            y: receiveView.rowsY
+            x: Theme.nearbyInset
+            width: receiveView.width - Theme.nearbyInset * 2
+            height: receiveView.rowsHeight
+            spacing: Theme.nearbyRowGap
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+            model: rowModel
+            // Hovering a row while the list moves would leave the preview behind it.
+            onContentYChanged: win.previewActive = false
+
+            delegate: ReceivedRow {
+              id: receivedRow
+
+              required property string key
+
+              width: receivedList.width
+              transfer: Nearby.transferById(key)
+              fresh: Nearby.freshArrival === key
+              progress: Nearby.progressOf(transfer)
+              onClicked: Nearby.openFile(receivedRow.path)
+              onHoverMoved: function (lx, ly) {
+                if (!receivedRow.done || receivedRow.path === "") {
+                  win.previewActive = false;
+                  return;
+                }
+                // Into the card, then the window: a PanelWindow is not an Item to map onto, but
+                // the overlay shares the window's origin and the card's offset is known.
+                var p = receivedRow.mapToItem(win.surface, lx, ly);
+                win.previewX = win.surface.x + p.x;
+                win.previewY = win.surface.y + p.y;
+                win.previewPath = receivedRow.path;
+                win.previewActive = true;
+              }
+              onHoverExited: win.previewActive = false
+            }
+          }
+
+          ScrollFade {
+            list: receivedList
           }
         }
       }
@@ -553,16 +791,9 @@ Variants {
       FilePicker {
         id: picker
 
-        x: (parent.width - Theme.pickerWidth) / 2
         width: Theme.pickerWidth
         height: Theme.pickerHeight
-        opacity: win.picking ? 1 : 0
-        visible: opacity > 0
         enabled: win.picking
-
-        Behavior on opacity {
-          ContentFade {}
-        }
 
         onDirChanged: win.lastDir = dir
         onAccepted: function (paths) {
@@ -570,229 +801,6 @@ Variants {
           win.stage(paths);
         }
         onCancelled: win.picking = false
-      }
-
-      // ================= Receive =================
-
-      Item {
-        id: receiveView
-
-        x: (parent.width - width) / 2
-        width: win.columnWidth
-        height: contentHeight
-        opacity: win.direction === "receive" && !win.picking ? 1 : 0
-        visible: opacity > 0
-        enabled: visible
-
-        readonly property int rowCount: rowModel.count
-        readonly property int visibleRows: Math.min(rowCount, Theme.nearbyRowsMax)
-        readonly property real radarY: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyRadarTop
-        readonly property real chipsBottom: radarY + radar.implicitHeight
-        readonly property real noticeHeight: Nearby.noticeText !== "" ? 22 : 0
-        readonly property real cardsTop: chipsBottom + noticeHeight
-        readonly property real receivedY: cardsTop + (cards.height > 0 ? cards.height + Theme.nearbyReceivedAfterCard : Theme.nearbyReceivedGap)
-        readonly property real rowsY: receivedY + 14 + 6
-        readonly property real rowsHeight: visibleRows > 0 ? visibleRows * Theme.nearbyRowHeight + (visibleRows - 1) * Theme.nearbyRowGap : 0
-        readonly property real contentHeight: rowCount > 0 ? rowsY + rowsHeight + Theme.nearbyReceiveBottom : cardsTop + (cards.height > 0 ? cards.height + Theme.nearbyPadBottom : Theme.nearbyPadBottom + 4)
-
-        Behavior on opacity {
-          ContentFade {}
-        }
-
-        NearbyHeader {
-          y: Theme.nearbyPadTop
-          direction: win.direction
-          onDirectionChosen: function (direction) {
-            win.direction = direction;
-          }
-        }
-
-        RadarView {
-          id: radar
-
-          y: receiveView.radarY
-          width: receiveView.width
-          deviceName: Nearby.deviceName !== "" ? Nearby.deviceName : Nearby.kdeconnect ? "This laptop" : ""
-          remainingLabel: Nearby.remainingLabel
-          receivable: Nearby.kdeconnect ? Phone.connected : Nearby.receivable
-          wifiPaused: Nearby.wifiPaused
-          peerName: Nearby.kdeconnect ? Phone.name : ""
-          onTimerClicked: Nearby.receivable ? Nearby.turnOff() : Nearby.turnOnForever()
-        }
-
-        Text {
-          visible: Nearby.noticeText !== ""
-          x: Theme.nearbySectionSide
-          y: receiveView.chipsBottom + 8
-          width: receiveView.width - Theme.nearbySectionSide * 2
-          horizontalAlignment: Text.AlignHCenter
-          elide: Text.ElideRight
-          text: Nearby.noticeText
-          color: Nearby.noticeLevel === "error" ? Theme.love : Theme.inkSecondary
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.nearbySectionSize
-          font.weight: Theme.weightMedium
-        }
-
-        // Consent cards (board 16g). A request animates in and stays until it is answered - or
-        // until the transfer behind it fails, when it animates out on its own. The model keeps a
-        // card a moment past its request so the way out can be seen.
-        ListModel {
-          id: cardModel
-        }
-
-        function syncCards() {
-          var live = {};
-          var pending = Nearby.pendingInbound;
-          for (var i = 0; i < pending.length; i++)
-            live[pending[i].id] = pending[i];
-          for (var j = 0; j < cardModel.count; j++) {
-            var id = cardModel.get(j).tid;
-            if (live[id]) {
-              cardModel.setProperty(j, "snapshot", JSON.stringify(live[id]));
-              cardModel.setProperty(j, "live", true);
-              delete live[id];
-            } else if (cardModel.get(j).live) {
-              cardModel.setProperty(j, "live", false);
-            }
-          }
-          for (var k in live)
-            cardModel.append({
-              "tid": k,
-              "live": true,
-              "snapshot": JSON.stringify(live[k])
-            });
-        }
-
-        Connections {
-          target: Nearby
-
-          function onPendingInboundChanged() {
-            receiveView.syncCards();
-          }
-        }
-
-        Component.onCompleted: syncCards()
-
-        Column {
-          id: cards
-
-          y: receiveView.cardsTop
-          width: receiveView.width
-
-          Repeater {
-            model: cardModel
-
-            Item {
-              id: cardSlot
-
-              required property string tid
-              required property bool live
-              required property string snapshot
-              required property int index
-
-              width: receiveView.width
-              clip: true
-
-              // 0 -> 1 as the card arrives, back to 0 as it leaves; the slot's height rides it,
-              // so the list below slides rather than jumps.
-              property real shown: 0
-              readonly property real full: Theme.nearbyIncomingTop + Theme.nearbyIncomingHeight
-
-              height: full * shown
-              Component.onCompleted: shown = live ? 1 : 0
-              onLiveChanged: shown = live ? 1 : 0
-              onShownChanged: if (!live && shown <= 0.001)
-                Qt.callLater(function () {
-                  for (var i = 0; i < cardModel.count; i++) {
-                    if (cardModel.get(i).tid === cardSlot.tid && !cardModel.get(i).live) {
-                      cardModel.remove(i);
-                      break;
-                    }
-                  }
-                })
-
-              Behavior on shown {
-                NumberAnimation {
-                  duration: Theme.duration(cardSlot.live ? 260 : 200)
-                  easing.type: cardSlot.live ? Easing.OutBack : Easing.InCubic
-                  easing.overshoot: 1.2
-                }
-              }
-
-              IncomingCard {
-                x: Theme.nearbyInset
-                y: Theme.nearbyIncomingTop
-                transfer: JSON.parse(cardSlot.snapshot)
-                opacity: Math.min(1, cardSlot.shown * 1.4)
-                scale: 0.96 + 0.04 * Math.min(1, cardSlot.shown)
-                enabled: cardSlot.live
-                onAccepted: Nearby.accept(cardSlot.tid)
-                onDeclined: Nearby.decline(cardSlot.tid)
-              }
-            }
-          }
-        }
-
-        SectionLabel {
-          y: receiveView.receivedY
-          width: receiveView.width
-          height: 14
-          inset: Theme.nearbySectionSide
-          verticalAlignment: Qt.AlignVCenter
-          title: "Received"
-          action: "Downloads"
-          actionGlyph: IconPaths.folder
-          actionGlyphSize: 14
-          onActionClicked: Nearby.openDownloads()
-          visible: receiveView.rowCount > 0
-        }
-
-        ListView {
-          id: receivedList
-
-          y: receiveView.rowsY
-          x: Theme.nearbyInset
-          width: receiveView.width - Theme.nearbyInset * 2
-          height: receiveView.rowsHeight
-          spacing: Theme.nearbyRowGap
-          clip: true
-          interactive: contentHeight > height
-          boundsBehavior: Flickable.StopAtBounds
-          model: rowModel
-          // Hovering a row while the list moves would leave the preview behind it.
-          onContentYChanged: win.previewActive = false
-
-          delegate: ReceivedRow {
-            id: receivedRow
-
-            required property string key
-
-            width: receivedList.width
-            transfer: Nearby.transferById(key)
-            fresh: Nearby.freshArrival === key
-            progress: Nearby.progressOf(transfer)
-            onClicked: Nearby.openFile(receivedRow.path)
-            onHoverMoved: function (lx, ly) {
-              if (!receivedRow.done || receivedRow.path === "") {
-                win.previewActive = false;
-                return;
-              }
-              // Into the card, then the window: a PanelWindow is not an Item to map onto, but
-              // the overlay shares the window's origin and the card's offset is known.
-              var p = receivedRow.mapToItem(win.surface, lx, ly);
-              win.previewX = win.surface.x + p.x;
-              win.previewY = win.surface.y + p.y;
-              win.previewPath = receivedRow.path;
-              win.previewActive = true;
-            }
-            onHoverExited: win.previewActive = false
-          }
-        }
-
-        ScrollFade {
-          list: receivedList
-        }
       }
     }
   }

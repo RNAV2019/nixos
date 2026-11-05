@@ -128,10 +128,12 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   `kick(v)` sets a starting velocity; `label` names it in the motion log (`QS_MOTION_LOG=1`, read by
   `tools/qs-verify/motion`), one unique label per instance. `Motion.js` holds the maths
   (`springStep`, `seedVelocity`, `progress`, `ramp`, `snap`).
-- **`ProgressSpring`**: a `MorphSpring` for a 0..1 progress (`ProgressSpring { target: shown ? 1 : 0 }`).
-- **`SurfaceSpring`**: a `SpringAnimation` for geometry that must keep its velocity when the
-  target changes (the control centre's views, Nearby, carousel tiles).
-- **`MicroSpring`**: the shorter, non-bouncy one for small controls (the switch knob).
+- **`ProgressSpring`**: a `MorphSpring` for a 0..1 progress (`ProgressSpring { target: shown ? 1 : 0 }`);
+  `omega: Theme.microOmega` gives the small controls' shorter pace.
+- **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view
+  (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
+  views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.
+  Used by the control centre, Nearby (send/receive and the picker) and the phone panel.
 - **`Morph`**: a `NumberAnimation` for state changes that are not spatial (fades, fills).
 - **`ContentFade`**: the `Morph` for a cross-fade between two contents in one place (the shut
   pill and the open card, one panel view and the next).
