@@ -4,8 +4,8 @@ import "Motion.js" as Motion
 
 // The island's shape spring: one critically damped spring, so it never overshoots, solved
 // exactly for each frame's own time step.
-// SpringAnimation steps in fixed 16 ms quanta, so on a 120 Hz output a morph only moved on
-// every other frame; this moves on every one, and lands on the same curve at any frame rate.
+// It steps with every frame's own time, so on a 120 Hz output it moves on every frame, and it lands
+// on the same curve at any frame rate.
 //
 // Bind `target`, read `value`. A new target keeps the velocity, as a spring should. With
 // `animate` down a new target is taken at once and any motion stops, which is what writing

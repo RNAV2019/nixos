@@ -286,23 +286,8 @@ Singleton {
   // out of the island rides this.
   readonly property real morphOmega: 21
 
-  // SpringAnimation's damping is a Qt friction value, not a normalized ratio, applied in fixed
-  // 16 ms steps. 0.5 is the least damping that does not overshoot in those steps at this
-  // stiffness: quartiles 48/80/128/176 ms, in step with the morph spring above.
-  // (5 / 0.65 was overdamped: 90% at ~265 ms and settled only after ~800 ms.)
-  readonly property real surfaceSpring: 5.5
-  readonly property real surfaceDamping: 0.5
-  readonly property real surfaceMass: 1.0
-  readonly property real surfaceEpsilon: 0.5
-  readonly property real microSpring: 5.0
-  readonly property real microDamping: 0.6
-  readonly property real microMass: 0.8
-  readonly property real microEpsilon: 0.005
-  // MicroSpring's pace as a per-frame MorphSpring omega. MicroSpring is a Qt SpringAnimation
-  // (spring 5.0, damping 0.6, mass 0.8), whose 0 -> 1 step reaches 90% at about 249 ms. Measured
-  // 2026-11-05 by running that SpringAnimation in the Qt 6.12 qml runtime (offscreen, 60 Hz) and
-  // logging the value at every change: 0.890 at 241 ms, 0.906 at 256 ms. A critically damped
-  // spring reaches 90% at omega * t = 3.89, so omega = 3.89 / 0.249 s = 15.6.
+  // The small controls' pace (the switch knob): a critically damped spring that reaches 90% at
+  // about 249 ms, since omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6.
   readonly property real microOmega: 15.6
 
   // Every panel grows from the same column width and corner radius; the per-surface tokens

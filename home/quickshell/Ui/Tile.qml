@@ -47,8 +47,8 @@ ButtonBase {
   property string image: ""
   property color placeholderColor: Theme.overlay
   property string noun: "tile"
-  // Set from the row's `glide`: position and size then spring to each new selection instead of
-  // jumping, on the rail's own spring so the two never drift apart.
+  // Set from the row's `glide`: the ring's weight then eases to each new selection instead of
+  // jumping. (Position and size follow the row's own spring; the picker binds them.)
   property bool glide: false
 
   // Device: the transfer's state, its progress and the line under the name.
@@ -164,30 +164,6 @@ ButtonBase {
       root.opened();
     else
       root.toggled();
-  }
-
-  Behavior on x {
-    enabled: root.glide
-
-    SurfaceSpring {}
-  }
-
-  Behavior on y {
-    enabled: root.glide
-
-    SurfaceSpring {}
-  }
-
-  Behavior on width {
-    enabled: root.glide
-
-    SurfaceSpring {}
-  }
-
-  Behavior on height {
-    enabled: root.glide
-
-    SurfaceSpring {}
   }
 
   // ---- Control and Choice: a ground, an outline, the glyph and the words ----
@@ -349,9 +325,8 @@ ButtonBase {
     Behavior on border.width {
       enabled: root.glide
 
-      NumberAnimation {
-        duration: Theme.duration(Theme.morphState)
-        easing.type: Easing.OutQuad
+      Morph {
+        duration: Theme.morphState
       }
     }
   }

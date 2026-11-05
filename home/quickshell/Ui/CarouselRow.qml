@@ -19,22 +19,39 @@ Item {
 
   readonly property int count: model.length
 
-  // Whether the rail and tiles glide to a new selection. Every piece rides the same spring
-  // from the same instant, so a tile's size and the rail's slide stay in step and the
-  // selection holds the centre line all the way over. Tiles bind their own `glide` to this.
+  // Whether the rail and tiles glide to a new selection. They all read one spring, on the
+  // selection index, so a tile's size and the rail's slide are the same motion and reach rest on
+  // the same frame, with the selection holding the centre line all the way over. Tiles bind
+  // their own `glide` to this (for their ring weight).
   property bool snapping: false
   readonly property bool glide: !Theme.reduceMotion && !root.snapping
+
+  // Where the row is looking: the selection, followed at the island's pace. A whole number at
+  // rest, between two while it moves.
+  readonly property real position: positionSpring.value
+
+  MorphSpring {
+    id: positionSpring
+
+    target: root.selected
+    animate: !root.snapping
+    epsilon: 0.001
+    label: "carousel." + root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
+  }
 
   // The room the row has: the panel's own width, not the token, so a narrow screen's clamp is
   // what the row centres on.
   readonly property real inner: root.width - 2 * Theme.wallpaperInset
 
   // The selected tile takes the first width, everything else the last, indexed by distance
-  // from the selection and clamped to its end; see the token note.
+  // from the selection and clamped to its end; see the token note. The distance is fractional
+  // while the row moves, which blends the two widths either side of it.
   function tileWidth(i) {
     var widths = Theme.wallpaperTileWidths;
-    var d = Math.abs(i - root.selected);
-    return widths[Math.min(d, widths.length - 1)];
+    var d = Math.min(Math.abs(i - root.position), widths.length - 1);
+    var lo = Math.floor(d);
+    var hi = Math.min(lo + 1, widths.length - 1);
+    return widths[lo] + (widths[hi] - widths[lo]) * (d - lo);
   }
 
   function tileHeight(i) {
@@ -46,15 +63,32 @@ Item {
     return Theme.wallpaperRowMid - root.tileHeight(i) / 2;
   }
 
-  // A tile's left edge is the sum before it, so selecting right pushes the row left.
-  function tileX(i) {
-    var x = 0;
-    for (var j = 0; j < i; j++)
-      x += root.tileWidth(j) + Theme.wallpaperTileGap;
-    return x;
+  // Every tile's left edge (the last entry is the strip's end plus a gap): the sum of what is
+  // before it, so selecting right pushes the row left. One pass per frame, not one per tile.
+  readonly property var offsets: {
+    var o = [0];
+    for (var j = 0; j < root.count; j++)
+      o.push(o[j] + root.tileWidth(j) + Theme.wallpaperTileGap);
+    return o;
   }
 
-  readonly property real stripWidth: count > 0 ? root.tileX(count) - Theme.wallpaperTileGap : 0
+  function tileX(i) {
+    return root.offsets[i];
+  }
+
+  readonly property real stripWidth: count > 0 ? root.offsets[count] - Theme.wallpaperTileGap : 0
+
+  // The centre of the tile the row is looking at, blended between two while it moves.
+  readonly property real focusCentre: {
+    if (count === 0)
+      return 0;
+    var p = Math.max(0, Math.min(count - 1, root.position));
+    var i = Math.floor(p);
+    var k = Math.min(i + 1, count - 1);
+    var ci = root.offsets[i] + root.tileWidth(i) / 2;
+    var ck = root.offsets[k] + root.tileWidth(k) / 2;
+    return ci + (ck - ci) * (p - i);
+  }
 
   // A fitting row is centred; otherwise the selection is pulled to the centre line, then
   // clamped so neither end passes the inset.
@@ -62,7 +96,7 @@ Item {
     if (stripWidth <= inner)
       return Theme.wallpaperInset + (inner - stripWidth) / 2;
 
-    var wanted = root.width / 2 - (root.tileX(root.selected) + root.tileWidth(root.selected) / 2);
+    var wanted = root.width / 2 - root.focusCentre;
     var furthest = root.width - Theme.wallpaperInset - stripWidth;
     return Math.max(furthest, Math.min(Theme.wallpaperInset, wanted));
   }
@@ -96,12 +130,6 @@ Item {
       y: 0
       width: root.stripWidth
       height: parent.height
-
-      Behavior on x {
-        enabled: root.glide
-
-        SurfaceSpring {}
-      }
 
       Repeater {
         model: root.model
