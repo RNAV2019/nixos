@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -191,6 +191,18 @@ sc_satellite() {
   sleep 1.6
   qsipc phone close >/dev/null 2>&1
   sleep 1.2
+}
+
+# A click on the docked satellite draws it in and opens the phone panel (log: surface.phone.showing).
+sc_satellite_click() {
+  ph_up
+  sleep 1.5
+  cursor 1046 26
+  sleep 0.5
+  click
+  sleep 1.8
+  qsipc phone close >/dev/null 2>&1
+  sleep 1.0
 }
 
 # The satellite on the lock screen's rehearsal surface.

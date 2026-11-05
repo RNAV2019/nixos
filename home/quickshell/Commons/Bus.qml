@@ -146,6 +146,22 @@ Singleton {
     return lookup(transientSurfaces, name, null);
   }
 
+  // Where the phone satellite is on each output, written by Bar/PhoneSatellite.qml every frame it
+  // moves: { edgeX, midY (the disc's row), shapeY, halfH, capR (the shape it leaves), disc (cx, cy,
+  // r), neck (smooth-min k), follow ("pill" or "transient"), windowTop, p, docked, ring, hover }, all
+  // in the bar window's coordinates. A transient surface's window draws the bud while it follows
+  // that transient (Bar/SatelliteLayer.qml), so it lies over the transient's outline.
+  property var satellite: ({})
+
+  function setSatellite(name, geometry) {
+    if (name !== "")
+      satellite = writeMap(satellite, name, geometry);
+  }
+
+  function satelliteFor(name) {
+    return lookup(satellite, name, null);
+  }
+
   function transientOnScreen(name) {
     if (name === "")
       return false;

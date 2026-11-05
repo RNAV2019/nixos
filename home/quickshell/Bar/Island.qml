@@ -169,6 +169,11 @@ FrostedSurface {
   implicitWidth: widthSpring.value
   implicitHeight: heightSpring.value
 
+  // The right edge as the springs have it, centred as the bar centres the pill but not rounded
+  // to the pixel grid: x and width snap separately, so their sum jitters by a device pixel on
+  // the way. The phone satellite rides this.
+  readonly property real edgeX: ((parent ? parent.width : 0) + widthSpring.value) / 2 + Bus.pillOffsetX
+
   // Corner read off height, not animated: a per-frame fit gives radius = min(height / 2,
   // surface radius) to 1.25 px rms vs 5.32 px interpolated, keeping a true stadium longer.
   surfaceRadius: Math.min(height / 2, Theme.islandExpandedRadius)

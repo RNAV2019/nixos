@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Wayland
+import qs.Bar
 import qs.Commons
 
 // One transient island surface: the OSD, a notification toast, the sharing pill, the dictation
@@ -31,6 +32,26 @@ IslandSurfaceBase {
 
   // A transient never takes the keyboard.
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+  // The phone satellite while it rides this transient: drawn here, over the card's outline, and
+  // not in the card's clipped contents. The bar keeps the pointer area under it.
+  readonly property var satelliteGeometry: Bus.satelliteFor(win.screenName)
+  readonly property bool hostsSatellite: win.tall && satelliteGeometry !== null && satelliteGeometry.follow === "transient" && Bus.transientSurfaceFor(win.screenName) === surface
+
+  onHostsSatelliteChanged: if (!hostsSatellite)
+    satelliteLinger.restart()
+
+  Timer {
+    id: satelliteLinger
+
+    interval: 40
+  }
+
+  overlayData: SatelliteLayer {
+    g: win.satelliteGeometry
+    yOffset: win.satelliteGeometry ? win.satelliteGeometry.windowTop : 0
+    shown: win.tall && (win.hostsSatellite || satelliteLinger.running)
+  }
 
   // ---- turns ----
 

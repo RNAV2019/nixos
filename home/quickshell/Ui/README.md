@@ -45,6 +45,11 @@ take the pill's clock and marks off their timed fade while closing.
   moment, rebuild and a failed recording 0. One that is outranked waits, and takes over as a
   handover when the higher one lets go.
 
+`IslandSurfaceBase.overlayData` takes items drawn over the card and outside its clip, in the window's
+coordinates: the one user is the phone satellite (`Bar/SatelliteLayer.qml`), drawn there while it rides
+a transient so its neck lies over the transient's outline (`Bar/PhoneSatellite.qml` writes its geometry
+to `Bus.satellite[screen]`; the body is the one shader, `Shaders/satellite.frag`).
+
 Both register on `Bus` when they are created (`registerSurface`), so there is no list to edit.
 
 **To add a panel:** a file with a `Variants` over `IslandSurface { key: "name" ... }`, an

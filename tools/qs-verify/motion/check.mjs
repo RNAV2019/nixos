@@ -16,7 +16,8 @@
 // Rules live in the RULES table below (name, enabled(opts), check(series, opts) -> failures).
 // A later rule is one more entry plus its option in parseArgs.
 //   stepping   running spring whose value repeats between two consecutive frames although its velocity
-//              implies movement clearly above the logged precision (--resolution Q overrides it)
+//              implies movement clearly above the logged precision (--resolution Q overrides it); not at
+//              the turning point of an overshoot, where the velocity changes sign between the samples
 //   overshoot  value past the target in the direction of travel (labels not prefixed "phone.")
 //              --overshoot-tol GLOB:PX[,GLOB:PX] lets matching labels run PX past a target.
 //   stall      velocity 0 while the target still differs, for labels matched by --expect FILE
@@ -81,6 +82,9 @@ export const RULES = [
       for (let i = 1; i < s.length; i++) {
         const a = s[i - 1], b = s[i];
         if (b.target !== a.target || b.value !== a.value) continue;
+        // The apex of an underdamped spring's overshoot: the velocity turns over between the two
+        // samples, so the value really does stand still across them.
+        if (a.velocity * b.velocity < 0) continue;
         const quantum = o.resolution ?? Math.pow(10, -Math.max(a.dec, b.dec));
         const expected = Math.abs(b.velocity) * (b.t - a.t) / 1000;
         const dist = Math.abs(b.target - b.value);

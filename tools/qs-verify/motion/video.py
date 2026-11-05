@@ -12,6 +12,7 @@ width differs from the last frame's by more than JUMP px (the fastest spring mov
 120 Hz), shows two islands, or a shape that jumped: the still and the taker at different sizes.
 Prints "  islands: <n> frames with 2+ components (runs), <m> width jumps (frames)". Runs longer than one
 frame are what the handover must not have.
+With --satellite it also tracks the phone satellite's disc (see satellite()).
 Needs numpy and ffmpeg on PATH:  nix shell nixpkgs#ffmpeg --impure --expr
 'with import <nixpkgs> {}; python3.withPackages (p: [p.numpy])' ...   (see README.md)
 """
@@ -81,12 +82,82 @@ def runs(idx):
     return out
 
 
+SAT_X0, SAT_X1, SAT_Y1 = 700, 1800, 80   # the band the bar's island and its satellite live in
+SAT_ROW = 29                          # the disc's midline: the pill's top (8) plus half the bar (21)
+DISC = 44                             # columns counted as the disc: its diameter and a pixel each side
+AREA_FULL = 3.1416 * 21 * 21          # a docked disc's area, px
+AREA_TOL = 0.02                       # jump of the disc's area, as a share of a full disc
+POP_RATIO = 2.5                       # how much bigger than its neighbours' steps a step must be to be a pop
+CENTRE_TOL = 1.5                      # jump of its right edge, px, that the spring cannot explain
+
+
+def satellite(path):
+    """Per frame, the right edge R of the island-coloured silhouette on the disc's midline and the
+    area A of island-coloured pixels within DISC columns of it. The recorder's frames come at
+    uneven times (a repeated frame, a dropped one), so the steps between frames are not the
+    spring's; a pop is a step that is out of scale with both its neighbours: more than POP_RATIO
+    times the larger of them, and by more than CENTRE_TOL px (R) or AREA_TOL of a full disc (A).
+    A repeated frame is skipped. Returns (n_frames, tracked, [(frame, what, step)])."""
+    cmd = ["ffmpeg", "-v", "error", "-i", str(path), "-vf", f"crop={SAT_X1 - SAT_X0}:{SAT_Y1}:{SAT_X0}:0",
+           "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    size = (SAT_X1 - SAT_X0) * SAT_Y1 * 3
+    mid = None
+    last = None
+    track = []
+    n = 0
+    while True:
+        buf = p.stdout.read(size)
+        if len(buf) < size:
+            break
+        img = np.frombuffer(buf, dtype=np.uint8).reshape(SAT_Y1, SAT_X1 - SAT_X0, 3)
+        if mid is None:
+            mid = img[12, (960 - SAT_X0)].astype(int)    # the resting island, top centre
+        near = np.all(np.abs(img.astype(int) - mid) <= TOL, axis=2)
+        cols = np.flatnonzero(near[SAT_ROW])
+        if len(cols):
+            # The silhouette is the run of columns through the centre, runs less than 30 px apart
+            # being one (the docked disc sits 8 px off the pill); dark wallpaper beyond is not it.
+            cuts = np.flatnonzero(np.diff(cols) > 30)
+            ends = np.append(cols[cuts], cols[-1])
+            starts = np.insert(cols[cuts + 1], 0, cols[0])
+            mid_col = 960 - SAT_X0
+            hit = [k for k in range(len(ends)) if starts[k] <= mid_col <= ends[k]]
+            if not hit:
+                n += 1
+                continue
+            right = int(ends[hit[0]])
+            area = int(near[:, max(0, right - DISC + 1):right + 1].sum())
+            raw = img.tobytes()
+            if raw != last:
+                track.append((n, right, area))
+            last = raw
+        n += 1
+    p.wait()
+    flags = []
+    for k in range(2, len(track) - 1):
+        for what, col, tol in (("edge", 1, CENTRE_TOL), ("area", 2, AREA_TOL * AREA_FULL)):
+            before = abs(track[k - 1][col] - track[k - 2][col])
+            step = abs(track[k][col] - track[k - 1][col])
+            after = abs(track[k + 1][col] - track[k][col])
+            if step > tol and step > POP_RATIO * max(before, after):
+                flags.append((track[k][0], what, track[k][col] - track[k - 1][col]))
+    return n, len(track), flags
+
+
 def main():
-    d = Path(sys.argv[1])
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    sat = "--satellite" in sys.argv
+    d = Path(args[0])
     vids = sorted(d.glob("*.mkv"))
     if not vids:
         sys.exit(f"video.py: no .mkv in {d}")
     for v in vids:
+        if sat:
+            n, tracked, flags = satellite(v)
+            print(f"{v.stem}: satellite {len(flags)} flags over {tracked} tracked of {n} frames"
+                  + (": " + ", ".join(f"{f}:{w}{x:+.1f}" for f, w, x in flags[:40]) if flags else ""))
+            continue
         n, total, blank, multi, jumps = analyse(v)
         print(f"{v.stem}: {n} blank of {total} frames" + (f" ({', '.join(runs(blank))})" if blank else ""))
         print(f"  islands: {len(multi)} frames with 2+ components" + (f" ({', '.join(runs(multi))})" if multi else "")

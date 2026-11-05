@@ -84,6 +84,17 @@ PATH=$FF/bin:$PATH $PY/bin/python tools/qs-verify/motion/video.py OUT_DIR
 
 Verified with a synthetic clip (5 frames boxed out of a real capture): reports `5 blank (100-104)`.
 
+## `video.py --satellite`
+
+`video.py OUT_DIR --satellite` follows the phone satellite instead: per frame the right edge of the
+silhouette on the disc's midline (x 700..1800, the run through the centre, runs under 30 px apart
+being one) and the area of island-coloured pixels in the 44 columns before it. The recorder repeats and
+drops frames, so steps between frames are not the spring's: repeated frames are skipped, and a pop is a
+step more than 2.5 times both neighbouring steps and over 1.5 px (edge) or 2% of a full disc (area).
+It also reads the OSD pill growing beside the disc and a lock covering the screen, so read the flags
+by frame number against the scenario, and compare with the parent's capture. `satellite-click` drives
+a click on the docked disc (log: `surface.phone.showing`).
+
 ## Baselines (main 8567e52, taken 2026-11-05)
 
 - Screenshots: `~/.cache/qs-verify/baseline-motion-main` (82 PNGs + meta.txt). `sharing-connecting`

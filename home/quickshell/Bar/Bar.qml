@@ -52,7 +52,10 @@ Variants {
       }
 
       Region {
-        item: satellite.hitItem
+        x: satellite.hitX
+        y: satellite.hitY
+        width: satellite.hitActive ? satellite.hitSize : 0
+        height: satellite.hitActive ? satellite.hitSize : 0
       }
     }
 

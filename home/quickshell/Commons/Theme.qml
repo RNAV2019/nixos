@@ -1151,10 +1151,10 @@ Singleton {
   // damping ratio 0.7 overshoots by about 4.6% of the travel, under 2 px of the bud's 44.
   readonly property real phoneSpringOmega: 17
   readonly property real phoneSpringDamping: 0.7
-  // The bridge between pill and satellite breaks once the gap between them passes this; the
-  // two stubs it leaves pull back over phoneNubFade.
+  // The neck between pill and satellite is a smooth union whose width k falls with the gap
+  // between them (Bar/PhoneSatellite.qml): it breaks as the gap passes this, and the stubs it
+  // leaves are the union's own fillet, thinning to nothing at twice this gap.
   readonly property real phoneBridgeBreak: 6
-  readonly property int phoneNubFade: reduceMotion ? 1 : 160
   // How far back into its retreat a clicked satellite is before the panel is asked for, as
   // satellite progress: by then the bridge has re-formed and it reads as going in.
   readonly property real phoneOpenAt: 0.5

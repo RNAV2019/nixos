@@ -38,6 +38,10 @@ PanelWindow {
   // uncovered by the growing shape, which makes the open read as a reveal rather than a fade.
   default property alias content: bodyHolder.data
 
+  // What a policy draws over the card and outside its clip, in the window's coordinates (the
+  // phone satellite beside a transient).
+  property alias overlayData: overlay.data
+
   // What a policy adds inside the card, beside the contents: items that draw nothing of their own.
   property alias surfaceData: surface.content
 
@@ -624,5 +628,11 @@ PanelWindow {
         y: (1 - bodyHolder.opacity) * win.enterTravel
       }
     }
+  }
+
+  Item {
+    id: overlay
+
+    anchors.fill: parent
   }
 }

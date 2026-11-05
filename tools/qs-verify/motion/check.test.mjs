@@ -30,6 +30,13 @@ test("stepping: value repeats on alternate frames while running", () => {
   assert.ok(f.some((x) => x.rule === "stepping" && x.label === "island.w"));
 });
 
+test("stepping: the apex of an underdamped overshoot repeats its value legitimately", () => {
+  const rows = [["phone.p", "0", "1.0459", "0.0407", 1], ["phone.p", "7", "1.0459", "-0.0559", 1]];
+  assert.ok(!checkText(log(rows)).some((x) => x.rule === "stepping"));
+  const same = [["phone.p", "0", "1.0459", "0.3000", 1], ["phone.p", "7", "1.0459", "0.3000", 1]];
+  assert.ok(checkText(log(same)).some((x) => x.rule === "stepping"));
+});
+
 test("overshoot: crosses the target, except phone.*", () => {
   const rows = clean();
   rows[40][2] = "100.8000";
