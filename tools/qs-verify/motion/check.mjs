@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
+// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--expect-fade-frames GLOB:N] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
@@ -18,6 +18,8 @@
 //              only prints them while the surface's springs run)
 //   monotonic  labels matched by --expect-monotonic (an opacity whose target is its intent, 1 or 0): within a
 //              run of samples sharing a target the value never reverses direction. A new target starts a new run.
+//   fade-frames labels matched by --expect-fade-frames GLOB:N[,GLOB:N]: a drop from >= 0.95 to <= 0.05 in fewer than N frames
+//              (samples) is a cut, not a fade.
 //   anim-length (only with --max-anim-ms N) a segment that travels longer than N ms
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -143,15 +145,34 @@ export const RULES = [
         // The segment's first sample may still carry the last frame of the previous intent (the
         // log is sampled once per frame, the intent flips between two).
         // A jump at the flip itself (a restart from the far end) is caught against the previous
-        // run's last sample, with a tolerance of 0.2 for that one frame.
+        // run's last sample, with a tolerance of 0.5 for that one frame (an opening step can be that big).
         for (let i = seg.start; i <= seg.end; i++) {
           if (i === seg.start && i === 0) continue;
           const prev = s[i - 1].value;
-          if ((s[i].value - prev) * dir < -(i === seg.start ? 0.2 : tol)) {
+          if ((s[i].value - prev) * dir < -(i === seg.start ? 0.5 : tol)) {
             bad.push({ frame: i, t: s[i].t, detail: `value ${prev} then ${s[i].value}, against its direction to ${seg.target}` });
             break;
           }
         }
+      }
+      return bad;
+    },
+  },
+  {
+    name: "fade-frames",
+    enabled: (o, label) => o.expectFadeFrames.some((f) => f.re.test(label)),
+    // An opacity that goes from >= 0.95 to <= 0.05 must take at least N frames (samples) to do it:
+    // a one-frame cut is not a fade.
+    check(s, o, label) {
+      const n = Math.max(...o.expectFadeFrames.filter((f) => f.re.test(label)).map((f) => f.n));
+      const bad = [];
+      let top = -1;
+      for (let i = 0; i < s.length; i++) {
+        if (s[i].value >= 0.95) top = i;
+        else if (s[i].value <= 0.05 && top >= 0 && i - top < n && s[i].t - s[top].t < 200) {
+          bad.push({ frame: i, t: s[i].t, detail: `fell from ${s[top].value} to ${s[i].value} in ${i - top} frame(s) (< ${n})` });
+          top = -1;
+        } else if (s[i].value <= 0.05) top = -1;
       }
       return bad;
     },
@@ -177,22 +198,23 @@ export const RULES = [
 
 export function checkSeries(label, s, opts) {
   const out = [];
-  for (const r of RULES) if (r.enabled(opts, label)) for (const b of r.check(s, opts)) out.push({ rule: r.name, label, ...b });
+  for (const r of RULES) if (r.enabled(opts, label)) for (const b of r.check(s, opts, label)) out.push({ rule: r.name, label, ...b });
   return out;
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], expectStatic: [], expectMonotonic: [], maxAnimMs: null, resolution: null, ...opts };
+  const o = { expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
   for (const [label, s] of parseLog(text)) out.push(...checkSeries(label, s, o));
   return out;
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], maxAnimMs: null, resolution: null };
+  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
     else if (argv[i] === "--expect-static") o.expectStatic = argv[++i].split(",").map(globToRe);
+    else if (argv[i] === "--expect-fade-frames") o.expectFadeFrames = argv[++i].split(",").map((a) => ({ re: globToRe(a.slice(0, a.lastIndexOf(":"))), n: Number(a.slice(a.lastIndexOf(":") + 1)) }));
     else if (argv[i] === "--expect-monotonic") o.expectMonotonic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);

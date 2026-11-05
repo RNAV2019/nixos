@@ -52,6 +52,8 @@ empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one
   target 1 while the contents should be up, 0 while they should go). Within one run of samples sharing a
   target the value never turns back by more than the printed quantum; a re-toggle (new target) starts a new
   run. The first sample of a run is not judged: it can still carry the last frame of the previous intent.
+- **fade-frames** (`--expect-fade-frames GLOB:N[,GLOB:N]`): an opacity that falls from 0.95 or more to 0.05 or less in fewer
+  than N samples is a cut, not a fade (`surface.*.body:3` on the contents).
 - **anim-length** (`--max-anim-ms N` only): a segment that takes longer than N ms to reach its target.
 
 Exit 1 with `<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>` per failure.

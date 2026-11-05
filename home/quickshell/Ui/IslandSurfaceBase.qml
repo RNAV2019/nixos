@@ -258,15 +258,23 @@ PanelWindow {
     animate: !win.parked
   }
 
-  // The close also runs on a short clock of its own, restarted on the flip: a card closed while
-  // it is still opening coasts outward first, and its progress stays 0 for that while.
-  ProgressSpring {
+  // The close also runs on a timed clock of its own, started on the flip and as long as the
+  // content cross-fades: a card closed while it is still opening coasts outward first (its
+  // progress stays 0 for that while), and a fast shape would otherwise cut the contents in a frame.
+  property real closeT: 1
+
+  onCloseTChanged: if (!bodyPending && !bodyWanted)
+    updateBody()
+
+  NumberAnimation {
     id: closeClock
 
-    target: 1
-    animate: !win.parked
-    onValueChanged: if (!win.bodyPending && !win.bodyWanted)
-      win.updateBody()
+    target: win
+    property: "closeT"
+    from: 0
+    to: 1
+    duration: Theme.duration(Theme.morphContent)
+    easing.type: Easing.OutCubic
   }
 
   readonly property real morphProgress: isNaN(win.shapeProgress) ? (Theme.reduceMotion ? 1 : progressFallback.value) : win.shapeProgress
@@ -296,7 +304,7 @@ PanelWindow {
       bodyOpacity = Math.max(bodyOpacity, Motion.ramp(p, r[0], r[1]));
       pillAmount = 0;
     } else {
-      bodyOpacity = Math.min(bodyOpacity, 1 - Math.max(Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]), Motion.ramp(closeClock.value, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1])));
+      bodyOpacity = Math.min(bodyOpacity, 1 - Math.max(Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]), win.closeT));
       if (!win.open)
         pillAmount = Math.max(pillAmount, Motion.ramp(p, Theme.fadePillIn[0], Theme.fadePillIn[1]));
     }
@@ -320,8 +328,7 @@ PanelWindow {
     onTriggered: {
       win.bodyPending = false;
       if (!win.bodyWanted) {
-        closeClock.value = 0;
-        closeClock.kick(0);
+        closeClock.restart();
       }
       // Only a shape that stays put needs it; one that travels is read off its own size.
       if (isNaN(win.shapeProgress)) {

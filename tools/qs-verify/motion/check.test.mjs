@@ -87,6 +87,14 @@ test("static: a contentX that follows the card fails, one that stays put passes"
   assert.deepEqual(checkText(log(two), opts), []);
 });
 
+test("fade-frames: a one-frame cut fails, a four-frame fade passes", () => {
+  const row = (t, v) => ["surface.control.body", String(t), v.toFixed(4), "0.0000", "0.0000"];
+  const opts = { expectFadeFrames: [{ re: /^surface\..*\.body$/, n: 3 }] };
+  assert.ok(checkText(log([row(0, 1), row(8, 1), row(16, 0)]), opts).some((x) => x.rule === "fade-frames"));
+  assert.deepEqual(checkText(log([row(0, 1), row(8, 0.7), row(16, 0.2), row(25, 0)]), opts), []);
+  assert.ok(!checkText(log([row(0, 1), row(8, 0)])).some((x) => x.rule === "fade-frames"), "only labels asked for");
+});
+
 test("monotonic: a restart that jumps back fails, a carried fade and a re-toggle pass", () => {
   const row = (t, v, tg) => ["surface.control.body", String(t), v.toFixed(4), "0.0000", tg.toFixed(4)];
   const opts = { expectMonotonic: [/^surface\..*\.body$/] };

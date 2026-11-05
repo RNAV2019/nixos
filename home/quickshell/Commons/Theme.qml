@@ -1042,7 +1042,7 @@ Singleton {
   readonly property int surfaceRetain: 300000
 
   // Still used by Moments, Calendar/Arrival and Toast (morphEnter), and by the content cross-fades
-  // (ContentFade, KeyedList, chips, PhoneSatellite, PillState: morphContent); not by the surfaces' contents.
+  // (ContentFade, KeyedList, chips, PhoneSatellite, PillState, DictationPill: morphContent); not by the surfaces' contents.
   readonly property int morphEnter: reduceMotion ? 1 : 90
 
   // Contents fade as a function of the card's shape progress (0 at the shape the card left,
@@ -1052,8 +1052,9 @@ Singleton {
   readonly property var fadeOpenIn: [0.0, 0.2]
   // Panel to panel: the entering contents start late, as the 45 ms delay did, and land before the shape settles.
   readonly property var fadeEnterIn: [0.15, 0.45]
-  // Closing: the contents are gone early.
-  readonly property var fadeCloseOut: [0.0, 0.15]
+  // Closing: the contents are gone by the time the shape has travelled this far, or in
+  // morphContent ms (IslandSurfaceBase.closeT), whichever is first; never in under a few frames.
+  readonly property var fadeCloseOut: [0.0, 0.5]
   // Closing: the collapsed pill's clock and marks arrive as the card nears the pill.
   readonly property var fadePillIn: [0.7, 1.0]
 
