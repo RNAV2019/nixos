@@ -176,6 +176,8 @@ Variants {
         subShown: win.view !== "" && win.loadedView === win.view
         subReady: subLoader.status === Loader.Ready
         onSettledChanged: win.unloadIfParked()
+        // With reduced motion the spring never runs, so progress is all that tells it.
+        onProgressChanged: win.unloadIfParked()
       }
 
       HomeView {

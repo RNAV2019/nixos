@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite controls"
+SCENARIOS="open-close abc retoggle subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 toggle() { qsipc "$1" toggle >/dev/null; }
@@ -176,5 +176,56 @@ sc_controls() {
   keys -k Return
   sleep 1.5
   qsipc control close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# Escape and Backspace through the sliding sub-views (frames land in $OUT/subview-keys-*.png):
+# the control centre drilled into Wi-Fi and backed out by Escape 60 ms into the slide, then by
+# Escape and by Backspace once settled; the Nearby picker and the phone panel's picker backed out
+# by Escape. Each lands on its home view, which the frames show.
+sc_subview_keys() {
+  local shot="$OUT/subview-keys"
+  sleep 0.5
+  toggle control
+  sleep 1.3
+  keys -k Return
+  sleep 0.06
+  keys -k Escape
+  sleep 1.4
+  grim "$shot-ctl-mid-escape.png"
+  keys -k Return
+  sleep 1.4
+  keys -k Escape
+  sleep 1.4
+  grim "$shot-ctl-escape.png"
+  keys -k Return
+  sleep 1.4
+  keys -k BackSpace
+  sleep 1.4
+  grim "$shot-ctl-backspace.png"
+  qsipc control close >/dev/null 2>&1
+  sleep 1.0
+  toggle nearby
+  sleep 1.4
+  keys -k Return
+  sleep 1.4
+  grim "$shot-nearby-picker.png"
+  keys -k Escape
+  sleep 1.4
+  grim "$shot-nearby-home.png"
+  qsipc nearby close >/dev/null 2>&1
+  sleep 1.0
+  ph_up
+  toggle phone
+  sleep 1.6
+  keys -k Right
+  sleep 0.3
+  keys -k Return
+  sleep 1.6
+  grim "$shot-phone-picker.png"
+  keys -k Escape
+  sleep 1.4
+  grim "$shot-phone-home.png"
+  qsipc phone close >/dev/null 2>&1
   sleep 1.0
 }
