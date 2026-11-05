@@ -390,8 +390,8 @@ PanelWindow {
     // so the growing card uncovers them. The open card's top, as the y below works it out.
     contentWidth: win.openWidth
     contentHeight: win.openHeight
-    contentLeft: (win.width - contentWidth) / 2 + origin.offsetX
-    contentTop: Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(contentHeight, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0)
+    contentLeft: (win.width - snap(contentWidth)) / 2 + origin.offsetX
+    contentTop: Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(snap(contentHeight), Theme.islandPillHeight) - Theme.barHeight) / 2 : 0)
 
     implicitWidth: widthSpring.value
     implicitHeight: heightSpring.value

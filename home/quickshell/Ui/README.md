@@ -45,10 +45,10 @@ handlers (recorder, theme, session, nearby, auth).
 
 **To add a pill:** a file with a `Variants` over `TransientSurface { key, rank, wanted,
 openWidth/Height/Radius }`, an instance in `shell.qml`. Lay its contents out at their final size
-in an `Item` centred in the content box (`x: (parent.width - width) / 2`), so the growing shape uncovers them. `wanted` should also
-check `win.focused && !Bus.islandOpenFor(win.screenName)` where the pill should not cover an
-open panel; see `Rebuild/RebuildPill.qml`, the simplest one. Count the dwell on screen only
-(`Timer { running: win.open }`).
+in an `Item` centred in the content box (`x: (parent.width - width) / 2`), so the growing shape
+uncovers them. `wanted` should also check `win.focused && !Bus.islandOpenFor(win.screenName)`
+where the pill should not cover an open panel; see `Rebuild/RebuildPill.qml`, the simplest
+one. Count the dwell on screen only (`Timer { running: win.open }`).
 
 ## Panel scaffolding
 
