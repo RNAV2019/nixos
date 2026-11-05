@@ -165,11 +165,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793879149,
-        "narHash": "sha256-eCr4DcQr9dJQokVX4Rf5YLORKZv+206ePa8QyFxFWcA=",
+        "lastModified": 1793880342,
+        "narHash": "sha256-1BRUjtqysJcx7D+ww+5TplFgM/p8umJHVKCuq+FXAKM=",
         "ref": "refs/heads/main",
-        "rev": "9e5b5aa88c264ae9bb1547c0db431619173ab1e6",
-        "revCount": 90,
+        "rev": "df1379f22faf8c1d22b76d706b063436f124b692",
+        "revCount": 92,
         "type": "git",
         "url": "file:///home/ryan/Projects/lectern"
       },
