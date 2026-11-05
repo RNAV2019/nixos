@@ -9,6 +9,8 @@
 # Writes $QSV_WORK/env.sh for shoot.sh to source.
 #
 #   QS_SCALE=1.25 run.sh CONFIG_DIR     the fractional-scale scenario
+#   QS_REFRESH=120 run.sh CONFIG_DIR    the headless output refresh rate in Hz (default 60)
+#   QS_MOTION_LOG=1 run.sh CONFIG_DIR   the shell logs its motion springs (read by motion/record.sh)
 #   QS_THEME=dark run.sh CONFIG_DIR     a theme other than the live one
 #   QS_VERIFY_WORK=/tmp/x run.sh ...    a second harness side by side
 set -euo pipefail
@@ -67,6 +69,11 @@ chmod 700 "$RT"
 printf '%s' "$THEME" >"$SCRATCH_HOME/.local/state/theme/name"
 # Quickshell insists on this one for the lock's "is it secured" probe; harmless otherwise.
 : >"$RT/quickshell-secured-"
+
+# Opt-in switches for the shell itself (motion recorder), kept across the scrub.
+MOTION_LOG=${QS_MOTION_LOG:-}
+REFRESH=${QS_REFRESH:-60}
+REDUCE_MOTION=${QUICKSHELL_REDUCE_MOTION:-}
 
 scrub_live_env
 
@@ -260,7 +267,7 @@ wp set-volume @DEFAULT_AUDIO_SOURCE@ 0.80
 # ---- the compositor ----
 
 cat >"$QSV_WORK/sway.conf" <<EOF
-output HEADLESS-1 resolution 1920x1080 scale $SCALE
+output HEADLESS-1 mode 1920x1080@${REFRESH}Hz scale $SCALE
 output * bg $QSV_WORK/bg.png fill
 default_border none
 EOF
@@ -307,6 +314,8 @@ QSV_CFG=$CFG
   done
   printf 'export QSV_CFG=%q QSV_SCALE=%q QSV_THEME=%q QSV_SRC=%q\n' "$CFG" "$SCALE" "$THEME" "$SRC"
   printf 'export QSV_BWRAP=%q\n' "$QSV_BWRAP"
+  [[ -z $MOTION_LOG ]] || printf 'export QS_MOTION_LOG=%q\n' "$MOTION_LOG"
+  [[ -z $REDUCE_MOTION ]] || printf 'export QUICKSHELL_REDUCE_MOTION=%q\n' "$REDUCE_MOTION"
   printf 'unset LD_LIBRARY_PATH\n'
 } >"$QSV_ENV"
 
