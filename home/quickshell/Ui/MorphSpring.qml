@@ -46,22 +46,50 @@ QtObject {
     ready = true;
   }
 
+  // A velocity waiting for the target to move (see kick); never outlives the move it was meant for.
+  property real armedVelocity: 0
+
   onTargetChanged: {
     if (!ready || !animate || Theme.reduceMotion) {
       driver.stop();
       velocity = 0;
+      armedVelocity = 0;
       value = target;
       return;
     }
-    if (value !== target)
+    if (value !== target) {
+      if (armedVelocity !== 0)
+        velocity = armedVelocity;
       driver.start();
+    }
+    armedVelocity = 0;
   }
 
-  // Sets the velocity (a handover from something that was already moving) and wakes the driver.
+  // Gives the spring a velocity (a handover from something that was already moving). On a spring
+  // that is going somewhere it applies now. On one at rest on its target it is held until the
+  // target moves, in whichever order the move and the kick arrive, and dropped by settle() if
+  // the move never comes. With motion off there is nothing to carry.
   function kick(v) {
-    velocity = v;
-    if (value !== target && ready && animate && !Theme.reduceMotion)
+    if (!ready || !animate || Theme.reduceMotion) {
+      velocity = 0;
+      armedVelocity = 0;
+      return;
+    }
+    if (value !== target) {
+      armedVelocity = 0;
+      velocity = v;
       driver.start();
+    } else {
+      armedVelocity = v;
+    }
+  }
+
+  // Drops any carried velocity of a spring that is not moving: a surface that goes away before
+  // its shape ever travelled must not hand a phantom speed to the next one.
+  function settle() {
+    armedVelocity = 0;
+    if (!driver.running)
+      velocity = 0;
   }
 
   function log() {

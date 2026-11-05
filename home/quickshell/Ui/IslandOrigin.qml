@@ -147,6 +147,9 @@ QtObject {
   property real heldRadius: 0
 
   // How fast the shape was changing when it was seated; the still takes it up when its taker is on screen.
+  // The radius the still goes to once the taker is on screen, with the shape.
+  property real heldTargetRadius: 0
+
   property real heldVW: 0
   property real heldVH: 0
   property int heldDuration: 0
@@ -175,7 +178,8 @@ QtObject {
     snapping = true;
     heldWidth = width;
     heldHeight = height;
-    heldRadius = claim ? claim.radius : radius;
+    heldRadius = radius;
+    heldTargetRadius = claim ? claim.radius : radius;
     heldVW = vw;
     heldVH = vh;
     held = true;
@@ -205,6 +209,7 @@ QtObject {
     takerWait.stop();
     heldWidth = heldTargetWidth;
     heldHeight = heldTargetHeight;
+    heldRadius = heldTargetRadius;
     takerPresented = true;
     holdTimer.interval = Theme.duration(Theme.morphHoldLinger);
     holdTimer.restart();

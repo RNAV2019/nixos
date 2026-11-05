@@ -155,3 +155,10 @@ test("continuity: a taker that starts from rest after a fast surface fails, one 
   const near = [["surface.calendar.w", "120", "517.0000", "70.000", "520"]];
   assert.deepEqual(checkText(log([...out, ...near]), opts), []);
 });
+
+test("overshoot: a run that starts after a gap is judged from its own first sample", () => {
+  // rests at 36, then (a later open) comes down from 580 to 260: not an overshoot of 260 from 36
+  const rows = [["surface.nearby.h", "0", "36.0000", "0.000", "36"], ["surface.nearby.h", "1000", "580.0000", "-1100.000", "260"], ["surface.nearby.h", "1008", "560.0000", "-1800.000", "260"], ["surface.nearby.h", "1016", "500.0000", "-2000.000", "260"]];
+  assert.deepEqual(checkText(log(rows)).filter((x) => x.rule === "overshoot"), []);
+});
+

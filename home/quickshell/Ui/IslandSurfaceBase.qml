@@ -111,6 +111,8 @@ PanelWindow {
   property bool closesElsewhere: false
 
   function show() {
+    widthSpring.settle();
+    heightSpring.settle();
     win.opening();
     handover = false;
     farewell = false;
@@ -124,8 +126,9 @@ PanelWindow {
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     open = true;
     // Carry on the motion of the surface that let go (zero out of the pill): per axis, towards
-    // the open shape only, and no faster than a spring that does not overshoot could be. Held
-    // until this surface's first frame is up, when the target moves and the spring runs.
+    // the open shape only, and no faster than a spring that does not overshoot could be. Armed
+    // until this surface's first frame is up, when the target moves and the spring runs; dropped
+    // if it is closed or dismissed before then.
     if (origin.handedOver) {
       widthSpring.kick(Motion.seedVelocity(widthSpring.value, win.openWidth, origin.fromVW, Theme.morphOmega));
       heightSpring.kick(Motion.seedVelocity(heightSpring.value, win.openHeight, origin.fromVH, Theme.morphOmega));
@@ -133,6 +136,8 @@ PanelWindow {
   }
 
   function hide() {
+    widthSpring.settle();
+    heightSpring.settle();
     origin.release();
     // The travel belongs to the arrival: a close is a close whichever shape it grew out of.
     enterTravel = 0;
@@ -145,8 +150,10 @@ PanelWindow {
   function dismiss() {
     var w = surface.implicitWidth;
     var h = surface.implicitHeight;
-    var vw = widthSpring.velocity;
-    var vh = heightSpring.velocity;
+    var vw = widthSpring.running ? widthSpring.velocity : 0;
+    var vh = heightSpring.running ? heightSpring.velocity : 0;
+    widthSpring.settle();
+    heightSpring.settle();
     origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh);
     stillCarriesBody = win.open;
     handover = true;

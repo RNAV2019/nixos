@@ -58,7 +58,8 @@ function segments(s) {
   let cur = null;
   s.forEach((f, i) => {
     if (!cur || f.target !== cur.target) {
-      const startValue = i > 0 ? s[i - 1].value : f.value;
+      // A first sample after a gap of 100 ms or more belongs to a new run, not to the value left in the old one.
+      const startValue = i > 0 && f.t - s[i - 1].t <= 100 ? s[i - 1].value : f.value;
       cur = { target: f.target, start: i, startValue, end: i };
       out.push(cur);
     }
