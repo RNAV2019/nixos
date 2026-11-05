@@ -155,9 +155,10 @@ Singleton {
   // instance filled at weight 400 (pkgs/material-symbols-filled), so an icon Text keeps its
   // regular weight.
   readonly property string iconFont: "Material Symbols Rounded Filled"
-  readonly property string uiFont: "Inter"
-  // Inter's large-optical-size cut, for type big enough that the text cut looks loose.
-  readonly property string displayFont: "Inter Display"
+  // SF Pro (pkgs/sf-pro), as static cuts: Text for UI sizes, Display for type big enough that
+  // the Text cut looks loose.
+  readonly property string uiFont: "SF Pro Text"
+  readonly property string displayFont: "SF Pro Display"
 
   readonly property int weightRegular: Font.Normal
   readonly property int weightMedium: Font.Medium
@@ -753,7 +754,7 @@ Singleton {
 
   // Board 13: a 1920x1080 lock surface. The surface paints its own background, so the
   // session-lock protocol never exposes a black frame.
-  readonly property int lockDateTop: 150
+  readonly property int lockDateTop: 162
   readonly property int lockDateSize: 20
   readonly property int lockClockTop: 175
   readonly property int lockClockSize: 112

@@ -14,6 +14,8 @@ final: prev: {
   design-fonts = final.callPackage ./design-fonts {};
   # The shell's icon font: Material Symbols Rounded, filled, as a static instance.
   material-symbols-filled = final.callPackage ./material-symbols-filled {};
+  # Apple's SF Pro, the shell's UI face.
+  sf-pro = final.callPackage ./sf-pro {};
   # Offline dictation: nixpkgs' build, given its typing tools.
   handy = final.callPackage ./handy {inherit (prev) handy;};
 
