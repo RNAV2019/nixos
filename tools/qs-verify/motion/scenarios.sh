@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through warm-watch"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys click-off-early click-through"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -343,10 +343,4 @@ sc_click_through() {
   sleep 1.2
   cursor 200 900
   sleep 1.0
-}
-
-# Nothing is driven: record the start with QS_SETTLE=0 QS_VIDEO=1 to see the surfaces warm
-# (Theme.surfaceWarmStagger apart). No frame may differ from the idle desktop.
-sc_warm_watch() {
-  sleep 4
 }

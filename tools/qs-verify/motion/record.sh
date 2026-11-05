@@ -47,8 +47,6 @@ start_harness() { # [ENV=VALUE...]
   env -u XDG_RUNTIME_DIR "$QSV/stop.sh" >/dev/null 2>&1 || true
   env HOME=$REAL_HOME QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1 "$@" "$QSV/run.sh" "$TREE" >"$QSV_WORK.run.log" 2>&1 \
     || { cat "$QSV_WORK.run.log" >&2; die "run.sh failed"; }
-  # Time for the surfaces to warm (Theme.surfaceWarmStagger apart); QS_SETTLE=0 records a cold start.
-  sleep "${QS_SETTLE:-4}"
   load_env
   PH_CALLS=$QSV_WORK/phone-calls.log
   PH_STORAGE=$QSV_WORK/phone-storage

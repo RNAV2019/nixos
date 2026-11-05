@@ -14,7 +14,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `record.sh TREE OUT_DIR SCENARIO...` starts the harness (its own sway, buses and scratch HOME;
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
-`open-twice` (cold then warm open; with the `.marks` file `first h change` is toggle to first motion), `click-off-early` (a click 200 ms into an open dismisses), `click-through` and `warm-watch` (record with `QS_SETTLE=0 QS_VIDEO=1` to watch the surfaces warm: no frame may differ from the idle desktop). `record.sh` waits `QS_SETTLE` (default 4) seconds after start so the warm-up is done; `QS_SETTLE=0` records a cold start. Others:
+`open-twice` (cold then warm open; with the `.marks` file `first h change` is toggle to first motion), `click-off-early` (a click 200 ms into an open dismisses), `click-through`. Others:
 `open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.

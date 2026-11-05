@@ -457,22 +457,6 @@ PanelWindow {
   // waits out its first frame with the pill still up, which is slower but never bare.
   property bool retained: false
 
-  // Warmed once the session is ready, staggered: the window is mapped as a parked sliver, which
-  // builds it and presents its first frame in the background (nothing is drawn, no input, no
-  // focus: the keyboard mode is None while not open). It then obeys surfaceRetain like any other.
-  property int warmTicket: 0
-
-  Component.onCompleted: warmTicket = Bus.takeWarmTicket()
-
-  Timer {
-    interval: Theme.surfaceWarmStagger * (win.warmTicket + 1)
-    running: Bus.sessionReady && !Bus.locking
-    onTriggered: if (win.parked && !win.showing && !win.retained) {
-      win.retained = true;
-      retainTimer.restart();
-    }
-  }
-
   Timer {
     id: retainTimer
 

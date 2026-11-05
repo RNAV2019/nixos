@@ -1041,11 +1041,6 @@ Singleton {
   // How long a parked surface keeps its window before letting it go (Ui/IslandSurfaceBase.qml).
   readonly property int surfaceRetain: 300000
 
-  // The gap between one island surface and the next being warmed after the session is ready
-  // (Ui/IslandSurfaceBase.qml): each builds its window, presents one parked frame, and the
-  // first open after login no longer waits for that.
-  readonly property int surfaceWarmStagger: 150
-
   // Still used by Moments, Calendar/Arrival and Toast (morphEnter), and by the content cross-fades
   // (ContentFade, KeyedList, chips, PhoneSatellite, PillState, DictationPill: morphContent); not by the surfaces' contents.
   readonly property int morphEnter: reduceMotion ? 1 : 90
