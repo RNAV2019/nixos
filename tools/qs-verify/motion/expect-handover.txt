@@ -1,0 +1,3 @@
+# Springs the stall rule watches across handovers (check.mjs --expect).
+surface.*.w
+surface.*.h

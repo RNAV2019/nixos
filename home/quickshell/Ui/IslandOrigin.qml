@@ -26,6 +26,11 @@ QtObject {
   // there rather than travelling there.
   property bool snapping: false
 
+  // How fast the shape grown out of was changing (px/s) when it was handed over, for the taker
+  // to carry on; zero out of the pill or the card.
+  property real fromVW: 0
+  property real fromVH: 0
+
   // The pill the surface starts from and returns to, which is wider while something plays.
   readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
@@ -140,6 +145,10 @@ QtObject {
   property real heldWidth: 0
   property real heldHeight: 0
   property real heldRadius: 0
+
+  // How fast the shape was changing when it was seated; the still takes it up when its taker is on screen.
+  property real heldVW: 0
+  property real heldVH: 0
   property int heldDuration: 0
 
   // The claim this surface's still was armed for. A still is owed to one taker; a second
@@ -154,17 +163,21 @@ QtObject {
   property real heldTargetWidth: 0
   property real heldTargetHeight: 0
 
-  // Seats the still at rest on the shape it was wearing, where it waits for the taker's first
-  // frame and then rides the taker's own spring to the taker's shape. The taker waits on that
-  // same frame and grows out of that same shape, so the two run one curve from one start; a
-  // surface caught mid-morph would otherwise carry its old velocity and part from the taker.
-  // Owners bind held ahead of open, so the seat lands while open is still up.
-  function hold(width, height, radius) {
+  // Seats the still on the shape it was wearing, where it waits for the taker's first frame; the
+  // taker waits on that same frame and grows out of that same shape. Neither moves until then
+  // (the still stopped at the speed it had, nothing is drawn ahead of a taker that is not on
+  // screen), and then both start together from the same shape at the same speed (vw, vh,
+  // px/s per axis; the owner kicks its springs with them, see IslandSurfaceBase.qml), so they run
+  // one curve and the still never parts from the taker. The still's radius springs to the
+  // taker's. Owners bind held ahead of open, so the seat lands while open is still up.
+  function hold(width, height, radius, vw, vh) {
     var claim = Bus.claimFor(screenName);
     snapping = true;
     heldWidth = width;
     heldHeight = height;
     heldRadius = claim ? claim.radius : radius;
+    heldVW = vw;
+    heldVH = vh;
     held = true;
     snapping = false;
     heldTargetWidth = claim ? claim.width : width;
@@ -261,6 +274,8 @@ QtObject {
     snapping = true;
     fromWidth = handoff.width;
     fromHeight = handoff.height;
+    fromVW = handoff.vw || 0;
+    fromVH = handoff.vh || 0;
     snapping = false;
     handedOver = true;
   }
@@ -274,6 +289,8 @@ QtObject {
     handedOver = false;
     fromWidth = 0;
     fromHeight = 0;
+    fromVW = 0;
+    fromVH = 0;
     fromClock = true;
     Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
@@ -284,6 +301,8 @@ QtObject {
   function claim(width, height, radius, duration) {
     handedOver = false;
     held = false;
+    fromVW = 0;
+    fromVH = 0;
     fromClock = true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
@@ -303,8 +322,8 @@ QtObject {
 
   // Give the island up to the surface that claimed it. There is no shrink back to the pill:
   // what this one owes the taker is the shape it was wearing, published before it lets go.
-  function publish(width, height, radius) {
-    Bus.publishHandoff(screenName, width, height, radius);
+  function publish(width, height, radius, vw, vh) {
+    Bus.publishHandoff(screenName, width, height, radius, vw, vh);
     release();
   }
 }

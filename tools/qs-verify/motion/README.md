@@ -14,7 +14,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `record.sh TREE OUT_DIR SCENARIO...` starts the harness (its own sway, buses and scratch HOME;
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
-`open-close abc retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite reduce`
+`open-close abc abc-slow retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.
 
@@ -54,15 +54,25 @@ empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one
   run. The first sample of a run is not judged: it can still carry the last frame of the previous intent.
 - **fade-frames** (`--expect-fade-frames GLOB:N[,GLOB:N]`): an opacity that falls from 0.95 or more to 0.05 or less in fewer
   than N samples is a cut, not a fade (`surface.*.body:3` on the contents).
+- **continuity** (`--expect-continuity GLOB[,GLOB]`, e.g. `surface.*.w,surface.*.h`; `expect-handover.txt` lists the same for the
+  stall rule): a handover is read off the log as surface B's spring starting a run (first sample, or more than 100 ms after its
+  previous) while another surface's spring on the same axis (`.w` or `.h`) logged a sample in the 250 ms before. That sample's
+  velocity is what B must carry: when it is over 200 px/s, B's target lies the way it was heading and B's first velocity is under
+  half of min(|v_out|, 21 x distance) (the clamp of `Motion.seedVelocity`), B started from rest. `abc` (60 ms apart) never gets a
+  window on screen before the next claim, so `abc-slow` (100 ms, windows warmed first) is the scenario that exercises it, with
+  `osd-over-open`. Fails on the parent of the momentum commit for both.
 - **anim-length** (`--max-anim-ms N` only): a segment that takes longer than N ms to reach its target.
 
 Exit 1 with `<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>` per failure.
 
-## `video.py`: blank frames
+## `video.py`: blank frames and islands
 
 Counts frames where no pixel of row y = 12 (inside the island's top edge, x 460..1460) is near the
 island colour taken from the first frame: a pill that vanishes between two surfaces is a blank frame.
-Prints `<scenario>: <n> blank of <frames> frames (runs)`. It needs numpy and ffmpeg:
+Prints `<scenario>: <n> blank of <frames> frames (runs)`, then the island count: frames whose row has two or more
+island-coloured components (gaps over 12 px; the still beside a smaller taker would show so) and width jumps over 50 px in one
+frame. Jumps are noisy (a stalled frame is one; open-close has 2-3 on every build), so judge them against the parent's
+capture, and read components as the hard bar (0 here). It needs numpy and ffmpeg:
 
 ```sh
 PY=$(nix build --impure --no-link --print-out-paths --expr 'with import <nixpkgs> {}; python3.withPackages (p: [p.numpy])')

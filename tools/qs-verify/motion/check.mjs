@@ -1,10 +1,17 @@
 #!/usr/bin/env node
-// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--expect-fade-frames GLOB:N] [--max-anim-ms N] [--resolution Q]
+// check.mjs OUT_DIR [--expect FILE] [--expect-static GLOB[,GLOB]] [--expect-monotonic GLOB[,GLOB]] [--expect-fade-frames GLOB:N] [--expect-continuity GLOB[,GLOB]] [--max-anim-ms N] [--resolution Q]
 //
 // Checks the motion logs (OUT_DIR/*.log) written by record.sh. A line is
 //   motion <label> <t_ms> <value> <velocity> <target>
 // Samples of one label in one file are one spring, in time order. Exit 1 if any rule fails; each
 // failure prints "<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>".
+//
+// A handover is read off the log: surface B's spring starts a run (its first sample, or one more than
+// 100 ms after its previous) while another surface's spring of the same axis (the same label suffix, .w or .h)
+// has a sample within the 250 ms before. That sample is the outgoing surface's last velocity. The taker's first
+// sample of the run must then carry it: if the outgoing |v| is over 200 px/s, the taker's target lies the way it
+// was heading and the taker's first |v| is under half of min(|v_out|, omega * distance) (the most a critically
+// damped spring may take on, see Motion.seedVelocity), the taker started from rest: a stall at the join.
 //
 // Rules live in the RULES table below (name, enabled(opts), check(series, opts) -> failures).
 // A later rule is one more entry plus its option in parseArgs.
@@ -20,6 +27,8 @@
 //              run of samples sharing a target the value never reverses direction. A new target starts a new run.
 //   fade-frames labels matched by --expect-fade-frames GLOB:N[,GLOB:N]: a drop from >= 0.95 to <= 0.05 in fewer than N frames
 //              (samples) is a cut, not a fade.
+//   continuity labels matched by --expect-continuity GLOB[,GLOB] (e.g. surface.*.w,surface.*.h): across surfaces, see
+//              checkContinuity. At a handover the taker's first velocity must carry the outgoing one.
 //   anim-length (only with --max-anim-ms N) a segment that travels longer than N ms
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -196,6 +205,34 @@ export const RULES = [
   },
 ];
 
+const OMEGA = 21;
+
+export function checkContinuity(series, o) {
+  const bad = [];
+  if (!o.expectContinuity.length) return bad;
+  const labels = [...series.keys()].filter((l) => o.expectContinuity.some((re) => re.test(l)));
+  const axis = (l) => l.slice(l.lastIndexOf(".") + 1);
+  const owner = (l) => l.slice(0, l.lastIndexOf("."));
+  for (const lb of labels) {
+    const s = series.get(lb);
+    for (let i = 0; i < s.length; i++) {
+      if (i > 0 && s[i].t - s[i - 1].t <= 100) continue;
+      let out = null;
+      for (const la of labels) {
+        if (la === lb || axis(la) !== axis(lb) || owner(la) === owner(lb)) continue;
+        for (const f of series.get(la)) if (f.t < s[i].t && s[i].t - f.t <= 250 && (!out || f.t > out.t)) out = f;
+      }
+      if (!out || Math.abs(out.velocity) <= 200) continue;
+      const dist = s[i].target - s[i].value;
+      if (Math.abs(dist) < 1 || Math.sign(dist) !== Math.sign(out.velocity)) continue;
+      const want = Math.min(Math.abs(out.velocity), OMEGA * Math.abs(dist));
+      if (Math.abs(s[i].velocity) < 0.5 * want)
+        bad.push({ rule: "continuity", label: lb, frame: i, t: s[i].t, detail: `took over at ${s[i].velocity} px/s from a surface leaving at ${out.velocity} px/s (wants at least ${(0.5 * want).toFixed(0)})` });
+    }
+  }
+  return bad;
+}
+
 export function checkSeries(label, s, opts) {
   const out = [];
   for (const r of RULES) if (r.enabled(opts, label)) for (const b of r.check(s, opts, label)) out.push({ rule: r.name, label, ...b });
@@ -203,18 +240,21 @@ export function checkSeries(label, s, opts) {
 }
 
 export function checkText(text, opts = {}) {
-  const o = { expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], maxAnimMs: null, resolution: null, ...opts };
+  const o = { expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], maxAnimMs: null, resolution: null, ...opts };
   const out = [];
-  for (const [label, s] of parseLog(text)) out.push(...checkSeries(label, s, o));
+  const series = parseLog(text);
+  for (const [label, s] of series) out.push(...checkSeries(label, s, o));
+  out.push(...checkContinuity(series, o));
   return out;
 }
 
 function parseArgs(argv) {
-  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], maxAnimMs: null, resolution: null };
+  const o = { dir: null, expect: [], expectStatic: [], expectMonotonic: [], expectFadeFrames: [], expectContinuity: [], maxAnimMs: null, resolution: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--expect") o.expect = readFileSync(argv[++i], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(globToRe);
     else if (argv[i] === "--expect-static") o.expectStatic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--expect-fade-frames") o.expectFadeFrames = argv[++i].split(",").map((a) => ({ re: globToRe(a.slice(0, a.lastIndexOf(":"))), n: Number(a.slice(a.lastIndexOf(":") + 1)) }));
+    else if (argv[i] === "--expect-continuity") o.expectContinuity = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--expect-monotonic") o.expectMonotonic = argv[++i].split(",").map(globToRe);
     else if (argv[i] === "--resolution") o.resolution = Number(argv[++i]);
     else if (argv[i] === "--max-anim-ms") o.maxAnimMs = Number(argv[++i]);

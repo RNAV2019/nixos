@@ -123,6 +123,13 @@ PanelWindow {
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     open = true;
+    // Carry on the motion of the surface that let go (zero out of the pill): per axis, towards
+    // the open shape only, and no faster than a spring that does not overshoot could be. Held
+    // until this surface's first frame is up, when the target moves and the spring runs.
+    if (origin.handedOver) {
+      widthSpring.kick(Motion.seedVelocity(widthSpring.value, win.openWidth, origin.fromVW, Theme.morphOmega));
+      heightSpring.kick(Motion.seedVelocity(heightSpring.value, win.openHeight, origin.fromVH, Theme.morphOmega));
+    }
   }
 
   function hide() {
@@ -138,11 +145,13 @@ PanelWindow {
   function dismiss() {
     var w = surface.implicitWidth;
     var h = surface.implicitHeight;
-    origin.publish(surface.width, surface.height, surface.surfaceRadius);
+    var vw = widthSpring.velocity;
+    var vh = heightSpring.velocity;
+    origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh);
     stillCarriesBody = win.open;
     handover = true;
     farewell = true;
-    origin.hold(w, h, surface.surfaceRadius);
+    origin.hold(w, h, surface.surfaceRadius, vw, vh);
     open = false;
     win.dismissed();
     // Whoever claimed registers itself in the same turn; if nothing did, the island is free.
@@ -227,6 +236,29 @@ PanelWindow {
     label: "surface." + win.key + ".h"
     animate: win.geometryAnimEnabled
     target: origin.held ? origin.heldHeight : win.open && origin.presented ? win.openHeight : origin.originHeight
+  }
+
+  // The taker is on screen and the still starts for it: from the shape it waited on, at the speed it
+  // was seated with, towards the taker's shape, which is where the taker's own spring is going
+  // from the same shape at the same speed.
+  Connections {
+    target: origin
+
+    function onTakerPresentedChanged() {
+      if (!origin.held || !origin.takerPresented)
+        return;
+      widthSpring.kick(Motion.seedVelocity(widthSpring.value, origin.heldTargetWidth, origin.heldVW, Theme.morphOmega));
+      heightSpring.kick(Motion.seedVelocity(heightSpring.value, origin.heldTargetHeight, origin.heldVH, Theme.morphOmega));
+    }
+  }
+
+  MorphSpring {
+    id: radiusSpring
+
+    label: "surface." + win.key + ".r"
+    // Not gated by the snapping that seats a still: it is the radius that must travel then.
+    animate: !Theme.reduceMotion && !win.parked
+    target: origin.held ? origin.heldRadius : win.openRadius
   }
 
   // With QS_MOTION_LOG=1: where the contents sit on screen while the shape moves, which
@@ -540,8 +572,9 @@ PanelWindow {
     implicitHeight: heightSpring.value
 
     // Read off the height rather than travelling; see Bar/Island.qml. A still riding a taker's
-    // morph asks for the taker's radius, as it does for target shape and duration.
-    surfaceRadius: Math.min(height / 2, origin.held ? origin.heldRadius : win.openRadius)
+    // morph asks for the taker's radius, as it does for target shape and duration, on a spring so
+    // it does not jump when it is seated.
+    surfaceRadius: Math.min(height / 2, radiusSpring.value)
 
     // The complete collapsed pill carried over from the shape this surface grew out of. Up on
     // the first frame of an open out of the island, so that frame matches the pill it covers;

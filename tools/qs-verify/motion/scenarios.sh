@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close abc retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
+SCENARIOS="open-close abc abc-slow retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite controls subview-keys"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 toggle() { qsipc "$1" toggle >/dev/null; }
@@ -38,6 +38,27 @@ sc_abc() {
   sleep 0.06
   toggle calendar
   sleep 0.06
+  toggle nearby
+  sleep 1.4
+  qsipc nearby close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# The same three panels with time to move between them (a handover from a surface in flight,
+# where abc's 60 ms never gets the windows on screen). Each is opened once first so none is cold.
+sc_abc_slow() {
+  local k
+  for k in control calendar nearby; do
+    toggle "$k"
+    sleep 0.9
+    toggle "$k"
+    sleep 0.9
+  done
+  sleep 0.3
+  toggle control
+  sleep 0.1
+  toggle calendar
+  sleep 0.1
   toggle nearby
   sleep 1.4
   qsipc nearby close >/dev/null 2>&1

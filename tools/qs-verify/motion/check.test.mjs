@@ -113,3 +113,45 @@ test("monotonic: a restart that jumps back fails, a carried fade and a re-toggle
   assert.ok(checkText(log(dipped), opts).some((x) => x.rule === "monotonic"));
   assert.ok(!checkText(log(dipped)).some((x) => x.rule === "monotonic"), "only labels asked for");
 });
+
+test("continuity: a taker that starts from rest after a fast surface fails, one that carries the speed passes", () => {
+  // control.w leaves at 1500 px/s at t=100; calendar.w takes over 20 ms later
+  const out = [["surface.control.w", "92", "300.0000", "1400.000", "520"], ["surface.control.w", "100", "312.0000", "1500.000", "520"]];
+  const rest = [["surface.calendar.w", "120", "312.5000", "150.000", "520"], ["surface.calendar.w", "128", "313.0000", "300.000", "520"]];
+  const carried = [["surface.calendar.w", "120", "315.0000", "1450.000", "520"], ["surface.calendar.w", "128", "327.0000", "1480.000", "520"]];
+  const opts = { expectContinuity: [/^surface\..*\.w$/] };
+  assert.ok(checkText(log([...out, ...rest]), opts).some((x) => x.rule === "continuity" && x.label === "surface.calendar.w"));
+  assert.deepEqual(checkText(log([...out, ...carried]), opts), []);
+  assert.ok(!checkText(log([...out, ...rest])).some((x) => x.rule === "continuity"), "only labels asked for");
+  // an outgoing surface heading the other way, or too slow, or long gone, is no handover to judge
+  const away = out.map((r) => [r[0], r[1], r[2], "-1500.000", r[4]]);
+  assert.deepEqual(checkText(log([...away, ...rest]), opts), []);
+  const slow = out.map((r) => [r[0], r[1], r[2], "100.000", r[4]]);
+  assert.deepEqual(checkText(log([...slow, ...rest]), opts), []);
+  const late = rest.map((r) => [r[0], String(Number(r[1]) + 400), r[2], r[3], r[4]]);
+  assert.deepEqual(checkText(log([...out, ...late]), opts), []);
+  // the clamp: a taker 3 px from its target cannot take 1500 px/s, 21 * 3 = 63 is the most
+  const near = [["surface.calendar.w", "120", "517.0000", "70.000", "520"]];
+  assert.deepEqual(checkText(log([...out, ...near]), opts), []);
+});
+
+test("continuity: a taker that starts from rest after a fast surface fails, one that carries the speed passes", () => {
+  // control.w leaves at 1500 px/s at t=100; calendar.w takes over 20 ms later
+  const out = [["surface.control.w", "92", "300.0000", "1400.000", "520"], ["surface.control.w", "100", "312.0000", "1500.000", "520"]];
+  const rest = [["surface.calendar.w", "120", "312.5000", "150.000", "520"], ["surface.calendar.w", "128", "313.0000", "300.000", "520"]];
+  const carried = [["surface.calendar.w", "120", "315.0000", "1450.000", "520"], ["surface.calendar.w", "128", "327.0000", "1480.000", "520"]];
+  const opts = { expectContinuity: [/^surface\..*\.w$/] };
+  assert.ok(checkText(log([...out, ...rest]), opts).some((x) => x.rule === "continuity" && x.label === "surface.calendar.w"));
+  assert.deepEqual(checkText(log([...out, ...carried]), opts), []);
+  assert.ok(!checkText(log([...out, ...rest])).some((x) => x.rule === "continuity"), "only labels asked for");
+  // an outgoing surface heading the other way, or too slow, or long gone, is no handover to judge
+  const away = out.map((r) => [r[0], r[1], r[2], "-1500.000", r[4]]);
+  assert.deepEqual(checkText(log([...away, ...rest]), opts), []);
+  const slow = out.map((r) => [r[0], r[1], r[2], "100.000", r[4]]);
+  assert.deepEqual(checkText(log([...slow, ...rest]), opts), []);
+  const late = rest.map((r) => [r[0], String(Number(r[1]) + 400), r[2], r[3], r[4]]);
+  assert.deepEqual(checkText(log([...out, ...late]), opts), []);
+  // the clamp: a taker 3 px from its target cannot take 1500 px/s, 21 * 3 = 63 is the most
+  const near = [["surface.calendar.w", "120", "517.0000", "70.000", "520"]];
+  assert.deepEqual(checkText(log([...out, ...near]), opts), []);
+});
