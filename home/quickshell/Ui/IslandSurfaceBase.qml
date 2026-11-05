@@ -258,6 +258,17 @@ PanelWindow {
     animate: !win.parked
   }
 
+  // The close also runs on a short clock of its own, restarted on the flip: a card closed while
+  // it is still opening coasts outward first, and its progress stays 0 for that while.
+  ProgressSpring {
+    id: closeClock
+
+    target: 1
+    animate: !win.parked
+    onValueChanged: if (!win.bodyPending && !win.bodyWanted)
+      win.updateBody()
+  }
+
   readonly property real morphProgress: isNaN(win.shapeProgress) ? (Theme.reduceMotion ? 1 : progressFallback.value) : win.shapeProgress
 
   // What the contents are on their way to: up, or gone.
@@ -285,7 +296,7 @@ PanelWindow {
       bodyOpacity = Math.max(bodyOpacity, Motion.ramp(p, r[0], r[1]));
       pillAmount = 0;
     } else {
-      bodyOpacity = Math.min(bodyOpacity, 1 - Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]));
+      bodyOpacity = Math.min(bodyOpacity, 1 - Math.max(Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]), Motion.ramp(closeClock.value, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1])));
       if (!win.open)
         pillAmount = Math.max(pillAmount, Motion.ramp(p, Theme.fadePillIn[0], Theme.fadePillIn[1]));
     }
@@ -308,6 +319,10 @@ PanelWindow {
     interval: 0
     onTriggered: {
       win.bodyPending = false;
+      if (!win.bodyWanted) {
+        closeClock.value = 0;
+        closeClock.kick(0);
+      }
       // Only a shape that stays put needs it; one that travels is read off its own size.
       if (isNaN(win.shapeProgress)) {
         progressFallback.value = 0;

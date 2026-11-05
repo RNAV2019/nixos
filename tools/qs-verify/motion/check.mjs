@@ -141,11 +141,13 @@ export const RULES = [
         if (!dir) continue;
         const tol = Math.pow(10, -Math.max(s[seg.start].dec, 3)) * 1.5;
         // The segment's first sample may still carry the last frame of the previous intent (the
-        // log is sampled once per frame, the intent flips between two), so the direction is read
-        // from the second sample on.
-        for (let i = seg.start + 1; i <= seg.end; i++) {
+        // log is sampled once per frame, the intent flips between two).
+        // A jump at the flip itself (a restart from the far end) is caught against the previous
+        // run's last sample, with a tolerance of 0.2 for that one frame.
+        for (let i = seg.start; i <= seg.end; i++) {
+          if (i === seg.start && i === 0) continue;
           const prev = s[i - 1].value;
-          if ((s[i].value - prev) * dir < -tol) {
+          if ((s[i].value - prev) * dir < -(i === seg.start ? 0.2 : tol)) {
             bad.push({ frame: i, t: s[i].t, detail: `value ${prev} then ${s[i].value}, against its direction to ${seg.target}` });
             break;
           }

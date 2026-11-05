@@ -96,6 +96,11 @@ test("monotonic: a restart that jumps back fails, a carried fade and a re-toggle
   // the close restarts from 1 (a Behavior's restart), then the open climbs and dips
   const jumped = [row(0, 0, 1), row(8, 0.6, 1), row(16, 0.6, 0), row(25, 1, 0), row(33, 0.5, 0)];
   assert.ok(checkText(log(jumped), opts).some((x) => x.rule === "monotonic"));
+  // a restart at the flip itself: 0.3 falls to 0.1 then the close jumps back to 0.9
+  const flipJump = [row(0, 0, 1), row(8, 0.3, 1), row(16, 0.9, 0), row(25, 0.5, 0)];
+  assert.ok(checkText(log(flipJump), opts).some((x) => x.rule === "monotonic"));
+  // the previous intent's last frame landing on the flip sample is tolerated
+  assert.deepEqual(checkText(log([row(0, 0, 1), row(8, 0.8, 1), row(16, 0.92, 0), row(25, 0.4, 0)]), opts), []);
   const dipped = [row(0, 0, 1), row(8, 0.6, 1), row(16, 0.5, 1), row(25, 1, 1)];
   assert.ok(checkText(log(dipped), opts).some((x) => x.rule === "monotonic"));
   assert.ok(!checkText(log(dipped)).some((x) => x.rule === "monotonic"), "only labels asked for");

@@ -1041,6 +1041,8 @@ Singleton {
   // How long a parked surface keeps its window before letting it go (Ui/IslandSurfaceBase.qml).
   readonly property int surfaceRetain: 300000
 
+  // Still used by Moments, Calendar/Arrival and Toast (morphEnter), and by the content cross-fades
+  // (ContentFade, KeyedList, chips, PhoneSatellite, PillState: morphContent); not by the surfaces' contents.
   readonly property int morphEnter: reduceMotion ? 1 : 90
 
   // Contents fade as a function of the card's shape progress (0 at the shape the card left,
