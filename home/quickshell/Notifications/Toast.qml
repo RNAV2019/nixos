@@ -47,16 +47,55 @@ Item {
   anchors.fill: parent
   enabled: toast.live
   // The card's presence is one spring (0 hidden, 1 shown) that a toast taking over or giving
-  // way retargets with its speed. In, the opacity is the progress itself; out, it is spent over
-  // the first 0.6 of the travel, so a card leaving clears before the next one is fully there.
-  opacity: toast.live ? present.value : Math.min(present.value, Motion.ramp(present.value, 0.4, 1))
+  // way retargets with its speed. The opacity is read off it in a hurry so the island's pace
+  // does not slow the toast: in, it is up over the first 0.4 of the travel (about 90 ms, as the
+  // old fade was); out, it is spent over the first 0.6 of the travel, quicker than in. Either
+  // starts from the opacity the card has when its direction turns, so a card leaving mid-enter
+  // (or coming back mid-exit) goes on from there rather than jumping. `held` is that opacity.
+  opacity: toast.held
   visible: opacity > 0 && toast.n !== null
+
+  property real held: 0
+  property real fromOpacity: 0
+  property real fromValue: 0
+  property real lastValue: 0
+  property bool dirLive: false
+
+  function refresh() {
+    var v = present.value;
+    if (toast.live !== toast.dirLive) {
+      toast.fromOpacity = toast.held;
+      toast.fromValue = toast.lastValue;
+      toast.dirLive = toast.live;
+    }
+    toast.lastValue = v;
+    var o;
+    if (toast.live)
+      o = toast.fromValue >= 1 ? 1 : toast.fromOpacity + (1 - toast.fromOpacity) * Motion.ramp(v, toast.fromValue, toast.fromValue + 0.4 * (1 - toast.fromValue));
+    else
+      o = toast.fromValue <= 0 ? 0 : toast.fromOpacity * Motion.ramp(v, 0.4 * toast.fromValue, toast.fromValue);
+    toast.held = o;
+    // The opacity the card shows, against its intent, for check.mjs --expect-monotonic.
+    if (Theme.motionLog)
+      console.info("motion toast." + toast.slot + ".opacity " + Date.now() + " " + o.toFixed(4) + " 0.0000 " + (toast.live ? 1 : 0));
+  }
+
+  onLiveChanged: toast.refresh()
+
+  Component.onCompleted: {
+    toast.dirLive = toast.live;
+    toast.fromOpacity = toast.live ? 1 : 0;
+    toast.fromValue = present.value;
+    toast.lastValue = present.value;
+    toast.held = toast.live ? 1 : 0;
+  }
 
   ProgressSpring {
     id: present
 
     target: toast.live ? 1 : 0
     label: "toast." + toast.slot
+    onValueChanged: toast.refresh()
   }
 
   // The sender's icon, or its initial on a colour picked off the name.

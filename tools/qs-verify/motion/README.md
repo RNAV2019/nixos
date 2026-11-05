@@ -62,7 +62,7 @@ empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one
   half of min(|v_out|, 21 x distance) (the clamp of `Motion.seedVelocity`), B started from rest. `abc` (60 ms apart) never gets a
   window on screen before the next claim, so `abc-slow` (100 ms, windows warmed first) is the scenario that exercises it, with
   `osd-over-open`. Fails on the parent of the momentum commit for both.
-- **overshoot-tol** (`--overshoot-tol GLOB:PX[,GLOB:PX]`): lets matching labels run PX past a target. For springs retargeted ~30 times a second (`dict.bar*:0.5`), whose carried speed passes a target that lands just behind them.
+- **overshoot-tol** (`--overshoot-tol GLOB:PX[,GLOB:PX]`): lets matching labels run PX past a target. For springs retargeted ~30 times a second (`dict.bar*:0.25`), whose carried speed passes a target that lands just behind them.
 - **anim-length** (`--max-anim-ms N` only): a segment that takes longer than N ms to reach its target.
 
 Exit 1 with `<file>: <label>: <rule> at frame <n> (t=<ms>): <detail>` per failure.

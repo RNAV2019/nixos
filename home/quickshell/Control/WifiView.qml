@@ -254,7 +254,7 @@ ControlSubView {
           id: heightSpring
 
           target: passwordRow.open ? passwordRow.fullHeight : 0
-          label: "wifi.pass." + entry.name.replace(/\s+/g, "_")
+          label: "wifi.pass." + entry.key.replace(/\s+/g, "_")
         }
 
         onOpenChanged: {

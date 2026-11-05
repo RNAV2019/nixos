@@ -148,6 +148,17 @@ Scope {
                     omega: Theme.levelOmega
                     epsilon: 0.1
                     label: "dict.bar" + index
+
+                    // A bar keeps its speed across a new level only as far as it can without
+                    // passing it: one already past the new target stops, and one heading for it
+                    // at more than omega x distance is held to that (Motion.seedVelocity's clamp).
+                    onTargetChanged: {
+                      var x = value - target;
+                      if (x * velocity > 0)
+                        velocity = 0;
+                      else if (Math.abs(velocity) > omega * Math.abs(x))
+                        velocity = -omega * x;
+                    }
                   }
                 }
               }
