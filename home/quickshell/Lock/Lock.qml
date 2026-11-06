@@ -335,7 +335,7 @@ Scope {
       // One per screen, sharing one reveal clock, so a second screen joins the ramp in
       // progress rather than restarting it.
       Component.onCompleted: {
-        if (!reveal.animatingIn && reveal.ground === 0 && reveal.clockAlpha === 0 && reveal.loginAlpha === 0)
+        if (!reveal.animatingIn && reveal.ground === 0 && reveal.dateAlpha === 0 && reveal.timeAlpha === 0 && reveal.loginAlpha === 0)
           reveal.animateIn();
       }
 
@@ -351,8 +351,12 @@ Scope {
         busy: root.busy
         inputStarted: root.inputStarted
         ground: reveal.ground
-        clockAlpha: reveal.clockAlpha
+        dateAlpha: reveal.dateAlpha
+        timeAlpha: reveal.timeAlpha
         loginAlpha: reveal.loginAlpha
+        dateSlide: reveal.dateSlide
+        timeSlide: reveal.timeSlide
+        loginSlide: reveal.loginSlide
 
         onPasswordEdited: function (text) {
           root.password = text;

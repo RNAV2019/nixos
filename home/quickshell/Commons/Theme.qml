@@ -1135,6 +1135,10 @@ Singleton {
   readonly property int lockInContent: 280
   readonly property int lockOutClock: 20
   readonly property int lockOutContent: 180
+  // The date, time and field slide as they fade: the time trails the date by lockStagger going in and leads it
+  // coming out; the travel is in the lock canvas's reference units (LockView scales it).
+  readonly property int lockStagger: 50
+  readonly property int lockSlideTravel: 12
 
   // ---- the phone (Bar/PhoneSatellite.qml, Phone/PhonePanel.qml) ----
 

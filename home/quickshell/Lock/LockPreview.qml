@@ -57,8 +57,12 @@ Scope {
         forceCapsLock: root.capsLock
         inputStarted: root.inputStarted
         ground: reveal.ground
-        clockAlpha: reveal.clockAlpha
+        dateAlpha: reveal.dateAlpha
+        timeAlpha: reveal.timeAlpha
         loginAlpha: reveal.loginAlpha
+        dateSlide: reveal.dateSlide
+        timeSlide: reveal.timeSlide
+        loginSlide: reveal.loginSlide
 
         onPasswordEdited: function (text) {
           root.password = text;
@@ -76,6 +80,14 @@ Scope {
       busy = false;
       capsLock = false;
       inputStarted = false;
+    }
+  }
+
+  Connections {
+    target: reveal
+
+    function onRevealOutFinished() {
+      root.active = false;
     }
   }
 
@@ -106,6 +118,12 @@ Scope {
         return;
       }
       root.active = false;
+    }
+
+    // The reveal played out, as the real unlock does it; the stage comes down when it ends.
+    function unlock(): void {
+      if (root.active)
+        reveal.animateOut();
     }
 
     function password(text: string): void {

@@ -147,3 +147,7 @@ freeze the waves in a scratch copy of each tree (a literal phase in place of `sc
 
 The `launcher-scroll` scenario adds twelve fixture apps matching one query and arrows through the list
 (label `launcher.scroll`).
+
+`nearby-switch` (Send <-> Receive by the arrow keys, frames in `OUT/nearby-switch-*.png`) and `lock-reveal` (the lock
+preview's reveal in, then out through `qsipc lockpreview unlock`; log labels `lock.date.y`, `lock.time.y`,
+`lock.field.y` are the offsets from rest in reference px) never touch the real lock.

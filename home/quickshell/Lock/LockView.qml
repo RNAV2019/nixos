@@ -19,8 +19,13 @@ Item {
   // Board 13 draws the field from its first frame rather than waiting for a keystroke.
   property bool inputStarted: false
   property real ground: 0
-  property real clockAlpha: 0
+  property real dateAlpha: 0
+  property real timeAlpha: 0
   property real loginAlpha: 0
+  // 1 with the element at rest, 0 a lockSlideTravel away (LockReveal).
+  property real dateSlide: 1
+  property real timeSlide: 1
+  property real loginSlide: 1
 
   // The screen this view draws on - the lock surface's or the preview's.
   property var outputScreen
@@ -91,6 +96,12 @@ Item {
       return Math.round(v * ui);
     }
 
+    // How far an element sits from its place while it slides, in whole device px so it is crisp the
+    // moment it lands (exactly 0 at rest); none with reduced motion.
+    function lift(slide) {
+      return Theme.reduceMotion ? 0 : Math.round((1 - slide) * u(Theme.lockSlideTravel));
+    }
+
     width: view.width * outputScale
     height: view.height * outputScale
     transformOrigin: Item.TopLeft
@@ -142,8 +153,8 @@ Item {
       id: date
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockDateTop)
-      opacity: view.clockAlpha
+      y: canvas.u(Theme.lockDateTop) + canvas.lift(view.dateSlide)
+      opacity: view.dateAlpha
 
       // Keep the board's weekday-first date order independent of locale.
       text: Qt.formatDate(clock.date, "dddd, MMMM d")
@@ -159,8 +170,8 @@ Item {
       id: time
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockClockTop)
-      opacity: view.clockAlpha
+      y: canvas.u(Theme.lockClockTop) + canvas.lift(view.timeSlide)
+      opacity: view.timeAlpha
 
       text: Qt.formatDateTime(clock.date, "HH:mm")
       color: Theme.lockTextPrimary
@@ -176,7 +187,7 @@ Item {
       id: login
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockPillTop)
+      y: canvas.u(Theme.lockPillTop) - canvas.lift(view.loginSlide)
       width: canvas.u(Theme.lockPillWidth)
       height: canvas.u(Theme.lockPillHeight + Theme.lockCaptionGap) + caption.height
       opacity: view.loginAlpha

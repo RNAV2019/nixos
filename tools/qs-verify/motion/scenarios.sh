@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll"
+SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -466,4 +466,45 @@ sc_launcher_scroll() {
   sleep 0.8
   qsipc launcher close >/dev/null 2>&1
   sleep 1.0
+}
+
+# Nearby's Send <-> Receive switch (Right/Left arrow): the header and the direction control stay put
+# and only the body slides. Frames land in $OUT/nearby-switch-*.png: send at rest, then a frame
+# 110 ms into the slide each way and receive at rest.
+sc_nearby_switch() {
+  local shot="$OUT/nearby-switch"
+  sleep 0.5
+  toggle nearby
+  sleep 1.6
+  grim "$shot-send.png"
+  keys -k Right
+  sleep 0.11
+  grim "$shot-mid-to-receive.png"
+  sleep 1.4
+  grim "$shot-receive.png"
+  keys -k Left
+  sleep 0.11
+  grim "$shot-mid-to-send.png"
+  sleep 1.4
+  qsipc nearby close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# The lock screen's reveal on the preview stage (never the real lock): in, then out the way an
+# unlock does it. The log carries lock.date.y, lock.time.y and lock.field.y (offset from rest in
+# reference px). Frames land in $OUT/lock-reveal-*.png.
+sc_lock_reveal() {
+  local shot="$OUT/lock-reveal"
+  sleep 0.5
+  qsipc lockpreview preview true >/dev/null
+  sleep 0.2
+  grim "$shot-in-early.png"
+  sleep 0.1
+  grim "$shot-in-mid.png"
+  sleep 1.4
+  grim "$shot-rest.png"
+  qsipc lockpreview unlock >/dev/null
+  sleep 0.14
+  grim "$shot-out-mid.png"
+  sleep 1.2
 }
