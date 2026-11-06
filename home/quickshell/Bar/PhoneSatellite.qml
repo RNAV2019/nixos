@@ -246,7 +246,16 @@ Item {
 
   readonly property var geo: geometry()
 
-  onGeoChanged: Bus.setSatellite(screenName, geo)
+  // Nothing moves while the disc is away and not on its way: skip, so no window re-renders for
+  // an island morph that does not concern the disc.
+  property bool pushedAway: false
+  onGeoChanged: {
+    var away = p === 0 && progress.target === 0;
+    if (away && pushedAway)
+      return;
+    pushedAway = away;
+    Bus.setSatellite(screenName, geo);
+  }
 
   // The battery ring sweeps in once the disc has landed, and is gone as soon as it leaves.
   property real ringShown: 0
@@ -280,10 +289,10 @@ Item {
     onClicked: root.openPanel()
   }
 
-  // The bar's input mask takes this while the disc is docked and still: one fixed rectangle,
-  // not a region that follows the disc each frame.
-  readonly property bool hitActive: docked && !progress.running && !blend.running && geo !== null
-  readonly property real hitX: geo ? geo.disc.x - satRadius : 0
-  readonly property real hitY: geo ? geo.disc.y - satRadius : 0
+  // The bar's input mask takes this once the disc is nearly home (docked, p > 0.9, as before the
+  // spring): one fixed rectangle at the rest position, not a region that follows the disc.
+  readonly property bool hitActive: docked && geo !== null
+  readonly property real hitX: eff ? (eff.edge - startInset + travel) - satRadius : 0
+  readonly property real hitY: eff ? (eff.top + (eff.transient ? eff.height : Math.min(eff.height, Theme.barHeight)) / 2) - satRadius : 0
   readonly property real hitSize: Theme.phoneSatelliteSize
 }
