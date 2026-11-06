@@ -130,6 +130,8 @@ Item {
     capRadius: root.g ? root.g.capR : 0
     disc: root.g ? root.g.disc : Qt.vector3d(0, 0, 0)
     neck: root.g ? root.g.neck : 0
+    stub: root.g ? root.g.stub : Qt.point(0, 0)
+    bulge: root.g ? root.g.bulge : 0
     aa: 1 / root.ratio
   }
 

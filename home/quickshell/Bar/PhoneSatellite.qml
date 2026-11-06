@@ -7,12 +7,14 @@ import "../Ui/Motion.js" as Motion
 
 // The phone satellite (board "Phone satellite"): while KDE Connect has a phone, a disc buds out
 // of the right end of whatever the island is wearing - the pill, the open card, or a transient
-// pill such as the OSD - and rides that edge. It comes and goes like a drop of liquid: pill and
-// disc are one smooth union (Shaders/satellite.frag) whose neck thins as the disc travels; past
-// Theme.phoneBridgeBreak it breaks, and the small stubs it leaves are the union's own fillet,
-// fading with the gap. A full panel taking the island draws it back in; clicking it does the
-// same, and the phone panel is asked for once it is mostly in, so the panel reads as growing out
-// of it.
+// pill such as the OSD - and rides that edge. It comes and goes like a drop of liquid on a neck
+// (Motion.satelliteStep): going out it is held back by the neck, so it starts slowly, speeds up as
+// the neck stretches and thins, and past Theme.phoneBridgeBreak the neck snaps, both ends recoil
+// into rounded tips, and the disc settles into its dock with a little give. Coming in, a pull
+// that grows as the gap closes draws it home; on contact the neck re-forms and the pill's end
+// swells and relaxes. Shaders/satellite.frag draws it. A full panel taking the island draws it
+// back in; clicking it does the same, and the phone panel is asked for once it is mostly in, so
+// the panel reads as growing out of it.
 //
 // This item holds the logic and the geometry. The geometry goes to Bus.satellite every frame it
 // changes; the bar's SatelliteLayer draws it, and a transient surface's window draws it instead
@@ -117,7 +119,6 @@ Item {
   }
 
   onRawChanged: syncEff()
-  Component.onCompleted: syncEff()
 
   // ---- out or in ----
 
@@ -130,23 +131,102 @@ Item {
   // carries it where it sat.
   readonly property bool wantOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp && !retreating
 
-  // Unlike the island's morphs, this one overshoots a little; see Theme.phoneSpringDamping.
-  MorphSpring {
-    id: progress
+  readonly property real satRadius: Theme.phoneSatelliteSize / 2
+  // The disc starts a little inside the edge and grows to full size over the first 70% of its
+  // travel; docked it sits phoneSatelliteGap off the edge.
+  readonly property real startInset: 6
+  readonly property real travel: startInset + Theme.phoneSatelliteGap + satRadius
 
-    label: "phone.p"
-    target: root.wantOut ? 1 : 0
-    omega: Theme.phoneSpringOmega
-    damping: Theme.phoneSpringDamping
-    epsilon: 0.001
+  // The simulation's tokens (Motion.satelliteStep lists what each is). Unlike the island's morphs
+  // it gives a little at the dock; see Theme.phoneSpringDamping. Times are seconds there.
+  readonly property var simParams: ({
+      travel: travel,
+      startInset: startInset,
+      satR: satRadius,
+      grow: 0.7,
+      dock: travel,
+      reach: Theme.phoneReach,
+      omega: Theme.phoneSpringOmega,
+      zeta: Theme.phoneSpringDamping,
+      rampFrom: Theme.phoneRampFrom,
+      rampTime: Theme.phoneRampTime / 1000,
+      tension: Theme.phoneTension,
+      tensionLead: Theme.phoneTensionLead,
+      breakGap: Theme.phoneBridgeBreak,
+      maxHold: Theme.phoneMaxHold / 1000,
+      neckK: Theme.phoneNeckK,
+      neckOn: Theme.phoneNeckOn / 1000,
+      pull0: Theme.phonePull0,
+      pull1: Theme.phonePull1,
+      pullDrag: Theme.phonePullDrag,
+      mergeOmega: Theme.phoneMergeOmega,
+      stubOmega: Theme.phoneStubOmega,
+      stubZeta: Theme.phoneStubDamping,
+      stubKick: Theme.phoneStubKick,
+      bulgeKick: Motion.satelliteKick(Theme.phoneBulge, Theme.phoneBulgeOmega, Theme.phoneBulgeDamping),
+      bulgeOmega: Theme.phoneBulgeOmega,
+      bulgeZeta: Theme.phoneBulgeDamping,
+      bulgeVRef: Theme.phoneBulgeVRef,
+      restEps: Theme.phoneRestEps
+    })
+
+  // The simulation's state (see Motion.satelliteRest), replaced every frame it runs. It starts
+  // at rest where the target is, as a spring does.
+  property var sim: Motion.satelliteRest(false, simParams)
+
+  readonly property real p: sim.x / travel
+
+  function snapSim() {
+    driver.stop();
+    sim = Motion.satelliteRest(wantOut, simParams);
   }
 
-  readonly property real p: progress.value
+  onWantOutChanged: {
+    if (Theme.reduceMotion)
+      snapSim();
+    else
+      driver.start();
+  }
+  Component.onCompleted: {
+    snapSim();
+    syncEff();
+  }
+
+  // A stalled frame is solved for its whole length rather than slowed down; past 50 ms it is
+  // clamped, as MorphSpring does.
+  FrameAnimation {
+    id: driver
+
+    running: false
+    onTriggered: {
+      if (Theme.reduceMotion) {
+        root.snapSim();
+        return;
+      }
+      root.sim = Motion.satelliteStep(root.sim, root.simParams, root.wantOut, Math.min(0.05, Math.max(0, frameTime)));
+      if (Theme.motionLog)
+        root.logSim();
+      if (root.sim.rest)
+        stop();
+    }
+  }
+
+  // One line per frame per label for tools/qs-verify/motion/check.mjs: p is progress 0..1 (and
+  // may pass 1 where the neck stretches it), the others are px.
+  function logSim() {
+    var t = Date.now();
+    var s = sim;
+    var goal = wantOut ? 1 : 0;
+    console.info("motion phone.p " + t + " " + p.toFixed(4) + " " + (s.v / travel).toFixed(4) + " " + goal.toFixed(4));
+    console.info("motion phone.x " + t + " " + s.x.toFixed(4) + " " + s.v.toFixed(3) + " " + (wantOut ? travel : 0).toFixed(4));
+    console.info("motion phone.neck " + t + " " + s.neck.toFixed(4) + " 0.000 0.0000");
+    console.info("motion phone.bulge " + t + " " + s.bulge.toFixed(4) + " 0.000 0.0000");
+  }
 
   // Locking from a panel (the session menu's Lock) closes the panel, and the disc comes back
-  // out: the lock's snapshot waits until it has stopped (the overshoot included), not merely
-  // until the spring's last thousandth.
-  readonly property bool settling: Bus.locking && (blend.running || (progress.running && !(Math.abs(p - progress.target) < 0.005 && Math.abs(progress.velocity) < 0.05)))
+  // out: the lock's snapshot waits until the simulation rests (the give, the stubs and the swell
+  // included).
+  readonly property bool settling: Bus.locking && (blend.running || driver.running)
   readonly property string holdKey: "phone-satellite:" + screenName
 
   onSettlingChanged: Bus.holdLock(holdKey, settling)
@@ -187,24 +267,18 @@ Item {
 
   // ---- geometry ----
 
-  readonly property real satRadius: Theme.phoneSatelliteSize / 2
-  // The disc starts a little inside the edge and grows to full size over the first 70%; docked
-  // it sits phoneSatelliteGap off the edge.
-  readonly property real startInset: 6
-  readonly property real travel: startInset + Theme.phoneSatelliteGap + satRadius
-
   readonly property real ratio: QsWindow.window && QsWindow.window.devicePixelRatio > 0 ? QsWindow.window.devicePixelRatio : 1
 
   // The disc's left or top on the device grid, except while it is travelling: it blends from the
   // free position to the snapped one over the last 0.3 px of motion, so settling neither
-  // jumps nor leaves it between pixels. The overshoot's turning points count as motion, not rest.
+  // jumps nor leaves it between pixels. The give's turning points count as motion, not rest.
   function settled(v, remaining) {
     // Not while the edge it follows is moving or a hand-over is carried: it would step against
     // a smooth edge.
     if (blend.running || !edgeStill)
       return v;
     var s = Motion.snap(v - satRadius, ratio) + satRadius;
-    if (!progress.running)
+    if (!driver.running)
       return s;
     var t = Theme.clamp01(remaining / 0.3);
     return s + (v - s) * t;
@@ -217,16 +291,14 @@ Item {
     var rowH = e.transient ? e.height : Math.min(e.height, Theme.barHeight);
     var mid = e.top + rowH / 2;
     var pc = Math.max(0, p);
-    var r = satRadius * Theme.clamp01(pc / 0.7);
-    var remaining = (Math.abs(p - progress.target) + Math.abs(progress.velocity) / progress.omega) * travel;
-    var cx = settled(e.edge - startInset + travel * pc, remaining);
+    var s = sim;
+    var r = Motion.satelliteRadius(s.x, simParams);
+    var remaining = Math.abs(s.x - (wantOut ? travel : 0)) + Math.abs(s.v) / Theme.phoneSpringOmega;
+    var cx = settled(e.edge - startInset + s.x, remaining);
     var cy = settled(mid, remaining);
-    // The neck's width falls with the gap between the edge and the disc, reaching twice the
-    // gap (a neck of no thickness) at Theme.phoneBridgeBreak, and grows with the disc so a bud
-    // too small to see does not bulge the pill.
-    var gap = cx - r - e.edge;
-    var b = Theme.phoneBridgeBreak;
-    var k = Math.max(0, 2 * (2 * b - gap)) * Theme.clamp01(r / (satRadius * 0.5));
+    // The broken ends the snap leaves, reaching out of the pill and the disc and shrinking to
+    // nothing as they recoil.
+    var stub = Qt.point(s.stubs * Theme.phoneStubLength, Theme.phoneStubRadius * Theme.clamp01(s.stubs * 2));
     return {
       edgeX: e.edge,
       midY: mid,
@@ -234,7 +306,9 @@ Item {
       halfH: e.height / 2,
       capR: e.capR,
       disc: Qt.vector3d(cx, cy, r),
-      neck: k,
+      neck: s.neck,
+      stub: stub,
+      bulge: Math.max(0, s.bulge),
       follow: e.transient ? "transient" : "pill",
       windowTop: windowTop,
       p: pc,
@@ -250,7 +324,7 @@ Item {
   // an island morph that does not concern the disc.
   property bool pushedAway: false
   onGeoChanged: {
-    var away = p === 0 && progress.target === 0;
+    var away = sim.rest && !wantOut;
     if (away && pushedAway)
       return;
     pushedAway = away;

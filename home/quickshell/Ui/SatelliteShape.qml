@@ -1,10 +1,11 @@
 import QtQuick
 import qs.Commons
 
-// The phone satellite's body: the shape's right cap and the disc as one smooth union with a 1 px
-// outline, drawn by Shaders/satellite.frag. The properties are the shader's uniforms, in the
-// parent's coordinates; the item itself is only as big as the bud (the cap's end, the disc, and
-// the room the neck's fillet can bulge into) plus `aa`, so the window is never covered whole.
+// The phone satellite's body: the shape's right cap and the disc, joined by a liquid neck while it
+// holds and by two rounded stubs after it breaks, as one shape with a 1 px outline, drawn by
+// Shaders/satellite.frag. The properties are the shader's uniforms, in the parent's coordinates;
+// the item itself is only as big as the bud (the cap's end, the swell, the neck, the disc) plus
+// `aa`, so the window is never covered whole.
 //
 // The bar draws it while the satellite rides the pill or the open card, and a transient surface's
 // window draws it while the satellite rides that transient (Ui/SatelliteLayer.qml hosts both).
@@ -18,18 +19,22 @@ ShaderEffect {
   property real capRadius: Theme.barHeight / 2
   // The disc: centre x, centre y, radius.
   property vector3d disc: Qt.vector3d(0, 0, 0)
-  // The smooth-min k between the two, 0 for none.
+  // The radius of the ball that fillets the cap into the disc (the neck), 0 for none.
   property real neck: 0
+  // The broken ends after the neck snaps: how far each reaches, and its radius.
+  property point stub: Qt.point(0, 0)
+  // How far the cap swells while a disc is drawn in.
+  property real bulge: 0
   property real outlineWidth: 1
   // Premultiplied, as the shader composes them: the ground and the outline over it.
   property color fill: Theme.surface
   property color outline: Theme.surfaceOutline
   property real aa: 1
 
-  // Where the bud lies: from just inside the cap to the disc's far side, and as high as the
-  // taller of the two plus the neck's bulge.
-  readonly property real boundReach: Math.max(capRadius, disc.z) + neck / 4 + 2 * aa
-  readonly property real boundLeft: pillEdge.x - capRadius - neck / 4 - 2 * aa
+  // Where the bud lies: from inside the cap (the fillet is faintly there too, over the pill's
+  // top) to the disc's far side, and as high as the taller of the two plus the swell.
+  readonly property real boundReach: Math.max(capRadius, disc.z) + bulge + 2 * aa
+  readonly property real boundLeft: pillEdge.x - 2.5 * capRadius - 2 * aa
   readonly property real boundRight: disc.x + disc.z + 2 * aa
 
   // The sizes are snapped to whole device pixels by the caller's aa (1 / ratio).

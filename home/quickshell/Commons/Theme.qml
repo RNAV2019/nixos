@@ -1151,14 +1151,59 @@ Singleton {
   readonly property real phoneRingWidth: 2
   // At or below this, discharging, the ring and glyph turn love.
   readonly property int phoneLowBattery: 20
-  // Unlike the island's morphs, the satellite settles with a little overshoot, Ryan's choice:
-  // damping ratio 0.7 overshoots by about 4.6% of the travel, under 2 px of the bud's 44.
+  // The satellite is a drop of liquid on a neck, not a spring: Motion.satelliteStep. Ryan, 2026-11-06:
+  // "more physical liquid" (main's metaball bridge, a little exaggerated) and "surface tension"
+  // (held back, then snapping free). Distances are px, rates 1/s or px/s^2; the sim runs in its own
+  // time and reduce-motion skips it (the satellite snaps), so none of these go through duration().
+  //
+  // Unlike the island's morphs, the satellite settles into its dock with a little give: the dock
+  // spring, damping ratio 0.7, which gives about 4.6% of a run it makes from rest (less here:
+  // the disc arrives already near the dock).
   readonly property real phoneSpringOmega: 17
   readonly property real phoneSpringDamping: 0.7
-  // The neck between pill and satellite is a smooth union whose width k falls with the gap
-  // between them (Bar/PhoneSatellite.qml): it breaks as the gap passes this, and the stubs it
-  // leaves are the union's own fillet, thinning to nothing at twice this gap.
-  readonly property real phoneBridgeBreak: 6
+  // How far past the dock the pull would take the disc if the neck did not hold it: the neck
+  // stretches until it snaps, 8 px being a neck about as long again as the gap it ends on.
+  readonly property real phoneReach: 8
+  // The pull builds from this share of its strength to full over phoneRampTime ms, so the disc
+  // starts slowly (the neck holds it) and speeds up as it stretches.
+  readonly property real phoneRampFrom: 0.15
+  readonly property int phoneRampTime: 140
+  // The neck's pull back, per px of stretch from phoneTensionLead px before contact. Tuned with
+  // phoneReach so the disc reaches the break at a walking pace (about 40 px/s): a harder pull
+  // never lets the neck snap, and phoneMaxHold (ms) lets go anyway if it ever stalls.
+  readonly property real phoneTension: 130
+  readonly property real phoneTensionLead: 10
+  readonly property int phoneMaxHold: 600
+  // The neck is a ball of this radius rolling between pill and disc (Shaders/satellite.frag): it
+  // thins as they part and would pinch off at about 10 px, with phoneBridgeBreak (px of clear gap)
+  // where the sim snaps it first, a little past the 8 px dock gap and longer than main's 6.
+  readonly property real phoneNeckK: 5.1
+  readonly property real phoneBridgeBreak: 9.5
+  // A neck re-forming on contact swells in over this long (ms), not in one frame.
+  readonly property int phoneNeckOn: 50
+  // Coming in: the pull on a loose disc, px/s^2, and what is added as the gap closes (squared),
+  // with a little drag; then, joined, a critically damped spring home.
+  readonly property real phonePull0: 500
+  readonly property real phonePull1: 7000
+  readonly property real phonePullDrag: 6
+  readonly property real phoneMergeOmega: 22
+  // The ends of a snapped neck recoil: they start this fast (1/s of their length), ringing a
+  // little (damping 0.55) so they overshoot into rounded tips and are gone in about 150 ms. They
+  // reach phoneStubLength px past their bodies at first and are phoneStubRadius px thick.
+  readonly property real phoneStubOmega: 30
+  readonly property real phoneStubDamping: 0.55
+  readonly property real phoneStubKick: 25
+  readonly property real phoneStubLength: 4.75
+  readonly property real phoneStubRadius: 1.4
+  // The pill's end swells by this much (px) when the disc is drawn in at speed phoneBulgeVRef
+  // (px/s) or more, and relaxes with a lightly damped spring in about 200 ms.
+  readonly property real phoneBulge: 2.5
+  readonly property real phoneBulgeOmega: 30
+  readonly property real phoneBulgeDamping: 0.45
+  readonly property real phoneBulgeVRef: 200
+  // Rests within this many px of its end (so the settling hand-off to the snapped grid is not
+  // chasing a tail).
+  readonly property real phoneRestEps: 0.05
   // How far back into its retreat a clicked satellite is before the panel is asked for, as
   // satellite progress: by then the bridge has re-formed and it reads as going in.
   readonly property real phoneOpenAt: 0.5
