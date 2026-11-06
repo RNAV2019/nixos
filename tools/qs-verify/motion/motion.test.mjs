@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(here, "../../../home/quickshell/Ui/Motion.js"), "utf8").replace(/^\.pragma.*$/m, "");
-const M = new Function(`${src}; return { springStep, seedVelocity, progress, ramp, snap };`)();
+const M = new Function(`${src}; return { springStep, seedVelocity, progress, ramp, snap, satelliteStep, satelliteRest, satelliteGap, satelliteKick };`)();
 
 // The formula MorphSpring.step inlined before Motion.js (critically damped branch, then ringing).
 function oldStep(x, v, w, z, dt) {
@@ -95,4 +95,101 @@ test("ramp", () => {
 test("snap lands on the device-pixel grid", () => {
   const r = 1.3333334, v = M.snap(10.67, r);
   assert.ok(Math.abs(v / 0.75 - Math.round(v / 0.75)) < 1e-6, String(v));
+});
+
+// ---- the phone satellite's simulation (Theme.qml's phone tokens, 36 px bar) ----
+
+const SAT = (() => {
+  const satR = 18, startInset = 6, travel = startInset + 8 + satR;
+  const P = {
+    travel, startInset, satR, grow: 0.7, dock: travel, reach: 8, omega: 17, zeta: 0.7,
+    rampFrom: 0.15, rampTime: 0.14, tension: 130, tensionLead: 10, breakGap: 9.5, maxHold: 0.6,
+    neckK: 5.1, neckOn: 0.05, pull0: 500, pull1: 7000, pullDrag: 6, mergeOmega: 22,
+    stubOmega: 30, stubZeta: 0.55, stubKick: 25, bulgeOmega: 30, bulgeZeta: 0.45, bulgeVRef: 200, restEps: 0.05,
+  };
+  P.bulgeKick = M.satelliteKick(2.5, P.bulgeOmega, P.bulgeZeta);
+  return P;
+})();
+
+function satRun(out, dt, ms, from) {
+  let s = from || M.satelliteRest(!out, SAT);
+  const trace = [];
+  for (let t = 0; t < ms - 1e-9; t += dt * 1000) {
+    s = M.satelliteStep(s, SAT, out, dt);
+    trace.push({ t: t + dt * 1000, s });
+    if (s.rest) break;
+  }
+  return { s, trace };
+}
+
+test("satellite out: reaches the dock, breaks once, no NaN, gives by a few px at most", () => {
+  const { s, trace } = satRun(true, 1 / 120, 3000);
+  assert.ok(s.rest);
+  assert.equal(s.x, SAT.dock);
+  assert.equal(s.snaps, 1);
+  assert.equal(s.merges, 0);
+  for (const { s: q } of trace) for (const k of ["x", "v", "neck", "stubs", "bulge"]) assert.ok(Number.isFinite(q[k]), k);
+  const over = Math.max(...trace.map((q) => q.s.x)) - SAT.dock;
+  assert.ok(over > 0 && over <= 3, `give ${over}`);
+  assert.ok(trace.every((q) => q.s.x > -0.001));
+});
+
+test("satellite out: starts slower than a plain spring, and the neck thins to nothing at the break", () => {
+  const { trace } = satRun(true, 1 / 120, 60);
+  const plain = M.springStep(-SAT.dock, 0, SAT.omega, SAT.zeta, 0.06);
+  assert.ok(trace.at(-1).s.x < (plain.x + SAT.dock) / 2, `${trace.at(-1).s.x} vs ${plain.x + SAT.dock}`);
+  const all = satRun(true, 1 / 120, 3000).trace;
+  const iBreak = all.findIndex((q) => q.s.broken);
+  assert.ok(iBreak > 0);
+  assert.equal(all[iBreak].s.neck, 0);
+  assert.ok(all[iBreak - 1].s.neck < all[iBreak - 4].s.neck, "thinning before it snaps");
+  // The stubs start full at the snap, recoil, and are gone within 250 ms.
+  assert.equal(all[iBreak].s.stubs > 0.5, true);
+  const gone = all.findIndex((q, i) => i > iBreak && q.s.stubs === 0);
+  assert.ok((gone - iBreak) / 120 < 0.25, `stubs ${(gone - iBreak) / 120}`);
+});
+
+test("satellite in: merges once, the pill swells and relaxes, ends home", () => {
+  const { s, trace } = satRun(false, 1 / 120, 3000);
+  assert.ok(s.rest);
+  assert.equal(s.x, 0);
+  assert.equal(s.merges, 1);
+  assert.equal(s.snaps, 0);
+  assert.equal(s.bulge, 0);
+  const peak = Math.max(...trace.map((q) => q.s.bulge));
+  assert.ok(peak > 1.5 && peak < 3, `bulge ${peak}`);
+  // Pulled in: it speeds up on the way to contact.
+  const vs = trace.filter((q) => q.s.broken).map((q) => Math.abs(q.s.v));
+  assert.ok(vs.at(-1) > vs[Math.floor(vs.length / 2)]);
+});
+
+test("satellite: 120 Hz and 60 Hz are the same curve", () => {
+  for (const out of [true, false]) {
+    const a = satRun(out, 1 / 120, 1000).trace;
+    const b = satRun(out, 1 / 60, 1000).trace;
+    for (const q of b) {
+      const m = a.find((r) => Math.abs(r.t - q.t) < 0.01);
+      if (m) assert.ok(Math.abs(m.s.x - q.s.x) < 0.1, `${out} ${q.t}: ${m.s.x} ${q.s.x}`);
+    }
+  }
+});
+
+test("satellite: turning round mid-flight neither breaks twice nor sticks", () => {
+  let s = satRun(true, 1 / 120, 120).s;
+  s = satRun(false, 1 / 120, 3000, s).s;
+  assert.ok(s.rest && s.x === 0);
+  let u = satRun(false, 1 / 120, 3000).s;
+  u = satRun(true, 1 / 120, 120, u).s;
+  u = satRun(true, 1 / 120, 3000, u).s;
+  assert.ok(u.rest && u.x === SAT.dock);
+  assert.equal(u.snaps, 1);
+});
+
+test("satellite: the rest state is at rest and carries no neck", () => {
+  for (const out of [true, false]) {
+    const r = M.satelliteRest(out, SAT);
+    const n = M.satelliteStep(r, SAT, out, 1 / 120);
+    assert.ok(n.rest && n.neck === 0 && n.stubs === 0 && n.bulge === 0);
+    assert.equal(n.x, out ? SAT.dock : 0);
+  }
 });
