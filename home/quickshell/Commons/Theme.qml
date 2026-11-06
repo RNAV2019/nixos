@@ -1173,7 +1173,7 @@ Singleton {
   // the give at the dock under 1.5 px. The normal exit is the sim's stuck guard (the disc has
   // stopped beyond the dock gap), not the break gap: phoneBridgeBreak is a ceiling the neck
   // would snap at if the pull still carried the disc that far, and phoneMaxHold (ms) a last
-  // resort. Tension around 160-200 makes the neck stall until phoneMaxHold: the node test
+  // resort. Tension of about 200 and up makes the neck stall until phoneMaxHold: the node test
   // "first snap before 400 ms" fails there, so retune with it.
   readonly property real phoneTension: 148
   readonly property real phoneTensionLead: 10
