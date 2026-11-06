@@ -193,3 +193,32 @@ test("satellite: the rest state is at rest and carries no neck", () => {
     assert.equal(n.x, out ? SAT.dock : 0);
   }
 });
+
+test("satellite: the first snap comes before 400 ms at 60, 120 and 144 Hz and across a stalled frame", () => {
+  const snapAt = (dts) => {
+    let s = M.satelliteRest(false, SAT), t = 0;
+    for (let i = 0; i < 2000 && s.snaps === 0; i++) {
+      const dt = dts(i);
+      s = M.satelliteStep(s, SAT, true, dt);
+      t += dt * 1000;
+    }
+    return s.snaps === 1 ? t : Infinity;
+  };
+  for (const hz of [60, 120, 144]) assert.ok(snapAt(() => 1 / hz) < 400, `${hz} Hz: ${snapAt(() => 1 / hz)}`);
+  // A 50 ms frame (the clamp) in the middle of the stretch.
+  const stalled = snapAt((i) => (i === 15 ? 0.05 : 1 / 120));
+  assert.ok(stalled < 400, `stalled frame: ${stalled}`);
+});
+
+test("satellite: the rest states carry no neck, stubs or swell (the reduce-motion snap)", () => {
+  for (const out of [true, false]) {
+    const r = M.satelliteRest(out, SAT);
+    assert.equal(r.neck, 0);
+    assert.equal(r.stubs, 0);
+    assert.equal(r.stubV, 0);
+    assert.equal(r.bulge, 0);
+    assert.equal(r.bulgeV, 0);
+    assert.equal(r.v, 0);
+    assert.equal(r.x, out ? SAT.dock : 0);
+  }
+});

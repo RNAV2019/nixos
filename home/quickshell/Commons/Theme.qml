@@ -1169,15 +1169,18 @@ Singleton {
   readonly property real phoneRampFrom: 0.15
   readonly property int phoneRampTime: 140
   // The neck's pull back, per px of stretch from phoneTensionLead px before contact. Tuned with
-  // phoneReach so the disc has all but stopped when the neck lets go (under 3 px/s at 9.5 px of
-  // gap), which keeps the give at the dock under 1.5 px; a harder pull stalls it short of the
-  // break, and the sim lets go then (or after phoneMaxHold ms) so it can never hang.
+  // phoneReach so the disc has all but stopped as the neck lets go (under 3 px/s), which keeps
+  // the give at the dock under 1.5 px. The normal exit is the sim's stuck guard (the disc has
+  // stopped beyond the dock gap), not the break gap: phoneBridgeBreak is a ceiling the neck
+  // would snap at if the pull still carried the disc that far, and phoneMaxHold (ms) a last
+  // resort. Tension around 160-200 makes the neck stall until phoneMaxHold: the node test
+  // "first snap before 400 ms" fails there, so retune with it.
   readonly property real phoneTension: 148
   readonly property real phoneTensionLead: 10
   readonly property int phoneMaxHold: 600
   // The neck is a ball of this radius rolling between pill and disc (Shaders/satellite.frag): it
   // thins as they part and would pinch off at about 10 px, with phoneBridgeBreak (px of clear gap)
-  // where the sim snaps it first, a little past the 8 px dock gap and longer than main's 6.
+  // where the sim would snap it, a little past the 8 px dock gap and longer than main's 6 (a ceiling: see phoneTension).
   readonly property real phoneNeckK: 5.1
   readonly property real phoneBridgeBreak: 9.5
   // A neck re-forming on contact swells in over this long (ms), not in one frame.
