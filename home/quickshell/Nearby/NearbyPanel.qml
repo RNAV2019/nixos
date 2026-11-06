@@ -356,7 +356,9 @@ Variants {
         // never passes over the header. The views keep their own coordinates (y 0 is the card's
         // top), so they sit `body.inset` above the clip.
         NearbyHeader {
+          x: Math.round((parent.width - win.columnWidth) / 2)
           y: Theme.nearbyPadTop
+          width: win.columnWidth
           direction: win.direction
           onDirectionChosen: function (direction) {
             win.direction = direction;

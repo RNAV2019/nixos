@@ -486,6 +486,14 @@ sc_nearby_switch() {
   sleep 0.11
   grim "$shot-mid-to-send.png"
   sleep 1.4
+  keys -k Return
+  sleep 0.11
+  grim "$shot-picker-opening.png"
+  sleep 1.4
+  keys -k Escape
+  sleep 0.11
+  grim "$shot-picker-closing.png"
+  sleep 1.4
   qsipc nearby close >/dev/null 2>&1
   sleep 1.0
 }

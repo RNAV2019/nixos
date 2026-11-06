@@ -96,7 +96,7 @@ Item {
       return Math.round(v * ui);
     }
 
-    // How far an element sits from its place while it slides, in whole device px so it is crisp the
+    // How far an element sits from its place while it slides (the date and time start above it, the field below), in whole device px so it is crisp the
     // moment it lands (exactly 0 at rest); none with reduced motion.
     function lift(slide) {
       return Theme.reduceMotion ? 0 : Math.round((1 - slide) * u(Theme.lockSlideTravel));
@@ -153,7 +153,7 @@ Item {
       id: date
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockDateTop) + canvas.lift(view.dateSlide)
+      y: canvas.u(Theme.lockDateTop) - canvas.lift(view.dateSlide)
       opacity: view.dateAlpha
 
       // Keep the board's weekday-first date order independent of locale.
@@ -170,7 +170,7 @@ Item {
       id: time
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockClockTop) + canvas.lift(view.timeSlide)
+      y: canvas.u(Theme.lockClockTop) - canvas.lift(view.timeSlide)
       opacity: view.timeAlpha
 
       text: Qt.formatDateTime(clock.date, "HH:mm")
@@ -187,7 +187,7 @@ Item {
       id: login
 
       anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockPillTop) - canvas.lift(view.loginSlide)
+      y: canvas.u(Theme.lockPillTop) + canvas.lift(view.loginSlide)
       width: canvas.u(Theme.lockPillWidth)
       height: canvas.u(Theme.lockPillHeight + Theme.lockCaptionGap) + caption.height
       opacity: view.loginAlpha

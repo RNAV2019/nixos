@@ -49,26 +49,26 @@ Item {
     loginSlide = 0;
   }
 
-  // The slide's offset in the motion log, in reference px (QS_MOTION_LOG=1; check.mjs reads it).
+  // The slide's signed offset from rest in the motion log (y grows down: date and time start above, the field below), in reference px (QS_MOTION_LOG=1; check.mjs reads it).
   property var logLast: ({})
 
-  function logSlide(label, slide, target) {
+  function logSlide(label, slide, target, sign) {
     if (!Theme.motionLog || !(inAnim.running || outAnim.running))
       return;
     const now = Date.now();
     const prev = logLast[label];
-    const v = (1 - slide) * Theme.lockSlideTravel;
+    const v = sign * (1 - slide) * Theme.lockSlideTravel;
     const vel = prev && now > prev.t ? (v - prev.v) / ((now - prev.t) / 1000) : 0;
     logLast[label] = {
       "t": now,
       "v": v
     };
-    console.info("motion " + label + " " + now + " " + v.toFixed(4) + " " + vel.toFixed(4) + " " + ((1 - target) * Theme.lockSlideTravel).toFixed(4));
+    console.info("motion " + label + " " + now + " " + v.toFixed(4) + " " + vel.toFixed(4) + " " + (sign * (1 - target) * Theme.lockSlideTravel).toFixed(4));
   }
 
-  onDateSlideChanged: logSlide("lock.date.y", dateSlide, inAnim.running ? 1 : 0)
-  onTimeSlideChanged: logSlide("lock.time.y", timeSlide, inAnim.running ? 1 : 0)
-  onLoginSlideChanged: logSlide("lock.field.y", loginSlide, inAnim.running ? 1 : 0)
+  onDateSlideChanged: logSlide("lock.date.y", dateSlide, inAnim.running ? 1 : 0, -1)
+  onTimeSlideChanged: logSlide("lock.time.y", timeSlide, inAnim.running ? 1 : 0, -1)
+  onLoginSlideChanged: logSlide("lock.field.y", loginSlide, inAnim.running ? 1 : 0, 1)
 
   // One element's reveal: wait `delay`, then ease the alpha and the slide to `to`.
   component Lift: SequentialAnimation {
