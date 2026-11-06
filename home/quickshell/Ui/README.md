@@ -177,7 +177,8 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
 - **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view
   (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
   views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.
-  Used by the control centre, Nearby (send/receive and the picker) and the phone panel.
+  Used by the control centre, Nearby (send/receive and the picker) and the phone panel. Nearby draws
+  its header once outside the slide and clips only the body below it, so what both directions share stays still.
 - **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
   surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,
   `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU.
