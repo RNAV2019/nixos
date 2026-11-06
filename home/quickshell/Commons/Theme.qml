@@ -1169,9 +1169,10 @@ Singleton {
   readonly property real phoneRampFrom: 0.15
   readonly property int phoneRampTime: 140
   // The neck's pull back, per px of stretch from phoneTensionLead px before contact. Tuned with
-  // phoneReach so the disc reaches the break at a walking pace (about 40 px/s): a harder pull
-  // never lets the neck snap, and phoneMaxHold (ms) lets go anyway if it ever stalls.
-  readonly property real phoneTension: 130
+  // phoneReach so the disc has all but stopped when the neck lets go (under 3 px/s at 9.5 px of
+  // gap), which keeps the give at the dock under 1.5 px; a harder pull stalls it short of the
+  // break, and the sim lets go then (or after phoneMaxHold ms) so it can never hang.
+  readonly property real phoneTension: 148
   readonly property real phoneTensionLead: 10
   readonly property int phoneMaxHold: 600
   // The neck is a ball of this radius rolling between pill and disc (Shaders/satellite.frag): it

@@ -103,7 +103,7 @@ const SAT = (() => {
   const satR = 18, startInset = 6, travel = startInset + 8 + satR;
   const P = {
     travel, startInset, satR, grow: 0.7, dock: travel, reach: 8, omega: 17, zeta: 0.7,
-    rampFrom: 0.15, rampTime: 0.14, tension: 130, tensionLead: 10, breakGap: 9.5, maxHold: 0.6,
+    rampFrom: 0.15, rampTime: 0.14, tension: 148, tensionLead: 10, breakGap: 9.5, maxHold: 0.6,
     neckK: 5.1, neckOn: 0.05, pull0: 500, pull1: 7000, pullDrag: 6, mergeOmega: 22,
     stubOmega: 30, stubZeta: 0.55, stubKick: 25, bulgeOmega: 30, bulgeZeta: 0.45, bulgeVRef: 200, restEps: 0.05,
   };
@@ -130,7 +130,7 @@ test("satellite out: reaches the dock, breaks once, no NaN, gives by a few px at
   assert.equal(s.merges, 0);
   for (const { s: q } of trace) for (const k of ["x", "v", "neck", "stubs", "bulge"]) assert.ok(Number.isFinite(q[k]), k);
   const over = Math.max(...trace.map((q) => q.s.x)) - SAT.dock;
-  assert.ok(over > 0 && over <= 3, `give ${over}`);
+  assert.ok(over > 0 && over <= 1.5, `give ${over}`);
   assert.ok(trace.every((q) => q.s.x > -0.001));
 });
 

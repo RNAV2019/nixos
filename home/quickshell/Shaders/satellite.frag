@@ -61,8 +61,8 @@ void main() {
     // the pill's own outline.
     float halfW = capRadius * 2.0;
     float dPill = sdRoundBox(p - vec2(pillEdge.x - halfW, pillEdge.y), vec2(halfW, pillHalfH), capRadius);
-    // The cap swells at its end, and not along the pill.
-    float dCap = dPill - bulge * smoothstep(pillEdge.x - 2.0 * capRadius, pillEdge.x, p.x);
+    // The cap swells by pushing its end out; the pill's straight edges stay where they are.
+    float dCap = sdRoundBox(p - vec2(pillEdge.x + bulge - halfW, pillEdge.y), vec2(halfW, pillHalfH), capRadius);
     float dDisc = length(p - disc.xy) - disc.z;
     float d = neck > 0.0 ? sminRound(dCap, dDisc, neck) : min(dCap, dDisc);
 

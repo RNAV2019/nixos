@@ -118,14 +118,15 @@ function satelliteRest(out, P) {
 }
 
 // The fillet ball's radius for the neck at this state: full while joined, shrinking to nothing
-// over the last fifth of the stretch so the pinch reads as the neck thinning to a thread, and
-// growing with the disc so a bud too small to see does not bulge the pill.
+// over the last fifth of the stretch so the pinch reads as the neck thinning to a thread. It
+// is also faded out while the disc is still inside the cap (gap below -5 px): a fillet between
+// a wide pill and a small disc is a sharp wedge, and a bud should come out round.
 function satelliteNeck(s, P) {
   if (s.broken || s.joint <= 0)
     return 0;
   var gap = satelliteGap(s.x, P);
   var thin = sat01((P.breakGap - gap) / (0.2 * P.breakGap));
-  var size = sat01(satelliteRadius(s.x, P) / (P.satR * 0.5));
+  var size = ramp(gap, -5, 0.5);
   return P.neckK * s.joint * thin * size;
 }
 
