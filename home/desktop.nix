@@ -131,6 +131,10 @@ in {
           force_split = 2;
         };
 
+        # XWayland windows render at the monitor's real pixels instead of being stretched from
+        # scale 1. Lectern (Chromium, X11-only) passes its own scale; see home/lectern.nix.
+        xwayland.force_zero_scaling = true;
+
         misc = {
           vrr = 0;
 
