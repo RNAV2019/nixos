@@ -124,7 +124,8 @@ Item {
 
     // 1:1 with the device pixels, so a settled card shows the contents exactly as drawn.
     textureSize: Qt.size(Math.round(contentHolder.width * root.pixelRatio), Math.round(contentHolder.height * root.pixelRatio))
-    sourceItem: root.clipContent ? contentHolder : null
+    // Hidden (a parked window), no texture is held: nine idle panels would keep nine open-size ones.
+    sourceItem: root.clipContent && root.visible ? contentHolder : null
     hideSource: root.clipContent
     live: true
     smooth: false

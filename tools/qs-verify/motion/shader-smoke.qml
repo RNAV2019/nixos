@@ -65,6 +65,31 @@ Window {
             fragmentShader: Qt.resolvedUrl("../../../home/quickshell/Shaders/roundedclip.frag.qsb")
         }
     }
+    // stage 3: hills.frag, three layers of the same half-transparent red over a 100x40 track,
+    // fully played, full amplitude: the bottom row is under all three, so alpha is 1 - 0.5^3 and
+    // the colour (un-premultiplied in the PNG) is still pure red. Fails if the colour is
+    // multiplied by alpha twice.
+    Item {
+        id: stage3
+
+        x: 150
+        y: 170
+        width: 100
+        height: 30
+
+        ShaderEffect {
+            property real amplitude: 1
+            property color ink0: Qt.rgba(1, 0, 0, 0.5)
+            property color ink1: Qt.rgba(1, 0, 0, 0.5)
+            property color ink2: Qt.rgba(1, 0, 0, 0.5)
+            property size itemSize: Qt.size(100, 30)
+            property real phase: 0
+            property real progress: 1
+
+            anchors.fill: parent
+            fragmentShader: Qt.resolvedUrl("../../../home/quickshell/Shaders/hills.frag.qsb")
+        }
+    }
     Timer {
         interval: 500
         running: true
@@ -73,7 +98,10 @@ Window {
             r.saveToFile("@OUT@.1.png");
             stage2.grabToImage(function (r2) {
                 r2.saveToFile("@OUT@.2.png");
-                Qt.quit();
+                stage3.grabToImage(function (r3) {
+                    r3.saveToFile("@OUT@.3.png");
+                    Qt.quit();
+                });
             });
         })
     }

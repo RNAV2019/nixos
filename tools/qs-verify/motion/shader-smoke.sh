@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Loads Shaders/roundedclip.frag.qsb in a real Qt scene graph and checks the clip.
+# Loads Shaders/roundedclip.frag.qsb and hills.frag.qsb in a real Qt scene graph and checks the clip and the hills colour.
 # ShaderEffect needs an RHI GL/Vulkan backend, which the offscreen QPA plugin lacks,
 # so this runs under a private headless sway (pixman, no GPU needed). Prints PASS or FAIL.
 set -u
@@ -37,4 +37,9 @@ expect 2 90,80 255 "case2 box centre"
 expect 2 90,51 255 "case2 box top edge"
 expect 2 41,51 0 "case2 box corner"
 expect 2 139,109 0 "case2 box corner"
+chan() { nix shell --inputs-from ../../.. nixpkgs#imagemagick -c magick "$OUT.$1.png" -format "%[fx:round(255*p{$2}.$3)]" info: 2>/dev/null; }
+# case 3: hills, three stacked half-alpha red layers (bottom row of the track, mid-width)
+r=$(chan 3 50,29 r); a=$(chan 3 50,29 a)
+[[ $a -ge 218 && $a -le 228 ]] || { echo "FAIL case3 hills alpha $a, want ~223"; fail=1; }
+[[ $r -ge 250 ]] || { echo "FAIL case3 hills red $r, want ~255 (colour multiplied by alpha twice?)"; fail=1; }
 [[ $fail == 0 ]] && echo PASS || exit 1

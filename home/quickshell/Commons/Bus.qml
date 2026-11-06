@@ -395,9 +395,7 @@ Singleton {
       width: width,
       height: height,
       radius: radius,
-      duration: duration,
-      vw: 0,
-      vh: 0
+      duration: duration
     });
     islandClaimed(screen);
   }
@@ -414,7 +412,7 @@ Singleton {
   }
 
   // The shape a surface was wearing when it let go, and how fast it was changing (px/s per
-  // axis), so the taker carries the motion on. The claim it answers learns the velocity too.
+  // axis), so the taker carries the motion on.
   function publishHandoff(screen, width, height, radius, vw, vh) {
     islandHandoffs = writeMap(islandHandoffs, screen, {
       width: width,
@@ -423,12 +421,6 @@ Singleton {
       vw: vw,
       vh: vh
     });
-    var claim = claimFor(screen);
-    if (claim)
-      islandClaims = writeMap(islandClaims, screen, Object.assign({}, claim, {
-        vw: vw,
-        vh: vh
-      }));
   }
 
   function consumeHandoff(screen) {

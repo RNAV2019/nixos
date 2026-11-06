@@ -13,7 +13,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 itemSize;   // the ShaderEffect item size, item px (the whole track wide)
     float amplitude; // 0 flat .. 1 full hills
     float progress;  // played fraction of the track, 0..1
-    vec4 ink0;       // back to front, straight alpha (alpha is the layer's opacity)
+    vec4 ink0;       // back to front, colour uniform as Qt delivers it: premultiplied (alpha is the layer's opacity)
     vec4 ink1;
     vec4 ink2;
 };
@@ -30,10 +30,11 @@ float hill(float x, float w, float f1, float f2, float s1, float s2, float k) {
     return itemSize.y * k * amplitude * envelope * (0.55 + 0.45 * wave);
 }
 
-// Source-over of a layer with straight colour c over a premultiplied destination.
+// Source-over of a layer over a premultiplied destination. Qt hands colour uniforms to the
+// shader premultiplied (rgb already times alpha), so the colour is only scaled by coverage.
 vec4 over(vec4 dst, vec4 c, float cover) {
     float a = c.a * cover;
-    return dst * (1.0 - a) + vec4(c.rgb * a, a);
+    return dst * (1.0 - a) + vec4(c.rgb * cover, a);
 }
 
 void main() {

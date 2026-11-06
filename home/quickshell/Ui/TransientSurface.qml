@@ -38,7 +38,7 @@ IslandSurfaceBase {
   readonly property bool hostsSatellite: win.tall && satelliteGeometry !== null && satelliteGeometry.follow === "transient" && Bus.transientSurfaceFor(win.screenName) === surface
 
   overlayData: SatelliteLayer {
-    g: win.satelliteGeometry
+    g: win.tall ? win.satelliteGeometry : null
     yOffset: win.satelliteGeometry ? win.satelliteGeometry.windowTop : 0
     screenName: win.screenName
     hostId: "transient:" + win.key

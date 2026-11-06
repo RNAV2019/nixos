@@ -130,7 +130,9 @@ backend, where ShaderEffect does nothing) and checks the clip in two cases: item
 and an item (200x160) larger than the box (100x60 at origin 40,50) so `itemSize` and `boxOrigin`
 are exercised. Prints `PASS` or `FAIL <case> ...`. Frames go to a per-run temp dir that is removed.
 The shader's uniforms: `boxSize`, `boxOrigin`, `itemSize` (all item px), `radius`, `aa`
-(1/devicePixelRatio). Copy the pattern to smoke-test later shaders.
+(1/devicePixelRatio). Copy the pattern to smoke-test later shaders. A third case draws `hills.frag` with three half-transparent red layers and checks the RGB of the
+bottom row (alpha 223, red 255 once un-premultiplied): a shader that multiplies the colour uniform by
+its alpha again (Qt delivers it premultiplied) reads red 128 there.
 
 ## Media card: `media-cpu.sh`, `mock-mpris.py`
 

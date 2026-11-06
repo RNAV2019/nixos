@@ -159,6 +159,7 @@ PanelWindow {
     widthSpring.settle();
     heightSpring.settle();
     origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh);
+    // A taker still waiting for its first frame hands over velocity 0: nothing of this surface moves yet.
     stillCarriesBody = win.open;
     handover = true;
     farewell = true;
@@ -323,7 +324,12 @@ PanelWindow {
   readonly property real morphProgress: isNaN(win.shapeProgress) ? (Theme.reduceMotion ? 1 : progressFallback.value) : win.shapeProgress
 
   // What the contents are on their way to: up, or gone.
-  readonly property bool bodyWanted: (win.open && origin.presented) || (origin.held && win.stillCarriesBody)
+  readonly property bool bodyWanted: wantedNow()
+
+  // Read afresh by updateBody, since a handler of `origin.held` runs before this binding has caught up.
+  function wantedNow() {
+    return (win.open && origin.presented) || (origin.held && win.stillCarriesBody);
+  }
 
   // Carried across retargets: moves only toward the end its intent points at.
   property real bodyOpacity: 0
@@ -337,10 +343,16 @@ PanelWindow {
 
   function updateBody() {
     if (origin.held || Theme.reduceMotion || win.parked) {
-      bodyOpacity = win.bodyWanted ? 1 : 0;
+      // A held still carries the contents as they are (a dismissal 30 ms into an open must not
+      // pop them to full); only reduced motion and a parked window jump.
+      var carry = origin.held && !Theme.reduceMotion && !win.parked;
+      bodyOpacity = win.wantedNow() ? (carry ? bodyOpacity : 1) : 0;
       pillAmount = win.open ? 0 : 1;
       return;
     }
+    // The intent has changed and `bodyWanted` has not caught up: its own handler settles this.
+    if (win.bodyWanted !== win.wantedNow())
+      return;
     var p = win.morphProgress;
     if (win.bodyWanted) {
       var r = win.entering ? Theme.fadeEnterIn : Theme.fadeOpenIn;

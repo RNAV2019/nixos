@@ -30,7 +30,7 @@ QtObject {
   // 1 is critically damped; below 1 overshoots, by about 4.6% of the travel at 0.7.
   property real damping: 1
 
-  // At rest once within a tenth of a pixel and all but still; a value that is not in pixels
+  // At rest once within epsilon (0.3 px) and all but still; a value that is not in pixels
   // sets its own.
   property real epsilon: 0.3
 

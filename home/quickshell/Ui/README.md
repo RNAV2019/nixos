@@ -24,6 +24,12 @@ is the moving card; they take their size from the box (`parent.width`) or from t
 Only the open size changing (a panel gaining a row) re-allocates the texture. Things that are
 the surface's own size, like the shut pill carried over, go in `FrostedSurface.fillData`.
 
+Known limit: the texture is constant only while the open size is. The bar's island
+(`Bar/Island.qml`, `clipContent` with no box) draws its contents at the shape's own size, and a panel
+whose `openHeight` animates (the Wi-Fi password row growing `ControlSubView.contentHeight`)
+re-allocates the texture each frame of that growth. Neither is a regression from main; both are
+left as they are. A parked surface (`FrostedSurface` not visible) holds no texture.
+
 **Contents fade on the shape's clock.** `IslandSurfaceBase.morphProgress` is how far the shape has
 travelled from the shape it left (re-based on every retarget) to the one it is going to, along the
 axis that travels further (`Motion.progress`; a short spring of its own when neither does). The
@@ -167,7 +173,7 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   the contents change at `Theme.momentSwapOpacity`), a toast slot's presence (`Notifications/Toast.qml`;
   out, the opacity is spent over the first 0.3 of the travel), the Wi-Fi password row's height
   (`Control/WifiView.qml`, content kept at 40 px inside a clip) and the dictation level bars
-  (`MorphSpring` per bar, `Theme.levelOmega` 40, epsilon 0.1 px).
+  (`MorphSpring` per bar, `Theme.levelOmega` 40, epsilon 0.1 px; `MorphSpring.epsilon` defaults to 0.3 px).
 - **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view
   (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
   views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.

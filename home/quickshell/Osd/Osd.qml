@@ -118,7 +118,7 @@ Scope {
       }
 
       IslandPill {
-        x: (parent.width - width) / 2
+        x: window.surface.snap((parent.width - width) / 2)
         y: (parent.height - height) / 2
         layout: "glyphTrackReading"
         alert: root.current.alarming

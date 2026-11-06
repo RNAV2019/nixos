@@ -44,7 +44,7 @@ Variants {
     Item {
       id: stage
 
-      x: (parent.width - width) / 2
+      x: win.surface.snap((parent.width - width) / 2)
       y: (parent.height - height) / 2
       width: Theme.islandPillWidth
       height: Theme.islandPillHeight

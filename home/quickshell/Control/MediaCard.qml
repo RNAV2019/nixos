@@ -255,7 +255,7 @@ Item {
       property color ink1: shade(2, 0.8)
       property color ink2: shade(2.6, 0.75)
 
-      // The accent darkened, with the layer's own opacity (the shader takes straight alpha).
+      // The accent darkened, with the layer's own opacity (Qt premultiplies it on the way to the shader).
       function shade(by, alpha) {
         var c = Qt.darker(Theme.accent, by);
         return Qt.rgba(c.r, c.g, c.b, alpha);

@@ -308,7 +308,7 @@ Scope {
     property real stateWidth: Theme.islandPillWidth
     property real stateHeight: Theme.islandPillHeight
 
-    x: (parent.width - stateWidth) / 2
+    x: win.surface.snap((parent.width - stateWidth) / 2)
     y: (parent.height - stateHeight) / 2
     width: stateWidth
     height: stateHeight
