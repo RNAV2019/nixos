@@ -97,7 +97,9 @@ OLED orbit would move the pill one pixel every three minutes).
   itself fails to register (allowed in `allowed-log.txt`).
 - **Lock screen.** Time and wallpaper dependent, and `lockpreview` needs a lock surface; the
   `LoginPill` is only seen through the real lock.
-- **Motion.** One settled frame per state; transitions, springs and handoffs need video.
+- **Motion.** One settled frame per state; transitions, springs and handoffs are covered by the
+  separate 120 Hz recorder and checker in `motion/` (`motion/README.md`: `record.sh`, `check.mjs`,
+  `video.py`, `shader-smoke.sh`, `media-cpu.sh`).
 - **Mpris media card with a player, clipboard history, emoji and file launcher modes, the file
   picker, hover previews, the Send-with-files and Apple (AirDrop) nearby flows, Recorder busy
   states, Night Light (the tile reads "Unavailable"), Displays with a second output.**

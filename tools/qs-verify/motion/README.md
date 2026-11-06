@@ -15,7 +15,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
 `open-twice` (cold then warm open; with the `.marks` file `first h change` is toggle to first motion), `click-off-early` (a click 200 ms into an open dismisses), `click-through`. Others:
-`open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite lock-satellite reduce`
+`open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview subview-keys osd-over-open segmented carousel controls satellite satellite-click lock-satellite lock-osd-satellite moment-swap toast-stack dictation-levels wifi-pass launcher-scroll reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.
 
@@ -34,9 +34,8 @@ scenario so the first frame is the island at rest.
 
 ## The log and `check.mjs`
 
-The shell (from Task 1 on, with `QS_MOTION_LOG=1`) prints `motion <label> <t_ms> <value> <velocity>
-<target>` once per frame per running spring; `record.sh` keeps those lines. Before Task 1 the logs are
-empty (`check.mjs` then reports 0 samples, exit 0). One label in one file is one spring. Rules (the
+The shell (with `QS_MOTION_LOG=1`) prints `motion <label> <t_ms> <value> <velocity>
+<target>` once per frame per running spring; `record.sh` keeps those lines. One label in one file is one spring. Rules (the
 `RULES` table in `check.mjs`: add an entry and, if it needs an option, one line in `parseArgs`):
 
 - **stepping**: a running spring (velocity not 0, not at target) whose value is unchanged between two
@@ -113,7 +112,7 @@ a click on the docked disc (log: `surface.phone.showing`).
 - Compare against a capture of the parent commit made in the same conditions (see memory
   `qs-verify-timing-and-motion`); the 120 Hz clock and wf-recorder add noise of a frame or two.
 
-## What Task 1's log must provide
+## What the log provides
 
 - **Precision:** print the value with at least 4 decimals (velocity with 3 or more). `check.mjs`
   infers the printed quantum from the value's decimals and flags a repeated value as stepping only when

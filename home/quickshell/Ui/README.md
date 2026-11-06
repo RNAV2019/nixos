@@ -172,12 +172,20 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
   views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.
   Used by the control centre, Nearby (send/receive and the picker) and the phone panel.
+- **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
+  surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,
+  `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU.
+  After editing a `.frag`, run `tools/qs-shaders.sh` (regenerates the `.qsb`); `tools/qs-shaders.sh
+  --check` and the flake check `quickshell-shaders` fail when one is stale. A new shader gets a case
+  in `tools/qs-verify/motion/shader-smoke.sh`.
 - **`Morph`**: a `NumberAnimation` for state changes that are not spatial (fades, fills).
 - **`ContentFade`**: the `Morph` for a cross-fade between two contents in one place (the shut
   pill and the open card, one panel view and the next).
 - **`Tint`**: a `ColorAnimation`, so colour never overshoots.
 
-All of them follow `Theme.reduceMotion` (`QUICKSHELL_REDUCE_MOTION=1`). A raw duration goes
+All of them follow `Theme.reduceMotion` (`QUICKSHELL_REDUCE_MOTION=1`): the springs snap, the
+satellite included, and no motion label runs past 80 ms (`record.sh ... reduce`, then
+`check.mjs OUT/reduce --max-anim-ms 80`). A raw duration goes
 through `Theme.duration(ms)`, which shortens it then; the named ones (`morphState`, `tintFade`)
 already do.
 

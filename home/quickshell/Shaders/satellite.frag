@@ -48,7 +48,12 @@ void main() {
     float d = smin(dPill, dDisc, neck);
 
     float outer = smoothstep(0.5 * aa, -0.5 * aa, d);
-    float inner = smoothstep(0.5 * aa, -0.5 * aa, d + outlineWidth);
+    // The pill under the cap paints its own fill, and its contents (a label's last letters, a
+    // cancel glyph) reach into the cap. Only the strip along its outline is covered, so the
+    // outline does not show through the neck; d <= dPill, so no outline band lies deeper.
+    float cover = smoothstep(-(outlineWidth + 2.0 * aa), -(outlineWidth + aa), dPill);
+    outer *= cover;
+    float inner = cover * smoothstep(0.5 * aa, -0.5 * aa, d + outlineWidth);
     float band = outer - inner;
     vec4 c = fill * outer;
     c = c * (1.0 - outline.a * band) + outline * band;
