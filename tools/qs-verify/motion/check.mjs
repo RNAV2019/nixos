@@ -19,7 +19,8 @@
 //              implies movement clearly above the logged precision (--resolution Q overrides it); not at
 //              the turning point of an overshoot (phone.* only: the underdamped spring), where the
 //              velocity changes sign between the samples
-//   overshoot  value past the target in the direction of travel (labels not prefixed "phone.")
+//   overshoot  value past the target in the direction of travel by more than the 0.9-damped
+//              settle (0.5% of the travel; labels not prefixed "phone.")
 //              --overshoot-tol GLOB:PX[,GLOB:PX] lets matching labels run PX past a target.
 //   stall      velocity 0 while the target still differs, for labels matched by --expect FILE
 //              (one glob per line, # comments), except at a deliberate stop: the frame where the
@@ -54,6 +55,10 @@ const globToRe = (g) =>
   new RegExp("^" + g.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
 
 const tolFor = (range) => Math.max(1e-3, 1e-3 * Math.abs(range));
+// The surfaces ride Theme.morphDamping 0.9: about 0.15% past the target from rest, more with a
+// carried velocity (a handover). Past 0.5% of the travel, and past 1.5 px (under that it cannot
+// be seen), is a real overshoot.
+const settleFor = (range) => Math.max(5e-3 * Math.abs(range), 1.5);
 
 // Segments: runs of samples that share a target.
 function segments(s) {
@@ -83,9 +88,11 @@ export const RULES = [
       for (let i = 1; i < s.length; i++) {
         const a = s[i - 1], b = s[i];
         if (b.target !== a.target || b.value !== a.value) continue;
-        // The apex of an underdamped spring's overshoot: the velocity turns over between the two
-        // samples, so the value really does stand still across them.
-        if (label.startsWith("phone.") && a.velocity * b.velocity < 0) continue;
+        // The apex of an underdamped spring's overshoot (every surface at morphDamping 0.9, the
+        // phone more): the velocity turns over between the two samples, or is about to, so the
+        // value really does stand still across them. Past the target is where an apex lies.
+        const pastTarget = (b.value - b.target) * Math.sign(b.velocity) < 0;
+        if (a.velocity * b.velocity < 0 || (pastTarget && Math.abs(b.velocity) < 1)) continue;
         const quantum = o.resolution ?? Math.pow(10, -Math.max(a.dec, b.dec));
         const expected = Math.abs(b.velocity) * (b.t - a.t) / 1000;
         const dist = Math.abs(b.target - b.value);
@@ -109,7 +116,7 @@ export const RULES = [
         const dir = Math.sign(range);
         for (let i = seg.start; i <= seg.end; i++) {
           const past = (s[i].value - seg.target) * dir;
-          if (past > tolFor(range) + extra) {
+          if (past > tolFor(range) + settleFor(range) + extra) {
             bad.push({ frame: i, t: s[i].t, detail: `value ${s[i].value} is ${past.toFixed(4)} past target ${seg.target}` });
             break;
           }

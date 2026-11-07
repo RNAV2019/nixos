@@ -33,15 +33,19 @@ test("stepping: value repeats on alternate frames while running", () => {
 test("stepping: the apex of an underdamped overshoot repeats its value legitimately", () => {
   const rows = [["phone.p", "0", "1.0459", "0.0407", 1], ["phone.p", "7", "1.0459", "-0.0559", 1]];
   assert.ok(!checkText(log(rows)).some((x) => x.rule === "stepping"));
+  // The surfaces are underdamped too (Theme.morphDamping 0.9), so their apex is as legitimate.
   const other = rows.map((r) => ["island.w", ...r.slice(1)]);
-  assert.ok(checkText(log(other)).some((x) => x.rule === "stepping"));
+  assert.ok(!checkText(log(other)).some((x) => x.rule === "stepping"));
   const same = [["phone.p", "0", "1.0459", "0.3000", 1], ["phone.p", "7", "1.0459", "0.3000", 1]];
   assert.ok(checkText(log(same)).some((x) => x.rule === "stepping"));
 });
 
-test("overshoot: crosses the target, except phone.*", () => {
+test("overshoot: crosses the target past the 0.9-damped settle, except phone.*", () => {
+  const settle = clean();
+  settle[40][2] = "100.3000";
+  assert.ok(!checkText(log(settle)).some((x) => x.rule === "overshoot"));
   const rows = clean();
-  rows[40][2] = "100.8000";
+  rows[40][2] = "102.5000";
   assert.ok(checkText(log(rows)).some((x) => x.rule === "overshoot"));
   const ph = rows.map((r) => ["phone.x", ...r.slice(1)]);
   assert.ok(!checkText(log(ph)).some((x) => x.rule === "overshoot"));

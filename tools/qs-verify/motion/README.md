@@ -40,7 +40,7 @@ The shell (with `QS_MOTION_LOG=1`) prints `motion <label> <t_ms> <value> <veloci
 
 - **stepping**: a running spring (velocity not 0, not at target) whose value is unchanged between two
   consecutive frames.
-- **overshoot**: value past its target in the direction of travel (segment = samples sharing a target,
+- **overshoot**: value past its target in the direction of travel by more than 0.5% of the travel, the room `Theme.morphDamping` 0.9 needs to settle (segment = samples sharing a target,
   starting from the value where the target changed). Skipped for `phone.*`.
 - **stall**: velocity 0 while the target still differs, for labels matched by `--expect FILE` (globs,
   one per line, `#` comments). The frame where the target changes and the last sample of a log are
