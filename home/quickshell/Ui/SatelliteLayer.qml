@@ -127,6 +127,7 @@ Item {
     visible: root.visible && root.shown
     pillEdge: root.g ? Qt.point(root.g.edgeX, root.g.shapeY) : Qt.point(0, 0)
     pillHalfH: root.g ? root.g.halfH : 0
+    pillWidth: root.g && root.g.shapeW !== undefined ? root.g.shapeW : 0
     capRadius: root.g ? root.g.capR : 0
     disc: root.g ? root.g.disc : Qt.vector3d(0, 0, 0)
     neck: root.g ? root.g.neck : 0

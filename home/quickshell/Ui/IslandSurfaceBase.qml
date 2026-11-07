@@ -537,9 +537,26 @@ PanelWindow {
       retainTimer.stop();
       retained = true;
       parked = false;
+      shadowFade.stop();
+      shadowLevel = 1;
     } else {
       parkDelay.restart();
+      shadowFade.restart();
     }
+  }
+
+  // The drop shadow hands over with the shape. Closed onto the pill, this surface lingers for
+  // surfacePark over the bar's own pill, which has a shadow of its own: this one fades out as
+  // that one fades in (Bar/Island.qml), over Theme.shadowHandover, so they never stack.
+  property real shadowLevel: 1
+
+  NumberAnimation {
+    id: shadowFade
+
+    target: win
+    property: "shadowLevel"
+    to: 0
+    duration: Theme.duration(Theme.shadowHandover)
   }
 
   Connections {
@@ -571,6 +588,9 @@ PanelWindow {
     // a frame on screen to show through it, so the island's spot is never left bare.
     contentOpacity: win.farewell ? 0 : 1
     backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
+    // A still's shadow goes the moment its taker is on screen, not with its ground: the taker
+    // starts from this very shape and casts its own, and two would stack while the ground fades.
+    shadowStrength: win.farewell && origin.takerPresented ? 0 : Theme.surfaceShadowAlpha * win.shadowLevel
 
     // Only the fade out is animated; the reset lands off screen in one frame. Guarded on
     // `handover`, not `farewell`: a Behavior's enabled binding is evaluated before farewell changes.

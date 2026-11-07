@@ -30,6 +30,17 @@ FrostedSurface {
   // Keep the pill out of Hyprland's backdrop-blur sample while another surface grows over it.
   opacity: suppressed ? 0 : 1
 
+  // Back from under a closing surface, the pill's shadow fades in while that surface's fades out
+  // (Ui/IslandSurfaceBase.qml), so for the frames both are on screen the two never stack.
+  property real shadowLevel: suppressed ? 0 : 1
+  shadowStrength: Theme.surfaceShadowAlpha * shadowLevel
+
+  Behavior on shadowLevel {
+    NumberAnimation {
+      duration: Theme.duration(Theme.shadowHandover)
+    }
+  }
+
   onSuppressedChanged: {
     if (suppressed) {
       openDelay.stop();
@@ -211,6 +222,13 @@ FrostedSurface {
   // How far a block travels as it arrives, from towards the clock.
   readonly property real flight: 14
 
+  // The week and the gauges sit beside the clock, so they wait until the card is wide enough to
+  // hold them whole (about 0.7 of the open; earlier, half of each is cut off at the clock) and
+  // then fade in with a short drift. Closing, they are the first to go.
+  readonly property real sideFrom: 0.7
+  readonly property real sideTo: 0.97
+  readonly property real sideFlight: 6
+
   // Do not infer completion from clamped openness; a spring may cross the target before resting.
   readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
 
@@ -344,7 +362,7 @@ FrostedSurface {
         Text {
           id: title
 
-          y: parent.height / 2 - 9 - height / 2
+          y: parent.height / 2 - 8 - height / 2
           width: parent.width
           // Only once the morph stops, so the ellipsis never appears mid-motion.
           elide: root.settled ? Text.ElideRight : Text.ElideNone
@@ -356,7 +374,7 @@ FrostedSurface {
         }
 
         Text {
-          y: parent.height / 2 + 10 - height / 2
+          y: parent.height / 2 + 9.5 - height / 2
           width: parent.width
           elide: root.settled ? Text.ElideRight : Text.ElideNone
           text: Media.artist
@@ -377,9 +395,9 @@ FrostedSurface {
       visible: !Media.active
 
       MiniCalendar {
-        readonly property real shown: root.reveal(0.15, 0.65)
+        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
 
-        x: -root.flight * (1 - shown)
+        x: -root.sideFlight * (1 - shown)
         y: root.midline - height / 2
         today: clock.date
         opacity: shown
@@ -387,8 +405,8 @@ FrostedSurface {
     }
 
     // Board 02's gauges: the battery 16 px in from the right like the album art, system load
-    // beside it, each flying out from the clock on its own stretch, the battery first. Clipped
-    // short of the clock on that side too, so nothing crosses it while the card is narrow.
+    // beside it, fading in once the card can hold them (sideFrom). Clipped short of the clock on
+    // that side too, so nothing crosses it.
     Item {
       id: gauges
 
@@ -398,17 +416,17 @@ FrostedSurface {
       clip: true
 
       SystemGauge {
-        readonly property real shown: root.reveal(0.25, 0.7)
+        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
 
-        x: gauges.width - 16 - 12 - 2 * width + root.flight * (1 - shown)
+        x: gauges.width - 16 - 12 - 2 * width + root.sideFlight * (1 - shown)
         y: root.midline - height / 2
         opacity: shown
       }
 
       StatusGauge {
-        readonly property real shown: root.reveal(0.15, 0.6)
+        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
 
-        x: gauges.width - 16 - width + root.flight * (1 - shown)
+        x: gauges.width - 16 - width + root.sideFlight * (1 - shown)
         y: root.midline - height / 2
         opacity: shown
       }
@@ -440,7 +458,7 @@ FrostedSurface {
       readonly property real shown: root.reveal(0.5, 0.95)
 
       x: (root.width - width) / 2
-      y: root.midline + 14 - height / 2 + 6 * (1 - shown)
+      y: root.midline + 13.5 - height / 2 + 6 * (1 - shown)
       opacity: shown
       text: Qt.formatDateTime(clock.date, "ddd, d MMM")
       color: Theme.subtle
@@ -473,7 +491,7 @@ FrostedSurface {
       var shutX = root.collapsedClockLeft - width * (1 - scale) / 2;
       return shutX + root.openness * (openX - shutX);
     }
-    y: root.midline - 9 * root.openness - height / 2
+    y: root.midline - 8 * root.openness - height / 2
     transformOrigin: Item.Center
     scale: shownSize / Theme.islandDisplaySize
     text: Qt.formatDateTime(clock.date, "HH:mm")

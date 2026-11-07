@@ -16,6 +16,9 @@ ShaderEffect {
   // the corner radius of that end.
   property point pillEdge: Qt.point(0, 0)
   property real pillHalfH: Theme.barHeight / 2
+  // The whole shape's width, so the disc's shadow can be joined to the shape's own rather than
+  // stacked on it (0: not known, the disc's is drawn alone).
+  property real pillWidth: 0
   property real capRadius: Theme.barHeight / 2
   // The disc: centre x, centre y, radius.
   property vector3d disc: Qt.vector3d(0, 0, 0)

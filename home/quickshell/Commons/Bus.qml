@@ -147,7 +147,7 @@ Singleton {
   }
 
   // Where the phone satellite is on each output, written by Bar/PhoneSatellite.qml every frame it
-  // moves: { edgeX, midY (the disc's row), shapeY, halfH, capR (the shape it leaves), disc (cx, cy,
+  // moves: { edgeX, midY (the disc's row), shapeY, halfH, shapeW, capR (the shape it leaves), disc (cx, cy,
   // r), neck (smooth-min k), follow ("pill" or "transient"), windowTop, p, docked, ring, hover }, all
   // in the bar window's coordinates. A transient surface's window draws the bud while it follows
   // that transient (Ui/SatelliteLayer.qml), so it lies over the transient's outline.

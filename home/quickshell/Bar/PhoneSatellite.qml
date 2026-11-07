@@ -48,6 +48,7 @@ Item {
       edge: t || !f.morphRunning ? f.x + f.width : f.edgeX,
       top: t ? f.y - windowTop : f.y,
       height: f.height,
+      width: f.width,
       // The stadium's own end circle, or for the open card its corner radius.
       capR: Math.max(1, Math.min(f.height / 2, f.surfaceRadius))
     };
@@ -63,6 +64,7 @@ Item {
       edge: 0,
       top: 0,
       height: 0,
+      width: 0,
       capR: 0
     })
 
@@ -98,6 +100,7 @@ Item {
           edge: eff.edge - r.edge,
           top: eff.top - r.top,
           height: eff.height - r.height,
+          width: eff.width - r.width,
           capR: eff.capR - r.capR
         };
         blend.value = 1;
@@ -114,6 +117,7 @@ Item {
       edge: r.edge + delta.edge * b,
       top: r.top + delta.top * b,
       height: r.height + delta.height * b,
+      width: r.width + delta.width * b,
       capR: Math.max(1, r.capR + delta.capR * b)
     };
   }
@@ -304,6 +308,7 @@ Item {
       midY: mid,
       shapeY: e.top + e.height / 2,
       halfH: e.height / 2,
+      shapeW: e.width,
       capR: e.capR,
       disc: Qt.vector3d(cx, cy, r),
       neck: s.neck,

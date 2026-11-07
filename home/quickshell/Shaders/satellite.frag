@@ -1,7 +1,9 @@
 #version 440
 // The phone satellite: the pill's right cap and a disc, joined while the neck holds, drawn as one
 // filled shape (an outline is drawn if one is given) over the disc's drop shadow, the shell's
-// Gaussian (Shaders/shadow.frag); the pill under the cap casts its own. The neck is a rolling-ball fillet (circular blend): a ball of
+// Gaussian (Shaders/shadow.frag). The shape under the cap casts its own shadow in its own layer,
+// so the disc's is joined to it: this draws only what the disc adds past the shape's shadow,
+// and the two together come to the darker of the two, never one stacked on the other. The neck is a rolling-ball fillet (circular blend): a ball of
 // radius `neck` that touches both bodies, so the join is a concave, waisted bridge that thins as the
 // disc draws away and pinches off at the gap where the ball no longer reaches both, as a metaball's
 // does. After the break, `stub` draws the two broken ends as rounded tips, and `bulge` swells the
@@ -19,6 +21,7 @@ layout(std140, binding = 0) uniform buf {
     vec2 origin;       // its top-left in the parent, px
     vec2 pillEdge;     // x of the shape's right edge, y of its centre
     float pillHalfH;   // half the shape's height
+    float pillWidth;   // the shape's whole width; 0 when not known
     float capRadius;   // corner radius of its right end
     float neck;        // the fillet ball's radius, px; 0 keeps the two apart
     float outlineWidth;
@@ -54,9 +57,7 @@ float shadowX(float x, float y, float s, float r, vec2 halfSize) {
     return integral.y - integral.x;
 }
 
-// A disc is a rounded box whose corner radius is half its side.
-float discShadow(vec2 p, float r, float s) {
-    vec2 halfSize = vec2(r);
+float roundedBoxShadow(vec2 p, vec2 halfSize, float s, float r) {
     float low = p.y - halfSize.y;
     float high = p.y + halfSize.y;
     float start = clamp(-3.0 * s, low, high);
@@ -69,6 +70,11 @@ float discShadow(vec2 p, float r, float s) {
         y += stepY;
     }
     return value;
+}
+
+// A disc is a rounded box whose corner radius is half its side.
+float discShadow(vec2 p, float r, float s) {
+    return roundedBoxShadow(p, vec2(r), s, r);
 }
 
 float sdRoundBox(vec2 p, vec2 halfSize, float r) {
@@ -128,9 +134,20 @@ void main() {
     // The disc's shadow lies under the shape, off its own footprint and the pill's.
     float shade = 0.0;
     if (shadowStrength > 0.0 && disc.z > 0.0) {
-        float s = clamp(discShadow(p - disc.xy - vec2(0.0, shadowOffsetY), disc.z, max(shadowSigma, 0.5)), 0.0, 1.0);
+        float sg = max(shadowSigma, 0.5);
+        vec2 drop = vec2(0.0, shadowOffsetY);
+        float sDisc = clamp(discShadow(p - disc.xy - drop, disc.z, sg), 0.0, 1.0) * shadowStrength;
+        float sPill = 0.0;
+        if (pillWidth > 0.0) {
+            vec2 halfPill = vec2(pillWidth * 0.5, pillHalfH);
+            vec2 centre = vec2(pillEdge.x - halfPill.x, pillEdge.y);
+            float r = min(capRadius, min(halfPill.x, halfPill.y));
+            sPill = clamp(roundedBoxShadow(p - centre - drop, halfPill, sg, r), 0.0, 1.0) * shadowStrength;
+        }
+        // Over the shape's own shadow sPill, this much more makes max(sPill, sDisc) in all.
+        float add = max(sDisc - sPill, 0.0) / max(1.0 - sPill, 1e-3);
         float pillOff = smoothstep(-0.5 * aa, 0.5 * aa, dPill);
-        shade = s * shadowStrength * pillOff * (1.0 - outer);
+        shade = add * pillOff * (1.0 - outer);
     }
     c = c + vec4(0.0, 0.0, 0.0, shade) * (1.0 - c.a);
     fragColor = c * qt_Opacity;

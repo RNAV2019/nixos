@@ -257,9 +257,9 @@ Singleton {
   readonly property int panelRowHeight: 34
 
   readonly property int barHeight: 36
-  // About half the pill's height, so the island floats clear of the screen edge (saneAspect's
-  // ratio); windows start one gaps_out below the pill.
-  readonly property int barMarginTop: 16
+  // The island floats this far below the screen edge; windows start one gaps_out below the
+  // pill. saneAspect's half-pill gap (16) sat too low; Ryan chose 10 on 2026-11-07.
+  readonly property int barMarginTop: 10
 
   // OLED burn-in care (Services/OledCare.qml). The island pill and the workspaces pill never
   // move, so on the OLED panel they would print into it: every few minutes each takes the next
@@ -284,11 +284,11 @@ Singleton {
   readonly property real surfaceBlur: 0.53
 
   // Surfaces float on a drop shadow rather than an outline (Ui/FrostedSurface.qml), measured off
-  // saneAspect's 2026-11 recordings: the shape blurred by a Gaussian, neutral black at about
-  // 0.68, sigma about two thirds of the pill's height and offset down about a quarter of it,
-  // the same on every surface. `surfaceShadowRoom` is how far it reaches (offset plus about
+  // saneAspect's 2026-11 recordings: the shape blurred by a Gaussian, neutral black, sigma about
+  // two thirds of the pill's height and offset down about a quarter of it, the same on every
+  // surface. His is about 0.68 strong; Ryan wanted it subtler (2026-11-07). `surfaceShadowRoom` is how far it reaches (offset plus about
   // 2.6 sigma); a window must leave that much free around a surface or the shadow is cut off.
-  readonly property real surfaceShadowAlpha: 0.68
+  readonly property real surfaceShadowAlpha: 0.4
   readonly property real surfaceShadowSigma: 24
   readonly property real surfaceShadowOffsetY: 9
   readonly property int surfaceShadowRoom: 72
@@ -338,10 +338,10 @@ Singleton {
   readonly property int islandExpandedWidth: panelColumnWidth
   readonly property int islandExpandedHeight: 84
   readonly property int islandExpandedRadius: panelRadius
-  readonly property int islandClockSize: 19
-  readonly property int islandDisplaySize: 26
-  readonly property int islandTitleSize: 14
-  readonly property int islandCaptionSize: 12
+  readonly property int islandClockSize: 17
+  readonly property int islandDisplaySize: 22
+  readonly property int islandTitleSize: 13
+  readonly property int islandCaptionSize: 11
   readonly property int islandArtSize: 48
   readonly property int islandArtRadius: 8
   readonly property int islandHoverOpenDelay: 70
@@ -1072,6 +1072,11 @@ Singleton {
   // How long a closed surface keeps its window full size before parking it, so the bar's pill
   // has a frame on screen under the surface's last one.
   readonly property int surfacePark: 80
+
+  // A close hands its drop shadow to the bar's pill over this long, one fading out as the other
+  // fades in, so the two never stack (two at once read as a dark bloom under the pill). Inside
+  // surfacePark, so the surface's has gone before its window parks.
+  readonly property int shadowHandover: reduceMotion ? 1 : 64
 
   // How long a parked surface keeps its window before letting it go (Ui/IslandSurfaceBase.qml).
   readonly property int surfaceRetain: 300000
