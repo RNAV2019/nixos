@@ -15,6 +15,10 @@ in
   appimageTools.wrapType2 {
     inherit pname version src;
 
+    # The launcher (Services/Launch.qml) starts apps from a watcher shell that exits after a
+    # second; with --die-with-parent that exit kills the whole sandbox, app and all.
+    dieWithParent = false;
+
     # The FHS environment cannot provide a setuid chrome-sandbox.
     extraInstallCommands = ''
       install -Dm644 ${appimageContents}/t3code.desktop \

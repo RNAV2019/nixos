@@ -25,6 +25,10 @@ in
   appimageTools.wrapType2 {
     inherit pname version src;
 
+    # The launcher (Services/Launch.qml) starts apps from a watcher shell that exits after a
+    # second; with --die-with-parent that exit kills the whole sandbox, app and all.
+    dieWithParent = false;
+
     extraPkgs = _: [mcpBridge];
 
     # `openpencil` is the CLI's name (pkgs/openpencil/cli), so the app gets its own.
