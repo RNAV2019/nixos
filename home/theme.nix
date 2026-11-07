@@ -325,8 +325,8 @@
         return {
           general = {
             col = {
-              active_border = "rgba(${bare p.highlightHigh}aa)",
-              inactive_border = "rgba(${bare p.overlay}aa)",
+              active_border = "rgba(${bare p.highlightMed}ff)",
+              inactive_border = "rgba(${bare p.highlightLow}ff)",
             },
           },
           -- The drag pile (pkgs/dragpile) in the shell's own roles: cards are raised surfaces,

@@ -101,12 +101,13 @@ in {
           gaps_in = 5;
           gaps_out = 10;
 
-          border_size = 2;
-
-          # Rose Pine's. The active theme's are applied over these; see theme.nix.
+          # A quiet 1 px edge in two opaque near-ground colours, so the accent is kept for
+          # "you are here" (saneAspect's). Rose Pine's; the active theme's are applied over
+          # these, see theme.nix.
+          border_size = 1;
           col = {
-            active_border = "rgba(524f67aa)";
-            inactive_border = "rgba(26233aaa)";
+            active_border = "rgba(403d52ff)";
+            inactive_border = "rgba(21202eff)";
           };
 
           resize_on_border = false;
@@ -121,7 +122,13 @@ in {
             passes = 3;
             vibrancy = 0.1696;
           };
-          shadow.enabled = false;
+          # Windows float on a soft shadow like the shell's surfaces (saneAspect's values).
+          shadow = {
+            enabled = true;
+            range = 28;
+            render_power = 3;
+            color = "rgba(0a0a0a92)";
+          };
         };
 
         animations.enabled = true;
