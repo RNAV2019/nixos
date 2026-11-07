@@ -44,7 +44,7 @@ Item {
     radius: Theme.panelRowRadius
     color: Theme.withAlpha(Theme.text, Theme.fillNormal)
     border.width: 1
-    border.color: input.activeFocus ? Theme.withAlpha(Theme.accent, Theme.borderSelected) : Theme.withAlpha(Theme.overlay, Theme.borderNormal)
+    border.color: input.activeFocus ? Theme.withAlpha(Theme.accent, Theme.borderSelected) : Theme.lift(Theme.liftEdge)
 
     Behavior on border.color {
       Tint {}

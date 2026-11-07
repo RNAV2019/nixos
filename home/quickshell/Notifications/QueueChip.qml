@@ -26,7 +26,7 @@ Rectangle {
   width: Theme.notifChipWidth
   height: Theme.notifChipHeight
   radius: height / 2
-  color: Theme.withAlpha(Theme.highlightMed, Theme.notifActionSecondaryAlpha)
+  color: Theme.lift(Theme.liftControl)
   opacity: chip.shown && chip.count > 0 ? 1 : 0
   visible: opacity > 0
 

@@ -53,7 +53,7 @@ take the pill's clock and marks off their timed fade while closing.
 
 `IslandSurfaceBase.overlayData` takes items drawn over the card and outside its clip, in the window's
 coordinates: the one user is the phone satellite (`Ui/SatelliteLayer.qml`), drawn there while it rides
-a transient so its neck lies over the transient's outline (`Bar/PhoneSatellite.qml` writes its geometry
+a transient so its neck lies over the transient's edge (`Bar/PhoneSatellite.qml` writes its geometry
 to `Bus.satellite[screen]`; the body is the one shader, `Shaders/satellite.frag`).
 
 Both register on `Bus` when they are created (`registerSurface`), so there is no list to edit.
@@ -143,8 +143,9 @@ All pressable controls are on **`ButtonBase`**: hover and press tracking, the pr
   uses, `Commons/IconPaths.qml` what `StrokeIcon` is given (names, plus the few marks Material
   lacks as paths). A name the font lacks shows as its letters, so check a new one.
 
-**The recipe, on `ButtonBase`:** hover steps `highlightMed` from `groundRestAlpha` to
-`groundHoverAlpha` (tiles and grouped rows from `surfaceRestAlpha`); filled kinds lift by
+**The recipe, on `ButtonBase`:** inner fills are white lifts over the ground (`Theme.lift(a)`):
+neutral controls step `liftControl` to `liftControlHover`, tiles and grouped rows `liftTile` to
+`liftHover` under a `liftEdge` hairline; filled kinds lift by
 `fillLift`; pressed scales by `Theme.pressScale`; disabled is the same control at
 `Theme.disabledAlpha`, rasterised so overlapping glyphs dim evenly; the ring shows only for a
 focus that arrived by Tab. Do not hand-roll these; if a new control needs a state, it goes in
@@ -153,17 +154,21 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
 ## Motion and colour
 
 - **`SatelliteShape` / `SatelliteLayer`**: the phone satellite's drawing. `SatelliteShape` is the
-  ShaderEffect for `Shaders/satellite.frag` (pill cap and disc, smooth union, 1 px outline; properties
+  ShaderEffect for `Shaders/satellite.frag` (pill cap and disc, smooth union, the disc's drop shadow; properties
   are the shader's uniforms in the parent's coordinates). `SatelliteLayer` adds the disc's face and the
   hand-over protocol: a host (the bar, or a transient's window via `overlayData`) claims the satellite
   with `wanted`, and the host giving it up keeps drawing until the taker's frame is swapped
   (`Bus.claimSatelliteHost`), with `Theme.morphPresentFallback` as the bound. Geometry comes from
   `Bus.satellite[screen]`, written by `Bar/PhoneSatellite.qml`.
 
-- **`MorphSpring`**: the island's shape spring. Critically damped, solved exactly per frame so
-  it lands on one curve at any refresh rate, and a new `target` keeps the velocity. Bind
-  `target`, read `value`; `animate: false` snaps. `damping` below 1 overshoots; only the phone
-  satellite asks for that.
+- **`DropShadow`**: the shell's elevation (`Shaders/shadow.frag`), a Gaussian-blurred rounded
+  rectangle the size of its parent, offset down and cut out under it, solved from the live size every
+  frame. `FrostedSurface` carries one (`shadowEnabled`, `shadowStrength`); surfaces have no outline.
+  The window must leave `Theme.surfaceShadowRoom` free around a surface or the shadow is clipped.
+- **`MorphSpring`**: the island's shape spring, at `Theme.morphDamping` (0.9: about 0.15% past
+  the target, then settled), solved exactly per frame so it lands on one curve at any refresh rate,
+  and a new `target` keeps the velocity. Bind `target`, read `value`; `animate: false` snaps. The
+  phone satellite asks for a lower `damping`.
   `kick(v)` sets a starting velocity; `label` names it in the motion log (`QS_MOTION_LOG=1`, read by
   `tools/qs-verify/motion`), one unique label per instance. `Motion.js` holds the maths
   (`springStep`, `seedVelocity`, `progress`, `ramp`, `snap`).

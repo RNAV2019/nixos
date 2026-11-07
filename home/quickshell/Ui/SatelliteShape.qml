@@ -2,8 +2,8 @@ import QtQuick
 import qs.Commons
 
 // The phone satellite's body: the shape's right cap and the disc, joined by a liquid neck while it
-// holds and by two rounded stubs after it breaks, as one shape with a 1 px outline, drawn by
-// Shaders/satellite.frag. The properties are the shader's uniforms, in the parent's coordinates;
+// holds and by two rounded stubs after it breaks, as one shape over the disc's drop shadow, drawn
+// by Shaders/satellite.frag. The properties are the shader's uniforms, in the parent's coordinates;
 // the item itself is only as big as the bud (the cap's end, the swell, the neck, the disc) plus
 // `aa`, so the window is never covered whole.
 //
@@ -25,17 +25,23 @@ ShaderEffect {
   property point stub: Qt.point(0, 0)
   // How far the cap swells while a disc is drawn in.
   property real bulge: 0
-  property real outlineWidth: 1
+  // No outline: the shell's surfaces float on a shadow instead (Ui/DropShadow.qml).
+  property real outlineWidth: 0
   // Premultiplied, as the shader composes them: the ground and the outline over it.
   property color fill: Theme.surface
-  property color outline: Theme.surfaceOutline
+  property color outline: "transparent"
   property real aa: 1
+  property real shadowSigma: Theme.surfaceShadowSigma
+  property real shadowOffsetY: Theme.surfaceShadowOffsetY
+  property real shadowStrength: Theme.surfaceShadowAlpha
+  // How far the disc's shadow reaches past the bud.
+  readonly property real shadowRoom: shadowStrength > 0 ? Theme.surfaceShadowRoom : 0
 
   // Where the bud lies: from inside the cap (the fillet is faintly there too, over the pill's
   // top) to the disc's far side, and as high as the taller of the two plus the swell.
-  readonly property real boundReach: Math.max(capRadius, disc.z) + bulge + 2 * aa
+  readonly property real boundReach: Math.max(capRadius, disc.z) + bulge + 2 * aa + shadowRoom
   readonly property real boundLeft: pillEdge.x - 2.5 * capRadius - 2 * aa
-  readonly property real boundRight: disc.x + disc.z + 2 * aa
+  readonly property real boundRight: disc.x + disc.z + 2 * aa + shadowRoom
 
   // The sizes are snapped to whole device pixels by the caller's aa (1 / ratio).
   x: Math.floor(boundLeft / aa) * aa

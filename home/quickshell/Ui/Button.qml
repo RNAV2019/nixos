@@ -81,7 +81,7 @@ ButtonBase {
     switch (kind) {
     case Button.Disc:
     case Button.Neutral:
-      return Theme.withAlpha(Theme.highlightMed, lit ? Theme.groundHoverAlpha : Theme.groundRestAlpha);
+      return Theme.lift(lit ? Theme.liftControlHover : Theme.liftControl);
     case Button.DiscDanger:
       return Theme.withAlpha(Theme.urgent, lit ? Theme.groundHoverAlpha : Theme.dangerRestAlpha);
     case Button.Primary:
@@ -155,7 +155,7 @@ ButtonBase {
     radius: height / 2
     color: root.fill
     border.width: root.kind === Button.Ghost ? 1 : 0
-    border.color: Theme.withAlpha(Theme.highlightMed, Theme.hairlineAlpha)
+    border.color: Theme.lift(Theme.liftEdge)
 
     Behavior on color {
       Tint {}

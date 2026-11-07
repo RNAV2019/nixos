@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Commons
 
-// A floating opaque surface with the shell's shared fill.
+// A floating opaque surface with the shell's shared fill and drop shadow.
 Item {
   id: root
 
@@ -20,6 +20,10 @@ Item {
   // before its surface.
   property real backdropOpacity: 1
   property real contentOpacity: 1
+
+  // The drop shadow (Ui/DropShadow.qml): off for a surface flush with the screen edge.
+  property bool shadowEnabled: true
+  property real shadowStrength: Theme.surfaceShadowAlpha
 
   default property alias content: contentHolder.data
 
@@ -64,6 +68,15 @@ Item {
   width: snap(implicitWidth)
   height: snap(implicitHeight)
 
+  // Floats on the shell's drop shadow rather than an outline; it fades with the ground.
+  DropShadow {
+    radius: root.surfaceRadius
+    strength: root.shadowStrength
+    pixelRatio: root.pixelRatio
+    opacity: root.backdropOpacity
+    visible: root.shadowEnabled && root.backdropOpacity > 0 && root.width > 0 && root.height > 0
+  }
+
   Item {
     id: frost
 
@@ -77,18 +90,6 @@ Item {
       radius: root.surfaceRadius
       color: Theme.surface
     }
-  }
-
-  // The opaque fill makes contrast deterministic; this outline keeps the material legible
-  // against a near-black desktop. Intentionally quieter than a glow.
-  Rectangle {
-    anchors.fill: parent
-    radius: root.surfaceRadius
-    color: "transparent"
-    border.width: 1
-    border.color: Theme.surfaceOutline
-    opacity: root.backdropOpacity
-    visible: opacity > 0
   }
 
   // Fills the surface under the contents and fades with them; the shut pill carried over

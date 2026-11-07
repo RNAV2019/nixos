@@ -31,15 +31,14 @@ Variants {
       right: true
     }
 
-    // Tall enough for the island's expanded card; the strip is transparent. The pills sit
-    // oledShiftMax inside it, so their burn-in orbit has room either way; the margin and the
-    // exclusive zone take that back, leaving the same room for windows.
-    implicitHeight: Theme.islandExpandedHeight + 2 * Theme.oledShiftMax
-    margins.top: Theme.barMarginTop - Theme.oledShiftMax
+    // From the screen's top edge down past the island's expanded card and its drop shadow;
+    // the strip is transparent. Starting at the edge rather than at the pill keeps the shadow
+    // above the pill from being cut off by the window, and the room below lets it fall.
+    implicitHeight: Theme.barMarginTop + Theme.islandExpandedHeight + Theme.oledShiftMax + Theme.surfaceShadowRoom
 
     // Windows give way to the resting strip only; an expanded card floats over them.
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: Theme.barHeight + Theme.oledShiftMax
+    exclusiveZone: Theme.barMarginTop + Theme.barHeight
 
     // Input is taken only where a surface actually is; the rest stays click-through.
     mask: Region {
@@ -64,7 +63,7 @@ Variants {
 
       // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
       x: snap(10 + Bus.workspacesOffsetX)
-      y: snap(Theme.oledShiftMax + Bus.workspacesOffsetY)
+      y: snap(Theme.barMarginTop + Bus.workspacesOffsetY)
       screenOffsetY: Theme.barMarginTop
     }
 
@@ -75,7 +74,7 @@ Variants {
 
       // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
       x: snap((parent.width - width) / 2 + Bus.pillOffsetX)
-      y: snap(Theme.oledShiftMax + Bus.pillOffsetY)
+      y: snap(Theme.barMarginTop + Bus.pillOffsetY)
       screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
       // Off covers, not owners: a surface covers the pill from its first frame on screen, so
@@ -92,7 +91,7 @@ Variants {
       anchors.fill: parent
       pill: island
       screenName: bar.screen ? bar.screen.name : ""
-      windowTop: Theme.barMarginTop - Theme.oledShiftMax
+      windowTop: 0
     }
   }
 }

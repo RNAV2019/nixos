@@ -22,9 +22,9 @@ Rectangle {
   implicitHeight: body !== "" ? 48 + Math.ceil(bodyText.implicitHeight) + 14 : 62
 
   radius: Theme.controlNotifRadius
-  color: Theme.surfaceSubtle
+  color: Theme.lift(Theme.liftTile)
   border.width: 1
-  border.color: urgent ? Theme.withAlpha(Theme.dangerFill, 0.7) : Theme.withAlpha(Theme.separator, 0.8)
+  border.color: urgent ? Theme.withAlpha(Theme.dangerFill, 0.7) : Theme.lift(Theme.liftEdge)
 
   readonly property color accentColour: urgent ? Theme.urgent : NotificationStore.avatarColour(appName, iconTinted)
 

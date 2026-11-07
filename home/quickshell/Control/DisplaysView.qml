@@ -60,9 +60,9 @@ ControlSubView {
     width: parent.width
     height: Theme.displaysCanvasHeight
     radius: Theme.displaysCanvasRadius
-    color: Theme.withAlpha(Theme.surfaceSubtle, Theme.displaysCanvasAlpha)
+    color: Theme.lift(Theme.liftTile)
     border.width: 1
-    border.color: activeFocus ? Theme.focusRing : Theme.withAlpha(Theme.separator, Theme.displaysCanvasBorderAlpha)
+    border.color: activeFocus ? Theme.focusRing : Theme.lift(Theme.liftEdge)
     clip: true
 
     activeFocusOnTab: root.external !== null

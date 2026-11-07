@@ -364,7 +364,7 @@ Item {
     radius: height / 2
     color: any ? Theme.withAlpha(Theme.accentFill, 0.14) : "transparent"
     border.width: any ? 0 : 1
-    border.color: Theme.withAlpha(Theme.separator, 0.7)
+    border.color: Theme.lift(Theme.liftEdge)
 
     Behavior on color {
       Tint {}
@@ -598,7 +598,7 @@ Item {
 
       Rectangle {
         anchors.fill: parent
-        color: Theme.withAlpha(Theme.surfaceSubtle, 0.85)
+        color: Theme.lift(Theme.liftTile)
       }
 
       Image {

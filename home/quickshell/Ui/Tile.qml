@@ -101,16 +101,16 @@ ButtonBase {
     if (isControl) {
       if (active)
         return lit ? Qt.lighter(activeColor, Theme.tileLift) : activeColor;
-      return Theme.withAlpha(lit ? Theme.highlightMed : Theme.surfaceSubtle, lit ? Theme.groundHoverAlpha : Theme.surfaceRestAlpha);
+      return Theme.lift(lit ? Theme.liftHover : Theme.liftTile);
     }
     if (active)
       return pressedAny ? Qt.darker(activeColor, Theme.tileDim) : activeColor;
-    return Theme.withAlpha(lit ? Theme.highlightMed : Theme.highlightLow, lit ? Theme.groundHoverAlpha : Theme.surfaceRestAlpha);
+    return Theme.lift(lit ? Theme.liftHover : Theme.liftTile);
   }
 
   readonly property color outlineColor: {
     if (isControl)
-      return current ? Theme.focusRing : outlineTint.a > 0 ? outlineTint : Theme.withAlpha(Theme.separator, Theme.hairlineAlpha);
+      return current ? Theme.focusRing : outlineTint.a > 0 ? outlineTint : Theme.lift(Theme.liftEdge);
     if (isChoice) {
       if (active && activeIsCommitting)
         return activeColor;
@@ -118,9 +118,9 @@ ButtonBase {
         return Theme.accent;
       if (active)
         return activeColor;
-      return Theme.withAlpha(Theme.highlightMed, Theme.hairlineAlpha);
+      return Theme.lift(Theme.liftEdge);
     }
-    return current ? Theme.accent : active ? Theme.withAlpha(Theme.accent, Theme.wallpaperActiveBorderAlpha) : Theme.withAlpha(Theme.highlightMed, Theme.wallpaperTileBorderAlpha);
+    return current ? Theme.accent : active ? Theme.withAlpha(Theme.accent, Theme.wallpaperActiveBorderAlpha) : Theme.lift(Theme.liftEdge);
   }
 
   implicitWidth: {
@@ -389,9 +389,9 @@ ButtonBase {
     Rectangle {
       anchors.fill: parent
       radius: width / 2
-      color: root.sent ? Theme.accentFill : root.sending ? Theme.withAlpha(Theme.accentFill, 0.14) : Theme.withAlpha(root.lit ? Theme.highlightMed : Theme.surfaceSubtle, root.lit ? Theme.groundHoverAlpha : Theme.hairlineGroundAlpha)
+      color: root.sent ? Theme.accentFill : root.sending ? Theme.withAlpha(Theme.accentFill, 0.14) : Theme.lift(root.lit ? Theme.liftHover : Theme.liftTile)
       border.width: root.sent ? 0 : 1
-      border.color: Theme.withAlpha(Theme.separator, Theme.rowBorderAlpha)
+      border.color: Theme.lift(Theme.liftEdge)
 
       Behavior on color {
         Tint {}

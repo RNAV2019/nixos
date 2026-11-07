@@ -27,7 +27,7 @@ Rectangle {
   implicitWidth: Theme.islandPillTrackWidth
   implicitHeight: Theme.islandPillTrackHeight
   radius: height / 2
-  color: Theme.surfaceSubtle
+  color: Theme.lift(Theme.liftTrack)
   clip: true
 
   Rectangle {

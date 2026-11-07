@@ -34,8 +34,12 @@ Item {
     width: layer.width - x * 2
     height: Theme.notifRadius * 2
     radius: Theme.notifRadius
-    color: Theme.surface
-    border.width: 1
-    border.color: Theme.surfaceOutline
+    // No outline: lifted a step off the ground, so a peeking card still reads as its own card
+    // against the one in front, and floating on the shadow like every surface.
+    color: Qt.tint(Theme.surface, Theme.lift(Theme.liftTile))
+
+    DropShadow {
+      radius: parent.radius
+    }
   }
 }

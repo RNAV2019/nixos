@@ -69,7 +69,24 @@ Rectangle {
 
   color: root.framed ? Theme.surface : "transparent"
   border.width: Math.max(1, Math.round(root.ui))
-  border.color: root.showError ? Qt.rgba(Theme.love.r, Theme.love.g, Theme.love.b, Theme.lockErrorOutline) : root.framed ? Theme.surfaceOutline : "transparent"
+  border.color: root.showError ? Qt.rgba(Theme.love.r, Theme.love.g, Theme.love.b, Theme.lockErrorOutline) : "transparent"
+
+  // Framed, it floats on the shell's drop shadow, like the island's surfaces, not an outline.
+  DropShadow {
+    radius: root.radius
+    sigma: root.u(Theme.surfaceShadowSigma)
+    offsetY: root.u(Theme.surfaceShadowOffsetY)
+    room: root.u(Theme.surfaceShadowRoom)
+    opacity: root.framed ? 1 : 0
+    visible: opacity > 0
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: Theme.duration(Theme.tintFade)
+        easing.type: Easing.OutQuad
+      }
+    }
+  }
 
   Behavior on border.color {
     Tint {}

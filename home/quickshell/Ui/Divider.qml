@@ -10,5 +10,6 @@ Rectangle {
 
   width: vertical ? 1 : implicitWidth
   height: vertical ? implicitHeight : 1
-  color: Theme.withAlpha(Theme.highlightMed, alpha)
+  // White in steps, like every inner fill; `alpha` scales it from the standard rule.
+  color: Theme.lift(Theme.liftDivider * alpha / Theme.dividerAlpha)
 }

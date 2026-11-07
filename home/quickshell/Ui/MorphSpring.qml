@@ -2,8 +2,8 @@ import QtQuick
 import qs.Commons
 import "Motion.js" as Motion
 
-// The island's shape spring: one critically damped spring, so it never overshoots, solved
-// exactly for each frame's own time step.
+// The island's shape spring: one damped spring at Theme.morphDamping (0.9, a barely visible
+// settle), solved exactly for each frame's own time step.
 // It steps with every frame's own time, so on a 120 Hz output it moves on every frame, and it lands
 // on the same curve at any frame rate.
 //
@@ -12,7 +12,8 @@ import "Motion.js" as Motion
 // through a disabled Behavior does, so the `snapping` idiom in Ui/IslandOrigin.qml carries over.
 //
 // A `damping` ratio below one makes it underdamped: the value runs a little past its target and
-// settles back. Only the phone satellite asks for that; the shell's surfaces have no overshoot.
+// settles back. The shell's surfaces run at Theme.morphDamping, about 0.15% past; the phone
+// satellite asks for more.
 //
 // With QS_MOTION_LOG=1 (Theme.motionLog) and a `label`, every frame prints
 // `motion <label> <t_ms> <value> <velocity> <target>` for tools/qs-verify/motion/check.mjs.
@@ -27,8 +28,9 @@ QtObject {
   property bool animate: true
 
   property real omega: Theme.morphOmega
-  // 1 is critically damped; below 1 overshoots, by about 4.6% of the travel at 0.7.
-  property real damping: 1
+  // 1 is critically damped; below 1 overshoots, by about 0.15% of the travel at 0.9 and 4.6%
+  // at 0.7.
+  property real damping: Theme.morphDamping
 
   // At rest once within epsilon (0.3 px) and all but still; a value that is not in pixels
   // sets its own.

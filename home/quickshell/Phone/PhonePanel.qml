@@ -167,9 +167,9 @@ Variants {
           width: Theme.phoneDeviceWidth
           height: Theme.phoneDeviceHeight
           radius: Theme.phoneDeviceRadius
-          color: Theme.highlightLow
+          color: Theme.lift(Theme.liftTile)
           border.width: 1
-          border.color: Theme.withAlpha(Theme.highlightMed, 0.7)
+          border.color: Theme.lift(Theme.liftEdge)
 
           Rectangle {
             id: screen

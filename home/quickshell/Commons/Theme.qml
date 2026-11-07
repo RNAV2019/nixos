@@ -110,7 +110,6 @@ Singleton {
   readonly property color dangerFill: urgent
   readonly property color inkOnDanger: base
   readonly property color focusRing: accent
-  readonly property color surfaceOutline: Qt.rgba(1, 1, 1, 0.10)
 
   // The palette every colour above comes from, for the surfaces that name it.
   readonly property string paletteName: palette.paletteName
@@ -118,9 +117,26 @@ Singleton {
   readonly property color accent: palette.accent
   readonly property color urgent: love
 
+  // Inner fills are white laid over the ground in steps (saneAspect's): a tile or grouped row,
+  // its hover, a chosen row, a neutral control and its hover, an off switch, the hairline on a
+  // tile's edge, a divider, and a level track. White rather than a palette colour, so a fill is
+  // the same lift over any theme's ground.
+  readonly property real liftTile: 0.05
+  readonly property real liftHover: 0.08
+  readonly property real liftSelected: 0.11
+  readonly property real liftControl: 0.075
+  readonly property real liftControlHover: 0.11
+  readonly property real liftOff: 0.15
+  readonly property real liftEdge: 0.10
+  readonly property real liftDivider: 0.12
+  readonly property real liftTrack: 0.10
+
+  function lift(a) {
+    return Qt.rgba(1, 1, 1, a);
+  }
+
   readonly property real fillNormal: 0.04
   readonly property real fillSelected: 0.18
-  readonly property real borderNormal: 0.4
   readonly property real borderSelected: 1.0
 
   // Press feedback and slider stepping, shared by the interactive controls.
@@ -183,9 +199,9 @@ Singleton {
   readonly property int panelHeaderMetaTop: 28
   // And its footer, when the panel has one: the line near the foot of a 232 px card.
   readonly property int panelFooterTop: 196
-  // Buttons (Ui/Button.qml). Grounded neutral kinds step highlightMed from the rest alpha to
-  // the hover one; the danger disc rests at its own; filled pills lift their fill by `fillLift`.
-  readonly property real groundRestAlpha: 0.75
+  // Buttons (Ui/Button.qml). Neutral kinds are white lifts (liftControl, liftControlHover); the
+  // danger disc rests at its own alpha and hovers to `groundHoverAlpha`; filled pills lift their
+  // fill by `fillLift`.
   readonly property real groundHoverAlpha: 0.95
   readonly property real dangerRestAlpha: 0.8
   readonly property real fillLift: 1.06
@@ -195,15 +211,10 @@ Singleton {
   readonly property real tonalHoverAlpha: 0.2
   readonly property real onAccentRestAlpha: 0.14
   readonly property real onAccentHoverAlpha: 0.24
-  readonly property real hairlineAlpha: 0.7
   // A control that cannot be used is the same control at this opacity.
   readonly property real disabledAlpha: 0.4
-  // Tiles and grouped rows rest at `surfaceRestAlpha` and hover to `groundHoverAlpha`; a hairline
-  // row or a device disc rests a little lower, under its own edge. Filled tiles lift their fill by
-  // `tileLift`, and a chosen tile darkens by `tileDim` while pressed.
-  readonly property real surfaceRestAlpha: 0.9
-  readonly property real hairlineGroundAlpha: 0.85
-  readonly property real rowBorderAlpha: 0.55
+  // Tiles and grouped rows are white lifts (liftTile, liftHover, liftEdge above). Filled tiles
+  // lift their fill by `tileLift`, and a chosen tile darkens by `tileDim` while pressed.
   readonly property real tileLift: 1.08
   readonly property real tileDim: 1.12
   // A hairline row's corner and a list's label size, wherever the shell draws one.
@@ -246,7 +257,9 @@ Singleton {
   readonly property int panelRowHeight: 34
 
   readonly property int barHeight: 36
-  readonly property int barMarginTop: 8
+  // About half the pill's height, so the island floats clear of the screen edge (saneAspect's
+  // ratio); windows start one gaps_out below the pill.
+  readonly property int barMarginTop: 16
 
   // OLED burn-in care (Services/OledCare.qml). The island pill and the workspaces pill never
   // move, so on the OLED panel they would print into it: every few minutes each takes the next
@@ -270,6 +283,16 @@ Singleton {
   readonly property int surfaceBlurMax: 64
   readonly property real surfaceBlur: 0.53
 
+  // Surfaces float on a drop shadow rather than an outline (Ui/FrostedSurface.qml), measured off
+  // saneAspect's 2026-11 recordings: the shape blurred by a Gaussian, neutral black at about
+  // 0.68, sigma about two thirds of the pill's height and offset down about a quarter of it,
+  // the same on every surface. `surfaceShadowRoom` is how far it reaches (offset plus about
+  // 2.6 sigma); a window must leave that much free around a surface or the shadow is cut off.
+  readonly property real surfaceShadowAlpha: 0.68
+  readonly property real surfaceShadowSigma: 24
+  readonly property real surfaceShadowOffsetY: 9
+  readonly property int surfaceShadowRoom: 72
+
   // Set QUICKSHELL_REDUCE_MOTION=1 for a short, non-overshooting presentation; an
   // environment switch, not a theme, so it applies to both.
   readonly property bool reduceMotion: Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
@@ -280,11 +303,14 @@ Singleton {
     return reduceMotion ? Math.min(80, Math.round(ms * 0.25)) : ms;
   }
 
-  // The island morph's spring (Ui/MorphSpring.qml), critically damped at this natural
-  // frequency: quartiles 45/79/128/185 ms, within 1% by 320 ms, and no overshoot - Ryan
-  // compared the survey's +1.5% overshoot against none and kept none. Every shape that grows
-  // out of the island rides this.
+  // The island morph's spring (Ui/MorphSpring.qml) at this natural frequency: quartiles about
+  // 45/79/128/185 ms and within 1% by about 320 ms. Every shape that grows out of the island
+  // rides this, at morphDamping below.
   readonly property real morphOmega: 21
+  // Its damping ratio. 0.9 runs about 0.15% past the target and settles back, a hint of the
+  // survey's 1.5% (zeta 0.8) without its visible bounce; Ryan chose it 2026-11-07 over the
+  // critically damped 1 he had kept since 2026-10-18.
+  readonly property real morphDamping: 0.9
 
   // The small controls' pace (the switch knob): a critically damped spring that reaches 90% at
   // about 249 ms, since omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6.
@@ -294,7 +320,8 @@ Singleton {
   // below alias these so each keeps its own name. (The `panelWidth(screen, desired)` clamp
   // above takes the width token as its `desired`.)
   readonly property int panelColumnWidth: 520
-  readonly property int panelRadius: 26
+  // The radius equals the shut pill's height, as saneAspect's cards match his pill.
+  readonly property int panelRadius: 36
 
   // The island: one pill carrying the clock, growing an equaliser while playing and
   // expanding into a media and status card on hover.
@@ -311,10 +338,10 @@ Singleton {
   readonly property int islandExpandedWidth: panelColumnWidth
   readonly property int islandExpandedHeight: 84
   readonly property int islandExpandedRadius: panelRadius
-  readonly property int islandClockSize: 17
-  readonly property int islandDisplaySize: 22
-  readonly property int islandTitleSize: 13
-  readonly property int islandCaptionSize: 11
+  readonly property int islandClockSize: 19
+  readonly property int islandDisplaySize: 26
+  readonly property int islandTitleSize: 14
+  readonly property int islandCaptionSize: 12
   readonly property int islandArtSize: 48
   readonly property int islandArtRadius: 8
   readonly property int islandHoverOpenDelay: 70
@@ -379,7 +406,7 @@ Singleton {
   // The notification toast: the pill grows into one card, holds while read, then melts back.
   // One card, not a stack; a second notification replaces the first.
   readonly property int notifWidth: 450
-  readonly property int notifRadius: 26
+  readonly property int notifRadius: panelRadius
   readonly property int notifInset: 16
   readonly property int notifTextLeft: 68
   readonly property int notifAvatarSize: 40
@@ -397,7 +424,6 @@ Singleton {
   readonly property int notifActionGapAbove: 10
   readonly property int notifActionHeight: 30
   readonly property int notifActionGap: 10
-  readonly property real notifActionSecondaryAlpha: 0.85
   readonly property int notifPadBottom: 14
 
   // Toasts waiting behind the card: back layers peeking under it, and a "+N" chip in the action row.
@@ -415,7 +441,7 @@ Singleton {
   // The power menu: three tiles on one row. Lock acts on first press; the two that end the
   // session arm first, turning love and relabelling Confirm.
   readonly property int powerHeight: 112
-  readonly property int powerRadius: 26
+  readonly property int powerRadius: panelRadius
   readonly property int powerInset: 11
   readonly property int powerTileWidth: 90
   readonly property int powerTileHeight: 80
@@ -432,9 +458,8 @@ Singleton {
   // pill's left, `Inset`s from its right; the glyph slot is 18 x 18 except in the wide layout.
   readonly property int islandPillWidth: 278
   readonly property int islandPillWidthWide: 340
-  // The pill hangs from barMarginTop and windows start barHeight + oledShiftMax + gaps_out
-  // below the strip, so a 48 px row reached into the window under it; 42 leaves 2 px at the
-  // orbit low.
+  // The pill hangs from barMarginTop and windows start barHeight + gaps_out below that, so a
+  // 48 px row reached into the window under it; 42 leaves 2 px at the orbit low.
   readonly property int islandPillHeight: 42
   readonly property int islandPillRadius: 21
   readonly property int islandPillGlyphLeft: 20
@@ -496,7 +521,7 @@ Singleton {
   // Accept/Decline; progress is an IslandPill row; confirm holds briefly.
   readonly property int sharingOfferWidth: 420
   readonly property int sharingOfferHeight: 64
-  readonly property int sharingOfferRadius: 26
+  readonly property int sharingOfferRadius: panelRadius
   readonly property int sharingConfirmDwell: 2500
   // A failed rebuild holds longer than a finished one; its error is in the terminal.
   readonly property int rebuildFailedDwell: 8000
@@ -617,8 +642,6 @@ Singleton {
   readonly property int displaysCanvasPadX: 32
   readonly property int displaysCanvasPadY: 28
   readonly property int displaysCanvasRadius: controlMediaRadius
-  readonly property real displaysCanvasAlpha: 0.85
-  readonly property real displaysCanvasBorderAlpha: 0.55
   readonly property int displaysTileRadius: wallpaperTileRadius
   readonly property real displaysTileVeil: 0.3
   readonly property int displaysPlateHeight: 22
@@ -653,7 +676,6 @@ Singleton {
   // is never part panel background.
   readonly property real wallpaperTileAspect: 16 / 9
 
-  readonly property real wallpaperTileBorderAlpha: 0.7
   readonly property int wallpaperSelectedBorder: 2
 
   // The keys' wallpaper is carried by the ring and size; the one that is up is the accent
@@ -1012,6 +1034,9 @@ Singleton {
   readonly property int workspaceSlotActiveWidth: 36
   readonly property int workspaceSlotHeight: 16
   readonly property int workspaceSlotRadius: 8
+  // The active slot's soft accent bloom, the only glow in the shell (saneAspect's).
+  readonly property real workspaceGlowBlur: 8
+  readonly property real workspaceGlowAlpha: 0.55
 
   // Every morph rides one curve, its pace from a survey of ten 1440p60 recordings: 186 found,
   // 176 fitted; measured quartiles 36/68/104/148 ms. The survey's +1.5% overshoot was left out.

@@ -77,7 +77,7 @@ ButtonBase {
 
   readonly property real groupRadius: Theme.controlRowGroupRadius
   readonly property real cornerRadius: kind === ListRow.Grouped ? Theme.controlRowRadius : kind === ListRow.Hairline ? Theme.rowRadius : Theme.pickerRowRadius
-  readonly property color edgeColor: accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.withAlpha(Theme.highlightMed, Theme.rowBorderAlpha)
+  readonly property color edgeColor: accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.lift(Theme.liftEdge)
   readonly property bool tinted: hovered && hoverTint
   readonly property real farEdge: Math.min(valueText.visible ? valueText.x : Infinity, slot.x)
   readonly property real textRoom: Math.max(0, farEdge - textLeft - textGap)
@@ -103,8 +103,7 @@ ButtonBase {
         return Theme.accent;
       if (root.accented)
         return Theme.withAlpha(Theme.accentFill, 0.1);
-      var alpha = root.kind === ListRow.Grouped ? Theme.surfaceRestAlpha : Theme.hairlineGroundAlpha;
-      return Theme.withAlpha(root.tinted ? Theme.highlightMed : Theme.highlightLow, root.tinted ? Theme.groundHoverAlpha : alpha);
+      return Theme.lift(root.tinted ? Theme.liftHover : Theme.liftTile);
     }
 
     Behavior on color {

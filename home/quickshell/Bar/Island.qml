@@ -5,8 +5,10 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The centred surface, the only one that changes shape. The open is not a cross-fade: contents
-// scale with the pill and the track block clips, revealing the title letter by letter.
+// The centred surface, the only one that changes shape. The open is not a cross-fade and nothing
+// scales but the clock: each block is drawn at its true size, rides the card's live edge, and
+// flies in on its own stretch of the open (saneAspect's shared-element card), while the growing
+// shape uncovers it and the track block clips, revealing the title letter by letter.
 FrostedSurface {
   id: root
 
@@ -181,11 +183,8 @@ FrostedSurface {
   readonly property real targetHeight: dropArmed ? Theme.nearbyDropTargetHeight : expanded ? Theme.islandExpandedHeight : Theme.barHeight
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
 
-  // The card is sized against the pill's height, so one animated property carries the layout
-  // and nothing falls out of step with the shape.
-  readonly property real scaleFactor: height / Theme.islandExpandedHeight
-
-  // Progress 0 shut, 1 open, for things that travel between two fixed states rather than scale.
+  // Progress 0 shut, 1 open, read off the shape's height, so nothing falls out of step with it;
+  // the spring's small overshoot is clamped away.
   readonly property real openness: {
     var span = Theme.islandExpandedHeight - Theme.barHeight;
     return span <= 0 ? 1 : Theme.clamp01((height - Theme.barHeight) / span);
@@ -199,7 +198,18 @@ FrostedSurface {
 
   // The date is wider than the clock, so while the card is small the track block stops short
   // of the date.
-  readonly property real centreLeft: Math.min(clockLeft, date.x + date.width * (1 - date.scale) / 2)
+  readonly property real centreLeft: Math.min(clockLeft, date.x)
+
+  // A block's own stretch of the open, eased: 0 until `openness` reaches `from`, 1 once it reaches
+  // `to`. Staggered stretches make the blocks arrive one after another and, the spring running
+  // back, leave in the reverse order.
+  function reveal(from, to) {
+    var t = Theme.clamp01((openness - from) / (to - from));
+    return t * t * (3 - 2 * t);
+  }
+
+  // How far a block travels as it arrives, from towards the clock.
+  readonly property real flight: 14
 
   // Do not infer completion from clamped openness; a spring may cross the target before resting.
   readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
@@ -274,66 +284,68 @@ FrostedSurface {
     }
   }
 
-  // Card laid out against the pill's live width, which makes contents reflow as it opens.
+  // The card's blocks at their open size, each riding the card's live edge (the track block and
+  // the week the left, the gauges the right) and centred on its live midline, so the growing shape
+  // uncovers them rather than scaling them. Hidden for the drop well, which has no card.
   Item {
     id: card
 
     anchors.fill: parent
-    opacity: root.expanded ? 1 : 0
-    visible: opacity > 0
+    opacity: root.dropArmed ? 0 : 1
+    visible: opacity > 0 && root.openness > 0
 
     Behavior on opacity {
       ContentFade {}
     }
 
-    // One scaled frame carries every block drawn at open metrics: placing the children here
-    // keeps one transform instead of four, and their x/y are the open-card coordinates (the
-    // composite TopLeft scaling lands each block exactly where its hand-placed form sat).
+    // Track block clipped rather than elided while it moves; animating font size re-fits glyphs
+    // every frame and the trailing letters flicker against the ellipsis.
     Item {
-      id: scaledCard
+      id: media
 
-      x: 0
-      y: 0
-      width: root.scaleFactor > 0 ? root.width / root.scaleFactor : 0
+      x: 16
+      y: root.midline - height / 2
+      width: Math.max(0, root.centreLeft - 28 - x)
       height: Theme.islandExpandedHeight
-      transformOrigin: Item.TopLeft
-      scale: root.scaleFactor
+      clip: true
+      visible: Media.active
 
-      // Track block drawn once at open metrics and scaled, clipped rather than elided; animating
-      // font size re-fits glyphs every frame and the trailing letters flicker against the ellipsis.
+      AlbumArt {
+        id: cover
+
+        readonly property real shown: root.reveal(0.1, 0.55)
+
+        x: -root.flight * (1 - shown)
+        y: (parent.height - height) / 2
+        width: Theme.islandArtSize
+        height: width
+        opacity: shown
+      }
+
+      Equaliser {
+        id: cardEq
+
+        x: 60 - root.flight * (1 - cover.shown)
+        y: (parent.height - height) / 2
+        playing: Media.playing
+        opacity: cover.shown
+      }
+
       Item {
-        id: media
+        id: track
 
-        x: 16
-        y: 0
-        width: root.scaleFactor > 0 ? Math.max(0, (root.centreLeft - 28 * root.scaleFactor) / root.scaleFactor) : 0
-        height: Theme.islandExpandedHeight
-        clip: true
-        visible: Media.active
+        readonly property real shown: root.reveal(0.3, 0.8)
 
-        AlbumArt {
-          id: cover
-
-          x: 0
-          y: (parent.height - height) / 2
-          width: Theme.islandArtSize
-          height: width
-        }
-
-        Equaliser {
-          id: cardEq
-
-          x: 60
-          y: (parent.height - height) / 2
-          playing: Media.playing
-        }
+        x: 84 - root.flight * (1 - shown)
+        width: Math.max(0, parent.width - 84)
+        height: parent.height
+        opacity: shown
 
         Text {
           id: title
 
-          x: 84
-          y: parent.height / 2 - 8 - height / 2
-          width: Math.max(0, parent.width - x)
+          y: parent.height / 2 - 9 - height / 2
+          width: parent.width
           // Only once the morph stops, so the ellipsis never appears mid-motion.
           elide: root.settled ? Text.ElideRight : Text.ElideNone
           text: Media.title
@@ -344,9 +356,8 @@ FrostedSurface {
         }
 
         Text {
-          x: title.x
-          y: parent.height / 2 + 9.5 - height / 2
-          width: title.width
+          y: parent.height / 2 + 10 - height / 2
+          width: parent.width
           elide: root.settled ? Text.ElideRight : Text.ElideNone
           text: Media.artist
           color: Theme.subtle
@@ -354,35 +365,60 @@ FrostedSurface {
           font.pixelSize: Theme.islandCaptionSize
         }
       }
+    }
 
-      // With nothing playing the track block's room carries the week instead, drawn from the
-      // card's left inset and scaled like the block it replaces, so the strip grows with the pill.
+    // With nothing playing the track block's room carries the week instead, from the same
+    // left inset, clipped short of the clock like the track block.
+    Item {
+      x: 16
+      width: Math.max(0, root.centreLeft - 12 - x)
+      height: parent.height
+      clip: true
+      visible: !Media.active
+
       MiniCalendar {
-        x: 16
-        y: (parent.height - height) / 2
+        readonly property real shown: root.reveal(0.15, 0.65)
+
+        x: -root.flight * (1 - shown)
+        y: root.midline - height / 2
         today: clock.date
-        visible: !Media.active
-      }
-
-      // Board 02's gauges: the battery 16 px in from the right like the album art, system load
-      // beside it. Their x rides the pill's live width, so the right inset is scaled off.
-      SystemGauge {
-        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - 12 - 2 * width : 0
-        y: (parent.height - height) / 2
-      }
-
-      StatusGauge {
-        x: root.scaleFactor > 0 ? root.width / root.scaleFactor - 16 - width : 0
-        y: (parent.height - height) / 2
+        opacity: shown
       }
     }
 
-    // Left/right buttons skip, so the card is a transport as well as a readout; kept outside
-    // the scaled block so it stays in real coordinates.
+    // Board 02's gauges: the battery 16 px in from the right like the album art, system load
+    // beside it, each flying out from the clock on its own stretch, the battery first. Clipped
+    // short of the clock on that side too, so nothing crosses it while the card is narrow.
+    Item {
+      id: gauges
+
+      x: root.width - root.centreLeft + 12
+      width: Math.max(0, root.width - x)
+      height: parent.height
+      clip: true
+
+      SystemGauge {
+        readonly property real shown: root.reveal(0.25, 0.7)
+
+        x: gauges.width - 16 - 12 - 2 * width + root.flight * (1 - shown)
+        y: root.midline - height / 2
+        opacity: shown
+      }
+
+      StatusGauge {
+        readonly property real shown: root.reveal(0.15, 0.6)
+
+        x: gauges.width - 16 - width + root.flight * (1 - shown)
+        y: root.midline - height / 2
+        opacity: shown
+      }
+    }
+
+    // Left/right buttons skip, so the card is a transport as well as a readout.
     MouseArea {
       x: 0
       y: 0
-      width: Math.max(0, root.centreLeft - 12 * root.scaleFactor)
+      width: Math.max(0, root.centreLeft - 12)
       height: parent.height
       enabled: Media.active && root.expanded
       cursorShape: Qt.PointingHandCursor
@@ -397,13 +433,15 @@ FrostedSurface {
       }
     }
 
+    // The date arrives last, rising into place under the clock as it settles.
     Text {
       id: date
 
+      readonly property real shown: root.reveal(0.5, 0.95)
+
       x: (root.width - width) / 2
-      y: root.midline + 13.5 * root.scaleFactor - height / 2
-      transformOrigin: Item.Center
-      scale: root.scaleFactor
+      y: root.midline + 14 - height / 2 + 6 * (1 - shown)
+      opacity: shown
       text: Qt.formatDateTime(clock.date, "ddd, d MMM")
       color: Theme.subtle
       font.family: Theme.uiFont
@@ -435,7 +473,7 @@ FrostedSurface {
       var shutX = root.collapsedClockLeft - width * (1 - scale) / 2;
       return shutX + root.openness * (openX - shutX);
     }
-    y: root.midline - 8 * root.openness - height / 2
+    y: root.midline - 9 * root.openness - height / 2
     transformOrigin: Item.Center
     scale: shownSize / Theme.islandDisplaySize
     text: Qt.formatDateTime(clock.date, "HH:mm")

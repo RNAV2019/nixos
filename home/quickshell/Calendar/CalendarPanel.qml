@@ -280,7 +280,7 @@ Variants {
                 width: agendaView.width
                 height: Theme.calAgendaHeight
                 radius: Theme.calAgendaRadius
-                color: Theme.withAlpha(Theme.highlightLow, 0.9)
+                color: Theme.lift(Theme.liftTile)
 
                 Rectangle {
                   x: Theme.calSpineLeft

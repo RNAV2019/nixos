@@ -24,7 +24,7 @@ ButtonBase {
       var lit = root.hovered || root.pressed;
       if (root.checked)
         return Qt.lighter(Theme.accentFill, lit ? Theme.fillLift : 1);
-      return Theme.withAlpha(Theme.highlightMed, lit ? Theme.groundHoverAlpha : Theme.groundRestAlpha);
+      return Theme.lift(lit ? Theme.liftOff + Theme.liftHover - Theme.liftTile : Theme.liftOff);
     }
 
     Behavior on color {

@@ -1,6 +1,7 @@
 #version 440
 // The phone satellite: the pill's right cap and a disc, joined while the neck holds, drawn as one
-// filled shape with a 1 px outline. The neck is a rolling-ball fillet (circular blend): a ball of
+// filled shape (an outline is drawn if one is given) over the disc's drop shadow, the shell's
+// Gaussian (Shaders/shadow.frag); the pill under the cap casts its own. The neck is a rolling-ball fillet (circular blend): a ball of
 // radius `neck` that touches both bodies, so the join is a concave, waisted bridge that thins as the
 // disc draws away and pinches off at the gap where the ball no longer reaches both, as a metaball's
 // does. After the break, `stub` draws the two broken ends as rounded tips, and `bulge` swells the
@@ -27,7 +28,48 @@ layout(std140, binding = 0) uniform buf {
     float bulge;       // how far the cap swells, px
     vec4 fill;         // premultiplied
     vec4 outline;      // premultiplied
+    float shadowSigma;    // the drop shadow's standard deviation, px
+    float shadowOffsetY;  // how far down it falls, px
+    float shadowStrength; // its peak alpha; 0 for none
 };
+
+const float PI = 3.141592653589793;
+
+float gaussian(float x, float s) {
+    return exp(-(x * x) / (2.0 * s * s)) / (sqrt(2.0 * PI) * s);
+}
+
+vec2 erf2(vec2 x) {
+    vec2 s = sign(x);
+    vec2 a = abs(x);
+    x = 1.0 + (0.278393 + (0.230389 + 0.078108 * (a * a)) * a) * a;
+    x *= x;
+    return s - s / (x * x);
+}
+
+float shadowX(float x, float y, float s, float r, vec2 halfSize) {
+    float delta = min(halfSize.y - r - abs(y), 0.0);
+    float curved = halfSize.x - r + sqrt(max(0.0, r * r - delta * delta));
+    vec2 integral = 0.5 + 0.5 * erf2((x + vec2(-curved, curved)) * (sqrt(0.5) / s));
+    return integral.y - integral.x;
+}
+
+// A disc is a rounded box whose corner radius is half its side.
+float discShadow(vec2 p, float r, float s) {
+    vec2 halfSize = vec2(r);
+    float low = p.y - halfSize.y;
+    float high = p.y + halfSize.y;
+    float start = clamp(-3.0 * s, low, high);
+    float end = clamp(3.0 * s, low, high);
+    float stepY = (end - start) / 12.0;
+    float y = start + stepY * 0.5;
+    float value = 0.0;
+    for (int i = 0; i < 12; i++) {
+        value += shadowX(p.x, p.y - y, s, r, halfSize) * gaussian(y, s) * stepY;
+        y += stepY;
+    }
+    return value;
+}
 
 float sdRoundBox(vec2 p, vec2 halfSize, float r) {
     vec2 q = abs(p) - halfSize + r;
@@ -83,5 +125,13 @@ void main() {
     float band = outer - inner;
     vec4 c = fill * outer;
     c = c * (1.0 - outline.a * band) + outline * band;
+    // The disc's shadow lies under the shape, off its own footprint and the pill's.
+    float shade = 0.0;
+    if (shadowStrength > 0.0 && disc.z > 0.0) {
+        float s = clamp(discShadow(p - disc.xy - vec2(0.0, shadowOffsetY), disc.z, max(shadowSigma, 0.5)), 0.0, 1.0);
+        float pillOff = smoothstep(-0.5 * aa, 0.5 * aa, dPill);
+        shade = s * shadowStrength * pillOff * (1.0 - outer);
+    }
+    c = c + vec4(0.0, 0.0, 0.0, shade) * (1.0 - c.a);
     fragColor = c * qt_Opacity;
 }

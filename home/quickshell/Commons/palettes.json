@@ -62,7 +62,7 @@
     "label": "Ariadne",
     "paletteName": "ariadne",
     "base": "#002018",
-    "surface": "#0a0a0a",
+    "surface": "#000000",
     "overlay": "#1e1c1a",
     "muted": "#707e78",
     "subtle": "#8a8a86",

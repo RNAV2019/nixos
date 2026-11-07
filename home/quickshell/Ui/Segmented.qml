@@ -86,9 +86,9 @@ Item {
     anchors.fill: parent
     visible: !root.compact
     radius: Theme.nearbyTrackRadius
-    color: Theme.withAlpha(Theme.surfaceSubtle, 0.9)
+    color: Theme.lift(Theme.liftTile)
     border.width: 1
-    border.color: Theme.withAlpha(Theme.separator, Theme.hairlineAlpha)
+    border.color: Theme.lift(Theme.liftEdge)
   }
 
   Rectangle {

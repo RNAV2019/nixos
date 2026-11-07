@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
@@ -91,6 +92,24 @@ FrostedSurface {
 
         Behavior on color {
           Tint {}
+        }
+
+        // The active slot blooms softly in the accent, the shell's only glow (saneAspect's).
+        RectangularShadow {
+          anchors.fill: parent
+          z: -1
+          radius: slot.radius
+          blur: Theme.workspaceGlowBlur
+          color: Theme.withAlpha(Theme.accent, Theme.workspaceGlowAlpha)
+          opacity: slot.isActive ? 1 : 0
+          visible: opacity > 0
+
+          Behavior on opacity {
+            NumberAnimation {
+              duration: Theme.duration(Theme.tintFade)
+              easing.type: Easing.OutQuad
+            }
+          }
         }
 
         MouseArea {

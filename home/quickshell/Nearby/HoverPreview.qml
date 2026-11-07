@@ -179,7 +179,7 @@ Item {
     radius: Theme.rowRadius
     color: "transparent"
     border.width: 1
-    border.color: Theme.withAlpha(Theme.separator, 0.7)
+    border.color: Theme.lift(Theme.liftEdge)
   }
 
   FilePeek {

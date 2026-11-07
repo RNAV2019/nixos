@@ -27,7 +27,7 @@ ButtonBase {
     anchors.fill: parent
     visible: !root.chosen
     radius: height / 2
-    color: Theme.withAlpha(Theme.highlightMed, root.hovered || root.pressed ? Theme.groundHoverAlpha : 0)
+    color: Theme.lift(root.hovered || root.pressed ? Theme.liftHover : 0)
 
     Behavior on color {
       Tint {}

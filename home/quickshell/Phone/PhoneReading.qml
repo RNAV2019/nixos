@@ -43,7 +43,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: Theme.controlTileStackedRadius
-    color: Theme.withAlpha(Theme.surfaceSubtle, Theme.surfaceRestAlpha)
+    color: Theme.lift(Theme.liftTile)
 
     Rectangle {
       anchors.fill: parent
