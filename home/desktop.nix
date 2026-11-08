@@ -122,13 +122,6 @@ in {
             passes = 3;
             vibrancy = 0.1696;
           };
-          # Windows float on a soft shadow like the shell's surfaces (saneAspect's values).
-          shadow = {
-            enabled = true;
-            range = 28;
-            render_power = 3;
-            color = "rgba(0a0a0a92)";
-          };
         };
 
         animations.enabled = true;
