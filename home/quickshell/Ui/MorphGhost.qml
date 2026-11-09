@@ -199,7 +199,7 @@ Item {
   // A leaver is cut: on this surface's first frame it is where the surface before left it, on the
   // next it is gone, with no half-faded frame between. Its parts live on the layer's one paint list
   // (MorphLayer.paint), ordered as the two panels painted them, so they take this through `fade`.
-  readonly property real fade: entry.out && host && host.clockRunning ? 1 - Motion.ramp(host.clock, 0, host.inPlace ? Theme.morphPillOut : Theme.morphDissolveOut) : 1
+  readonly property real fade: entry.out && host && host.clockRunning ? 1 - Motion.ramp(host.clock, 0, host.outTime) : 1
 
   // A long flight's backing: the card's own ground under the pair, on the paint list just below its
   // parts, so it hides what it crosses rather than print over it. Invisible where it sets off and

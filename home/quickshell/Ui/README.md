@@ -21,7 +21,9 @@ uncovers the contents and does not move them: `FrostedSurface` renders the box t
 (1:1 with device pixels, so it is crisp at rest) and crops it to the card with
 `Shaders/roundedclip.frag`. So contents never bind to `win.surface.width` or `.height`, which
 is the moving card; they take their size from the box (`parent.width`) or from the open size.
-Only the open size changing (a panel gaining a row) re-allocates the texture. Things that are
+Only the open size changing (a panel gaining a row) re-allocates the texture. A panel that gets
+shorter while open (the control centre into a sub-view) keeps the taller box until the card has come
+down (`IslandSurfaceBase.boxHeight`), so the view on its way out is covered by the card, not cut. Things that are
 the surface's own size, like the shut pill carried over, go in `FrostedSurface.fillData`.
 
 Known limit: the texture is constant only while the open size is. The bar's island
@@ -36,7 +38,8 @@ card's top middle (a pill's: its middle), through a blur that clears as it nears
 (`morphGrowBlur`, `morphGrowSharp`). Both are uniforms of `Shaders/roundedclip.frag`
 (`FrostedSurface.contentScale/contentBlur/contentPivot`), read off the shape itself, so the panel
 comes out of the island as one thing and goes back the same way. At rest the texture is drawn texel
-for texel.
+for texel. That is the leg out of the pill and back only: once open and at its size (`grown`), a
+panel whose open size changes springs to it with its contents as they are.
 
 **The pace is by size.** `Motion.pace`: a pill moves at `Theme.morphOmega`, a shape with far to go
 eases down to `morphOmegaCalm`; opening, the width leads the height (`morphWidthLead`); a close is
@@ -110,7 +113,9 @@ and pairs them with its own (`MorphScan.match`):
 - between two surfaces the rest is a dissolve: what the surface before had with no partner softens
   and fades over `Theme.morphDissolveOut` (`MorphGhost.fade`, `MorphLayer.ghostBlur`), and the taker's
   contents come up as one through a blur over `morphDissolve`, starting `morphDissolveDelay` in
-  (`MorphLayer.dissolve*`), so the two overlap and neither is cut. `MorphMask`, read by
+  (`MorphLayer.dissolve*`), so the two overlap and neither is cut. That is for a card. Into a pill
+  (`MorphLayer.soft` off) nothing is softened and the leavers go over `morphFarewell`: the blur
+  smudged a 42 px row, and a card's contents outlasted the shape shrinking through them. `MorphMask`, read by
   `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back until its ghost lands. A
   swap inside one surface keeps its cut and cascade (`morphPillOut`, `morphArrive*`).
 - what cannot be redrawn (a Shape, a Canvas, a shader) never pairs; inside a pair it waits for it.

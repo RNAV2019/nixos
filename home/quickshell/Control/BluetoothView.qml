@@ -109,6 +109,8 @@ ControlSubView {
 
   headerTrailing: [
     Button {
+      // On the header's centre line, with the switch beside it (a Row sets its children at its top).
+      anchors.verticalCenter: parent.verticalCenter
       kind: Button.Icon
       icon: Icons.refresh
       enabled: root.active

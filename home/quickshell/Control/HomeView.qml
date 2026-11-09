@@ -339,7 +339,7 @@ Item {
   // end, so it is gone as the first row starts to show and comes up as the last one clears, and
   // the two are never read through each other.
   Text {
-    x: root.inset + 6
+    x: root.inset + 1
     y: root.listTop + 12
     visible: opacity > 0
     opacity: Motion.ramp(empty.value, 1 - Theme.listSlotFade, 1)

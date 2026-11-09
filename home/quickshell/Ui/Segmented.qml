@@ -176,7 +176,7 @@ Item {
         required property var modelData
         required property int index
 
-        width: root.compact ? Theme.segmentCompactWidth : root.fit ? fitWidth : (root.width - root.pad * 2) / root.segments.length
+        width: root.compact ? Math.max(Theme.segmentCompactWidth, fitWidth - fitPad * 2 + 12) : root.fit ? fitWidth : (root.width - root.pad * 2) / root.segments.length
         height: root.cellHeight
         chosen: index === root.currentIndex
         label: modelData.label !== undefined ? modelData.label : ""

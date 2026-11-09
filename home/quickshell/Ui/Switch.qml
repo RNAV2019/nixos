@@ -55,6 +55,11 @@ ButtonBase {
     radius: height / 2
     color: root.checked ? Theme.inkOnAccent : Theme.inkPrimary
 
+    // With the track's tint, not ahead of it in one frame.
+    Behavior on color {
+      Tint {}
+    }
+
     // Going on, the right edge leads and the left follows at the pace the knob always had; going
     // off, the other way round. A click that reverses it mid-way swaps the paces and keeps both
     // edges' speeds, so the stretch changes side without a jump.

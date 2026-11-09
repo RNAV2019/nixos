@@ -511,8 +511,9 @@ Singleton {
   readonly property int islandPillLabelWidthWide: 170
   readonly property int islandPillLabelWidthAction: 200
   readonly property int islandPillLabelLeftDetail: 54
-  readonly property int islandPillLabelWidthDetail: 58
-  readonly property int islandPillDetailLeft: 116
+  // (Wide enough for "Charging" in the semibold it is set in; 58 elided it with room to spare.)
+  readonly property int islandPillLabelWidthDetail: 66
+  readonly property int islandPillDetailLeft: 124
   readonly property int islandPillDetailWidth: 44
   readonly property int islandPillLabelWidthDots: 78
   readonly property int islandPillDotsDetailLeft: 133
@@ -525,6 +526,8 @@ Singleton {
   readonly property int islandPillTrackLeftLabel: 128
   readonly property int islandPillTrackWidthLabel: 91
   readonly property int islandPillReadingWidth: 80
+  // The least room between the track's end and a reading set over its far end (a word, not a figure).
+  readonly property int islandPillReadingGap: 10
   readonly property int islandPillReadingInset: 20
   readonly property int islandPillReadingInsetAction: 48
   readonly property int islandPillReadingInsetWaveform: 45
@@ -1232,6 +1235,9 @@ Singleton {
   readonly property var fadeCloseOut: [0.05, 0.68]
   // Closing: the collapsed pill's clock and marks arrive as the card nears the pill.
   readonly property var fadePillIn: [0.7, 1.0]
+  // A pill going back has next to no shape to travel, so its clock starts as its contents go:
+  // waiting for 0.7 left the pill bare for a few frames in between.
+  readonly property var fadePillInSmall: [0.4, 1.0]
 
   // They settle through a few pixels in the direction the height travels, so a switch between
   // two same-width columns has an axis to read.

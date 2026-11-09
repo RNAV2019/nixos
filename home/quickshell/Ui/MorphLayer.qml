@@ -62,7 +62,14 @@ Item {
   // until it has, its progress still reads the rest it was at.
   // (Not before the words and glyphs that change on the clock have: a swap the same size has no
   // shape to wait on, and would otherwise hand over mid-roll.)
-  readonly property bool landed: running && clockRunning && clock > Math.max(Theme.morphPillIn + Theme.morphPillRoll, Theme.morphGlyphTravel, inPlace ? 0 : Theme.morphDissolveOut + 60) && progress >= 0.999
+  // Whether this surface is a card, as against a pill (set by the surface). A card's contents come
+  // up through a blur as the ones before soften away. A pill is too small for that: 7 px of blur on
+  // a 42 px row is a smudge, and what the surface before had would outlast the shape shrinking
+  // through it, so there the leavers go on the short clock and nothing is softened.
+  property bool soft: true
+  readonly property real outTime: inPlace ? Theme.morphPillOut : soft ? Theme.morphDissolveOut : Theme.morphFarewell
+
+  readonly property bool landed: running && clockRunning && clock > Math.max(Theme.morphPillIn + Theme.morphPillRoll, Theme.morphGlyphTravel, inPlace ? 0 : outTime + 60) && progress >= 0.999
   property bool ghostsDone: false
 
   readonly property real cascadeEnd: inPlace ? Theme.morphArriveDelay + Theme.morphArriveStep * Theme.morphArriveSteps + Theme.morphArriveFade : Theme.morphDissolveDelay + Theme.morphDissolve
@@ -78,7 +85,7 @@ Item {
   // (Out of a surface taken in the middle of its own morph they start as soft as it was showing them,
   // `carriedBlur`, so what was half dissolved does not come back sharp for a frame.)
   property real carriedBlur: 0
-  readonly property real ghostBlur: !running || inPlace || ghostsDone ? 0 : !clockRunning ? carriedBlur : Motion.lerp(carriedBlur, Theme.morphDissolveBlur, Motion.ramp(clock, 0, Theme.morphDissolveOut * 0.7)) * (1 - Motion.ramp(clock, Theme.morphDissolveOut * 0.7, Theme.morphDissolveOut + 60))
+  readonly property real ghostBlur: !running || inPlace || ghostsDone ? 0 : !clockRunning ? carriedBlur : Motion.lerp(carriedBlur, soft ? Theme.morphDissolveBlur : 0, Motion.ramp(clock, 0, outTime * 0.7)) * (1 - Motion.ramp(clock, outTime * 0.7, outTime + 60))
   // How soft this surface is showing its contents just now, for whoever takes over mid-morph.
   readonly property real shownBlur: !running || inPlace ? 0 : Math.max(ghostBlur, dissolveT > 0.05 ? dissolveBlur : 0)
 
@@ -660,7 +667,7 @@ Item {
       pairs.forEach(function (p) {
         result.push(lerpAnchor(p.a, p.b, q));
       });
-      var cut = !clockRunning ? 1 : 1 - Motion.ramp(clock, 0, inPlace ? Theme.morphPillOut : Theme.morphDissolveOut);
+      var cut = !clockRunning ? 1 : 1 - Motion.ramp(clock, 0, outTime);
       if (cut > 0.05)
         outs.forEach(function (a) {
           // Marked as a ghost: if it is the taker's own (a panel taken back before it had gone), the

@@ -203,6 +203,8 @@ PanelWindow {
     // A moment of another size springs the shape, and the morph rides it; one of the same size has
     // no shape to ride.
     morphLayer.useShape = win.swapSize.width !== win.openWidth || win.swapSize.height !== win.openHeight;
+    // The box the ghosts are drawn in was made for the old shape; the new one may reach past it.
+    surface.ghostBox = win.morphBox(win.swapSize.width, win.swapSize.height);
     morphLayer.rescan = function () {
       return MorphScan.scan(bodyHolder, surface.contentBox, 1);
     };
@@ -268,6 +270,10 @@ PanelWindow {
 
     function onVisibleChanged() {
       win.beginMorph();
+    }
+
+    function onWidthChanged() {
+      win.noteGrown();
     }
   }
 
@@ -378,6 +384,10 @@ PanelWindow {
   // Closed by anything but the owner letting go, a wanted surface is up again once the island
   // is free; closed for the want ending, there is nothing to decide.
   onOpenChanged: {
+    if (!open) {
+      grown = false;
+      heldBoxHeight = 0;
+    }
     if (!open && wanted)
       evaluateSoon();
   }
@@ -571,13 +581,53 @@ PanelWindow {
   // clears as they near full size. Read off the shape itself, so it cannot fall out of step with it.
   // Not out of another surface (there the contents dissolve, see MorphLayer), nor on a still.
   readonly property bool growing: !Theme.reduceMotion && !win.parked && !win.handover && !win.morphing && !win.morphPending && !origin.held && !(win.open && origin.handedOver) && win.openWidth > 0
+  // A pill, as against a card: one row high.
+  readonly property bool small: win.openHeight <= Theme.islandPillHeight * 1.5
+
+  // Open and arrived at its size. The growing is the leg out of the pill and back; a panel that
+  // changes its open size while open (Nearby's file picker, twice the width) springs to it as it
+  // is, and must not be read as a card that has only come 54% of the way out.
+  property bool grown: false
+
+  function noteGrown() {
+    if (win.open && !win.grown && win.openWidth > 0 && surface.width >= surface.snap(win.openWidth) * 0.999)
+      win.grown = true;
+  }
+
   readonly property real growRatio: {
-    if (!win.growing)
+    if (!win.growing || (win.open && win.grown))
       return 1;
     var r = surface.width / surface.snap(win.openWidth);
     return r >= 0.999 ? 1 : Math.max(Theme.morphGrowMin, r);
   }
   readonly property real growBlur: win.growRatio >= 1 ? 0 : Theme.morphGrowBlur * (1 - Motion.ramp((win.growRatio - Theme.morphGrowMin) / (1 - Theme.morphGrowMin), 0.1, Theme.morphGrowSharp))
+
+  // The content box's height. The open height, but a panel that gets shorter while open (the
+  // control centre into a sub-view) keeps the taller box until the card has come down to the new
+  // one: cut to it at once, the view on its way out lost everything below the new height in a frame
+  // and an empty card did the shrinking.
+  readonly property real boxHeight: Math.max(win.openHeight, win.heldBoxHeight)
+  property real heldBoxHeight: 0
+  property real lastOpenHeight: 0
+
+  onOpenHeightChanged: {
+    if (win.open && origin.presented && !Theme.reduceMotion && win.openHeight < win.lastOpenHeight) {
+      win.heldBoxHeight = Math.max(win.heldBoxHeight, win.lastOpenHeight);
+      boxRelease.restart();
+    }
+    win.lastOpenHeight = win.openHeight;
+  }
+  onMorphRunningChanged: if (!win.morphRunning)
+    win.heldBoxHeight = 0
+
+  // The card coming to rest lets the box go; this is for a change too small to set it moving.
+  Timer {
+    id: boxRelease
+
+    interval: 1200
+    onTriggered: if (!win.morphRunning)
+      win.heldBoxHeight = 0
+  }
 
   // The collapsed pill's share while the surface closes (CollapsedPill.amount).
   property real pillAmount: 1
@@ -607,12 +657,16 @@ PanelWindow {
     var p = win.morphProgress;
     if (win.bodyWanted) {
       var r = win.entering ? Theme.fadeEnterIn : Theme.fadeOpenIn;
-      bodyOpacity = Math.max(bodyOpacity, Motion.ramp(p, r[0], r[1]));
+      // Opened again on its way down, the card is already part of the way out, and its contents
+      // are owed as much as a card that far out has on a first open: read off the progress alone
+      // (re-based to zero by the retarget) they stayed away while a bare black box grew.
+      var out = win.entering || win.openWidth <= origin.collapsedWidth ? 0 : Motion.ramp((surface.width - origin.collapsedWidth) / (win.openWidth - origin.collapsedWidth), r[0], r[1]);
+      bodyOpacity = Math.max(bodyOpacity, Motion.ramp(p, r[0], r[1]), out);
       pillAmount = 0;
     } else {
       bodyOpacity = Math.min(bodyOpacity, 1 - Math.max(Motion.ramp(p, Theme.fadeCloseOut[0], Theme.fadeCloseOut[1]), win.closeT));
       if (!win.open)
-        pillAmount = Math.max(pillAmount, Motion.ramp(p, Theme.fadePillIn[0], Theme.fadePillIn[1]));
+        pillAmount = Math.max(pillAmount, Motion.ramp(p, (win.small ? Theme.fadePillInSmall : Theme.fadePillIn)[0], Theme.fadePillIn[1]));
     }
   }
 
@@ -889,7 +943,7 @@ PanelWindow {
     // Contents are laid out at the open size, in a box that stays where the open card will sit,
     // so the growing card uncovers them. The open card's top, as the y below works it out.
     contentWidth: win.openWidth
-    contentHeight: win.openHeight
+    contentHeight: win.boxHeight
     contentLeft: (win.width - snap(contentWidth)) / 2 + origin.offsetX
     contentTop: Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(snap(contentHeight), Theme.islandPillHeight) - Theme.barHeight) / 2 : 0)
 
@@ -911,6 +965,7 @@ PanelWindow {
       id: morphLayer
 
       label: "surface." + win.key + ".morph"
+      soft: !win.small
       visible: win.morphing
       opacity: bodyHolder.opacity
       shapeProgress: win.shapeProgress

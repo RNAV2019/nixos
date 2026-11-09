@@ -194,7 +194,9 @@ Item {
   LevelTrack {
     x: root.at.trackLeft
     y: Theme.islandPillTrackTop
-    width: root.at.trackWidth
+    // A reading that is a word ("Muted", "Mic off") reaches back over the track's far end: the
+    // track stops short of it, as it does of a figure by the layout's own metrics.
+    width: root.hasReading ? Math.min(root.at.trackWidth, readingText.x + readingText.width - readingText.contentWidth - Theme.islandPillReadingGap - x) : root.at.trackWidth
     visible: root.hasTrack
     value: root.value
     indeterminate: root.indeterminate
