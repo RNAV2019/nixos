@@ -343,6 +343,9 @@ Variants {
         name: "nearby.picker"
         subShown: win.picking
         subBase: (width - Theme.pickerWidth) / 2
+        // The picker is wider than the card it goes back to: a card's width of travel would leave
+        // it resting inside the narrow card, over the Send view, until the slide settled.
+        travel: Math.max(width, Theme.pickerWidth)
       }
 
       Item {

@@ -73,18 +73,24 @@ Variants {
       };
     }
 
-    // A fresh arrival on a card nobody can see lands at once; on a card on screen it crossfades.
+    // A fresh arrival on a card nobody can see lands at once. On a card on screen the one before
+    // turns into it in place, as one moment does into the next (Ui/MorphLayer.qml): what the two
+    // share (the buttons, the close mark, the badge) stays, and only the words change. Two slots
+    // crossfaded showed both notifications through each other and dipped what they shared.
+    // The crossfade is kept for when there is nothing on screen to turn from.
     function present(n) {
       var shown = win.shown;
       if (shown && shown.ref === n)
         return;
       var shot = win.snapshot(n);
       var crossfade = win.showing && !win.parked && shown !== null;
-      if (!crossfade) {
+      if (!crossfade || win.swapBegin()) {
         if (win.front === 0)
           slotA.n = shot;
         else
           slotB.n = shot;
+        if (crossfade)
+          win.swapEnd();
         return;
       }
       if (win.front === 0)
