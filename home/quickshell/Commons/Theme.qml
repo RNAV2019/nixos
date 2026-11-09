@@ -320,6 +320,15 @@ Singleton {
   readonly property real morphWidthLead: 1.13
   readonly property real morphCloseQuicken: 1.22
   readonly property real morphCloseDamping: 1
+  // Following the hand (Ui/SwipeAway.qml): a card dragged sideways is thrown away when it is let go
+  // past swipeDismissAt of its width, or fast enough to coast there (Motion.thrown at a quick
+  // throw's friction, swipeThrowRate: about 900 px/s from rest for a history row); short of that it
+  // springs back. It fades as it goes and is clear by swipeFadeEnd of its width, which is when its
+  // owner is told. The first swipeSlop px of a press move nothing, so a click stays a click.
+  readonly property real swipeDismissAt: 0.4
+  readonly property real swipeThrowRate: 0.994
+  readonly property real swipeFadeEnd: 0.8
+  readonly property int swipeSlop: 6
 
   // The small controls' pace (the switch knob): a critically damped spring that reaches 90% at
   // about 249 ms, since omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6.

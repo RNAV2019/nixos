@@ -256,6 +256,13 @@ focus that arrived by Tab. Do not hand-roll these; if a new control needs a stat
   out, the opacity is spent over the first 0.3 of the travel), the Wi-Fi password row's height
   (`Control/WifiView.qml`, content kept at 40 px inside a clip) and the dictation level bars
   (`MorphSpring` per bar, `Theme.levelOmega` 40, epsilon 0.1 px; `MorphSpring.epsilon` defaults to 0.3 px).
+- **`SwipeAway`**: a card thrown away sideways (a toast, a notification row). Put one inside the card,
+  move the card by its `offset` and dim it by its `fade`: a press dragged sideways, or two fingers across
+  a touchpad, carries the card one to one; let go past `Theme.swipeDismissAt` of its width or fast enough
+  to coast there (`Motion.thrown`) and it carries on out at that speed and `dismissed` fires, else it
+  springs back from the hand's speed. It sits behind the card's children (a drag handler takes every press
+  it sees, so nothing clickable may lie under it); where the click area is under the card, name it as `grip`.
+  Displays' monitor tiles hand the pointer's speed to their springs the same way (`Motion.tracker`, `kick`).
 - **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view
   (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
   views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.

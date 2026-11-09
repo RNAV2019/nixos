@@ -3,6 +3,7 @@ import qs.Commons
 import qs.Control
 import qs.Services
 import qs.Ui
+import "../Ui/Motion.js" as Motion
 
 // The monitors drawn to scale. The laptop panel is the anchor; the external monitor is
 // dragged around it, follows the pointer 1:1, and on release springs flush to the nearest
@@ -520,6 +521,18 @@ ControlSubView {
     height: hSpring.value
     z: selected ? 1 : 0
 
+    // Hands a spring that was following the pointer on to its place, from `from` (where the
+    // pointer let go: letting go can land the spring on a target before it is free to travel)
+    // at the pointer's speed `v`. The speed is held to what lands without passing the place, and
+    // one heading the other way is dropped.
+    function thrown(spring, from, v) {
+      if (Theme.reduceMotion || !spring.animate)
+        return;
+      spring.value = from;
+      if (spring.value !== spring.target)
+        spring.kick(Motion.seedVelocity(from, spring.target, v, spring.omega));
+    }
+
     // Four springs on one omega, so a tile's edges arrive together. Labels carry the monitor name.
     MorphSpring {
       id: xSpring
@@ -617,11 +630,16 @@ ControlSubView {
       preventStealing: true
 
       property point start
+      // The pointer's recent speed along each axis, for the release.
+      readonly property var speedX: Motion.tracker()
+      readonly property var speedY: Motion.tracker()
 
       onPressed: function (mouse) {
         start = mapToItem(tile.area, mouse.x, mouse.y);
         tile.area.dragX = 0;
         tile.area.dragY = 0;
+        speedX.reset();
+        speedY.reset();
         tile.area.dragging = true;
       }
 
@@ -629,15 +647,24 @@ ControlSubView {
         var p = mapToItem(tile.area, mouse.x, mouse.y);
         tile.area.dragX = p.x - start.x;
         tile.area.dragY = p.y - start.y;
+        var now = Date.now();
+        speedX.push(now, p.x);
+        speedY.push(now, p.y);
       }
 
       onReleased: {
         var moved = Math.abs(tile.area.dragX) + Math.abs(tile.area.dragY) > 2;
         var spot = moved ? tile.area.snap(tile.area.toLayoutX(tile.x), tile.area.toLayoutY(tile.y)) : null;
+        var now = Date.now();
+        var px = tile.x, py = tile.y;
         // The spring takes over from where the pointer let go.
         tile.area.dragging = false;
         if (spot)
           tile.area.commit(spot);
+        // And at the pointer's speed, so the tile glides into its place rather than stopping
+        // dead and then setting off.
+        tile.thrown(xSpring, px, speedX.velocity(now));
+        tile.thrown(ySpring, py, speedY.velocity(now));
       }
 
       onCanceled: tile.area.dragging = false

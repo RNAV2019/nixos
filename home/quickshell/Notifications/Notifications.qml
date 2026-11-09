@@ -126,10 +126,12 @@ Variants {
     }
 
     // Dismiss on the bus and drop from the store; the card keeps its snapshot to fade out with.
-    function close() {
-      if (!current)
+    // `which` names one that may no longer be the front one (a toast thrown away as a newer one
+    // arrived); one that has already gone is left alone.
+    function close(which) {
+      var n = which || current;
+      if (!n || NotificationStore.popups.indexOf(n) < 0)
         return;
-      var n = current;
       n.dismiss();
       NotificationStore.forgetPopup(n);
     }
@@ -149,8 +151,9 @@ Variants {
     }
 
     Timer {
-      // Only while the card is up and expiring, and the pointer is elsewhere.
-      running: win.open && win.timeout > 0 && !cardHover.containsMouse
+      // Only while the card is up and expiring, and the pointer is elsewhere. A card being swiped
+      // holds it too: the drag takes the pointer from the hover.
+      running: win.open && win.timeout > 0 && !cardHover.containsMouse && !slotA.swiping && !slotB.swiping
       interval: 100
       repeat: true
       onTriggered: {
@@ -219,6 +222,9 @@ Variants {
       host: win
       depth: 1
     }
+
+    // Where a toast's swipe is read (Ui/SwipeAway.qml `grip`).
+    readonly property alias cardArea: cardHover
 
     MouseArea {
       id: cardHover

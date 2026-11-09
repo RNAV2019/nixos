@@ -116,6 +116,15 @@ function tracker() {
   };
 }
 
+// Which way something dragged `x` px from rest and let go at `v` px/s is thrown away: 1 or -1 when
+// where it would coast to (project at `rate`) lies more than `limit` px from rest on that side, 0
+// when it stays. So a card held far out and let go still goes, a short flick goes, and one flicked
+// back toward rest from far out stays.
+function thrown(x, v, rate, limit) {
+  var land = x + project(v, rate);
+  return land > limit ? 1 : land < -limit ? -1 : 0;
+}
+
 // v rounded to the device-pixel grid of a surface at `ratio`.
 function snap(v, ratio) {
   return Math.round(v * ratio) / ratio;
