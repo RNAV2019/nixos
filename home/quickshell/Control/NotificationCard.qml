@@ -6,6 +6,11 @@ import qs.Ui
 Rectangle {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): the same notification as its toast, which turns into it.
+  property string morphRole: "notification"
+  property string morphKey: "notification." + root.appName + "|" + root.summary
+  property var morphSlot: undefined
+
   property string appName: ""
   property string summary: ""
   property string body: ""
@@ -30,6 +35,7 @@ Rectangle {
 
   Rectangle {
     id: avatar
+    objectName: "avatar"
 
     x: 14
     y: 16.5
@@ -39,6 +45,7 @@ Rectangle {
     color: Theme.withAlpha(root.accentColour, 0.22)
 
     Text {
+      objectName: "initial"
       anchors.centerIn: parent
       visible: !icon.shown
       text: NotificationStore.initial(root.appName)
@@ -61,6 +68,7 @@ Rectangle {
   }
 
   Text {
+    objectName: "app"
     x: Theme.controlNotifTextLeft
     y: 13
     width: Math.max(0, dismiss.x - x - 10)
@@ -72,6 +80,7 @@ Rectangle {
   }
 
   Text {
+    objectName: "summary"
     x: Theme.controlNotifTextLeft
     y: 28
     width: Math.max(0, dismiss.x - x - 10)
@@ -85,6 +94,7 @@ Rectangle {
 
   Text {
     id: bodyText
+    objectName: "body"
 
     x: Theme.controlNotifTextLeft
     y: 48

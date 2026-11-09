@@ -226,3 +226,39 @@ function satelliteKick(size, omega, zeta) {
   var tp = Math.atan2(wd, zeta * omega) / wd;
   return size * wd / (Math.exp(-zeta * omega * tp) * Math.sin(wd * tp));
 }
+
+// Content morph helpers (Ui/MorphLayer.qml): a straight blend of two numbers, two rects
+// ({x, y, w, h}) and two colours ({r, g, b, a}).
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function lerpRect(a, b, t) {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+    w: a.w + (b.w - a.w) * t,
+    h: a.h + (b.h - a.h) * t
+  };
+}
+
+// How far a rect's middle goes from `a` to `b`: a pill that widens where it stands goes nowhere.
+function travel(a, b) {
+  return Math.hypot(a.x + a.w / 2 - b.x - b.w / 2, a.y + a.h / 2 - b.y - b.h / 2);
+}
+
+// Blended premultiplied, so a faint white lift turning into a solid accent passes through a fainter
+// accent rather than a grey.
+function lerpColor(a, b, t) {
+  var al = a.a + (b.a - a.a) * t;
+  var mix = function (x, y) {
+    var v = x * a.a + (y * b.a - x * a.a) * t;
+    return al > 0.0001 ? v / al : y;
+  };
+  return {
+    r: mix(a.r, b.r),
+    g: mix(a.g, b.g),
+    b: mix(a.b, b.b),
+    a: al
+  };
+}

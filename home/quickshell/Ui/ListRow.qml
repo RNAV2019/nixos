@@ -12,6 +12,8 @@ import qs.Commons
 ButtonBase {
   id: root
 
+  morphRole: "row"
+
   enum Kind {
     Grouped,
     Hairline,
@@ -161,6 +163,7 @@ ButtonBase {
 
   Text {
     id: labelText
+    objectName: "label"
 
     x: root.textLeft
     y: root.labelTop >= 0 ? root.labelTop : root.sublabel !== "" ? root.height / 2 - 17 : (root.height - height) / 2
@@ -174,6 +177,7 @@ ButtonBase {
   }
 
   Text {
+    objectName: "sublabel"
     x: root.textLeft
     y: root.height / 2 + 1
     width: Math.min(implicitWidth, root.subRight >= 0 ? Math.max(0, root.width - x - root.subRight) : root.textRoom)
@@ -187,6 +191,7 @@ ButtonBase {
 
   Text {
     id: valueText
+    objectName: "value"
 
     x: root.valueCentred ? (root.width - width) / 2 : (slot.width > 0 ? slot.x - root.valueGap : root.width - root.valueInset) - width
     y: root.valueTop >= 0 ? root.valueTop : (root.height - height) / 2

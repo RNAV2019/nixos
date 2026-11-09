@@ -1058,6 +1058,52 @@ Singleton {
   // The outgoing contents dissolve inside the still, short so it finishes before the taker lands.
   readonly property int morphFarewell: reduceMotion ? 1 : 70
 
+  // The content morph between two surfaces (Ui/MorphLayer.qml). What pairs flies on the shape's
+  // own progress; what the surface before had with no partner is cut once the clock passes
+  // morphCut ms (on the next frame, never half faded under what arrives); what the new one has
+  // with no partner arrives in a cascade, row by row, morphArriveDelay after its first frame and
+  // morphArriveStep apart (at most morphArriveSteps steps), each over morphArriveFade. Words that
+  // change roll morphRoll px; the mask holding an anchor back reaches morphMaskBleed px past it,
+  // for glyphs that overhang.
+  readonly property int morphCut: 6
+  // How long into a morph the taker is read again for contents that lay out late (MorphLayer).
+  readonly property int morphRescanFor: 180
+  // A pair travelling this far flies on a backing of the card's own ground (MorphGhost), so it hides
+  // what it crosses rather than print over it.
+  readonly property int morphBackingTravel: 120
+  // How long a plate takes to turn another colour in a morph (Ui/MorphPart.qml).
+  readonly property int morphPlateTint: 56
+  // How long what waited for a pair that leads a panel takes to come up (Ui/MorphLayer.qml).
+  readonly property int morphWaitedFade: 50
+  // How far short of landing a pair that leads a panel down is when what lies below its landing comes.
+  readonly property int morphLeadBelow: 36
+  // Milliseconds per pixel: how what lies below where that pair lands comes, top to bottom.
+  readonly property real morphLeadStagger: 0.05
+  // How far a carousel's tile on its way may overlap a tile with no partner beside it as that comes:
+  // less than nothing, it has to leave that much of a gap.
+  readonly property int morphCarouselRoom: -10
+  // A pill whose words change where it stands: the old are gone over morphPillOut ms, the new start
+  // morphPillIn ms in, so one frame has the old faint and none has neither.
+  readonly property int morphPillOut: 12
+  readonly property int morphPillIn: 8
+  // ...and come up over morphPillRoll ms: a roll, not a swap in a frame or two.
+  readonly property int morphPillRoll: 40
+  // How long a pill's glyph takes from where the old one sat to where the new one sits.
+  readonly property int morphGlyphTravel: 70
+  readonly property int morphArriveDelay: 6
+  readonly property int morphArriveStep: 4
+  readonly property int morphArriveSteps: 12
+  readonly property int morphArriveFade: 40
+  readonly property real morphRoll: 8
+  readonly property int morphTitleRoll: 14
+  // How long a changed word takes to roll out, and to roll in (MorphPart).
+  readonly property int morphRollOut: 22
+  readonly property int morphRollIn: 26
+  // How long the fill or picture of a pair that only the panel before had takes to go (a row's card
+  // around a notification that becomes a toast).
+  readonly property int morphPlateFade: 70
+  readonly property real morphMaskBleed: 2
+
   // The still's ground outlives its contents, and only starts to go once the taker reports a
   // frame on screen (Ui/IslandOrigin.qml), so it covers however long that takes.
   readonly property int morphGroundFade: reduceMotion ? 1 : 60
@@ -1072,6 +1118,9 @@ Singleton {
   // How long a closed surface keeps its window full size before parking it, so the bar's pill
   // has a frame on screen under the surface's last one.
   readonly property int surfacePark: 80
+  // How long a panel holds the keyboard exclusively after opening (Ui/IslandSurface.qml), and tints
+  // snap (Ui/IslandSurfaceBase.qml): past the shape's settle, as both cost a frame.
+  readonly property int surfaceFocusPrime: 350
 
   // A close hands its drop shadow to the bar's pill over this long, one fading out as the other
   // fades in, so the two never stack (two at once read as a dark bloom under the pill). Inside

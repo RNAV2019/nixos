@@ -24,6 +24,12 @@ Item {
     })
   readonly property real inset: 16
 
+  // A content-morph anchor (Ui/MorphScan.js), the same thing as an IslandPill: a moment swapped for
+  // another, either kind, rolls its title and swaps its glyph in place.
+  property string morphRole: "pill"
+  property string morphKey: "pill"
+  property var morphSlot: undefined
+
   // Where the buttons begin, counted from the right edge.
   readonly property real buttonsLeft: buttonRow.x
 
@@ -37,6 +43,7 @@ Item {
   }
 
   Text {
+    objectName: "label"
     x: 48
     y: 13
     width: Math.max(0, root.buttonsLeft - 12 - x)
@@ -49,6 +56,7 @@ Item {
   }
 
   Text {
+    objectName: "detail"
     x: 48
     y: 33
     width: Math.max(0, root.buttonsLeft - 12 - x)

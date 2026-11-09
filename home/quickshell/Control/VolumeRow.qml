@@ -14,6 +14,8 @@ Item {
 
   // Rows without a mute control: the slider then takes the full width.
   property bool showMute: true
+  // What the slider is the same thing as on another surface (the volume OSD), for the content morph.
+  property string levelKey: ""
 
   readonly property var audio: root.node !== null && root.node.audio ? root.node.audio : null
 
@@ -24,6 +26,7 @@ Item {
   implicitHeight: Theme.controlSliderHeight
 
   BigSlider {
+    morphKey: root.levelKey
     width: root.showMute ? root.width - Theme.controlSliderHeight - 10 : root.width
     height: parent.height
     accessibleName: root.accessibleName

@@ -15,6 +15,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "segmented"
+  property string morphKey: ""
+  property var morphSlot: undefined
+
   // One per segment: { label?, icon?, filled?, name?, enabled? }. `name` is what a screen
   // reader says when there is no label.
   required property var segments
@@ -198,6 +203,8 @@ Item {
 
   // The keyboard cursor, drawn over the cell it is on.
   Rectangle {
+    // A focus state, not contents: a content morph leaves it out.
+    readonly property bool morphIgnore: true
     readonly property Item under: root.activeFocus && !root.pointerFocused ? cellRepeater.itemAt(root.cursor) : null
 
     visible: under !== null

@@ -7,6 +7,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "button"
+  property string morphKey: ""
+  property var morphSlot: undefined
+
   property string accessibleName: ""
   property int accessibleRole: Accessible.Button
   // False for a control that only reports: it still tracks the pointer, but takes no click, no
@@ -72,6 +77,9 @@ Item {
     root.pointerFocused = false
 
   Rectangle {
+    // A focus state, not contents: a content morph leaves it out.
+    readonly property bool morphIgnore: true
+
     z: 1
     anchors.fill: parent
     anchors.margins: root.ringInset

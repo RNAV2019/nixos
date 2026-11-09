@@ -33,6 +33,15 @@ Item {
   // The shut pill and the like: sized to the surface, not to the contents' box.
   property alias fillData: fillHolder.data
 
+  // Drawn over the contents in the window's coordinates and cut to the card's bounds: a content
+  // morph's ghosts (Ui/MorphLayer.qml), which fly between where two panels have their contents.
+  property alias ghostData: ghostWindow.data
+
+  // Laid out over the content box: what a content morph shows of the contents at each point, in
+  // the red channel (Ui/MorphMask.qml). Read only while `maskActive`.
+  property alias maskData: maskHolder.data
+  property bool maskActive: false
+
   // The size the contents are laid out at, which is the open size. Set, the contents sit in a
   // box of exactly this size at (contentLeft, contentTop) in the parent's coordinates, however
   // big the card is just now. Left at 0, they fill the card.
@@ -148,6 +157,86 @@ Item {
     property size itemSize: Qt.size(width, height)
     property real radius: root.surfaceRadius
     property real aa: 1 / root.pixelRatio
+    property variant mask: maskTexture
+    property real useMask: root.maskActive ? 1 : 0
+
+    fragmentShader: Qt.resolvedUrl("../Shaders/roundedclip.frag.qsb")
+  }
+
+  // The mask's box: the content box's geometry, rendered only while a morph is running.
+  Item {
+    id: maskHolder
+
+    x: contentHolder.x
+    y: contentHolder.y
+    width: contentHolder.width
+    height: contentHolder.height
+    visible: root.maskActive
+  }
+
+  ShaderEffectSource {
+    id: maskTexture
+
+    textureSize: root.maskActive ? Qt.size(Math.max(1, Math.round(maskHolder.width * root.pixelRatio)), Math.max(1, Math.round(maskHolder.height * root.pixelRatio))) : Qt.size(1, 1)
+    sourceItem: root.maskActive && root.visible ? maskHolder : null
+    hideSource: true
+    live: true
+    smooth: false
+    visible: false
+  }
+
+  // The ghosts, above the contents and cut to the card's rounded shape the way the contents are: they
+  // are drawn into a box that holds every shape the card takes during the morph (`ghostBox`, in the
+  // parent's coordinates, set once per morph so the texture is allocated once), and the same shader
+  // crops that to the card. Drawn into a texture like the contents, ghost text is antialiased as the
+  // text it lands on.
+  property bool ghostActive: false
+  property rect ghostBox: Qt.rect(0, 0, 0, 0)
+
+  Item {
+    id: ghostHolder
+
+    x: root.snap(root.ghostBox.x) - root.x
+    y: root.snap(root.ghostBox.y) - root.y
+    width: Math.max(1, root.snap(root.ghostBox.width))
+    height: Math.max(1, root.snap(root.ghostBox.height))
+    visible: root.ghostActive
+
+    Item {
+      id: ghostWindow
+
+      x: -ghostHolder.x - root.x
+      y: -ghostHolder.y - root.y
+    }
+  }
+
+  ShaderEffectSource {
+    id: ghostTexture
+
+    textureSize: root.ghostActive ? Qt.size(Math.round(ghostHolder.width * root.pixelRatio), Math.round(ghostHolder.height * root.pixelRatio)) : Qt.size(1, 1)
+    sourceItem: root.ghostActive && root.visible ? ghostHolder : null
+    hideSource: true
+    live: true
+    smooth: false
+    visible: false
+  }
+
+  ShaderEffect {
+    x: ghostHolder.x
+    y: ghostHolder.y
+    width: ghostHolder.width
+    height: ghostHolder.height
+    visible: root.ghostActive && root.contentOpacity > 0
+    opacity: root.contentOpacity
+
+    property variant source: ghostTexture
+    property size boxSize: Qt.size(root.width, root.height)
+    property point boxOrigin: Qt.point(-ghostHolder.x, -ghostHolder.y)
+    property size itemSize: Qt.size(width, height)
+    property real radius: root.surfaceRadius
+    property real aa: 1 / root.pixelRatio
+    property variant mask: maskTexture
+    property real useMask: 0
 
     fragmentShader: Qt.resolvedUrl("../Shaders/roundedclip.frag.qsb")
   }

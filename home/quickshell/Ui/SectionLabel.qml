@@ -8,6 +8,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "section"
+  property string morphKey: ""
+  property var morphSlot: undefined
+
   property string title: ""
   property string detail: ""
   property string note: ""

@@ -58,6 +58,67 @@ to `Bus.satellite[screen]`; the body is the one shader, `Shaders/satellite.frag`
 
 Both register on `Bus` when they are created (`registerSurface`), so there is no list to edit.
 
+**Contents morph from one surface into the next.** When a surface hands the island to another
+(panel to panel, a pill to a panel, one pill over another), the one letting go reads what it
+shows into plain descriptions (`Ui/MorphScan.js` `scan`: text, icons, filled rectangles and
+images, in paint order and window coordinates) and passes them with the handoff
+(`Bus.publishHandoff`, `IslandOrigin.fromMorph`). The taker redraws them as ghosts
+(`MorphLayer`, `MorphGhost`, `MorphPart`, drawn in `FrostedSurface.ghostData` over its contents)
+and pairs them with its own (`MorphScan.match`):
+
+- an **anchor** is an item with a `morphRole`; the primitives declare one (`Tile`: tile, choice,
+  carousel or device; `ListRow`: row; `Button`; `Switch`; `PanelHeader` and `PanelFooter`, keyed
+  `header` and `footer`; `SectionLabel`; `Segmented`; `TextField`; `LevelTrack`; `IslandPill`,
+  keyed `pill`; `BigSlider`; `MediaCard`, keyed `media`). An anchor inside an anchor is its own,
+  role prefixed (`header.button`). A part is named by its item's `objectName`, else by type and
+  ordinal, so name a primitive's texts when their order varies (`IslandPill`, `PanelFooter`).
+- pairs are the same `morphKey` (several may be listed, most particular first: `level.volume|pill`),
+  else the same role and `morphSlot` (declared, or the ordinal in reading order among those not
+  clipped away) when alike in size and close; inside one surface (`swapBegin`) whatever their keys.
+  A pair flies on the shape's progress, kept inside the card; changed text rolls, changed icons dip, pictures dissolve.
+  Words, glyphs and colours change on the clock (`morphRoll*`), not the shape. A panel's title slides
+  from where the old one was to where the new one lands. On a plate that changes colour a long way
+  (a chosen tile's fill going, `MorphGhost.plateTurns`) the new words keep the old ink until the
+  plate is half way (`morphPlateTint`); elsewhere each keeps its own. A plate with no partner fades
+  no faster than its flight (`morphPlateFade`).
+- in a pill, the old words go at once and the new roll in from below over `morphPillRoll`, with what
+  has no partner on that same curve; a pill handed to another pill moves its glyph from where the old
+  one sat to where the new one does over `morphGlyphTravel`, on the clock, not pinned to the card's
+  edge. The ghosts land no sooner than those finish, since a swap the same size has no shape to wait on.
+- carousel tiles pair by their place in the row (the theme and wallpaper pickers declare no key), so
+  the highlight changes tile rather than one tile flying over the others; a tile with no partner
+  waits until the one flying beside it leaves `morphCarouselRoom` clear.
+- what arrives where a pair is flying waits until it has passed. A long flight down (the OSD's slider
+  into the control centre) leads: what lies ahead of it comes as it passes, and what lies below where
+  it lands comes top to bottom once it is `morphLeadBelow` short of landing (`MorphLayer.lead`,
+  `aheadOfLead`, `leadStagger`). A long flight that does not lead flies on a backing of the card's
+  ground (`morphBackingTravel`), so it hides what it crosses rather than print over it.
+- what the surface before had with no partner is cut on the frame after the taker's first
+  (`Theme.morphCut`); what the taker has with no partner arrives in a cascade (`morphArrive*`).
+  `MorphMask`, read by `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back
+  until its ghost lands, and lets the rest arrive.
+- what cannot be redrawn (a Shape, a Canvas, a shader) never pairs; inside a pair it waits for it.
+- the still keeps its contents and ground until the taker's first frame, then cuts both, since the
+  taker's ghosts draw the same thing in the same place; the taker holds that first frame, shape
+  and all, until the still has drawn one without them (`Bus.stillCleared`).
+- a swap inside one surface that stays up (a moment replacing a moment, the OSD changing level)
+  morphs the same way: `swapBegin()`, change the contents, `swapEnd()`.
+- the taker's first frame, up before its clock runs, wears the corners it took over, not its own.
+- B's contents never move: the growing card uncovers them (a tile at the edge is seen cut until it is
+  reached). Elements that mean the same thing in two panels but play different roles (a device's name
+  as a label in Nearby and as the Phone panel's title) are left unpaired by choice: a flight across the
+  card read worse than the cut and cascade.
+
+Recording and reviewing these: `tools/qs-verify/motion/transitions.sh OUTDIR A:B ...` records each
+handover in the headless harness, and `sheet.py OUTDIR` turns each into a 12-frame contact sheet
+(+0..+500 ms). wf-recorder must not be given `-r`: a forced rate rewrites timestamps, so a dropped
+frame squeezes the timeline into a fake lurch. Sheets sample with rounding, not floor.
+
+The taker re-reads its own contents while the ghosts fly (a list that loads, a carousel that
+centres late). Reduce motion turns it all off. Review a change with
+`tools/qs-verify/motion/transitions.sh` and `sheet.py`, which record every pair and cut each into
+a contact sheet.
+
 **To add a panel:** a file with a `Variants` over `IslandSurface { key: "name" ... }`, an
 instance in `shell.qml`. The `qs ipc call name toggle|close` handler comes from the loop over
 `Bus.islandKeys`, unless the key is in that filter, which is for panels with handwritten

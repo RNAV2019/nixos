@@ -161,7 +161,9 @@ Variants {
       id: body
 
       anchors.fill: parent
-      enabled: win.open
+      // Through its close too, or every tile dims a beat before a surface takes these contents on (the
+      // window's mask already stops the pointer).
+      enabled: win.showing
 
       // The push is one per-frame spring at the island's pace (Ui/SubviewSlide.qml); it waits for
       // the sub-view to be built, so the home view holds still rather than sliding out to nothing.

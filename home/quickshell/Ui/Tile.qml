@@ -11,6 +11,8 @@ import qs.Commons
 ButtonBase {
   id: root
 
+  morphRole: root.kind === Tile.Control ? "tile" : root.kind === Tile.Choice ? "choice" : root.kind === Tile.Carousel ? "carousel" : "device"
+
   enum Kind {
     Control,
     Choice,
@@ -214,6 +216,7 @@ ButtonBase {
 
   Text {
     id: name
+    objectName: "label"
 
     x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileTextLeft
     y: root.stacked ? Theme.controlTileStackedLabelTop : 12
@@ -228,6 +231,7 @@ ButtonBase {
   }
 
   Text {
+    objectName: "sublabel"
     x: name.x
     y: root.stacked ? Theme.controlTileStackedSubTop : 30
     width: name.width
@@ -254,6 +258,7 @@ ButtonBase {
   }
 
   Text {
+    objectName: "label"
     anchors.horizontalCenter: parent.horizontalCenter
     y: Theme.powerLabelTop - Theme.powerTileTop
     visible: root.isChoice
@@ -433,6 +438,7 @@ ButtonBase {
   }
 
   Text {
+    objectName: "label"
     y: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap
     width: root.width
     visible: root.isDevice
@@ -446,6 +452,7 @@ ButtonBase {
   }
 
   Text {
+    objectName: "sublabel"
     y: Theme.nearbyDeviceSize + Theme.nearbyDeviceNameGap + Theme.nearbyDeviceNameLine + Theme.nearbyDeviceSubGap
     width: root.width
     visible: root.isDevice && root.hasSub

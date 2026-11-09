@@ -73,6 +73,9 @@ printf '%s' "$THEME" >"$SCRATCH_HOME/.local/state/theme/name"
 # Opt-in switches for the shell itself (motion recorder), kept across the scrub.
 MOTION_LOG=${QS_MOTION_LOG:-}
 REFRESH=${QS_REFRESH:-60}
+# The compositor's renderer: pixman (default, the same pixels everywhere) or gles2 (the GPU, for
+# motion: pixman paints a full 1080p frame too slowly to keep 120 Hz).
+RENDERER=${QS_RENDERER:-pixman}
 REDUCE_MOTION=${QUICKSHELL_REDUCE_MOTION:-}
 
 scrub_live_env
@@ -271,7 +274,7 @@ output HEADLESS-1 mode 1920x1080@${REFRESH}Hz scale $SCALE
 output * bg $QSV_WORK/bg.png fill
 default_border none
 EOF
-WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
+WLR_BACKENDS=headless WLR_RENDERER=$RENDERER WLR_LIBINPUT_NO_DEVICES=1 \
   "$(tool sway)" -c "$QSV_WORK/sway.conf" >"$QSV_WORK/sway.log" 2>&1 &
 for _ in $(seq 100); do
   [[ -S $RT/wayland-1 ]] && break
