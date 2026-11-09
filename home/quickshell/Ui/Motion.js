@@ -70,6 +70,52 @@ function pace(dw, dh, quick, calm) {
   return quick + (calm - quick) * ramp(paceTravel(dw, dh), 60, 420);
 }
 
+// ---- following the hand ----
+
+// How far something dragged `over` px past a limit is shown past it: it gives less the further it
+// is pulled and never passes `room` px (the view's own size is a good room). Apple's curve, with
+// its constant 0.55: over = 0 gives 0 at slope 0.55, and it flattens toward `room`.
+function rubberBand(over, room) {
+  if (room <= 0)
+    return 0;
+  var s = over < 0 ? -1 : 1;
+  var d = Math.abs(over);
+  return s * (1 - 1 / (d * 0.55 / room + 1)) * room;
+}
+
+// Where something let go at `v` px/s would coast to under a friction that keeps `rate` of its speed
+// each millisecond (0.998 is a scroll view's, 0.994 a quick throw's): the distance still to go.
+function project(v, rate) {
+  return v / 1000 * rate / (1 - rate);
+}
+
+// A pointer's speed from its last few samples, for a release: push({t (ms), x}) on every move, and
+// read velocity() on release; samples older than 80 ms are dropped, so a drag that paused before
+// letting go throws nothing.
+function tracker() {
+  var pts = [];
+  return {
+    reset: function () {
+      pts = [];
+    },
+    push: function (t, x) {
+      pts.push({
+        t: t,
+        x: x
+      });
+      while (pts.length > 1 && t - pts[0].t > 80)
+        pts.shift();
+    },
+    velocity: function (now) {
+      if (pts.length < 2 || now - pts[pts.length - 1].t > 80)
+        return 0;
+      var a = pts[0];
+      var b = pts[pts.length - 1];
+      return b.t > a.t ? (b.x - a.x) / (b.t - a.t) * 1000 : 0;
+    }
+  };
+}
+
 // v rounded to the device-pixel grid of a surface at `ratio`.
 function snap(v, ratio) {
   return Math.round(v * ratio) / ratio;
