@@ -460,6 +460,23 @@ function match(from, to, opts) {
       take(c.a, c.b, "same");
   });
 
+  // A ghost the surface before was still fading out (MorphLayer.snapshot) that this surface has in
+  // the very same place is this surface's own, taken back before it had gone: it stays, and comes
+  // back up where it stands.
+  fromSorted.forEach(function (a) {
+    if (!a.ghost || !pairable(a) || !free(from, usedA, a))
+      return;
+    for (var i = 0; i < to.length; i++) {
+      var b = to[i];
+      if (!pairable(b) || !free(to, usedB, b) || b.role !== a.role || b.slot !== a.slot || (b.key || "") !== (a.key || ""))
+        continue;
+      if (Math.abs(a.rect.x - b.rect.x) > 1.5 || Math.abs(a.rect.y - b.rect.y) > 1.5 || Math.abs(a.rect.w - b.rect.w) > 1.5 || Math.abs(a.rect.h - b.rect.h) > 1.5)
+        continue;
+      take(a, b, "back");
+      return;
+    }
+  });
+
   fromSorted.forEach(function (a) {
     if (!pairable(a) || !free(from, usedA, a))
       return;

@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -515,4 +515,35 @@ sc_lock_reveal() {
   sleep 0.14
   grim "$shot-out-mid.png"
   sleep 1.2
+}
+
+# Two panels swapped back and forth faster than a handover takes: control, calendar, control,
+# calendar, control, STEP seconds apart (default 0.12), then left to rest. Windows are warmed first.
+sc_ping_pong() {
+  local k step=${QS_PING_STEP:-0.12}
+  for k in control calendar; do
+    toggle "$k"
+    sleep 0.9
+    toggle "$k"
+    sleep 0.9
+  done
+  sleep 0.3
+  toggle control
+  sleep 0.9
+  toggle calendar
+  sleep "$step"
+  toggle control
+  sleep "$step"
+  toggle calendar
+  sleep "$step"
+  toggle control
+  sleep 1.4
+  qsipc control close >/dev/null 2>&1
+  sleep 1.0
+}
+
+# The same pair at a pace a hand keeps up with on two keys: each swap lands while the one before
+# is still settling.
+sc_ping_pong_slow() {
+  QS_PING_STEP=0.3 sc_ping_pong
 }

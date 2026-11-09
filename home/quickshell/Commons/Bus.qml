@@ -418,14 +418,16 @@ Singleton {
   // The shape a surface was wearing when it let go, and how fast it was changing (px/s per
   // axis), so the taker carries the motion on.
   // `morph` is the letting-go surface's contents read for a content morph (Ui/MorphScan.js), or null.
-  function publishHandoff(screen, width, height, radius, vw, vh, morph) {
+  // `blur` is how soft it was showing them, when it is let go in the middle of a morph of its own.
+  function publishHandoff(screen, width, height, radius, vw, vh, morph, blur) {
     islandHandoffs = writeMap(islandHandoffs, screen, {
       width: width,
       height: height,
       radius: radius,
       vw: vw,
       vh: vh,
-      morph: morph || null
+      morph: morph || null,
+      blur: blur || 0
     });
   }
 

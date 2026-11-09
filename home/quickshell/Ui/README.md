@@ -119,6 +119,16 @@ and pairs them with its own (`MorphScan.match`):
   and all, until the still has drawn one without them (`Bus.stillCleared`).
 - a swap inside one surface that stays up (a moment replacing a moment, the OSD changing level)
   morphs the same way: `swapBegin()`, change the contents, `swapEnd()`.
+- a surface taken in the middle of its own morph (two panels swapped back and forth faster than a
+  handover takes) turns round from where it is. Its morph is frozen where it had got to
+  (`MorphLayer.freeze`) and read as it stands (`snapshot`), with how soft it was showing
+  (`shownBlur`, handed on as `IslandOrigin.fromBlur` and taken up as `carriedBlur`); what the
+  taker finds among the ghosts in the very place it has the same thing itself is its own, not yet
+  gone, and pairs with it (tier `back` in `MorphScan.match`) rather than fading out under its
+  copy fading in. A surface that claims the island again while it stands as a still asks for its
+  first frame afresh (`IslandOrigin.represent`): the frame it was last seen on is not one of what
+  it draws now, and counting it cut the other surface away over nothing. Record it with the
+  `ping-pong` scenarios.
 - the taker's first frame, up before its clock runs, wears the corners it took over, not its own.
 - B's contents never move: the growing card uncovers them (a tile at the edge is seen cut until it is
   reached). Elements that mean the same thing in two panels but play different roles (a device's name

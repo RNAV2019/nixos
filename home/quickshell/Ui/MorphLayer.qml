@@ -24,7 +24,19 @@ Item {
   property bool useShape: true
   // A swap inside one surface: pairs by role and slot whatever their keys (MorphScan.match).
   property bool inPlace: false
-  readonly property real progress: !clockRunning ? 0 : useShape && !isNaN(shapeProgress) ? shapeProgress : fallback.value
+  readonly property real progress: frozen ? frozenAt : !clockRunning ? 0 : useShape && !isNaN(shapeProgress) ? shapeProgress : fallback.value
+
+  // A surface let go in the middle of this morph stands as a still: its shape is re-based for the
+  // surface taking over, and the pairs must not jump with it. They stay where they had got to.
+  property bool frozen: false
+  property real frozenAt: 0
+
+  function freeze() {
+    if (!running || frozen)
+      return;
+    frozenAt = progress;
+    frozen = true;
+  }
 
   ProgressSpring {
     id: fallback
@@ -63,7 +75,12 @@ Item {
   readonly property real dissolveScale: 1 + (Theme.morphDissolveScale - 1) * (1 - dissolveT)
   readonly property real dissolveBlur: dissolveT >= 1 ? 0 : Theme.morphDissolveBlur * (1 - Motion.ramp(dissolveT, 0.1, 0.9))
   // The ghosts soften as the leavers among them go, and are sharp again before the pairs land.
-  readonly property real ghostBlur: !running || inPlace || !clockRunning || ghostsDone ? 0 : Theme.morphDissolveBlur * Motion.ramp(clock, 0, Theme.morphDissolveOut * 0.7) * (1 - Motion.ramp(clock, Theme.morphDissolveOut * 0.7, Theme.morphDissolveOut + 60))
+  // (Out of a surface taken in the middle of its own morph they start as soft as it was showing them,
+  // `carriedBlur`, so what was half dissolved does not come back sharp for a frame.)
+  property real carriedBlur: 0
+  readonly property real ghostBlur: !running || inPlace || ghostsDone ? 0 : !clockRunning ? carriedBlur : Motion.lerp(carriedBlur, Theme.morphDissolveBlur, Motion.ramp(clock, 0, Theme.morphDissolveOut * 0.7)) * (1 - Motion.ramp(clock, Theme.morphDissolveOut * 0.7, Theme.morphDissolveOut + 60))
+  // How soft this surface is showing its contents just now, for whoever takes over mid-morph.
+  readonly property real shownBlur: !running || inPlace ? 0 : Math.max(ghostBlur, dissolveT > 0.05 ? dissolveBlur : 0)
 
   signal finished
 
@@ -367,6 +384,8 @@ Item {
     clockRunning = false;
     clockArmed = false;
     ghostsDone = false;
+    frozen = false;
+    carriedBlur = 0;
     var m = MorphScan.match(from, to, {
       inPlace: morph.inPlace
     });
@@ -574,6 +593,7 @@ Item {
     clockArmed = false;
     running = false;
     clockRunning = false;
+    frozen = false;
     ghostsDone = true;
     pairs = [];
     outs = [];
@@ -643,7 +663,11 @@ Item {
       var cut = !clockRunning ? 1 : 1 - Motion.ramp(clock, 0, inPlace ? Theme.morphPillOut : Theme.morphDissolveOut);
       if (cut > 0.05)
         outs.forEach(function (a) {
-          result.push(faded(a, cut));
+          // Marked as a ghost: if it is the taker's own (a panel taken back before it had gone), the
+          // taker picks it up where it stands rather than fading it out under its own copy fading in.
+          var g = faded(a, cut);
+          g.ghost = true;
+          result.push(g);
         });
     }
     own.forEach(function (a) {

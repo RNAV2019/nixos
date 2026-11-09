@@ -148,6 +148,7 @@ PanelWindow {
     morphLayer.useShape = true;
     morphLayer.inPlace = false;
     morphLayer.begin(origin.fromMorph, morphLayer.rescan());
+    morphLayer.carriedBlur = origin.fromBlur;
     if (Theme.motionLog)
       console.info("morph begin " + win.key + " in " + (Date.now() - t0) + " ms");
     if (origin.presented)
@@ -278,6 +279,10 @@ PanelWindow {
     widthSpring.settle();
     heightSpring.settle();
     win.opening();
+    // Taken back while it stands as a still (or was one, and has not parked): nothing of it is
+    // drawn, so the frame it was last seen on does not count. It waits for a new one like any taker.
+    if (win.farewell)
+      origin.represent();
     handover = false;
     farewell = false;
     stillCarriesBody = false;
@@ -335,7 +340,10 @@ PanelWindow {
     if (Theme.motionLog && contents)
       console.info("morph read " + win.key + " " + contents.length + " anchors in " + (Date.now() - t0) + " ms");
     morphHanded = contents !== null && contents.length > 0;
-    origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh, morphHanded ? contents : null);
+    if (win.morphing)
+      morphLayer.freeze();
+    // Taken in the middle of its own morph, it hands on how soft it was showing them too.
+    origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh, morphHanded ? contents : null, morphHanded && win.morphing ? morphLayer.shownBlur : 0);
     // A taker still waiting for its first frame hands over velocity 0: nothing of this surface moves yet.
     // What was handed on stays as it is until the taker draws it.
     stillCarriesBody = win.open || morphHanded;
@@ -478,6 +486,10 @@ PanelWindow {
         console.info("morph ev " + win.key + " takerPresented=" + origin.takerPresented + " held=" + origin.held + " handed=" + win.morphHanded + " " + Date.now());
       if (!origin.held || !origin.takerPresented)
         return;
+      // The taker draws this surface's contents from here on; a morph of its own that was frozen
+      // under them has nothing left to show.
+      if (morphLayer.frozen)
+        win.stopMorph();
       var pace = win.paceFor(origin.heldTargetWidth - widthSpring.value, origin.heldTargetHeight - heightSpring.value, false);
       widthSpring.kick(Motion.seedVelocity(widthSpring.value, origin.heldTargetWidth, origin.heldVW, pace.w));
       heightSpring.kick(Motion.seedVelocity(heightSpring.value, origin.heldTargetHeight, origin.heldVH, pace.h));

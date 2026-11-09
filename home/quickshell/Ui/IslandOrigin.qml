@@ -36,6 +36,8 @@ QtObject {
   property var fromMorph: null
   // The corner radius of the shape handed over.
   property real fromRadius: 0
+  // How soft that surface was showing them, taken in the middle of a morph of its own (px of blur).
+  property real fromBlur: 0
 
   // The pill the surface starts from and returns to, which is wider while something plays.
   readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
@@ -117,6 +119,17 @@ QtObject {
       return;
     presented = true;
     Bus.reportPresented(screenName, ownSerial);
+  }
+
+  // Asks for the first frame again. `presented` only says a frame went up since the window became
+  // presentable, and a window stays presentable after its surface stopped drawing: a still whose
+  // ground has faded, one let go and not parked yet. Claiming again from there, that old report
+  // would cut the surface before this one away with nothing drawn in its place.
+  function represent() {
+    presentArmed = false;
+    presentSynced = false;
+    presentFallback.stop();
+    presented = false;
   }
 
   property Connections frames: Connections {
@@ -289,6 +302,7 @@ QtObject {
     fromVH = handoff.vh || 0;
     fromRadius = handoff.radius || 0;
     fromMorph = handoff.morph || null;
+    fromBlur = handoff.blur || 0;
     snapping = false;
     handedOver = true;
   }
@@ -305,6 +319,7 @@ QtObject {
     fromVW = 0;
     fromVH = 0;
     fromMorph = null;
+    fromBlur = 0;
     fromClock = true;
     Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
@@ -318,6 +333,7 @@ QtObject {
     fromVW = 0;
     fromVH = 0;
     fromMorph = null;
+    fromBlur = 0;
     fromClock = true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
@@ -337,8 +353,8 @@ QtObject {
 
   // Give the island up to the surface that claimed it. There is no shrink back to the pill:
   // what this one owes the taker is the shape it was wearing, published before it lets go.
-  function publish(width, height, radius, vw, vh, morph) {
-    Bus.publishHandoff(screenName, width, height, radius, vw, vh, morph);
+  function publish(width, height, radius, vw, vh, morph, blur) {
+    Bus.publishHandoff(screenName, width, height, radius, vw, vh, morph, blur);
     release();
   }
 }
