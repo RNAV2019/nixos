@@ -8,7 +8,7 @@
   agents = llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
 
   # Ahead of llm-agents until it catches up; the guard drops this once it does.
-  claude-code-version = "2.1.318";
+  claude-code-version = "2.1.321";
   claude-code =
     if pkgs.lib.versionOlder agents.claude-code.version claude-code-version
     then
@@ -16,7 +16,7 @@
         version = claude-code-version;
         src = pkgs.fetchurl {
           url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${claude-code-version}/linux-x64/claude";
-          hash = "sha256-cIx3sgTbMAhv9vHtNFd72gPhvnTO2AVXy/e1Qknr8L0=";
+          hash = "sha256-QmwzgVymZFp3L3Ivv/ENvyy9sSSorqtzPBNl2/i79h8=";
         };
       }
     else agents.claude-code;
