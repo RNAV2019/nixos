@@ -468,12 +468,59 @@ Variants {
                 onRemoveClicked: win.removeFile(modelData)
               }
 
+              // As every list's rows do (Theme.listEnter): a fade and a rise of the last few px, on
+              // an ease-out.
               add: Transition {
+                id: staged
+
                 NumberAnimation {
                   property: "opacity"
                   from: 0
                   to: 1
-                  duration: Theme.duration(Theme.nearbyFileAppear)
+                  duration: Theme.listEnter
+                  easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                  property: "y"
+                  from: staged.ViewTransition.destination.y + Theme.listRise
+                  duration: Theme.listEnter
+                  easing.type: Easing.OutCubic
+                }
+              }
+
+              remove: Transition {
+                NumberAnimation {
+                  property: "opacity"
+                  to: 0
+                  duration: Theme.listExit
+                  easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                  property: "scale"
+                  to: Theme.listExitScale
+                  duration: Theme.listExit
+                  easing.type: Easing.OutCubic
+                }
+              }
+
+              displaced: Transition {
+                NumberAnimation {
+                  properties: "y"
+                  duration: Theme.listSettle
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: Theme.listEase
+                }
+                NumberAnimation {
+                  property: "opacity"
+                  to: 1
+                  duration: Theme.listEnter
+                  easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                  property: "scale"
+                  to: 1
+                  duration: Theme.listEnter
+                  easing.type: Easing.OutCubic
                 }
               }
             }
@@ -715,8 +762,8 @@ Variants {
                   Behavior on shown {
                     NumberAnimation {
                       duration: Theme.duration(cardSlot.live ? Theme.nearbyCardLive : Theme.nearbyCardDismiss)
-                      easing.type: cardSlot.live ? Easing.OutBack : Easing.InCubic
-                      easing.overshoot: 1.2
+                      // Opens onto its height and stops there: nothing in a list runs past its place.
+                      easing.type: cardSlot.live ? Easing.OutCubic : Easing.InCubic
                     }
                   }
 

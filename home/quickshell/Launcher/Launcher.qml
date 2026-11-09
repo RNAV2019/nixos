@@ -389,12 +389,23 @@ Variants {
         }
       }
 
+      // A new row fades in and rises the last few px into place; one that goes fades and shrinks
+      // quickly, out of the way (Theme.listEnter, listRise, listExit).
       add: Transition {
+        id: arrive
+
         NumberAnimation {
           property: "opacity"
           from: 0
           to: 1
-          duration: Theme.morphState
+          duration: Theme.listEnter
+          easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+          property: "y"
+          from: arrive.ViewTransition.destination.y + Theme.listRise
+          duration: Theme.listEnter
+          easing.type: Easing.OutCubic
         }
       }
 
@@ -402,21 +413,38 @@ Variants {
         NumberAnimation {
           property: "opacity"
           to: 0
-          duration: Theme.morphState
+          duration: Theme.listExit
+          easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+          property: "scale"
+          to: Theme.listExitScale
+          duration: Theme.listExit
+          easing.type: Easing.OutCubic
         }
       }
 
-      // Survivors travel on an OutCubic ease for the surface duration, so two can be
-      // seen crossing, not shoving.
+      // Survivors make room on the spring's curve (Theme.listEase), starting with the change, so
+      // two can be seen crossing, not shoving. One caught on its way in or out is brought back
+      // whole.
       displaced: Transition {
-        Morph {
+        NumberAnimation {
           properties: "y"
-          duration: Theme.duration(Theme.morphSurface)
+          duration: Theme.listSettle
+          easing.type: Easing.BezierSpline
+          easing.bezierCurve: Theme.listEase
         }
         NumberAnimation {
           property: "opacity"
           to: 1
-          duration: Theme.morphState
+          duration: Theme.listEnter
+          easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+          property: "scale"
+          to: 1
+          duration: Theme.listEnter
+          easing.type: Easing.OutCubic
         }
       }
     }

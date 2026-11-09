@@ -551,6 +551,45 @@ Singleton {
   // (a tenth of a second to 90%: 3.89 / 40). A bar is at rest within a tenth of a pixel.
   readonly property real levelOmega: 40
 
+  // Scrolling (Ui/ScrollView.qml). The content follows the wheel on a critically damped spring at
+  // scrollOmega: 90% of a notch in about 160 ms (3.89 / 24), a touch quicker than the small controls
+  // (microOmega), since a held wheel retargets it every notch and it must not feel towed.
+  readonly property real scrollOmega: 24
+  // Past an end the content gives (Motion.rubberBand) and comes back once the hand has been still
+  // for scrollIdle ms. A wheel notch is a click, not a hand, so only this share of what it pushes
+  // past the end counts: a nudge at the end of a list, not a lurch.
+  readonly property int scrollIdle: 80
+  readonly property real scrollWheelGive: 0.3
+  // What a touchpad throw keeps of its speed each millisecond (Motion.project): a quick throw, since
+  // the panels are short. The coast rides a spring at 2000 * (1 - rate) / rate, the one pace at
+  // which a spring let go at the fingers' speed neither speeds up nor brakes at once.
+  readonly property real scrollCoastRate: 0.994
+  // The scrollbar thumb: its width, the gutter between the rows and it (it sits outside the rows,
+  // in the panel's inset, so it never covers them), and how long it stays after the last movement.
+  readonly property int scrollThumbWidth: 3
+  readonly property int scrollThumbGap: 4
+  readonly property int scrollThumbLinger: 700
+
+  // Rows in a list (Control/KeyedList.qml, the launcher, Nearby's staged files). A new row fades in
+  // and rises listRise px over listEnter on an ease-out; one that goes fades and shrinks to
+  // listExitScale over listExit; the rows around it make room over listSettle on listEase, starting
+  // with the change. listEase is a critically damped spring drawn as a curve (omega * t = 7 at its
+  // end, so about omega 29 over listSettle, a touch quicker than the island since a typed query
+  // moves the launcher's rows on every key:
+  // a soft start, most of the way by a third, a long quiet landing), since a view's transitions
+  // take a curve and not a spring; nothing in a list runs past its place.
+  readonly property int listEnter: reduceMotion ? 1 : 180
+  readonly property int listExit: reduceMotion ? 1 : 110
+  readonly property int listSettle: reduceMotion ? 1 : 240
+  readonly property real listRise: reduceMotion ? 0 : 4
+  readonly property real listExitScale: reduceMotion ? 1 : 0.96
+  readonly property var listEase: [0.3, 0.4, 0.3, 1, 1, 1]
+  // A row that opens or closes its own slot (the control centre's notification history): the slot's
+  // height rides a critically damped spring at this pace, and the row is clear by the time the slot
+  // is listSlotFade of the way shut, so it never shows as a sliver.
+  readonly property real listSlotOmega: 21
+  readonly property real listSlotFade: 0.35
+
   // A moment swapped for another inside the open pill (Activities/Moments.qml): the stage's fade
   // spring, twice the island's pace so the two halves together take about what the old 140 ms
   // pair did (to 2% in about 160 ms), and the opacity at which the contents change.
