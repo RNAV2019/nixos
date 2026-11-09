@@ -302,8 +302,9 @@ PanelWindow {
     // until this surface's first frame is up, when the target moves and the spring runs; dropped
     // if it is closed or dismissed before then.
     if (origin.handedOver) {
-      widthSpring.kick(Motion.seedVelocity(widthSpring.value, win.openWidth, origin.fromVW, Theme.morphOmega));
-      heightSpring.kick(Motion.seedVelocity(heightSpring.value, win.openHeight, origin.fromVH, Theme.morphOmega));
+      var pace = win.paceFor(win.openWidth - widthSpring.value, win.openHeight - heightSpring.value, false);
+      widthSpring.kick(Motion.seedVelocity(widthSpring.value, win.openWidth, origin.fromVW, pace.w));
+      heightSpring.kick(Motion.seedVelocity(heightSpring.value, win.openHeight, origin.fromVH, pace.h));
     }
   }
 
@@ -411,10 +412,44 @@ PanelWindow {
   // lets go of its open one, which is what starts it from rest; see Ui/IslandOrigin.qml. An
   // open waits for its first frame on screen, so that frame is the shape it grows out of, and
   // the still riding along starts on the same frame, waiting on the same report.
+  // The springs' pace, by how far the shape has to go (Motion.pace), set on every retarget from
+  // where the shape is to where it is now headed. A still and its taker leave one shape for one
+  // target, so they work out the same pace and stay in step.
+  property real paceW: Theme.morphOmega
+  property real paceH: Theme.morphOmega
+  property real paceDamping: Theme.morphDamping
+
+  function paceFor(dw, dh, closing) {
+    var o = Motion.pace(dw, dh, Theme.morphOmega, Theme.morphOmegaCalm);
+    if (closing) {
+      o = Math.min(Theme.morphOmega, o * Theme.morphCloseQuicken);
+      return {
+        w: o,
+        h: o,
+        z: Theme.morphCloseDamping
+      };
+    }
+    var lead = 1 + (Theme.morphWidthLead - 1) * Motion.ramp(Motion.paceTravel(dw, dh), 60, 420);
+    return {
+      w: o * lead,
+      h: o,
+      z: Theme.morphDamping
+    };
+  }
+
+  function updatePace() {
+    var p = win.paceFor(widthSpring.target - widthSpring.value, heightSpring.target - heightSpring.value, !win.open && !origin.held);
+    win.paceW = p.w;
+    win.paceH = p.h;
+    win.paceDamping = p.z;
+  }
+
   MorphSpring {
     id: widthSpring
 
     label: "surface." + win.key + ".w"
+    omega: win.paceW
+    damping: win.paceDamping
     animate: win.geometryAnimEnabled
     target: origin.held ? origin.heldWidth : win.open && origin.presented ? win.openWidth : origin.originWidth
   }
@@ -423,6 +458,8 @@ PanelWindow {
     id: heightSpring
 
     label: "surface." + win.key + ".h"
+    omega: win.paceH
+    damping: win.paceDamping
     animate: win.geometryAnimEnabled
     target: origin.held ? origin.heldHeight : win.open && origin.presented ? win.openHeight : origin.originHeight
   }
@@ -438,8 +475,9 @@ PanelWindow {
         console.info("morph ev " + win.key + " takerPresented=" + origin.takerPresented + " held=" + origin.held + " handed=" + win.morphHanded + " " + Date.now());
       if (!origin.held || !origin.takerPresented)
         return;
-      widthSpring.kick(Motion.seedVelocity(widthSpring.value, origin.heldTargetWidth, origin.heldVW, Theme.morphOmega));
-      heightSpring.kick(Motion.seedVelocity(heightSpring.value, origin.heldTargetHeight, origin.heldVH, Theme.morphOmega));
+      var pace = win.paceFor(origin.heldTargetWidth - widthSpring.value, origin.heldTargetHeight - heightSpring.value, false);
+      widthSpring.kick(Motion.seedVelocity(widthSpring.value, origin.heldTargetWidth, origin.heldVW, pace.w));
+      heightSpring.kick(Motion.seedVelocity(heightSpring.value, origin.heldTargetHeight, origin.heldVH, pace.h));
     }
   }
 
@@ -599,6 +637,7 @@ PanelWindow {
     function onTargetChanged() {
       win.fromW = widthSpring.value;
       win.fromH = heightSpring.value;
+      win.updatePace();
       win.settleBody();
     }
   }
@@ -609,6 +648,7 @@ PanelWindow {
     function onTargetChanged() {
       win.fromW = widthSpring.value;
       win.fromH = heightSpring.value;
+      win.updatePace();
       win.settleBody();
     }
   }

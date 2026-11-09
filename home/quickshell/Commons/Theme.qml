@@ -311,6 +311,15 @@ Singleton {
   // survey's 1.5% (zeta 0.8) without its visible bounce; Ryan chose it 2026-11-07 over the
   // critically damped 1 he had kept since 2026-10-18.
   readonly property real morphDamping: 0.9
+  // The pace is by size (Ui/Motion.js pace): morphOmega is a pill's, and a shape with a long way to
+  // go eases down to morphOmegaCalm (a full panel is within 1% by about 440 ms), so a panel has more
+  // weight than a pill. Opening, the width runs morphWidthLead ahead of the height on a long move:
+  // the shape widens, then drops. A close is morphCloseQuicken faster than the open it undoes and
+  // critically damped, so nothing dips under the pill.
+  readonly property real morphOmegaCalm: 15
+  readonly property real morphWidthLead: 1.13
+  readonly property real morphCloseQuicken: 1.22
+  readonly property real morphCloseDamping: 1
 
   // The small controls' pace (the switch knob): a critically damped spring that reaches 90% at
   // about 249 ms, since omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6.
@@ -1175,7 +1184,7 @@ Singleton {
   // The wait after a panel closes and before its chosen action runs, so the pill is back
   // to its resting shape first (session, profiles, recorder launches). A close on the morph
   // spring is within half a pixel of the pill by about 450 ms.
-  readonly property int actionSettleDelay: reduceMotion ? 0 : 500
+  readonly property int actionSettleDelay: reduceMotion ? 0 : 560
 
   // Ambient state rather than a control answering: the media card's hills swelling, the
   // radar going live, each half of a pending pulse. Slower than morphState, so it reads as

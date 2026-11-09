@@ -59,6 +59,17 @@ function ramp(p, start, end) {
   return t * t * (3 - 2 * t);
 }
 
+// The natural frequency for a shape about to travel (dw, dh) px: `quick` for a short move (a pill
+// changing width), easing to `calm` for a long one (a full panel), so a large thing has more weight
+// than a small one. Height counts in full and width by half: a card that only widens stays quick.
+function paceTravel(dw, dh) {
+  return Math.max(Math.abs(dh), 0.5 * Math.abs(dw));
+}
+
+function pace(dw, dh, quick, calm) {
+  return quick + (calm - quick) * ramp(paceTravel(dw, dh), 60, 420);
+}
+
 // v rounded to the device-pixel grid of a surface at `ratio`.
 function snap(v, ratio) {
   return Math.round(v * ratio) / ratio;
