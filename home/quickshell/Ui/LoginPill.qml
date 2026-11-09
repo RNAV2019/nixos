@@ -242,7 +242,15 @@ Rectangle {
       anchors.leftMargin: root.busy || root.showError ? 0 : root.u(Theme.lockPlaceholderInset)
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      visible: !root.hasText
+      // Gone as fast as the first dot pops in, and back as the last one leaves.
+      opacity: root.hasText ? 0 : 1
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.duration(Theme.lockDotPop)
+        }
+      }
 
       text: {
         if (root.busy)
@@ -344,6 +352,16 @@ Rectangle {
 
     readonly property bool live: root.hasText && !root.busy
 
+    // The arrow turning into the spinner and back: 0 is the arrow, 1 the spinner. They
+    // cross-fade, each dipping in scale, so the disc's mark turns over rather than flips.
+    property real busyMix: root.busy ? 1 : 0
+
+    Behavior on busyMix {
+      Morph {
+        duration: Theme.duration(Theme.lockStateFade)
+      }
+    }
+
     anchors.right: parent.right
     anchors.rightMargin: root.u(Theme.lockPillInset)
     anchors.verticalCenter: parent.verticalCenter
@@ -358,7 +376,9 @@ Rectangle {
 
     StrokeIcon {
       anchors.centerIn: parent
-      visible: !root.busy
+      opacity: 1 - submit.busyMix
+      scale: 1 - (1 - Theme.glyphSwapDip) * submit.busyMix
+      visible: opacity > 0
       size: root.u(Theme.lockArrowSize)
       strokeWidth: 2 * root.ui
       color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
@@ -371,7 +391,9 @@ Rectangle {
       anchors.centerIn: parent
       size: root.u(Theme.lockSpinnerSize)
       stroke: 2 * root.ui
-      visible: root.busy
+      opacity: submit.busyMix
+      scale: Theme.glyphSwapDip + (1 - Theme.glyphSwapDip) * submit.busyMix
+      visible: opacity > 0
     }
 
     MouseArea {

@@ -172,6 +172,8 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       y: canvas.u(Theme.lockClockTop) - canvas.lift(view.timeSlide)
       opacity: view.timeAlpha
+      // The resting clock; while a minute turns over the roll below draws it.
+      visible: !timeRoll.rolling
 
       text: Qt.formatDateTime(clock.date, "HH:mm")
       color: Theme.lockTextPrimary
@@ -179,6 +181,16 @@ Item {
       font.weight: Theme.weightBold
       font.pixelSize: canvas.u(Theme.lockClockSize)
       renderType: Text.QtRendering
+    }
+
+    // The island clock's roll, on this clock's own glyphs: a changed digit travels and
+    // cross-fades, the rest stay where they are.
+    DigitRoll {
+      id: timeRoll
+
+      label: time
+      centred: true
+      opacity: view.timeAlpha
     }
 
     // Board 13: one pill carrying the avatar, the name, the password and the submit disc,

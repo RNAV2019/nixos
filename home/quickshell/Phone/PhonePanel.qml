@@ -190,14 +190,29 @@ Variants {
             // stubs legible, rounded to the screen's own corners; else the accent-to-base wash.
             readonly property bool pictured: Phone.wallpaper !== "" && !Phone.ringing && wallpaperImage.status === Image.Ready
 
+            // The screen's two states cross-fade where they stand: 0 is the clock and the
+            // notification stubs, 1 the ringing glyph.
+            property real ringMix: Phone.ringing ? 1 : 0
+
+            Behavior on ringMix {
+              Morph {
+                duration: Theme.stateSwap
+              }
+            }
+
             Rectangle {
               anchors.fill: parent
               radius: parent.radius
-              visible: !screen.pictured
+              // Under the picture until it has wholly arrived, so the two cross-fade.
+              visible: picture.opacity < 1
               gradient: Gradient {
                 GradientStop {
                   position: 0
                   color: Theme.withAlpha(Theme.accent, Phone.ringing ? 0.55 : 0.32)
+
+                  Behavior on color {
+                    Tint {}
+                  }
                 }
 
                 GradientStop {
@@ -208,8 +223,18 @@ Variants {
             }
 
             RoundedClip {
+              id: picture
+
               anchors.fill: parent
-              visible: screen.pictured
+              opacity: screen.pictured ? 1 : 0
+              visible: opacity > 0
+
+              Behavior on opacity {
+                Morph {
+                  duration: Theme.duration(Theme.tintFade)
+                }
+              }
+
               radius: screen.radius
 
               Image {
@@ -259,7 +284,8 @@ Variants {
             Column {
               y: 28
               width: parent.width
-              visible: !Phone.ringing
+              opacity: 1 - screen.ringMix
+              visible: opacity > 0
 
               Text {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -287,7 +313,8 @@ Variants {
               anchors.bottom: parent.bottom
               anchors.bottomMargin: Theme.phoneDiscBottom + Theme.phoneDiscSize + 8
               spacing: 4
-              visible: !Phone.ringing
+              opacity: 1 - screen.ringMix
+              visible: opacity > 0
 
               Repeater {
                 model: Phone.notifications.slice(0, Theme.phoneNotesMax).reverse()
@@ -323,7 +350,8 @@ Variants {
             // Ringing: rings pulsing out of the glyph.
             Item {
               anchors.fill: parent
-              visible: Phone.ringing
+              opacity: screen.ringMix
+              visible: opacity > 0
 
               Repeater {
                 model: 2

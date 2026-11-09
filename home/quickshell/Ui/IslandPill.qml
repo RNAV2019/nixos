@@ -36,6 +36,12 @@ Item {
   // Digits of a fixed width, for a reading that counts.
   property bool tabularReading: false
 
+  // A reading that changes while the pill is up (`running`) rolls to its next value, glyph by
+  // glyph, as the clock does (Ui/DigitRoll.qml). `rollPaused` makes a change a cut for now: the
+  // reading is about to stand for something else.
+  property bool rollReading: false
+  property bool rollPaused: false
+
   // The track, as LevelTrack takes them.
   property real value: 0
   property bool indeterminate: false
@@ -208,11 +214,13 @@ Item {
   }
 
   Text {
+    id: readingText
+
     objectName: "reading"
     x: root.width - root.at.readingInset - width
     y: root.at.readingTop
     width: root.at.readingWidth
-    visible: root.hasReading
+    visible: root.hasReading && !readingRoll.rolling
     horizontalAlignment: Text.AlignRight
     text: root.reading
     color: root.readingColor
@@ -222,6 +230,15 @@ Item {
     font.features: root.tabularReading ? {
       "tnum": 1
     } : {}
+  }
+
+  DigitRoll {
+    id: readingRoll
+
+    label: readingText
+    capacity: root.rollReading ? 16 : 0
+    live: root.rollReading && root.running && !root.rollPaused && root.hasReading
+    directional: true
   }
 
   Button {

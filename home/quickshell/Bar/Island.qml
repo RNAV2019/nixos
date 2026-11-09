@@ -326,7 +326,16 @@ FrostedSurface {
       width: Math.max(0, root.centreLeft - 28 - x)
       height: Theme.islandExpandedHeight
       clip: true
-      visible: Media.active
+      // The track block and the week below share this room and cross-fade when a player comes
+      // or goes, both laid out throughout.
+      opacity: Media.active ? 1 : 0
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.stateSwap
+        }
+      }
 
       AlbumArt {
         id: cover
@@ -392,7 +401,14 @@ FrostedSurface {
       width: Math.max(0, root.centreLeft - 12 - x)
       height: parent.height
       clip: true
-      visible: !Media.active
+      opacity: Media.active ? 0 : 1
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.stateSwap
+        }
+      }
 
       MiniCalendar {
         readonly property real shown: root.reveal(root.sideFrom, root.sideTo)

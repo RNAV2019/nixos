@@ -139,6 +139,10 @@ Scope {
                   radius: width / 2
                   color: Dictation.ready ? Theme.accent : Theme.inkTertiary
 
+                  Behavior on color {
+                    Tint {}
+                  }
+
                   // Levels land about 30 times a second; the spring carries them across the
                   // frames between and retargets on each, keeping its speed.
                   MorphSpring {
@@ -217,6 +221,18 @@ Scope {
           id: transcript
 
           y: transcriptBox.height - height
+
+          // A line more than the box holds moves the text up by one; eased, so the eye follows
+          // the words rather than finding them a line higher. Only while the text is up, so a
+          // new dictation starts in place.
+          Behavior on y {
+            enabled: win.live && transcriptBox.opacity > 0
+
+            NumberAnimation {
+              duration: Theme.duration(Theme.dictationLineSlide)
+              easing.type: Easing.OutCubic
+            }
+          }
           width: transcriptBox.textWidth
           wrapMode: Text.Wrap
           textFormat: Text.StyledText

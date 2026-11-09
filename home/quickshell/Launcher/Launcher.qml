@@ -186,7 +186,26 @@ Variants {
       height: Theme.launcherChipHeight
       radius: height / 2
       color: Theme.withAlpha(Theme.text, Theme.launcherChipAlpha)
-      visible: win.scope !== null
+
+      // The scope it last named, kept while it fades out so the chip leaves with its words.
+      property var named: null
+      readonly property var scope: win.scope
+
+      onScopeChanged: {
+        if (scope)
+          named = scope;
+      }
+
+      // Arrives and leaves as a control changing state: a short fade, growing from its dip.
+      opacity: win.scope !== null ? 1 : 0
+      scale: Theme.glyphSwapDip + (1 - Theme.glyphSwapDip) * opacity
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.duration(Theme.morphState)
+        }
+      }
 
       Row {
         id: chipRow
@@ -199,13 +218,13 @@ Variants {
           anchors.verticalCenter: parent.verticalCenter
           visible: path.length > 0
           size: Theme.launcherChipGlyphSize
-          path: win.scope && win.scope.scopeGlyph ? win.scope.scopeGlyph : ""
+          path: chip.named && chip.named.scopeGlyph ? chip.named.scopeGlyph : ""
           color: Theme.accent
         }
 
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          text: win.scope ? win.scope.section : ""
+          text: chip.named ? chip.named.section : ""
           color: Theme.accent
           font.family: Theme.uiFont
           font.pixelSize: Theme.launcherChipSize
@@ -275,7 +294,15 @@ Variants {
       x: Theme.launcherInset
       y: Theme.launcherSearchHeight
       width: win.openWidth - Theme.launcherInset * 2
-      visible: !win.listEmpty
+      // Drawn in as the first results arrive under it, and out with the last.
+      opacity: win.listEmpty ? 0 : 1
+      visible: opacity > 0
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.duration(Theme.morphState)
+        }
+      }
     }
 
     ListView {

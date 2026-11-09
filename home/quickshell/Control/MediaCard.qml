@@ -21,7 +21,7 @@ Item {
     return sink.nickname || sink.description || sink.name;
   }
 
-  readonly property bool hasArt: Media.artUrl !== "" && art.status === Image.Ready
+  readonly property bool hasArt: art.hasArt
 
   implicitHeight: Theme.controlMediaHeight
 
@@ -52,14 +52,12 @@ Item {
       visible: false
       layer.enabled: true
 
-      Image {
+      // A new cover fades in over the last one here, under the blur.
+      ArtFade {
         id: art
 
         anchors.fill: parent
         source: Media.artUrl
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: true
       }
     }
 
@@ -69,7 +67,9 @@ Item {
       width: crop.width
       height: crop.height
       source: crop
-      visible: root.hasArt
+      // The blurred cover arrives and leaves on a fade, with the scrim below following it.
+      opacity: art.presence
+      visible: opacity > 0
       blurEnabled: true
       blur: 0.6
       blurMax: 48
@@ -78,7 +78,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Theme.withAlpha(Theme.canvas, root.hasArt ? 0.58 : 0.2)
+      color: Theme.withAlpha(Theme.canvas, 0.2 + 0.38 * art.presence)
     }
   }
 
