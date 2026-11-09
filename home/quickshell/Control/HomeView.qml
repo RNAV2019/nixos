@@ -7,6 +7,7 @@ import qs.Commons
 import qs.Control
 import qs.Services
 import qs.Ui
+import "../Ui/Motion.js" as Motion
 
 Item {
   id: root
@@ -89,8 +90,30 @@ Item {
   readonly property int listTop: sectionTop + Theme.controlSectionHeight
 
   readonly property int count: NotificationStore.history.count
+  // Rows on their way out (see the slot below) still count above; these are the ones staying.
+  property int going: 0
+  readonly property int live: Math.max(0, count - going)
 
-  readonly property int listHeight: count > 0 ? Math.min(Theme.controlNotifMaxHeight, Math.ceil(list.implicitHeight)) : 44
+  // Up once the view is built: rows that arrive after that open, the ones it was built with are
+  // placed.
+  property bool primed: false
+
+  Component.onCompleted: Qt.callLater(function () {
+    root.primed = true;
+  })
+
+  // Every row leaves the way one does, together.
+  function clearNotifications() {
+    for (var i = history.count - 1; i >= 0; i--) {
+      var slot = history.itemAt(i);
+      if (slot)
+        slot.dismiss();
+    }
+  }
+
+  // Never under the empty line's room: a row is taller than that at rest, so this only shows while
+  // the first row opens or the last one shuts, and the card does not dip on the way.
+  readonly property int listHeight: Math.min(Theme.controlNotifMaxHeight, Math.max(44, Math.ceil(list.implicitHeight)))
 
   readonly property int contentHeight: listTop + listHeight + Theme.controlPadBottom
 
@@ -308,22 +331,36 @@ Item {
     width: root.span
     verticalAlignment: Qt.AlignTop
     title: "Notifications"
-    action: root.count > 0 ? "Clear all" : ""
-    onActionClicked: NotificationStore.clear()
+    action: root.live > 0 ? "Clear all" : ""
+    onActionClicked: root.clearNotifications()
   }
 
+  // Crosses with the rows on their own clock: a spring at the slots' pace, read from the other
+  // end, so it is gone as the first row starts to show and comes up as the last one clears, and
+  // the two are never read through each other.
   Text {
     x: root.inset + 6
     y: root.listTop + 12
-    visible: root.count === 0
+    visible: opacity > 0
+    opacity: Motion.ramp(empty.value, 1 - Theme.listSlotFade, 1)
     text: "Nothing new"
     color: Theme.muted
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlTileLabelSize
+
+    ProgressSpring {
+      id: empty
+
+      target: root.live === 0 ? 1 : 0
+      omega: Theme.listSlotOmega
+      damping: 1
+    }
   }
 
   ScrollView {
     id: notifications
+
+    name: "notifications"
 
     x: root.inset
     y: root.listTop
@@ -331,32 +368,128 @@ Item {
     height: root.listHeight
     visible: root.count > 0
 
-    Column {
+    // The rows' own height: every slot carries the gap under it, so the last one's is taken off.
+    Item {
       id: list
 
       width: notifications.width
-      spacing: Theme.controlNotifGap
+      implicitHeight: Math.max(0, slots.height - Theme.controlNotifGap)
+      height: implicitHeight
 
-      Repeater {
-        model: NotificationStore.history
+      Column {
+        id: slots
 
-        // Rows are snapshots that never change, so a one-shot read is enough.
-        NotificationCard {
-          id: card
+        width: list.width
 
-          required property int index
+        Repeater {
+          id: history
 
-          readonly property var row: NotificationStore.history.get(index)
+          model: NotificationStore.history
 
-          width: list.width
-          appName: row ? row.appName : ""
-          summary: row ? row.summary : ""
-          body: row ? row.body : ""
-          image: row ? row.image : ""
-          appIcon: row ? row.appIcon : ""
-          desktopEntry: row ? row.desktopEntry : ""
-          urgent: row ? row.urgent : false
-          onDismissed: NotificationStore.dismiss(card.index)
+          // A row's place in the list. The slot, not the card, is what opens and closes: its
+          // height and opacity ride one spring, so a new row grows open as it fades in, one that
+          // goes fades as it collapses, and the rows below move on the same clock. The card inside
+          // is left alone, so the collapse works wherever the card is (dragged aside, faded).
+          //
+          // dismiss() is the one way out: the card's X calls it, and so can anything else that
+          // takes a row away (a swipe). The row leaves the store when its slot has shut.
+          Item {
+            id: slot
+
+            required property int index
+
+            // Rows are snapshots that never change, so a one-shot read is enough.
+            readonly property var row: NotificationStore.history.get(index)
+
+            // True from dismiss() until the slot has shut and the row is gone.
+            property bool leaving: false
+            // False for the first frame of a row that arrives, so it opens from nothing; a row
+            // already there when the view is built is placed open.
+            property bool born: false
+            // This row is in root.going.
+            property bool counted: false
+            readonly property alias card: card
+
+            function dismiss() {
+              if (slot.leaving)
+                return;
+              slot.leaving = true;
+              slot.counted = true;
+              root.going++;
+              // Motion off: the spring has already landed, so nothing else would finish it.
+              if (!open.running)
+                later.start();
+            }
+
+            function finish() {
+              // Uncounted first, so the rows staying are never counted one short.
+              slot.counted = false;
+              root.going--;
+              NotificationStore.dismiss(slot.index);
+            }
+
+            Component.onCompleted: {
+              if (root.primed) {
+                later.start();
+              } else {
+                open.animate = false;
+                slot.born = true;
+                open.animate = true;
+              }
+            }
+            Component.onDestruction: {
+              if (slot.counted)
+                root.going--;
+            }
+
+            width: list.width
+            height: (card.height + Theme.controlNotifGap) * open.value
+            opacity: Motion.ramp(open.value, Theme.listSlotFade, 1)
+            // Only while it moves: the card's own edge is the slot's at rest.
+            clip: open.value < 1
+
+            // The next turn of the event loop: a row that arrives opens from the frame it was
+            // placed shut in, and one that has shut is taken away once its spring's own step is
+            // over (taking it away inside that step would pull the spring from under itself).
+            Timer {
+              id: later
+
+              interval: 0
+              onTriggered: {
+                if (slot.leaving)
+                  slot.finish();
+                else
+                  slot.born = true;
+              }
+            }
+
+            ProgressSpring {
+              id: open
+
+              target: slot.born && !slot.leaving ? 1 : 0
+              omega: Theme.listSlotOmega
+              damping: 1
+              onRunningChanged: {
+                if (!running && slot.leaving)
+                  later.start();
+              }
+            }
+
+            NotificationCard {
+              id: card
+
+              width: slot.width
+              enabled: !slot.leaving
+              appName: slot.row ? slot.row.appName : ""
+              summary: slot.row ? slot.row.summary : ""
+              body: slot.row ? slot.row.body : ""
+              image: slot.row ? slot.row.image : ""
+              appIcon: slot.row ? slot.row.appIcon : ""
+              desktopEntry: slot.row ? slot.row.desktopEntry : ""
+              urgent: slot.row ? slot.row.urgent : false
+              onDismissed: slot.dismiss()
+            }
+          }
         }
       }
     }

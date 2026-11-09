@@ -7,8 +7,8 @@ import qs.Ui
 // and edits a keyed model in place: keys that are gone are removed, new ones inserted,
 // reordered ones moved, and changed fields set on the entry that already exists. A scan result,
 // a property change or PipeWire churn therefore never rebuilds a delegate, so its hover, a
-// half-typed password and a slider mid-drag all survive. Rows fade in, fade out and glide when
-// displaced as the Launcher's do; the height is the content's, so the panel's own spring is
+// half-typed password and a slider mid-drag all survive. Rows fade in and rise, fade out and shrink, and
+// make room for each other as the Launcher's do (Theme.listEnter and its neighbours); the height is the content's, so the panel's own spring is
 // what makes the growing and shrinking read as one motion.
 Item {
   id: root
@@ -94,8 +94,11 @@ Item {
       onTriggered: root.primed = true
     }
 
-    // A new row waits a beat while the rows below glide apart, then fades into the gap.
+    // A new row waits a beat while the rows below start apart, then fades in and rises the last
+    // few px into the gap (Theme.listEnter, listRise).
     add: Transition {
+      id: arrive
+
       enabled: root.animated && root.primed
 
       SequentialAnimation {
@@ -106,72 +109,77 @@ Item {
         PauseAnimation {
           duration: Theme.morphContent
         }
-        NumberAnimation {
-          property: "opacity"
-          to: 1
-          duration: Theme.morphState
+        ParallelAnimation {
+          NumberAnimation {
+            property: "opacity"
+            to: 1
+            duration: Theme.listEnter
+            easing.type: Easing.OutCubic
+          }
+          NumberAnimation {
+            property: "y"
+            from: arrive.ViewTransition.destination.y + Theme.listRise
+            duration: Theme.listEnter
+            easing.type: Easing.OutCubic
+          }
         }
       }
     }
 
+    // Quick, and a little smaller as it goes, so it is out of the way of the rows closing over it.
     remove: Transition {
       enabled: root.animated && root.primed
 
       NumberAnimation {
         property: "opacity"
         to: 0
-        duration: Theme.morphState
+        duration: Theme.listExit
+        easing.type: Easing.OutCubic
+      }
+      NumberAnimation {
+        property: "scale"
+        to: Theme.listExitScale
+        duration: Theme.listExit
+        easing.type: Easing.OutCubic
       }
     }
 
-    // Survivors travel on an OutCubic ease for the surface duration, so two can be seen
-    // crossing, not shoving. A row that moved itself rides the same ease.
+    // The rows around a change make room on the spring's curve (Theme.listEase), and start with
+    // the change, not after it: its soft start is what keeps them off a row that is still fading.
+    // A row that moved itself rides the same curve.
     displaced: Transition {
       enabled: root.animated && root.primed
 
-      Morph {
+      NumberAnimation {
         properties: "y"
-        duration: Theme.duration(Theme.morphSurface)
+        duration: Theme.listSettle
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Theme.listEase
       }
 
+      // A row caught on its way in or out is brought back whole.
       NumberAnimation {
         property: "opacity"
         to: 1
-        duration: Theme.morphState
+        duration: Theme.listEnter
+        easing.type: Easing.OutCubic
       }
-    }
-
-    // The rows under a removal hold for the first of its fade, so they do not slide over a
-    // row that is still mostly there.
-    removeDisplaced: Transition {
-      enabled: root.animated && root.primed
-
-      SequentialAnimation {
-        PauseAnimation {
-          duration: Theme.morphContent
-        }
-
-        ParallelAnimation {
-          Morph {
-            properties: "y"
-            duration: Theme.duration(Theme.morphSurface)
-          }
-
-          NumberAnimation {
-            property: "opacity"
-            to: 1
-            duration: Theme.morphState
-          }
-        }
+      NumberAnimation {
+        property: "scale"
+        to: 1
+        duration: Theme.listEnter
+        easing.type: Easing.OutCubic
       }
     }
 
     move: Transition {
       enabled: root.animated && root.primed
 
-      Morph {
+      NumberAnimation {
         properties: "y"
-        duration: Theme.duration(Theme.morphSurface)
+        duration: Theme.listSettle
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Theme.listEase
       }
     }
   }
