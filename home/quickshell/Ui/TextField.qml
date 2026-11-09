@@ -7,6 +7,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "field"
+  property string morphKey: ""
+  property var morphSlot: undefined
+
   enum Kind {
     Panel,
     Bare

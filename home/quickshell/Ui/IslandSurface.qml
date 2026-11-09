@@ -48,7 +48,10 @@ IslandSurfaceBase {
   Timer {
     id: focusPrime
 
-    interval: 75
+    // After the opening has come to rest: the change is a layer-surface commit, on which the compositor
+    // reconfigures every layer surface and each of the shell's windows draws a frame the GUI thread
+    // waits for, a visible hitch anywhere in the motion.
+    interval: Theme.surfaceFocusPrime
     onTriggered: win.focusPrimed = true
   }
 

@@ -211,5 +211,11 @@ ShellRoot {
     function dismissMoments(): void {
       Activities.dismissAllMoments();
     }
+
+    // The moment up now goes, and the next in the queue takes its place (a moment swap).
+    function next(): void {
+      if (Activities.moment)
+        Activities.dismissMoment(Activities.moment.id);
+    }
   }
 }

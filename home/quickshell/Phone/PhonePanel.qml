@@ -162,6 +162,12 @@ Variants {
         Rectangle {
           id: device
 
+          // One thing to the content morph (Ui/MorphScan.js): the picture of the phone arrives whole, not
+          // its screen's pieces before its body.
+          property string morphRole: "phone"
+          property string morphKey: ""
+          property var morphSlot: undefined
+
           x: Theme.phoneInset
           y: Theme.phoneInset
           width: Theme.phoneDeviceWidth

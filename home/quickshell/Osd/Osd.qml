@@ -42,10 +42,21 @@ Scope {
     }
   }
 
+  // Raised around a change of level while the OSD is up, so each window turns the one before into
+  // the new one (IslandSurfaceBase.swapBegin/swapEnd).
+  signal swapping
+  signal swapped
+
   function flash(which) {
     if (blocked)
       return;
-    mode = which;
+    if (showing && mode !== which) {
+      root.swapping();
+      mode = which;
+      root.swapped();
+    } else {
+      mode = which;
+    }
     showing = true;
     hideTimer.restart();
   }
@@ -104,6 +115,18 @@ Scope {
 
       wanted: root.showing && window.focused && !window.outputBlocked
 
+      Connections {
+        target: root
+
+        function onSwapping() {
+          window.swapBegin();
+        }
+
+        function onSwapped() {
+          window.swapEnd();
+        }
+      }
+
       openWidth: Theme.islandPillWidth
       openHeight: Theme.islandPillHeight
       openRadius: Theme.islandPillRadius
@@ -119,6 +142,9 @@ Scope {
 
       IslandPill {
         x: window.surface.snap((parent.width - width) / 2)
+        // The same level as the control centre's slider for it, which this turns into and out of;
+        // else a pill like any other (a moment's, the sharing pill).
+        morphKey: "level." + root.mode + "|pill"
         y: (parent.height - height) / 2
         layout: "glyphTrackReading"
         alert: root.current.alarming

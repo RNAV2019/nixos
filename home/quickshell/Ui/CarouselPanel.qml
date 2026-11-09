@@ -73,7 +73,8 @@ Panel {
 
   footer.path: root.footerPath
   footer.name: root.footerName
-  footer.hint: root.count > 0 ? (root.selected + 1) + " / " + root.count + "   ·   Enter to apply" : root.emptyHint
+  footer.count: root.count > 0 ? (root.selected + 1) + " / " + root.count + "   ·   " : ""
+  footer.hint: root.count > 0 ? "Enter to apply" : root.emptyHint
 
   onMoved: function (dx, dy) {
     root.step(dx + dy);

@@ -274,6 +274,7 @@ Item {
   VolumeRow {
     x: root.inset
     y: root.slidersTop
+    levelKey: "level.volume"
     width: root.span
     showMute: false
     node: root.sink
@@ -282,6 +283,7 @@ Item {
   BigSlider {
     x: root.inset
     y: root.slidersTop + Theme.controlSliderHeight + Theme.controlSliderGap
+    morphKey: "level.brightness"
     width: root.span
     visible: Brightness.available
     glyph: Icons.brightness

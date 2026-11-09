@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 import "Motion.js" as Motion
+import "MorphScan.js" as MorphScan
 
 // What every island surface shares: the window, the shape, and the handover. How a surface
 // comes to be open is the policy of the file that derives from this: Ui/IslandSurface.qml is
@@ -114,13 +115,174 @@ PanelWindow {
   // is the only one open; a transient has its own turn on every output.
   property bool closesElsewhere: false
 
+  // ---- content morph ----
+  //
+  // Out of another surface, this one's contents grow out of that one's: see Ui/MorphLayer.qml.
+
+  // Taker: a morph is running here (its ghosts and mask are up).
+  property bool morphing: false
+  // Taker: a morph is owed, waiting for the window to be full height so the contents can be read.
+  property bool morphPending: false
+  // Leaver: this surface's contents went to its taker, whose ghosts take them over at its first frame.
+  property bool morphHanded: false
+
+  // This surface's contents as the eye sees them, for a taker's morph.
+  function readContents() {
+    var own = MorphScan.scan(bodyHolder, surface.contentBox, win.morphing ? 1 : bodyHolder.opacity);
+    return win.morphing ? morphLayer.snapshot(own) : own;
+  }
+
+  function beginMorph() {
+    // Read once the contents are drawn: the window full height and the surface shown (two
+    // bindings on the same change, which land in either order).
+    if (!win.morphPending || !win.tall || !surface.visible || !bodyHolder.visible)
+      return;
+    surface.ghostBox = win.morphBox(origin.fromWidth, origin.fromHeight);
+    win.morphPending = false;
+    win.morphing = true;
+    win.bodyOpacity = 1;
+    morphLayer.rescan = function () {
+      return MorphScan.scan(bodyHolder, surface.contentBox, 1);
+    };
+    var t0 = Date.now();
+    morphLayer.useShape = true;
+    morphLayer.inPlace = false;
+    morphLayer.begin(origin.fromMorph, morphLayer.rescan());
+    if (Theme.motionLog)
+      console.info("morph begin " + win.key + " in " + (Date.now() - t0) + " ms");
+    if (origin.presented)
+      morphLayer.startClock();
+    else
+      morphLayer.armClock();
+  }
+
+  // ---- a swap in place ----
+  //
+  // Contents changing inside one surface that stays up (a moment replacing a moment, the OSD
+  // going from volume to brightness) morph as a handover would. swapBegin() freezes what is on
+  // screen as ghosts and holds the contents back; the caller changes the contents; swapEnd()
+  // reads them once laid out and runs the morph. swapBegin() returns false when there is nothing
+  // on screen to morph from, and the caller does its own swap.
+  property var swapFrom: null
+  property size swapSize: Qt.size(0, 0)
+
+  function swapBegin() {
+    if (Theme.motionLog)
+      console.info("morph ev " + win.key + " swapBegin open=" + win.open + " presented=" + origin.presented + " tall=" + win.tall + " held=" + origin.held);
+    if (Theme.reduceMotion || !win.open || !origin.presented || !win.tall || origin.held)
+      return false;
+    var from = win.readContents();
+    if (from.length === 0)
+      return false;
+    morphLayer.stop();
+    win.morphPending = false;
+    win.morphing = true;
+    win.bodyOpacity = 1;
+    win.swapFrom = from;
+    win.swapSize = Qt.size(win.openWidth, win.openHeight);
+    surface.ghostBox = win.morphBox(surface.width, surface.height);
+    // Every part of the contents as a still leaver at full strength until swapEnd() pairs them.
+    morphLayer.inPlace = true;
+    morphLayer.rescan = null;
+    morphLayer.begin(from, []);
+    return true;
+  }
+
+  function swapEnd() {
+    if (win.swapFrom === null)
+      return;
+    Qt.callLater(win.swapLand);
+  }
+
+  function swapLand() {
+    var from = win.swapFrom;
+    win.swapFrom = null;
+    if (from === null || !win.morphing)
+      return;
+    // A moment of another size springs the shape, and the morph rides it; one of the same size has
+    // no shape to ride.
+    morphLayer.useShape = win.swapSize.width !== win.openWidth || win.swapSize.height !== win.openHeight;
+    morphLayer.rescan = function () {
+      return MorphScan.scan(bodyHolder, surface.contentBox, 1);
+    };
+    morphLayer.begin(from, morphLayer.rescan());
+    morphLayer.startClock();
+  }
+
+  // Where the card's top sits at height h (see FrostedSurface's y below).
+  function cardTop(h) {
+    return Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(h, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0);
+  }
+
+  // A box, in the window's coordinates, that holds every shape the card takes between a w x h shape
+  // and the open one (FrostedSurface.ghostBox); a few px over for the spring's settle.
+  function morphBox(w, h) {
+    var bw = Math.max(w, win.openWidth) + 8;
+    var top = Math.min(win.cardTop(h), win.cardTop(win.openHeight)) - 4;
+    var bottom = Math.max(win.cardTop(h) + h, win.cardTop(win.openHeight) + win.openHeight) + 4;
+    return Qt.rect((win.width - bw) / 2 + origin.offsetX, top, bw, bottom - top);
+  }
+
+  function stopMorph() {
+    if (!win.morphing && !win.morphPending)
+      return;
+    morphLayer.stop();
+    win.morphing = false;
+    win.morphPending = false;
+    win.updateBody();
+  }
+
+  // Tints snap from show() until the opening has come to rest.
+  Timer {
+    id: snapRelease
+
+    // Past the morph: every Tint in the shell reads this, and all of them re-evaluating is a dropped
+    // frame if it lands in the motion.
+    interval: Theme.surfaceFocusPrime
+    onTriggered: Bus.snapTints = false
+  }
+
+  onTallChanged: {
+    if (Theme.motionLog)
+      console.info("morph ev " + win.key + " tall=" + win.tall + " " + Date.now());
+    beginMorph();
+  }
+
+  Connections {
+    target: origin
+
+    // The first frame is on screen: the ghosts start out of where the surface before left them.
+    function onPresentedChanged() {
+      if (origin.presented)
+        snapRelease.restart();
+      if (Theme.motionLog)
+        console.info("morph ev " + win.key + " presented=" + origin.presented + " morphing=" + win.morphing + " " + Date.now());
+      if (origin.presented && win.morphing)
+        morphLayer.startClock();
+    }
+  }
+
+  Connections {
+    target: surface
+
+    function onVisibleChanged() {
+      win.beginMorph();
+    }
+  }
+
   function show() {
+    if (Theme.motionLog)
+      console.info("morph ev " + win.key + " show " + Date.now());
+    Bus.snapTints = true;
+    snapRelease.restart();
     widthSpring.settle();
     heightSpring.settle();
     win.opening();
     handover = false;
     farewell = false;
     stillCarriesBody = false;
+    morphHanded = false;
+    stopMorph();
     // Take the island. The ordering, the card and the handover mailbox live in
     // Ui/IslandOrigin.qml; the arguments are the morph the holder rides with this surface.
     claiming = true;
@@ -128,7 +290,13 @@ PanelWindow {
     claiming = false;
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
+    // Out of a surface that gave its contents, they turn into this one's rather than travelling in.
+    if (origin.handedOver && origin.fromMorph && !Theme.reduceMotion) {
+      enterTravel = 0;
+      morphPending = true;
+    }
     open = true;
+    beginMorph();
     // Carry on the motion of the surface that let go (zero out of the pill): per axis, towards
     // the open shape only, and no faster than a spring that does not overshoot could be. Armed
     // until this surface's first frame is up, when the target moves and the spring runs; dropped
@@ -158,9 +326,18 @@ PanelWindow {
     var vh = heightSpring.running ? heightSpring.velocity : 0;
     widthSpring.settle();
     heightSpring.settle();
-    origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh);
+    // The contents go with the shape when there is a taker here to draw them and they are on screen,
+    // open or on their way out (a panel closing as a queued pill takes the island).
+    var t0 = Date.now();
+    var onScreen = win.open ? origin.presented : win.showing && bodyHolder.opacity > 0.02;
+    var contents = !Theme.reduceMotion && onScreen && win.tall && Bus.claimFor(win.screenName) ? win.readContents() : null;
+    if (Theme.motionLog && contents)
+      console.info("morph read " + win.key + " " + contents.length + " anchors in " + (Date.now() - t0) + " ms");
+    morphHanded = contents !== null && contents.length > 0;
+    origin.publish(surface.width, surface.height, surface.surfaceRadius, vw, vh, morphHanded ? contents : null);
     // A taker still waiting for its first frame hands over velocity 0: nothing of this surface moves yet.
-    stillCarriesBody = win.open;
+    // What was handed on stays as it is until the taker draws it.
+    stillCarriesBody = win.open || morphHanded;
     handover = true;
     farewell = true;
     origin.hold(w, h, surface.surfaceRadius, vw, vh);
@@ -257,6 +434,8 @@ PanelWindow {
     target: origin
 
     function onTakerPresentedChanged() {
+      if (Theme.motionLog)
+        console.info("morph ev " + win.key + " takerPresented=" + origin.takerPresented + " held=" + origin.held + " handed=" + win.morphHanded + " " + Date.now());
       if (!origin.held || !origin.takerPresented)
         return;
       widthSpring.kick(Motion.seedVelocity(widthSpring.value, origin.heldTargetWidth, origin.heldVW, Theme.morphOmega));
@@ -342,6 +521,12 @@ PanelWindow {
   property bool bodyPending: false
 
   function updateBody() {
+    // A morph shows the contents through its mask; what is not up yet is held there, not faded.
+    if (win.morphing && win.wantedNow()) {
+      bodyOpacity = 1;
+      pillAmount = 0;
+      return;
+    }
     if (origin.held || Theme.reduceMotion || win.parked) {
       // A held still carries the contents as they are (a dismissal 30 ms into an open must not
       // pop them to full); only reduced motion and a parked window jump.
@@ -402,6 +587,8 @@ PanelWindow {
     target: origin
 
     function onHeldChanged() {
+      if (Theme.motionLog)
+        console.info("morph ev " + win.key + " held=" + origin.held + " " + Date.now());
       win.settleBody();
     }
   }
@@ -454,11 +641,17 @@ PanelWindow {
   Timer {
     id: parkDelay
 
-    interval: Theme.surfacePark
+    // A still that handed its contents on parks later: resizing a window costs the taker a frame, and
+    // the taker is still morphing then. Nothing of it shows meanwhile.
+    interval: win.morphHanded ? Theme.surfacePark + 500 : Theme.surfacePark
     onTriggered: {
       if (win.showing)
         return;
       win.parked = true;
+      if (Theme.motionLog)
+        console.info("morph ev " + win.key + " parked " + Date.now());
+      win.stopMorph();
+      win.morphHanded = false;
       // The close is off screen; the shape Behaviors are live again for the next open. A held
       // still parks with handover still raised, which keeps its cut to the pill instant.
       win.handover = false;
@@ -586,8 +779,11 @@ PanelWindow {
 
     // The still fades in two parts: its contents at once, its ground only once the taker has
     // a frame on screen to show through it, so the island's spot is never left bare.
-    contentOpacity: win.farewell ? 0 : 1
+    // A still that handed its contents on keeps them, ground and all, until the taker draws them.
+    contentOpacity: win.farewell && (!win.morphHanded || origin.takerPresented) ? 0 : 1
     backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
+    maskActive: win.morphing
+    ghostActive: win.morphing
     // A still's shadow goes the moment its taker is on screen, not with its ground: the taker
     // starts from this very shape and casts its own, and two would stack while the ground fades.
     shadowStrength: win.farewell && origin.takerPresented ? 0 : Theme.surfaceShadowAlpha * win.shadowLevel
@@ -595,7 +791,7 @@ PanelWindow {
     // Only the fade out is animated; the reset lands off screen in one frame. Guarded on
     // `handover`, not `farewell`: a Behavior's enabled binding is evaluated before farewell changes.
     Behavior on contentOpacity {
-      enabled: win.handover
+      enabled: win.handover && !win.morphHanded
 
       Morph {
         duration: Theme.morphFarewell
@@ -603,7 +799,7 @@ PanelWindow {
     }
 
     Behavior on backdropOpacity {
-      enabled: win.handover
+      enabled: win.handover && !win.morphHanded
 
       Morph {
         duration: Theme.duration(Theme.morphGroundFade)
@@ -628,11 +824,30 @@ PanelWindow {
     // Read off the height rather than travelling; see Bar/Island.qml. A still riding a taker's
     // morph asks for the taker's radius, as it does for target shape and duration, on a spring so
     // it does not jump when it is seated.
-    surfaceRadius: Math.min(height / 2, radiusSpring.value)
+    // In a morph out of another surface, with the shape: from the corners it had to the ones it will,
+    // as far along as the card is, rather than ahead of it on a spring of its own.
+    // (Its first frame, up before the clock runs, wears the corners it took over, not its own.)
+    surfaceRadius: Math.min(height / 2, win.open && origin.handedOver && !origin.presented && !morphLayer.inPlace ? origin.fromRadius : win.morphing && origin.handedOver && !morphLayer.inPlace && !isNaN(win.shapeProgress) ? Motion.lerp(origin.fromRadius, win.openRadius, Math.max(0, Math.min(1, win.shapeProgress))) : radiusSpring.value)
 
     // The complete collapsed pill carried over from the shape this surface grew out of. Up on
     // the first frame of an open out of the island, so that frame matches the pill it covers;
     // a shape from another surface or the drop well had no clock, so none is brought.
+    ghostData: MorphLayer {
+      id: morphLayer
+
+      label: "surface." + win.key + ".morph"
+      visible: win.morphing
+      opacity: bodyHolder.opacity
+      shapeProgress: win.shapeProgress
+      cardRect: Qt.rect(surface.x, surface.y, surface.width, surface.height)
+      cardEnd: Qt.rect((win.width - win.openWidth) / 2 + origin.offsetX, win.cardTop(win.openHeight), win.openWidth, win.openHeight)
+      onFinished: win.stopMorph()
+    }
+
+    maskData: MorphMask {
+      host: morphLayer
+    }
+
     fillData: CollapsedPill {
       anchors.fill: parent
       origin: origin
@@ -650,7 +865,7 @@ PanelWindow {
       id: bodyHolder
 
       anchors.fill: parent
-      opacity: win.bodyOpacity
+      opacity: (win.morphing || win.morphPending) && win.open ? 1 : win.bodyOpacity
       visible: opacity > 0
       Keys.forwardTo: win.contentKeyTargets
 

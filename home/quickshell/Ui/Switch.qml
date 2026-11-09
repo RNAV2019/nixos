@@ -6,6 +6,8 @@ import qs.Commons
 ButtonBase {
   id: root
 
+  morphRole: "switch"
+
   signal toggled(bool value)
 
   implicitWidth: Theme.switchWidth

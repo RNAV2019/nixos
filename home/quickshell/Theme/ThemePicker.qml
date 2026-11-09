@@ -55,6 +55,8 @@ Variants {
           colors: modelData.palette
           glide: panel.carousel.glide
           current: index === panel.selected
+          // To the content morph, tiles pair by their place from the chosen one, which is the same thing
+          // in both pickers wherever the row has it.
           active: index === Themes.index
           onClicked: panel.choose(index)
         }

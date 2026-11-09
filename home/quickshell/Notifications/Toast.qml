@@ -8,6 +8,12 @@ import "../Ui/Motion.js" as Motion
 Item {
   id: toast
 
+  // A content-morph anchor (Ui/MorphScan.js): the same notification as its card in the control
+  // centre, which it turns into.
+  property string morphRole: "notification"
+  property string morphKey: toast.n ? "notification." + toast.n.appName + "|" + toast.n.summary : ""
+  property var morphSlot: undefined
+
   // The window, and the minute clock: this file cannot see Notifications.qml's ids.
   property var host: null
   property date clockDate: new Date()
@@ -101,6 +107,7 @@ Item {
   // The sender's icon, or its initial on a colour picked off the name.
   Rectangle {
     id: avatar
+    objectName: "avatar"
 
     x: Theme.notifInset
     y: Theme.notifInset
@@ -110,6 +117,7 @@ Item {
     color: Theme.withAlpha(toast.tint, Theme.notifAvatarAlpha)
 
     Text {
+      objectName: "initial"
       anchors.centerIn: parent
       text: NotificationStore.initial(toast.appName)
       color: toast.tint
@@ -132,6 +140,7 @@ Item {
   }
 
   Text {
+    objectName: "app"
     x: Theme.notifTextLeft
     y: Theme.notifAppTop
     width: Math.max(0, stamp.x - x - Theme.notifActionGap)
@@ -171,6 +180,7 @@ Item {
   }
 
   Text {
+    objectName: "summary"
     x: Theme.notifTextLeft
     y: Theme.notifTitleTop
     width: Theme.notifWidth - x - Theme.notifInset
@@ -184,6 +194,7 @@ Item {
 
   Text {
     id: bodyMetrics
+    objectName: "body"
 
     x: Theme.notifTextLeft
     y: toast.bodyTop

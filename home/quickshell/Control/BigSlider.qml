@@ -5,6 +5,11 @@ import qs.Ui
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "slider"
+  property string morphKey: ""
+  property var morphSlot: undefined
+
   property real value: 0
   property string glyph: ""
   property string accessibleName: ""

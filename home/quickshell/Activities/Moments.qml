@@ -49,7 +49,14 @@ Variants {
     onShownChanged: {
       if (win.drawn === null || !win.open || win.drawn === win.shown)
         return;
-      win.swapping = true;
+      // The moment before turns into this one (Ui/MorphLayer.qml); with nothing on screen to turn
+      // from, the stage fades instead.
+      if (win.swapBegin()) {
+        win.drawn = win.shown;
+        win.swapEnd();
+      } else {
+        win.swapping = true;
+      }
     }
 
     // The stage fades out, the contents change under it, and it fades back in: one spring that

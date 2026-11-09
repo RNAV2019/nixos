@@ -13,6 +13,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "pill"
+  property string morphKey: "pill"
+  property var morphSlot: undefined
+
   // glyphTrackReading, glyphLabelTrackReading, glyphLabelReading, glyphTrackReadingAction,
   // glyphWaveformReadingAction, glyphLabelAction, glyphLabelDetailReading or glyphLabelDetailDots.
   property string layout: "glyphTrackReading"
@@ -152,6 +157,7 @@ Item {
   }
 
   Text {
+    objectName: "label"
     x: root.layout === "glyphLabelAction" ? Math.round((root.width - width) / 2) : root.at.labelLeft
     y: Theme.islandPillTextTop
     width: root.at.labelWidth
@@ -166,6 +172,7 @@ Item {
   }
 
   Text {
+    objectName: "detail"
     x: root.at.detailLeft
     y: Theme.islandPillTextTop
     width: root.at.detailWidth
@@ -201,6 +208,7 @@ Item {
   }
 
   Text {
+    objectName: "reading"
     x: root.width - root.at.readingInset - width
     y: root.at.readingTop
     width: root.at.readingWidth

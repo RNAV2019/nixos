@@ -377,6 +377,10 @@ Singleton {
 
   // Emitted by a surface about to take the island, just before it grows, carrying the
   // output. The holder cuts away rather than shrinks, avoiding two headers/clocks at once.
+  // Raised while a surface opens, until its first frame is on screen: colour state set then is
+  // taken at once (Ui/Tint.qml) rather than tweened past the open.
+  property bool snapTints: false
+
   signal islandClaimed(string screen)
 
   // Raised by a surface letting the island go with nothing growing in its place. Whoever
@@ -413,13 +417,15 @@ Singleton {
 
   // The shape a surface was wearing when it let go, and how fast it was changing (px/s per
   // axis), so the taker carries the motion on.
-  function publishHandoff(screen, width, height, radius, vw, vh) {
+  // `morph` is the letting-go surface's contents read for a content morph (Ui/MorphScan.js), or null.
+  function publishHandoff(screen, width, height, radius, vw, vh, morph) {
     islandHandoffs = writeMap(islandHandoffs, screen, {
       width: width,
       height: height,
       radius: radius,
       vw: vw,
-      vh: vh
+      vh: vh,
+      morph: morph || null
     });
   }
 

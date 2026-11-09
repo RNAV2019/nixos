@@ -11,6 +11,9 @@ Item {
 
   property real radius: 0
 
+  // Tells a content-morph scan (Ui/MorphScan.js) that what fills this takes its corners.
+  readonly property bool morphRounds: true
+
   default property alias content: holder.data
 
   Item {

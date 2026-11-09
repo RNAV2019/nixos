@@ -7,6 +7,8 @@ import qs.Commons
 ButtonBase {
   id: root
 
+  morphRole: "cell"
+
   property string label: ""
   property string icon: ""
   property bool iconFilled: false

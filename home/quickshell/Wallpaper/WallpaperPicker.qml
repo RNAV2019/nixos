@@ -59,6 +59,8 @@ Variants {
           glide: panel.carousel.glide
           current: index === panel.selected
           active: index === Wallpapers.index
+          // To the content morph, tiles pair by their place from the chosen one, which is the same thing
+          // in both pickers wherever the row has it.
           onClicked: panel.choose(index)
         }
       }

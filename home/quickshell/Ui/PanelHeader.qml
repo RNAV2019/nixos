@@ -7,6 +7,11 @@ import qs.Commons
 Item {
   id: root
 
+  // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
+  property string morphRole: "header"
+  property string morphKey: "header"
+  property var morphSlot: undefined
+
   property string title: ""
   property string meta: ""
   property bool hasBack: false
@@ -35,6 +40,7 @@ Item {
   }
 
   Text {
+    objectName: "title"
     x: root.hasBack ? back.x + back.width + 12 : Theme.panelHeaderInset
     y: (parent.height - height) / 2
     width: Math.max(0, Math.min(slot.x, root.meta !== "" ? metaText.x : root.width) - x - 12)
@@ -53,6 +59,7 @@ Item {
 
   Text {
     id: metaText
+    objectName: "meta"
 
     x: root.width - Theme.panelHeaderInset - width
     y: Theme.panelHeaderMetaTop

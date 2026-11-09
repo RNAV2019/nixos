@@ -31,6 +31,12 @@ QtObject {
   property real fromVW: 0
   property real fromVH: 0
 
+  // The contents of the surface handed over from, read for a content morph (Ui/MorphScan.js);
+  // null out of the pill, or when that surface had nothing on screen to give.
+  property var fromMorph: null
+  // The corner radius of the shape handed over.
+  property real fromRadius: 0
+
   // The pill the surface starts from and returns to, which is wider while something plays.
   readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
@@ -281,6 +287,8 @@ QtObject {
     fromHeight = handoff.height;
     fromVW = handoff.vw || 0;
     fromVH = handoff.vh || 0;
+    fromRadius = handoff.radius || 0;
+    fromMorph = handoff.morph || null;
     snapping = false;
     handedOver = true;
   }
@@ -296,6 +304,7 @@ QtObject {
     fromHeight = 0;
     fromVW = 0;
     fromVH = 0;
+    fromMorph = null;
     fromClock = true;
     Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
@@ -308,6 +317,7 @@ QtObject {
     held = false;
     fromVW = 0;
     fromVH = 0;
+    fromMorph = null;
     fromClock = true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
@@ -327,8 +337,8 @@ QtObject {
 
   // Give the island up to the surface that claimed it. There is no shrink back to the pill:
   // what this one owes the taker is the shape it was wearing, published before it lets go.
-  function publish(width, height, radius, vw, vh) {
-    Bus.publishHandoff(screenName, width, height, radius, vw, vh);
+  function publish(width, height, radius, vw, vh, morph) {
+    Bus.publishHandoff(screenName, width, height, radius, vw, vh, morph);
     release();
   }
 }
