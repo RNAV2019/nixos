@@ -321,9 +321,29 @@ Singleton {
   readonly property real morphCloseQuicken: 1.22
   readonly property real morphCloseDamping: 1
 
-  // The small controls' pace (the switch knob): a critically damped spring that reaches 90% at
-  // about 249 ms, since omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6.
+  // The small controls' pace (the switch knob). Chosen as the critically damped spring that reaches
+  // 90% at about 249 ms (omega * t = 3.89 there, so omega = 3.89 / 0.249 s = 15.6); the springs that
+  // take it inherit morphDamping 0.9, which gets there a little sooner, at about 219 ms.
   readonly property real microOmega: 15.6
+  // A control going down under a press (Ui/ButtonBase.qml): quicker than microOmega, 90% of the way
+  // to pressScale by about 122 ms, so a click is answered before it is over. Let go, it comes back
+  // at pressReleaseOmega (90% by about 170 ms). Both at morphDamping; on a 3% scale its settle
+  // cannot be seen. A release in the middle of a press turns round with the speed it had.
+  readonly property real pressOmega: 28
+  readonly property real pressReleaseOmega: 20
+  // The switch knob and the segmented plate stretch as they travel: the edge in front rides a spring
+  // this many times quicker than the edge behind (which keeps microOmega, so they arrive when they
+  // always did), and the two meet again at rest. 1.55 makes the knob about a quarter wider at its
+  // widest, around the middle of its travel; 1.25 makes the plate about an eighth of its travel longer.
+  readonly property real switchLead: 1.55
+  readonly property real segmentLead: 1.25
+  // How far a held switch's knob leans toward the side a click would send it (px).
+  readonly property real switchHeldWiden: 3
+  // How much taller a slider's bar is while it is held (px), as the control-centre sliders of
+  // macOS and iOS answer a press. The bar grows about its middle; nothing around it moves.
+  readonly property real sliderPressGrow: 3
+  // The keyboard ring's fade in and out, so a ring neither pops in nor trails the focus.
+  readonly property int focusFade: reduceMotion ? 1 : 80
 
   // Every panel grows from the same column width and corner radius; the per-surface tokens
   // below alias these so each keeps its own name. (The `panelWidth(screen, desired)` clamp

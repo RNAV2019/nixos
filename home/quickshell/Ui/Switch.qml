@@ -3,6 +3,10 @@ import qs.Commons
 
 // A two-state switch. Off is a highlightMed track that steps up under the pointer; on is the
 // accent, lifted the way a filled pill is. `enabled: false` dims it and ignores its clicks.
+//
+// The knob stretches toward where it is going and settles round, as the switches of macOS and iOS
+// do: its two edges are two springs, the one in front the quicker. Held, it leans a few pixels
+// toward the side a click would send it.
 ButtonBase {
   id: root
 
@@ -35,19 +39,39 @@ ButtonBase {
   }
 
   Rectangle {
+    id: knob
+
+    // The room the knob crosses. The edges are springs over 0..1 of it, not over pixels, so a
+    // switch that is laid out late does not slide into place.
+    readonly property real travel: Math.max(0, root.width - Theme.switchKnob - Theme.switchInset * 2)
+    readonly property real lean: root.pressed && travel > 0 ? Theme.switchHeldWiden / travel : 0
+    readonly property string who: root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
+
     y: Theme.switchInset
-    x: Theme.switchInset + knob.value * (root.width - width - Theme.switchInset * 2)
-    width: Theme.switchKnob
-    height: width
+    x: Theme.switchInset + leftEdge.value * travel
+    // Never narrower than round, whatever the two springs are doing.
+    width: Theme.switchKnob + Math.max(0, rightEdge.value - leftEdge.value) * travel
+    height: Theme.switchKnob
     radius: height / 2
     color: root.checked ? Theme.inkOnAccent : Theme.inkPrimary
 
+    // Going on, the right edge leads and the left follows at the pace the knob always had; going
+    // off, the other way round. A click that reverses it mid-way swaps the paces and keeps both
+    // edges' speeds, so the stretch changes side without a jump.
     ProgressSpring {
-      id: knob
+      id: leftEdge
 
-      target: root.checked ? 1 : 0
-      omega: Theme.microOmega
-      label: "switch." + root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
+      target: root.checked ? 1 - knob.lean : 0
+      omega: root.checked ? Theme.microOmega : Theme.microOmega * Theme.switchLead
+      label: "switch." + knob.who + ".l"
+    }
+
+    ProgressSpring {
+      id: rightEdge
+
+      target: root.checked ? 1 : knob.lean
+      omega: root.checked ? Theme.microOmega * Theme.switchLead : Theme.microOmega
+      label: "switch." + knob.who + ".r"
     }
   }
 }

@@ -2,6 +2,10 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 
+// The control centre's slider: a pill (or, `compact`, a thin bar) whose fill is the value. It
+// follows the pointer exactly while dragged; a wheel or key step, or a change from outside, moves
+// the fill on a spring. Held, the bar grows a few pixels taller and springs back when let go; it
+// is not scaled, so the fill never leaves the bar's edge.
 Item {
   id: root
 
@@ -28,11 +32,15 @@ Item {
   property bool _hasPendingValue: false
   property bool _interactionActive: false
 
-  // The compact bar's fill runs from the edge, so it has no pill to lead with.
-  readonly property real minFill: compact ? 0 : height
+  // The compact bar's fill runs from the edge, so it has no pill to lead with. `restFill` is the
+  // pill at rest, which the pointer is measured against; `minFill` grows with a held bar so the
+  // fill's end stays round.
+  readonly property real restFill: compact ? 0 : height
+  readonly property real minFill: compact ? 0 : trackHeight
   readonly property real displayValue: _previewing ? _previewValue : value
-  readonly property real fillWidth: minFill + Math.max(0, Math.min(1, displayValue)) * Math.max(0, width - minFill)
-  readonly property real trackHeight: compact ? 4 : height
+  readonly property real fillWidth: minFill + Math.max(0, Math.min(1, shown.value)) * Math.max(0, width - minFill)
+  readonly property real trackHeight: (compact ? 4 : height) + grow.value
+  readonly property string who: Theme.motionLog ? root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1") : ""
 
   implicitHeight: Theme.controlSliderHeight
 
@@ -88,8 +96,8 @@ Item {
   }
 
   function setFromX(x) {
-    var span = Math.max(1, root.width - root.minFill);
-    root.queueValue((x - root.minFill / 2) / span);
+    var span = Math.max(1, root.width - root.restFill);
+    root.queueValue((x - root.restFill / 2) / span);
   }
 
   onValueChanged: {
@@ -116,6 +124,28 @@ Item {
       root._previewing = false
   }
 
+  // Where the fill is drawn, 0..1: the value itself while the pointer has it, and a spring toward
+  // it for a wheel or key step or a change from outside. Over the value, not over pixels, so a
+  // slider that is laid out late does not sweep into place.
+  ProgressSpring {
+    id: shown
+
+    target: Math.max(0, Math.min(1, root.displayValue))
+    omega: Theme.microOmega
+    animate: !root._interactionActive
+    label: root.who !== "" ? "slider." + root.who + ".fill" : ""
+  }
+
+  // The press: the bar grows about its middle while held. The thin bar grows by less.
+  MorphSpring {
+    id: grow
+
+    target: drag.pressed ? Math.min(Theme.sliderPressGrow, root.compact ? 2 : Infinity) : 0
+    omega: drag.pressed ? Theme.pressOmega : Theme.pressReleaseOmega
+    epsilon: 0.05
+    label: root.who !== "" ? "slider." + root.who + ".grow" : ""
+  }
+
   LevelTrack {
     id: track
 
@@ -124,11 +154,9 @@ Item {
     height: root.trackHeight
     value: root.width > 0 ? root.fillWidth / root.width : 0
     fillColor: root.dimmed ? Theme.withAlpha(Theme.subtle, root.compact ? 0.5 : 0.35) : Theme.accent
-    // Smooths a keyboard step or an external change; a drag writes every frame anyway.
-    fillDuration: drag.pressed ? 0 : Theme.duration(Theme.morphState)
+    // The spring above does the smoothing; the track's own timed ease would trail it.
+    fillDuration: 0
 
-    // No press scale: the fill would shrink off the track's left edge, and a drag answers the
-    // pointer by moving the fill anyway.
     Behavior on fillColor {
       Tint {}
     }

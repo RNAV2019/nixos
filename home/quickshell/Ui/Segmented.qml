@@ -2,7 +2,8 @@ import QtQuick
 import qs.Commons
 
 // A segmented control: a track with a chosen plate that slides between cells on the
-// workspace-slot spring. A segment may set `pending`, which holds the plate in a soft pulse
+// workspace-slot spring, its front edge a little ahead of its back one, so it stretches on the way
+// and is the cell's size again when it lands. A segment may set `pending`, which holds the plate in a soft pulse
 // while a backend comes up (the AWDL radio, 10-30 s), and `enabled: false` to dim and skip it.
 //
 // By default the cells share the track equally, as the Send / Receive control and the display
@@ -100,14 +101,20 @@ Item {
     id: plate
 
     visible: root.currentIndex >= 0
+    // Which way it is heading: where its middle is going against where its middle is.
+    readonly property bool rightward: root.plateX + root.plateWidth / 2 > (xSpring.value + rSpring.value) / 2
+
     x: xSpring.value
     y: root.pad
-    width: wSpring.value
+    width: Math.max(0, rSpring.value - xSpring.value)
     height: root.cellHeight
     radius: height / 2
     color: Theme.accentFill
 
-    // x and width share an omega, so the plate reaches rest on one frame. The label is the
+    // The plate's two edges, each a spring: the one in front is Theme.segmentLead quicker than the
+    // one behind, which keeps the pace the plate always had, so the plate is longer while it
+    // travels and the cell's own width when both have landed. Critically damped, unlike the
+    // shell's other springs, so neither edge passes the cell it is going to. The label is the
     // control's own address (its toString), unique per instance: Segmented lives in several
     // places at once and one label is one spring in the motion log.
     MorphSpring {
@@ -116,18 +123,20 @@ Item {
       readonly property string who: root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1")
 
       target: root.plateX
-      omega: Theme.microOmega
+      omega: plate.rightward ? Theme.microOmega : Theme.microOmega * Theme.segmentLead
+      damping: 1
       animate: root.settled
       label: "seg." + who + ".x"
     }
 
     MorphSpring {
-      id: wSpring
+      id: rSpring
 
-      target: root.plateWidth
-      omega: Theme.microOmega
+      target: root.plateX + root.plateWidth
+      omega: plate.rightward ? Theme.microOmega * Theme.segmentLead : Theme.microOmega
+      damping: 1
       animate: root.settled
-      label: "seg." + xSpring.who + ".w"
+      label: "seg." + xSpring.who + ".r"
     }
 
     // The soft pulse while a mode switch is in flight; not a bounce, so plain opacity.
@@ -201,20 +210,32 @@ Item {
     }
   }
 
-  // The keyboard cursor, drawn over the cell it is on.
+  // The keyboard cursor, drawn over the cell it is on. It fades like ButtonBase's ring, and
+  // stays over the cell it was last on while it fades out.
   Rectangle {
     // A focus state, not contents: a content morph leaves it out.
     readonly property bool morphIgnore: true
     readonly property Item under: root.activeFocus && !root.pointerFocused ? cellRepeater.itemAt(root.cursor) : null
+    property Item last: null
 
-    visible: under !== null
-    x: under ? root.pad + under.x : 0
+    onUnderChanged: if (under)
+      last = under
+
+    opacity: under !== null ? 1 : 0
+    visible: opacity > 0
+    x: last ? root.pad + last.x : 0
     y: root.pad
-    width: under ? under.width : 0
+    width: last ? last.width : 0
     height: root.cellHeight
     radius: height / 2
     color: "transparent"
     border.width: 1
     border.color: Theme.focusRing
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.focusFade
+      }
+    }
   }
 }

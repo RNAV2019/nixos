@@ -212,7 +212,7 @@ ButtonBase {
   Row {
     id: slot
 
-    anchors.right: check.visible ? check.left : parent.right
+    anchors.right: check.shown ? check.left : parent.right
     anchors.rightMargin: root.trailInset
     anchors.verticalCenter: parent.verticalCenter
     layoutDirection: Qt.RightToLeft
@@ -225,9 +225,13 @@ ButtonBase {
     anchors.right: parent.right
     anchors.rightMargin: Theme.controlRowInset
     anchors.verticalCenter: parent.verticalCenter
-    visible: root.showCheck && root.selected
-    opacity: visible ? 1 : 0
-    scale: visible ? 1 : 0.5
+    // Leaves as it arrives, a fade and a slight scale, so it stays drawn until the fade is spent;
+    // the row's layout follows `shown` and does not wait for it.
+    readonly property bool shown: root.showCheck && root.selected
+
+    visible: opacity > 0
+    opacity: shown ? 1 : 0
+    scale: shown ? 1 : 0.5
     size: 16
     path: Icons.check
     color: Theme.inkOnAccent
