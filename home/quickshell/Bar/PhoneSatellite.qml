@@ -167,7 +167,10 @@ Item {
       stubOmega: Theme.phoneStubOmega,
       stubZeta: Theme.phoneStubDamping,
       stubKick: Theme.phoneStubKick,
-      bulgeKick: Motion.satelliteKick(Theme.phoneBulge, Theme.phoneBulgeOmega, Theme.phoneBulgeDamping),
+      // The pill's end swells as the disc comes home, and wobbles as it relaxes. Not when a panel is
+      // taking the island: the pill is about to grow into the panel, and a swell and a wobble in
+      // the frames before it does read as the pill being squashed.
+      bulgeKick: root.retreating || root.panelUp ? 0 : Motion.satelliteKick(Theme.phoneBulge, Theme.phoneBulgeOmega, Theme.phoneBulgeDamping),
       bulgeOmega: Theme.phoneBulgeOmega,
       bulgeZeta: Theme.phoneBulgeDamping,
       bulgeVRef: Theme.phoneBulgeVRef,

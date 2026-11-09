@@ -238,7 +238,23 @@ Item {
       e.rowTop = rows[e.rank].top;
       e.rowBottom = rows[e.rank].bottom;
     });
-    return list;
+    // The mask paints these in order, a later box over an earlier one. A held pair is painted a blur
+    // wider than it is, and a panel's header comes last in its contents: held, it painted its margin
+    // over the top of whatever stands close under it (the pickers' chosen tile, taller than its row,
+    // lost its top edge until the title had landed). So held boxes go first and what arrives is
+    // painted over them, but for a held box inside an arriving one (a pair within a tile), which
+    // must still hold its place there.
+    var inside = function (e, c) {
+      return e.x >= c.x - 2 && e.y >= c.y - 2 && e.x + e.w <= c.x + c.w + 2 && e.y + e.h <= c.y + c.h + 2;
+    };
+    var first = [], rest = [];
+    list.forEach(function (e) {
+      var under = e.paired && !arriving.some(function (c) {
+        return inside(e, c);
+      });
+      (under ? first : rest).push(e);
+    });
+    return first.concat(rest);
   }
 
   // An anchor whose pair is still flying in: this panel's copy waits for it. So does what cannot be

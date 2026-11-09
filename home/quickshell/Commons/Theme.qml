@@ -1228,6 +1228,8 @@ Singleton {
   // apart from the shape. Each is [start, end]: the progress where the fade begins and ends.
   // Out of the pill: about as quick as the 50 ms fade they replace.
   readonly property var fadeOpenIn: [0.08, 0.6]
+  // The least an open surface's contents are drawn at, so they are drawn (IslandSurfaceBase).
+  readonly property real bodyPrime: 0.004
   // Panel to panel: the entering contents start late, as the 45 ms delay did, and land before the shape settles.
   readonly property var fadeEnterIn: [0.15, 0.45]
   // Closing: the contents are gone by the time the shape has travelled this far, or in

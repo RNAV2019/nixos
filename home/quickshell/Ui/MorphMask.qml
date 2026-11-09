@@ -5,7 +5,7 @@ import qs.Commons
 // content box and read by Shaders/roundedclip.frag in the red channel. Each arriving box (an
 // anchor, or a loose part) arrives on its group's beat; an anchor whose partner is still flying
 // in is held at 0 until it lands; anything not read yet stays hidden. Opaque, so
-// a later (inner) anchor overwrites an outer one.
+// a later (inner) anchor overwrites an outer one; MorphLayer.maskFor orders them, held boxes first.
 Item {
   id: root
 

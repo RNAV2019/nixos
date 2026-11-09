@@ -1008,7 +1008,13 @@ PanelWindow {
       id: bodyHolder
 
       anchors.fill: parent
-      opacity: (win.morphing || win.morphPending) && win.open ? 1 : win.bodyOpacity
+      // Open, never quite nothing (Theme.bodyPrime, too faint to see): an item at 0 is not drawn at
+      // all, so the contents were first drawn, glyphs, pictures and the box's texture, on the frame
+      // after the surface's first, which is the first the shape moves on. That frame came late, and
+      // the pill sat fattened and dim for three or four before the card jumped on. Drawn from the
+      // first frame, the one the surface waits for with the bar's pill still up, the cost is paid
+      // before anything moves.
+      opacity: (win.morphing || win.morphPending) && win.open ? 1 : win.open ? Math.max(win.bodyOpacity, Theme.bodyPrime) : win.bodyOpacity
       visible: opacity > 0
       Keys.forwardTo: win.contentKeyTargets
 
