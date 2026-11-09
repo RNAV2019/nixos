@@ -30,6 +30,18 @@ whose `openHeight` animates (the Wi-Fi password row growing `ControlSubView.cont
 re-allocates the texture each frame of that growth. Neither is a regression from main; both are
 left as they are. A parked surface (`FrostedSurface` not visible) holds no texture.
 
+**Contents grow with the card.** Out of the pill and back into it the box is drawn at the card's
+share of its open width (`IslandSurfaceBase.growRatio`, never under `Theme.morphGrowMin`) about the
+card's top middle (a pill's: its middle), through a blur that clears as it nears full size
+(`morphGrowBlur`, `morphGrowSharp`). Both are uniforms of `Shaders/roundedclip.frag`
+(`FrostedSurface.contentScale/contentBlur/contentPivot`), read off the shape itself, so the panel
+comes out of the island as one thing and goes back the same way. At rest the texture is drawn texel
+for texel.
+
+**The pace is by size.** `Motion.pace`: a pill moves at `Theme.morphOmega`, a shape with far to go
+eases down to `morphOmegaCalm`; opening, the width leads the height (`morphWidthLead`); a close is
+`morphCloseQuicken` faster and critically damped (`IslandSurfaceBase.paceFor`, set on every retarget).
+
 **Contents fade on the shape's clock.** `IslandSurfaceBase.morphProgress` is how far the shape has
 travelled from the shape it left (re-based on every retarget) to the one it is going to, along the
 axis that travels further (`Motion.progress`; a short spring of its own when neither does). The
@@ -73,8 +85,10 @@ and pairs them with its own (`MorphScan.match`):
   role prefixed (`header.button`). A part is named by its item's `objectName`, else by type and
   ordinal, so name a primitive's texts when their order varies (`IslandPill`, `PanelFooter`).
 - pairs are the same `morphKey` (several may be listed, most particular first: `level.volume|pill`),
-  else the same role and `morphSlot` (declared, or the ordinal in reading order among those not
-  clipped away) when alike in size and close; inside one surface (`swapBegin`) whatever their keys.
+  and what sits inside a pair by role and `morphSlot`. Between two surfaces nothing else pairs: a tile
+  that merely holds the same place dissolves with the rest. Inside one surface (`swapBegin`) the same
+  role and slot (declared, or the ordinal in reading order among those not clipped away) pair when
+  alike in size and close, whatever their keys.
   A pair flies on the shape's progress, kept inside the card; changed text rolls, changed icons dip, pictures dissolve.
   Words, glyphs and colours change on the clock (`morphRoll*`), not the shape. A panel's title slides
   from where the old one was to where the new one lands. On a plate that changes colour a long way
@@ -93,10 +107,12 @@ and pairs them with its own (`MorphScan.match`):
   it lands comes top to bottom once it is `morphLeadBelow` short of landing (`MorphLayer.lead`,
   `aheadOfLead`, `leadStagger`). A long flight that does not lead flies on a backing of the card's
   ground (`morphBackingTravel`), so it hides what it crosses rather than print over it.
-- what the surface before had with no partner is cut on the frame after the taker's first
-  (`Theme.morphCut`); what the taker has with no partner arrives in a cascade (`morphArrive*`).
-  `MorphMask`, read by `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back
-  until its ghost lands, and lets the rest arrive.
+- between two surfaces the rest is a dissolve: what the surface before had with no partner softens
+  and fades over `Theme.morphDissolveOut` (`MorphGhost.fade`, `MorphLayer.ghostBlur`), and the taker's
+  contents come up as one through a blur over `morphDissolve`, starting `morphDissolveDelay` in
+  (`MorphLayer.dissolve*`), so the two overlap and neither is cut. `MorphMask`, read by
+  `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back until its ghost lands. A
+  swap inside one surface keeps its cut and cascade (`morphPillOut`, `morphArrive*`).
 - what cannot be redrawn (a Shape, a Canvas, a shader) never pairs; inside a pair it waits for it.
 - the still keeps its contents and ground until the taker's first frame, then cuts both, since the
   taker's ghosts draw the same thing in the same place; the taker holds that first frame, shape

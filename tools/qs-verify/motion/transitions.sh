@@ -129,6 +129,17 @@ for pair in "${PAIRS[@]}"; do
   hold=${hold:-0.9}
   name="${a//,/+}-${b//,/+}"
   reset_all "${prev:-}"
+  # The pair once unrecorded first (QS_WARM=0 skips it): the clip shader's blur, with a morph's mask
+  # bound, is another variant for the driver to build the first time each window draws it, and the
+  # headless renderer builds it in the frame (100 ms and more), which a capture would show as a
+  # freeze the live shell only has once after a driver update.
+  if [[ ${QS_WARM:-1} == 1 ]]; then
+    for s in ${a//,/ }; do raise "$s"; sleep 0.15; done
+    sleep 0.8
+    for s in ${b//,/ }; do raise "$s"; sleep 0.6; done
+    sleep 0.6
+    reset_all "${a//,/ } ${b//,/ }"
+  fi
   prev="${a//,/ } ${b//,/ }"
   case ${a%%,*} in
     osd-* | toast | moment-* | dictation | sharing | rebuild)

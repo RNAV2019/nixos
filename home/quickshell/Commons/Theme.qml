@@ -1081,7 +1081,7 @@ Singleton {
   // what it crosses rather than print over it.
   readonly property int morphBackingTravel: 120
   // How long a plate takes to turn another colour in a morph (Ui/MorphPart.qml).
-  readonly property int morphPlateTint: 56
+  readonly property int morphPlateTint: 120
   // How long what waited for a pair that leads a panel takes to come up (Ui/MorphLayer.qml).
   readonly property int morphWaitedFade: 50
   // How far short of landing a pair that leads a panel down is when what lies below its landing comes.
@@ -1093,24 +1093,24 @@ Singleton {
   readonly property int morphCarouselRoom: -10
   // A pill whose words change where it stands: the old are gone over morphPillOut ms, the new start
   // morphPillIn ms in, so one frame has the old faint and none has neither.
-  readonly property int morphPillOut: 12
-  readonly property int morphPillIn: 8
+  readonly property int morphPillOut: 45
+  readonly property int morphPillIn: 30
   // ...and come up over morphPillRoll ms: a roll, not a swap in a frame or two.
-  readonly property int morphPillRoll: 40
+  readonly property int morphPillRoll: 130
   // How long a pill's glyph takes from where the old one sat to where the new one sits.
-  readonly property int morphGlyphTravel: 70
+  readonly property int morphGlyphTravel: 150
   readonly property int morphArriveDelay: 6
-  readonly property int morphArriveStep: 4
+  readonly property int morphArriveStep: 10
   readonly property int morphArriveSteps: 12
-  readonly property int morphArriveFade: 40
+  readonly property int morphArriveFade: 90
   readonly property real morphRoll: 8
   readonly property int morphTitleRoll: 14
   // How long a changed word takes to roll out, and to roll in (MorphPart).
-  readonly property int morphRollOut: 22
-  readonly property int morphRollIn: 26
+  readonly property int morphRollOut: 60
+  readonly property int morphRollIn: 110
   // How long the fill or picture of a pair that only the panel before had takes to go (a row's card
   // around a notification that becomes a toast).
-  readonly property int morphPlateFade: 70
+  readonly property int morphPlateFade: 130
   readonly property real morphMaskBleed: 2
 
   // The still's ground outlives its contents, and only starts to go once the taker reports a
@@ -1147,18 +1147,38 @@ Singleton {
   // 1 at the one it is going to; Ui/Motion.js progress), so a retarget can never pull them
   // apart from the shape. Each is [start, end]: the progress where the fade begins and ends.
   // Out of the pill: about as quick as the 50 ms fade they replace.
-  readonly property var fadeOpenIn: [0.0, 0.2]
+  readonly property var fadeOpenIn: [0.08, 0.6]
   // Panel to panel: the entering contents start late, as the 45 ms delay did, and land before the shape settles.
   readonly property var fadeEnterIn: [0.15, 0.45]
   // Closing: the contents are gone by the time the shape has travelled this far, or in
   // morphContent ms (IslandSurfaceBase.closeT), whichever is first; never in under a few frames.
-  readonly property var fadeCloseOut: [0.0, 0.5]
+  readonly property var fadeCloseOut: [0.05, 0.68]
   // Closing: the collapsed pill's clock and marks arrive as the card nears the pill.
   readonly property var fadePillIn: [0.7, 1.0]
 
   // They settle through a few pixels in the direction the height travels, so a switch between
   // two same-width columns has an axis to read.
   readonly property real morphEnterTravel: 10
+
+  // Contents grow with the card (IslandSurfaceBase.growRatio): out of the pill they are drawn at the
+  // card's share of its open width, never smaller than morphGrowMin, and through a blur of up to
+  // morphGrowBlur px that has cleared by morphGrowSharp of the way from that floor to full size, so
+  // the panel comes out of the island as one thing and goes back into it the same way.
+  readonly property real morphGrowMin: 0.6
+  readonly property real morphGrowBlur: 7
+  readonly property real morphGrowSharp: 0.8
+  // The longest a closing surface's contents stay, however its shape is travelling (closeT).
+  readonly property int morphCloseFade: reduceMotion ? 1 : 240
+
+  // One panel into another (Ui/MorphLayer.qml): what the panel before had with no partner softens
+  // and fades over morphDissolveOut ms; this panel's contents come up through a blur over
+  // morphDissolve ms, starting morphDissolveDelay in, so the two overlap and neither is cut. They
+  // start morphDissolveScale larger and settle; the blur on either is at most morphDissolveBlur px.
+  readonly property int morphDissolveOut: 150
+  readonly property int morphDissolveDelay: 50
+  readonly property int morphDissolve: 220
+  readonly property real morphDissolveScale: 1.025
+  readonly property real morphDissolveBlur: 7
 
   // The clock's digit roll, measured at 60 fps: each digit travels about half a glyph's height
   // and cross-fades; a fraction of font size, so it reads the same at pill and card size.

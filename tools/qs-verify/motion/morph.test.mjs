@@ -28,7 +28,7 @@ test("the same role and slot pairs only when alike and close", () => {
   const b = [anchor("choice", 0, 0, 112, 88), anchor("choice", 122, 0, 300, 88), anchor("choice", 0, 500, 104, 88)];
   M.assignSlots(a);
   M.assignSlots(b);
-  const m = M.match(a, b);
+  const m = M.match(a, b, { inPlace: true });
   // slot 0 pairs; slot 1 is too wide (300 / 104 > 1.6); slot 2 is too far away.
   assert.deepEqual(m.pairs.map((p) => [p.a.slot, p.b.slot]), [[0, 0]]);
   assert.equal(m.outs.length, 2);
@@ -40,7 +40,7 @@ test("a declared slot outranks reading order", () => {
   const b = [anchor("carousel", 410, 0, 100, 60, { slot: 0 }), anchor("carousel", 520, 0, 100, 60, { slot: 1 })];
   M.assignSlots(a);
   M.assignSlots(b);
-  const m = M.match(a, b);
+  const m = M.match(a, b, { inPlace: true });
   assert.deepEqual(m.pairs.map((p) => p.a.slot), [0]);
 });
 
@@ -90,7 +90,7 @@ test("carousel tiles pair in order however far the rows sit apart", () => {
   const b = [anchor("carousel", 130, 85, 136, 80), anchor("carousel", 280, 85, 136, 80), anchor("carousel", 430, 80, 160, 90)];
   M.assignSlots(a);
   M.assignSlots(b);
-  const m = M.match(a, b);
+  const m = M.match(a, b, { inPlace: true });
   assert.equal(m.pairs.length, 3);
 });
 
@@ -127,4 +127,14 @@ test("a rectangle's default border is no border", () => {
   assert.equal(B(rect(2, { r: 1, g: 1, b: 1, a: 0 })), 0);
   assert.equal(B(rect(1, { r: 0.2, g: 0.9, b: 0.7, a: 1 })), 1);
   assert.equal(B(rect(2, { r: 0, g: 0, b: 0, a: 1 })), 2);
+});
+
+test("between two surfaces only a shared key pairs: the same place alone does not", () => {
+  const a = [anchor("tile", 0, 100, 160, 60), anchor("slider", 0, 200, 480, 40, { key: "level.volume" })];
+  const b = [anchor("tile", 0, 100, 160, 60), anchor("slider", 0, 260, 480, 40, { key: "level.volume" })];
+  M.assignSlots(a);
+  M.assignSlots(b);
+  const m = M.match(a, b);
+  assert.deepEqual(m.pairs.map((p) => p.a.key), ["level.volume"]);
+  assert.equal(m.outs.length, 1);
 });

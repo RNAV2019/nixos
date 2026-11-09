@@ -50,10 +50,20 @@ Item {
   // until it has, its progress still reads the rest it was at.
   // (Not before the words and glyphs that change on the clock have: a swap the same size has no
   // shape to wait on, and would otherwise hand over mid-roll.)
-  readonly property bool landed: running && clockRunning && clock > Math.max(Theme.morphPillIn + Theme.morphPillRoll, Theme.morphGlyphTravel) && progress >= 0.999
+  readonly property bool landed: running && clockRunning && clock > Math.max(Theme.morphPillIn + Theme.morphPillRoll, Theme.morphGlyphTravel, inPlace ? 0 : Theme.morphDissolveOut + 60) && progress >= 0.999
   property bool ghostsDone: false
 
-  readonly property real cascadeEnd: Theme.morphArriveDelay + Theme.morphArriveStep * Theme.morphArriveSteps + Theme.morphArriveFade
+  readonly property real cascadeEnd: inPlace ? Theme.morphArriveDelay + Theme.morphArriveStep * Theme.morphArriveSteps + Theme.morphArriveFade : Theme.morphDissolveDelay + Theme.morphDissolve
+
+  // Out of another surface this one's contents come up as one, through a blur, while what that one
+  // had with no partner softens away (MorphGhost.fade): a dissolve, with only the pairs in flight.
+  // (A swap inside one surface keeps its contents sharp and brings them in on the cascade.)
+  readonly property real dissolveT: !running || inPlace ? 1 : !clockRunning ? 0 : Motion.ramp(clock, Theme.morphDissolveDelay, Theme.morphDissolveDelay + Theme.morphDissolve)
+  readonly property real dissolve: dissolveT
+  readonly property real dissolveScale: 1 + (Theme.morphDissolveScale - 1) * (1 - dissolveT)
+  readonly property real dissolveBlur: dissolveT >= 1 ? 0 : Theme.morphDissolveBlur * (1 - Motion.ramp(dissolveT, 0.1, 0.9))
+  // The ghosts soften as the leavers among them go, and are sharp again before the pairs land.
+  readonly property real ghostBlur: !running || inPlace || !clockRunning || ghostsDone ? 0 : Theme.morphDissolveBlur * Motion.ramp(clock, 0, Theme.morphDissolveOut * 0.7) * (1 - Motion.ramp(clock, Theme.morphDissolveOut * 0.7, Theme.morphDissolveOut + 60))
 
   signal finished
 
@@ -630,7 +640,7 @@ Item {
       pairs.forEach(function (p) {
         result.push(lerpAnchor(p.a, p.b, q));
       });
-      var cut = clockRunning && clock > Theme.morphCut ? 0 : 1;
+      var cut = !clockRunning ? 1 : 1 - Motion.ramp(clock, 0, inPlace ? Theme.morphPillOut : Theme.morphDissolveOut);
       if (cut > 0.05)
         outs.forEach(function (a) {
           result.push(faded(a, cut));
@@ -643,7 +653,7 @@ Item {
           isPair = true;
       if (isPair && !ghostsDone)
         return;
-      var shown = a.rest ? morph.arrival(0) : rankOf(a) >= 0 ? morph.arrival(rankOf(a)) : 1;
+      var shown = !morph.inPlace ? morph.dissolve : a.rest ? morph.arrival(0) : rankOf(a) >= 0 ? morph.arrival(rankOf(a)) : 1;
       if (shown > 0.05)
         result.push(faded(a, shown));
     });

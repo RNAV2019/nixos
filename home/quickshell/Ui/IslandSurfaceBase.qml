@@ -534,8 +534,8 @@ PanelWindow {
     property: "closeT"
     from: 0
     to: 1
-    duration: Theme.duration(Theme.morphContent)
-    easing.type: Easing.OutCubic
+    duration: Theme.morphCloseFade
+    easing.type: Easing.InQuad
   }
 
   readonly property real morphProgress: isNaN(win.shapeProgress) ? (Theme.reduceMotion ? 1 : progressFallback.value) : win.shapeProgress
@@ -550,6 +550,19 @@ PanelWindow {
 
   // Carried across retargets: moves only toward the end its intent points at.
   property real bodyOpacity: 0
+
+  // Out of the pill and back into it the contents are drawn at the card's share of its open width
+  // (FrostedSurface.contentScale), so they grow and shrink with it as one thing, through a blur that
+  // clears as they near full size. Read off the shape itself, so it cannot fall out of step with it.
+  // Not out of another surface (there the contents dissolve, see MorphLayer), nor on a still.
+  readonly property bool growing: !Theme.reduceMotion && !win.parked && !win.handover && !win.morphing && !win.morphPending && !origin.held && !(win.open && origin.handedOver) && win.openWidth > 0
+  readonly property real growRatio: {
+    if (!win.growing)
+      return 1;
+    var r = surface.width / surface.snap(win.openWidth);
+    return r >= 0.999 ? 1 : Math.max(Theme.morphGrowMin, r);
+  }
+  readonly property real growBlur: win.growRatio >= 1 ? 0 : Theme.morphGrowBlur * (1 - Motion.ramp((win.growRatio - Theme.morphGrowMin) / (1 - Theme.morphGrowMin), 0.1, Theme.morphGrowSharp))
 
   // The collapsed pill's share while the surface closes (CollapsedPill.amount).
   property real pillAmount: 1
@@ -850,6 +863,13 @@ PanelWindow {
     y: snap(Theme.barMarginTop + origin.offsetY - (win.centred ? Math.max(0, Math.min(height, Theme.islandPillHeight) - Theme.barHeight) / 2 : 0))
 
     clipContent: true
+
+    // A pill's contents grow about its middle, a panel's from under the island.
+    contentPivot: Qt.point(width / 2, win.openHeight <= Theme.islandPillHeight * 1.5 ? height / 2 : 0)
+    contentScale: win.morphing ? morphLayer.dissolveScale : win.growRatio
+    contentBlur: win.morphing ? morphLayer.dissolveBlur : win.growBlur
+    contentDissolve: win.morphing ? morphLayer.dissolve : 1
+    ghostBlur: win.morphing ? morphLayer.ghostBlur : 0
 
     // Contents are laid out at the open size, in a box that stays where the open card will sit,
     // so the growing card uncovers them. The open card's top, as the y below works it out.

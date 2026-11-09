@@ -50,6 +50,17 @@ Item {
   property real contentLeft: x + (width - contentWidth) / 2
   property real contentTop: y
 
+  // The contents drawn smaller or larger about `contentPivot` (a point of this surface) and softened
+  // by `contentBlur` px, both in the clip shader: how they grow out of the pill with the card, and
+  // how one panel's dissolve into the next's (`contentDissolve`, their share of full strength).
+  // At rest (1, 0, 1) the texture is drawn texel for texel.
+  property real contentScale: 1
+  property real contentBlur: 0
+  property real contentDissolve: 1
+  property point contentPivot: Qt.point(width / 2, 0)
+  // The ghosts of the panel before (ghostData), softened as they go.
+  property real ghostBlur: 0
+
   // At a fractional scale most logical coordinates fall between device pixels, and the
   // clipContent layer is then resampled, softening every glyph in it. Size lands on the
   // pixel grid here; callers place the surface with snap().
@@ -138,7 +149,8 @@ Item {
     sourceItem: root.clipContent && root.visible ? contentHolder : null
     hideSource: root.clipContent
     live: true
-    smooth: false
+    // Nearest at rest, where a texel is a device pixel; filtered while it is drawn at another size.
+    smooth: root.contentScale !== 1
     visible: false
   }
 
@@ -148,8 +160,8 @@ Item {
     y: contentHolder.y
     width: contentHolder.width
     height: contentHolder.height
-    visible: root.clipContent && root.contentOpacity > 0
-    opacity: root.contentOpacity
+    visible: root.clipContent && root.contentOpacity > 0 && root.contentDissolve > 0
+    opacity: root.contentOpacity * root.contentDissolve
 
     property variant source: contentTexture
     property size boxSize: Qt.size(root.width, root.height)
@@ -159,6 +171,9 @@ Item {
     property real aa: 1 / root.pixelRatio
     property variant mask: maskTexture
     property real useMask: root.maskActive ? 1 : 0
+    property point pivot: Qt.point(root.contentPivot.x - contentHolder.x, root.contentPivot.y - contentHolder.y)
+    property real scale: root.contentScale
+    property real blur: root.contentBlur
 
     fragmentShader: Qt.resolvedUrl("../Shaders/roundedclip.frag.qsb")
   }
@@ -237,6 +252,9 @@ Item {
     property real aa: 1 / root.pixelRatio
     property variant mask: maskTexture
     property real useMask: 0
+    property point pivot: Qt.point(0, 0)
+    property real scale: 1
+    property real blur: root.ghostBlur
 
     fragmentShader: Qt.resolvedUrl("../Shaders/roundedclip.frag.qsb")
   }

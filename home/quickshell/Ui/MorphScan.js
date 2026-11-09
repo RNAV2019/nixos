@@ -463,6 +463,10 @@ function match(from, to, opts) {
   fromSorted.forEach(function (a) {
     if (!pairable(a) || !free(from, usedA, a))
       return;
+    // Between two surfaces only what is named the same thing flies (and what sits inside it); a tile
+    // that merely holds the same place in another panel dissolves with the rest.
+    if (!inPlace && !(a.parent && usedA.indexOf(a.parent) >= 0))
+      return;
     for (var i = 0; i < to.length; i++) {
       var b = to[i];
       if (!pairable(b) || !free(to, usedB, b) || !inPlace && b.key && a.key && !shareKey(a, b))

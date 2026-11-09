@@ -16,7 +16,9 @@ Item {
   Rectangle {
     anchors.fill: parent
     // Nothing that was not read shows: what the panel moves after a read waits for the next one.
-    color: Qt.rgba(root.host ? 0 : 1, 0, 0, 1)
+    // A swap in place holds everything back for its cascade; out of another surface only the pairs
+    // wait (for their ghosts), and the rest comes up with the dissolve.
+    color: Qt.rgba(root.host && root.host.inPlace ? 0 : 1, 0, 0, 1)
   }
 
   Repeater {
@@ -51,21 +53,25 @@ Item {
       // In the way of a pair leading the panel, held back; once it has passed, arriving from then. Once
       // in, it stays in.
       property bool started: false
-      readonly property bool covered: !modelData.paired && !started && (root.host.aheadOfLead(modelData.x, modelData.w, modelData.rowTop, modelData.rowBottom) || root.host.underCarouselTile(modelData.x, modelData.y, modelData.w, modelData.h))
+      readonly property bool covered: root.host.inPlace && !modelData.paired && !started && (root.host.aheadOfLead(modelData.x, modelData.w, modelData.rowTop, modelData.rowBottom) || root.host.underCarouselTile(modelData.x, modelData.y, modelData.w, modelData.h))
       property real clearedAt: 0
 
       onCoveredChanged: if (!covered && !started)
         clearedAt = root.host.clock + root.host.leadStagger(modelData.rowTop)
 
-      readonly property real shown: modelData.paired ? (root.host.landed ? 1 : 0) : firstSeen < 0 || covered ? 0 : root.host.arrivalFrom(modelData.rank, Math.max(firstSeen, clearedAt))
+      readonly property real shown: modelData.paired ? (root.host.landed ? 1 : 0) : !root.host.inPlace ? 1 : firstSeen < 0 || covered ? 0 : root.host.arrivalFrom(modelData.rank, Math.max(firstSeen, clearedAt))
 
       onShownChanged: if (shown > 0 && !modelData.paired)
         started = true
 
-      x: modelData.x - Theme.morphMaskBleed
-      y: modelData.y - Theme.morphMaskBleed
-      width: modelData.w + 2 * Theme.morphMaskBleed
-      height: modelData.h + 2 * Theme.morphMaskBleed
+      // A pair held back while the contents around it come up through a blur is held a blur wider,
+      // so none of it smears out from under its box.
+      readonly property real bleed: Theme.morphMaskBleed + (modelData.paired && !root.host.inPlace ? Theme.morphDissolveBlur : 0)
+
+      x: modelData.x - bleed
+      y: modelData.y - bleed
+      width: modelData.w + 2 * bleed
+      height: modelData.h + 2 * bleed
       color: Qt.rgba(shown, 0, 0, 1)
     }
   }
