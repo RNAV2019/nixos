@@ -5,8 +5,8 @@ import qs.Commons
 import qs.Services
 import qs.Ui
 
-// The calendar: the island grown into a card. The grid is always six rows of seven, and the
-// agenda always reserves Theme.calAgendaMax rows, so height never varies with month or day.
+// The calendar: the island grown into a wide, low card. The month is on the left, always six rows
+// of seven, and the chosen day's agenda on the right, so the size never varies with month or day.
 Variants {
   id: root
 
@@ -32,6 +32,19 @@ Variants {
     }
 
     readonly property var agenda: Calendar.eventsOn(Calendar.selected)
+
+    // How far off the chosen day is, for the eyebrow over its name.
+    readonly property string distance: {
+      var now = new Date();
+      var d = win.dayIndex - Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+      if (d === 0)
+        return "Today";
+      if (d === 1)
+        return "Tomorrow";
+      if (d === -1)
+        return "Yesterday";
+      return d > 0 ? "In " + d + " days" : -d + " days ago";
+    }
 
     // Each day opens at its first event, not wherever the last day was scrolled to.
     onAgendaChanged: agendaView.scrollToTop()
@@ -94,13 +107,13 @@ Variants {
       takesMove: true
       header.titleOpacity: monthLayer.opacity
       header.titleShift: monthLayer.shift
+      // The header is the month's: it ends where the left pane does.
+      header.width: Theme.calSplit
 
-      // Left and right turn the month, up and down the week.
+      // The arrows walk the grid: left and right a day, up and down a week, and the month follows
+      // the day across its edge. Page Up and Page Down turn the month.
       onMoved: function (dx, dy) {
-        if (dx !== 0)
-          Calendar.step(dx);
-        else
-          Calendar.stepDay(7 * dy);
+        Calendar.stepDay(dx + 7 * dy);
       }
 
       onKeyPressed: function (event) {
@@ -111,6 +124,12 @@ Variants {
           break;
         case Qt.Key_R:
           Calendar.refresh();
+          break;
+        case Qt.Key_PageUp:
+          Calendar.step(-1);
+          break;
+        case Qt.Key_PageDown:
+          Calendar.step(1);
           break;
         default:
           return;
@@ -185,9 +204,10 @@ Variants {
               width: Theme.calTodayMarker
               height: Theme.calTodayMarker
               radius: width / 2
-              visible: cell.isSelected || cell.isToday
-              color: cell.isSelected ? Theme.accent : "transparent"
-              border.width: cell.isSelected ? 0 : 1
+              visible: cell.isSelected || cell.isToday || pointer.containsMouse
+              // Under the pointer a day lifts like any control, so the grid reads as pressable.
+              color: cell.isSelected ? Theme.accent : pointer.containsMouse ? Theme.lift(Theme.liftControlHover) : "transparent"
+              border.width: cell.isSelected || !cell.isToday ? 0 : 1
               border.color: Theme.withAlpha(Theme.accent, 0.55)
 
               Behavior on color {
@@ -227,7 +247,10 @@ Variants {
             }
 
             MouseArea {
+              id: pointer
+
               anchors.fill: parent
+              hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: Calendar.selectDay(cell.day)
             }
@@ -236,30 +259,50 @@ Variants {
       }
 
       Divider {
-        x: Theme.calInset
-        y: Theme.calDividerTop
-        width: panel.width - Theme.calInset * 2
+        x: Theme.calSplit
+        y: Theme.calRuleInset
+        vertical: true
+        implicitHeight: panel.height - Theme.calRuleInset * 2
       }
 
-      // The selected day's heading, agenda and footnote arrive together.
+      // The selected day's name, agenda and footnote arrive together.
       ArrivalLayer {
         id: dayLayer
 
-        SectionLabel {
-          x: Theme.calInset
-          y: Theme.calSectionTop
-          width: panel.width - Theme.calInset * 2
-          verticalAlignment: Qt.AlignTop
-          title: Qt.formatDateTime(Calendar.selected, "dddd, d MMMM")
+        readonly property real paneWidth: panel.width - Theme.calAgendaLeft - Theme.calInset
+
+        Text {
+          x: Theme.calAgendaLeft
+          y: Theme.calEyebrowTop
+          width: dayLayer.paneWidth
+          text: win.distance.toUpperCase()
+          color: win.distance === "Today" ? Theme.accent : Theme.inkTertiary
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calEyebrowSize
+          font.weight: Theme.weightMedium
+          font.letterSpacing: 0.6
+          elide: Text.ElideRight
         }
 
-        // Room for three rows; a fuller day scrolls one row per wheel notch, keeping rows aligned.
+        Text {
+          x: Theme.calAgendaLeft
+          y: Theme.calHeadingTop
+          width: dayLayer.paneWidth
+          text: Qt.formatDateTime(Calendar.selected, "dddd d MMMM")
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.calHeadingSize
+          font.weight: Theme.weightSemi
+          elide: Text.ElideRight
+        }
+
+        // Room for six rows; a fuller day scrolls one row per wheel notch, keeping rows aligned.
         ScrollView {
           id: agendaView
 
-          x: Theme.calInset
+          x: Theme.calAgendaLeft
           y: Theme.calAgendaTop
-          width: panel.width - Theme.calInset * 2
+          width: dayLayer.paneWidth
           height: Theme.calAgendaBlock
           wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
 
@@ -294,14 +337,16 @@ Variants {
                 Text {
                   x: Theme.calTimeLeft
                   y: (parent.height - height) / 2
-                  text: row.event.allDay ? "all day" : Qt.formatDateTime(row.event.start, "HH:mm")
+                  // An all-day event has no time: its title starts here and "All day" goes to the far end.
+                  visible: !row.event.allDay
+                  text: Qt.formatDateTime(row.event.start, "HH:mm")
                   color: Theme.subtle
                   font.family: Theme.monoFont
                   font.pixelSize: Theme.calTimeSize
                 }
 
                 Text {
-                  x: Theme.calTitleLeft
+                  x: row.event.allDay ? Theme.calTimeLeft : Theme.calTitleLeft
                   y: (parent.height - height) / 2
                   width: Math.max(0, meta.x - x - 12)
                   text: row.event.title
@@ -316,11 +361,12 @@ Variants {
 
                   x: parent.width - width - Theme.calSpineLeft
                   y: (parent.height - height) / 2
+                  width: Math.min(implicitWidth, Theme.calMetaMax)
                   text: {
                     if (row.event.location !== "")
                       return row.event.location;
                     if (row.event.allDay)
-                      return "";
+                      return "All day";
                     var mins = Math.round((row.event.end - row.event.start) / 60000);
                     if (mins <= 0)
                       return "";
@@ -341,10 +387,12 @@ Variants {
         Text {
           readonly property bool alone: win.agenda.length === 0
 
-          x: Theme.calInset
-          y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap * 2
-          width: panel.width - Theme.calInset * 2
+          x: Theme.calAgendaLeft
+          y: alone ? Theme.calAgendaTop + (Theme.calAgendaBlock - height) / 2 : Theme.calAgendaTop + Theme.calAgendaBlock + Theme.calAgendaGap + 2
+          width: dayLayer.paneWidth
           horizontalAlignment: alone ? Text.AlignHCenter : Text.AlignLeft
+          wrapMode: alone ? Text.Wrap : Text.NoWrap
+          maximumLineCount: 3
           elide: Text.ElideRight
           text: {
             if (Calendar.error !== "")

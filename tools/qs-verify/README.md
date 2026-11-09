@@ -78,6 +78,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | dictation pill | JSON lines through a `socat` listener on `$XDG_RUNTIME_DIR/handy/overlay.sock` |
 | sharing pill, nearby panel | a stub `nearby` on PATH replaying `nearby.events` (peers, status, transfers) |
 | moments | the shell's own `activities` ipc (`plug`, `wifi`) |
+| calendar agenda | off by default (the stub `ical-agenda` fails as on a fresh machine); put ical-agenda's own tab-separated output in `$QS_VERIFY_WORK/cal-events.tsv` after `run.sh` and press `r` in the panel |
 | auth prompt | the shell's own `authpreview` ipc |
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |
 | phone satellite, phone panel, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |

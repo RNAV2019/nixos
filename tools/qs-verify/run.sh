@@ -101,8 +101,10 @@ done
 printf '#!/bin/sh\nexit 0\n' >"$QSV_WORK/bin/brightnessctl"
 printf '#!/bin/sh\nexit 1\n' >"$QSV_WORK/bin/hyprctl"
 # The real one names the scratch config path in its error, which moves with QS_VERIFY_WORK.
-printf '#!/bin/sh\necho "ical-agenda: no calendar addresses in ~/.config/quickshell-calendar/ical-urls" >&2\nexit 1\n' \
-  >"$QSV_WORK/bin/ical-agenda"
+# With $QSV_WORK/cal-events.tsv in place (ical-agenda's own output: a header line, then tab-separated
+# rows), it answers with that instead, for a calendar with an agenda in it.
+printf '#!/bin/sh\n[ -f "%s" ] && exec cat "%s"\necho "ical-agenda: no calendar addresses in ~/.config/quickshell-calendar/ical-urls" >&2\nexit 1\n' \
+  "$QSV_WORK/cal-events.tsv" "$QSV_WORK/cal-events.tsv" >"$QSV_WORK/bin/ical-agenda"
 chmod +x "$QSV_WORK/bin/brightnessctl" "$QSV_WORK/bin/hyprctl" "$QSV_WORK/bin/ical-agenda"
 
 # `nearby`, the CLI of nearbyd: the shell reads one long-lived `nearby events` stream and a

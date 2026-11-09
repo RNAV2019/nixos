@@ -815,43 +815,52 @@ Singleton {
   // The gap between a moment's buttons (Activities/MomentRow.qml).
   readonly property int activityButtonGap: 8
 
-  // The calendar. Board 14: a month grid over an agenda for the chosen day.
-  readonly property int calWidth: panelColumnWidth
-  readonly property int calHeight: 600
+  // The calendar: a split card, wide and low so it is plainly another shape than the control centre.
+  // The month is on the left (title and nav over a grid), the chosen day's agenda on the right.
+  readonly property int calWidth: 680
+  readonly property int calHeight: 330
   readonly property int calRadius: panelRadius
   readonly property int calInset: 24
-  readonly property int calHeaderTop: 4
+  // The header is the left pane's alone, seated so its title's centre line is 30 px down.
+  readonly property int calHeaderTop: -5
+  // Where the left pane ends: the rule between the two, and the header's own width.
+  readonly property int calSplit: 370
+  readonly property int calRuleInset: 26
 
-  // Seven columns on a 68 px pitch, six rows on 46; calGridTop is the first row's top, not a
+  // Seven columns on a 46 px pitch, six rows on 38; calGridTop is the first row's top, not a
   // baseline. Day centres in its cell, marker on the number, dot under it inside the marker.
-  readonly property int calWeekdayTop: 76
+  readonly property int calWeekdayTop: 64
   readonly property int calWeekdaySize: 11
-  readonly property int calGridTop: 102
-  readonly property int calColumnPitch: 68
-  readonly property int calRowPitch: 46
-  readonly property int calColumnFirst: 56
+  readonly property int calGridTop: 84
+  readonly property int calColumnPitch: 46
+  readonly property int calRowPitch: 38
+  readonly property int calColumnFirst: 47
   readonly property int calDaySize: 13
-  readonly property int calTodayMarker: 34
-  readonly property int calDotSize: 5
-  readonly property int calDotDrop: 12
+  readonly property int calTodayMarker: 30
+  readonly property int calDotSize: 4
+  readonly property int calDotDrop: 10
 
-  // The last grid row ends at 372, so the rule clears it by 20. Below it is a fixed block:
-  // room is reserved for calAgendaMax rows regardless, letting calHeight stay constant.
-  readonly property int calDividerTop: 392
-  readonly property int calSectionTop: 406
-  readonly property int calAgendaTop: 430
-  readonly property int calAgendaHeight: 38
+  // The right pane: an eyebrow (how far off the day is) over the day's name, then the agenda, whose
+  // first row tops out level with the grid's first. Room for calAgendaMax rows; more scroll.
+  readonly property int calAgendaLeft: calSplit + 20
+  readonly property int calEyebrowTop: 17
+  readonly property real calEyebrowSize: 10.5
+  readonly property int calHeadingTop: 32
+  readonly property int calHeadingSize: 15
+  readonly property int calAgendaTop: 66
+  readonly property int calAgendaHeight: 36
   readonly property int calAgendaGap: 4
   readonly property int calAgendaRadius: 14
-  readonly property int calSpineLeft: 12
+  readonly property int calSpineLeft: 10
   readonly property int calSpineWidth: 3
-  readonly property int calSpineHeight: 20
-  readonly property int calTimeLeft: 26
+  readonly property int calSpineHeight: 18
+  readonly property int calTimeLeft: 22
   readonly property real calTimeSize: 11.5
-  readonly property int calTitleLeft: 86
+  readonly property int calTitleLeft: 70
   readonly property real calEventTitleSize: 12.5
   readonly property real calMetaSize: 11
-  readonly property int calAgendaMax: 3
+  readonly property int calMetaMax: 76
+  readonly property int calAgendaMax: 6
   readonly property int calAgendaBlock: calAgendaMax * calAgendaHeight + (calAgendaMax - 1) * calAgendaGap
 
   // Board 13: a 1920x1080 lock surface. The surface paints its own background, so the
