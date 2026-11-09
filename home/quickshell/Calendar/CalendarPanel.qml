@@ -47,7 +47,16 @@ Variants {
     }
 
     // Each day opens at its first event, not wherever the last day was scrolled to.
-    onAgendaChanged: agendaView.scrollToTop()
+    onAgendaChanged: {
+      agendaView.openRow = -1;
+      agendaView.wantRow = -1;
+      agendaView.scrollToTop();
+    }
+
+    // How long something lasts, as an agenda row says it.
+    function lasting(mins) {
+      return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
+    }
 
     onOpening: {
       Calendar.today();
@@ -275,12 +284,11 @@ Variants {
           x: Theme.calAgendaLeft
           y: Theme.calEyebrowTop
           width: dayLayer.paneWidth
-          text: win.distance.toUpperCase()
+          text: win.distance
           color: win.distance === "Today" ? Theme.accent : Theme.inkTertiary
           font.family: Theme.uiFont
           font.pixelSize: Theme.calEyebrowSize
           font.weight: Theme.weightMedium
-          font.letterSpacing: 0.6
           elide: Text.ElideRight
         }
 
@@ -306,6 +314,42 @@ Variants {
           height: Theme.calAgendaBlock
           wheelStep: Theme.calAgendaHeight + Theme.calAgendaGap
 
+          // The row the pointer has open (-1: none). The first waits a moment, the next a shorter
+          // one, and none shuts in the gap between two.
+          property int openRow: -1
+          property int wantRow: -1
+
+          function hover(index, on) {
+            if (on) {
+              shut.stop();
+              wantRow = index;
+              if (openRow === index) {
+                open.stop();
+                return;
+              }
+              open.interval = openRow >= 0 ? Theme.calAgendaHoverSwap : Theme.calAgendaHoverDelay;
+              open.restart();
+            } else if (wantRow === index) {
+              wantRow = -1;
+              open.stop();
+              shut.restart();
+            }
+          }
+
+          Timer {
+            id: open
+
+            interval: Theme.calAgendaHoverDelay
+            onTriggered: agendaView.openRow = agendaView.wantRow
+          }
+
+          Timer {
+            id: shut
+
+            interval: Theme.calAgendaHoverGrace
+            onTriggered: agendaView.openRow = -1
+          }
+
           Column {
             width: agendaView.width
             spacing: Theme.calAgendaGap
@@ -319,15 +363,64 @@ Variants {
                 required property int index
 
                 readonly property var event: win.agenda[index]
+                readonly property bool expanded: agendaView.openRow === index
+                // One line of the title, which the first line of every row is centred on, open or shut.
+                readonly property real lineTop: (Theme.calAgendaHeight - titleLine.height) / 2
+                readonly property real openHeight: details.y + details.implicitHeight + Theme.calAgendaDetailPad
+
+                // When it runs, and for how long.
+                readonly property string span: {
+                  if (row.event.allDay)
+                    return "All day";
+                  var from = Qt.formatDateTime(row.event.start, "HH:mm");
+                  var mins = Math.round((row.event.end - row.event.start) / 60000);
+                  if (mins <= 0)
+                    return from;
+                  return from + " – " + Qt.formatDateTime(row.event.end, "HH:mm") + "  ·  " + win.lasting(mins);
+                }
 
                 width: agendaView.width
-                height: Theme.calAgendaHeight
+                height: expanded ? openHeight : Theme.calAgendaHeight
                 radius: Theme.calAgendaRadius
-                color: Theme.lift(Theme.liftTile)
+                color: Theme.lift(expanded || pointer.hovered ? Theme.liftHover : Theme.liftTile)
+                clip: true
+
+                Behavior on height {
+                  Morph {
+                    duration: Theme.morphState
+                  }
+                }
+
+                Behavior on color {
+                  Tint {}
+                }
+
+                HoverHandler {
+                  id: pointer
+
+                  onHoveredChanged: agendaView.hover(row.index, hovered)
+                }
+
+                // Opened low in the list, it is brought wholly into view once it has its height.
+                onExpandedChanged: if (expanded)
+                  reveal.restart()
+
+                Timer {
+                  id: reveal
+
+                  interval: Theme.morphState + 20
+                  onTriggered: {
+                    if (!row.expanded)
+                      return;
+                    var over = row.y + row.height - (agendaView.contentY + agendaView.height);
+                    if (over > 0.5)
+                      agendaView.feed(over, false);
+                  }
+                }
 
                 Rectangle {
                   x: Theme.calSpineLeft
-                  y: (parent.height - height) / 2
+                  y: (Theme.calAgendaHeight - height) / 2
                   width: Theme.calSpineWidth
                   height: Theme.calSpineHeight
                   radius: width / 2
@@ -336,7 +429,7 @@ Variants {
 
                 Text {
                   x: Theme.calTimeLeft
-                  y: (parent.height - height) / 2
+                  y: (Theme.calAgendaHeight - height) / 2
                   // An all-day event has no time: its title starts here and "All day" goes to the far end.
                   visible: !row.event.allDay
                   text: Qt.formatDateTime(row.event.start, "HH:mm")
@@ -345,22 +438,37 @@ Variants {
                   font.pixelSize: Theme.calTimeSize
                 }
 
+                // Measures one line, so the title's first line sits where it does shut.
                 Text {
+                  id: titleLine
+
+                  visible: false
+                  text: "X"
+                  font: title.font
+                }
+
+                Text {
+                  id: title
+
                   x: row.event.allDay ? Theme.calTimeLeft : Theme.calTitleLeft
-                  y: (parent.height - height) / 2
-                  width: Math.max(0, meta.x - x - 12)
+                  y: row.lineTop
+                  // Shut, it stops short of the far end's line; open, that line has gone under it and
+                  // the title has the row, on two lines if it needs them.
+                  width: Math.max(0, (row.expanded ? row.width - Theme.calSpineLeft : meta.x - 12) - x)
                   text: row.event.title
                   color: Theme.text
                   font.family: Theme.uiFont
                   font.pixelSize: Theme.calEventTitleSize
                   elide: Text.ElideRight
+                  wrapMode: row.expanded ? Text.Wrap : Text.NoWrap
+                  maximumLineCount: row.expanded ? 2 : 1
                 }
 
                 Text {
                   id: meta
 
                   x: parent.width - width - Theme.calSpineLeft
-                  y: (parent.height - height) / 2
+                  y: (Theme.calAgendaHeight - height) / 2
                   width: Math.min(implicitWidth, Theme.calMetaMax)
                   text: {
                     if (row.event.location !== "")
@@ -368,14 +476,53 @@ Variants {
                     if (row.event.allDay)
                       return "All day";
                     var mins = Math.round((row.event.end - row.event.start) / 60000);
-                    if (mins <= 0)
-                      return "";
-                    return mins < 60 ? mins + " min" : (mins % 60 === 0 ? (mins / 60) + " hr" : (mins / 60).toFixed(1) + " hr");
+                    return mins <= 0 ? "" : win.lasting(mins);
                   }
                   color: Theme.muted
                   font.family: Theme.uiFont
                   font.pixelSize: Theme.calMetaSize
                   elide: Text.ElideRight
+                  // Said in full underneath while the row is open.
+                  opacity: row.expanded ? 0 : 1
+                  visible: opacity > 0
+
+                  Behavior on opacity {
+                    ContentFade {}
+                  }
+                }
+
+                Column {
+                  id: details
+
+                  x: title.x
+                  y: title.y + title.height + Theme.calAgendaDetailGap + 1
+                  width: row.width - x - Theme.calSpineLeft
+                  spacing: Theme.calAgendaDetailGap
+                  opacity: row.expanded ? 1 : 0
+                  visible: opacity > 0
+
+                  Behavior on opacity {
+                    ContentFade {}
+                  }
+
+                  Repeater {
+                    model: [row.span, row.event.location, row.event.calendar]
+
+                    Text {
+                      required property string modelData
+                      required property int index
+
+                      width: details.width
+                      visible: modelData !== ""
+                      text: modelData
+                      color: index === 0 ? Theme.subtle : Theme.muted
+                      font.family: Theme.uiFont
+                      font.pixelSize: Theme.calAgendaDetailSize
+                      elide: Text.ElideRight
+                      wrapMode: index === 1 ? Text.Wrap : Text.NoWrap
+                      maximumLineCount: index === 1 ? 2 : 1
+                    }
+                  }
                 }
               }
             }

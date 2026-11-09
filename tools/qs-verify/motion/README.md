@@ -15,7 +15,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
 `open-twice` (cold then warm open; with the `.marks` file `first h change` is toggle to first motion), `click-off-early` (a click 200 ms into an open dismisses), `click-through`. Others:
-`satellite-hover-panel ping-pong ping-pong-slow open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview subview-keys osd-over-open segmented carousel controls satellite satellite-click lock-satellite lock-osd-satellite moment-swap toast-stack dictation-levels wifi-pass launcher-scroll reduce`
+`satellite-hover-panel ping-pong ping-pong-slow open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview subview-keys osd-over-open carousel controls satellite satellite-click lock-satellite lock-osd-satellite toast-stack dictation-levels launcher-scroll reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.
 
@@ -134,16 +134,7 @@ The shader's uniforms: `boxSize`, `boxOrigin`, `itemSize` (all item px), `radius
 bottom row (alpha 223, red 255 once un-premultiplied): a shader that multiplies the colour uniform by
 its alpha again (Qt delivers it premultiplied) reads red 128 there.
 
-## Media card: `media-cpu.sh`, `mock-mpris.py`
-
-`tools/qs-verify/mock-mpris.py` is a stand-in player (`org.mpris.MediaPlayer2.mock`, a four-minute
-track fixed at 90 s) that `lib.sh`'s `mpris_up [Playing|Paused]` starts on the private session bus. It
-is not part of `shoot.sh`, so the committed screenshot baselines are unchanged; the media card has no
-player there. `motion/media-cpu.sh TREE OUT_DIR [SECONDS]` opens the control centre with it playing,
-saves a still of the card and prints the shell's CPU jiffies (`/proc` utime+stime) over the window:
-the Task 5 method, since `QSG_RENDER_TIMING` is too coarse. Software GL (llvmpipe) puts the whole shell
-near two cores here, so the figures only compare two trees run back to back. To compare stills,
-freeze the waves in a scratch copy of each tree (a literal phase in place of `scrub.phase`).
+## Other scenarios
 
 The `launcher-scroll` scenario adds twelve fixture apps matching one query and arrows through the list
 (label `launcher.scroll`).

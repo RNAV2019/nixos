@@ -205,12 +205,3 @@ nb_kde_stage() {
   qsipc nearby send "$NB_SEND/photos-oct.zip" >/dev/null
   sleep 1.2
 }
-
-# ---- a media player: a mock MPRIS player on the private session bus (mock-mpris.py) ----
-# Not started by shoot.sh, so the committed baselines are unaffected; tests that need media call it.
-mpris_up() { # [Playing|Paused]
-  busctl --user list 2>/dev/null | grep -q org.mpris.MediaPlayer2.mock && return 0
-  setsid "$(mock_python)/bin/python" "$QSV_REPO/tools/qs-verify/mock-mpris.py" "${1:-Playing}" \
-    >"$QSV_WORK/mock-mpris.log" 2>&1 &
-  until busctl --user list 2>/dev/null | grep -q org.mpris.MediaPlayer2.mock; do sleep 0.2; done
-}

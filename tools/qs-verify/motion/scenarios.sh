@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -141,21 +141,6 @@ sc_osd_over_open() {
   wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.45
   sleep 2.0
   wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.40
-}
-
-# The recorder's segmented control (frame rate), moved by its F key.
-sc_segmented() {
-  sleep 0.5
-  toggle recorder
-  sleep 1.4
-  keys -k f
-  sleep 0.5
-  keys -k f
-  sleep 0.5
-  keys -k f
-  sleep 0.8
-  qsipc recorder close >/dev/null 2>&1
-  sleep 1.0
 }
 
 # The theme picker's carousel, arrowed right and back.
@@ -381,22 +366,6 @@ sc_click_through() {
   sleep 1.0
 }
 
-# A moment replaced by another inside the open pill, then interrupted mid-swap: charger, the
-# Wi-Fi sign-in over it, and the charger again 120 ms into that swap (the stage spring retargets).
-sc_moment_swap() {
-  sleep 0.5
-  qsipc activities plug 78 80 >/dev/null
-  sleep 1.4
-  qsipc activities wifi portal "Campus WiFi" >/dev/null
-  sleep 1.4
-  qsipc activities plug 41 20 >/dev/null
-  sleep 0.12
-  qsipc activities wifi portal "Campus WiFi" >/dev/null
-  sleep 1.6
-  qsipc activities dismissMoments >/dev/null 2>&1
-  sleep 1.2
-}
-
 # Notification toasts: one, a second crossfading in over it, a third 150 ms behind the second
 # (the two slots take turns), then let them time out. notify-send needs the harness' private bus.
 sc_toast_stack() {
@@ -434,19 +403,6 @@ sc_dictation_levels() {
   sleep 0.6
   dict '{"event":"hide"}'
   sleep 1.2
-}
-
-# The password row of a secured, unknown network opening and closing. The harness has no
-# networks (see the README), so this opens the Wi-Fi view and leaves the row to a tree that
-# fakes a scan; the springs log as wifi.pass.<name>.
-sc_wifi_pass() {
-  sleep 0.5
-  toggle control
-  sleep 1.3
-  keys -k Return
-  sleep 4.0
-  qsipc control close >/dev/null 2>&1
-  sleep 1.0
 }
 
 # The launcher's list scrolling: a query with more rows than fit, arrowed down past the window

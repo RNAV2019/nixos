@@ -75,7 +75,20 @@ Item {
 
   // Whether this pair's own contents, on their way to where they land, still have to cross a part that
   // arrives inside it (a title on its way past the back button it lands beside): that part waits.
+  //
+  // What arrives inside a pair is one group: if the words cross any of it, all of it rides. Judged a
+  // part at a time, a header's row of buttons came apart: the title's box (as wide as the room it
+  // has, whatever it says) reached the first button and the second's disc but not the second's
+  // arrow or the third, so one disc slid out from over its neighbour while its arrow stood waiting.
+  readonly property bool anyCrossed: !!target && !inPlace && target.parts.some(function (p) {
+    return p.folded && ghost.crossedAlone(p);
+  })
+
   function crossedBy(p) {
+    return anyCrossed;
+  }
+
+  function crossedAlone(p) {
     if (!target || inPlace)
       return false;
     var dx = rectA.x - rectB.x, dy = rectA.y - rectB.y;

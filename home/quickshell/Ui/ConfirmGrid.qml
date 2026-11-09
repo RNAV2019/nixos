@@ -129,7 +129,9 @@ Panel {
       model: root.model
       currentIndex: root.current
       activeIndex: root.armed >= 0 ? root.armed : root.marked
-      activeColor: Theme.love
+      // Love for a tile armed to do something that cannot be taken back; the one merely in use
+      // (the power profile) is a pick like any other, in the theme's accent.
+      activeColor: root.armed >= 0 ? Theme.love : Theme.accent
       activeLabel: root.armed >= 0 ? "Confirm" : ""
       activeIsCommitting: root.armed >= 0
       onEntered: function (index) {

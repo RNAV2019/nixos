@@ -847,7 +847,7 @@ Singleton {
   // first row tops out level with the grid's first. Room for calAgendaMax rows; more scroll.
   readonly property int calAgendaLeft: calSplit + 20
   readonly property int calEyebrowTop: 17
-  readonly property real calEyebrowSize: 10.5
+  readonly property real calEyebrowSize: 11.5
   readonly property int calHeadingTop: 32
   readonly property int calHeadingSize: 15
   readonly property int calAgendaTop: 66
@@ -864,6 +864,17 @@ Singleton {
   readonly property real calMetaSize: 11
   readonly property int calMetaMax: 76
   readonly property int calAgendaMax: 6
+  // A row under the pointer opens to its whole title and the lines a row has no room for (when it
+  // runs to, how long, where, whose calendar). Not at once: the pointer crossing the list on its way
+  // elsewhere opens nothing.
+  readonly property int calAgendaHoverDelay: 180
+  // From an open row to the next: brief, so a pointer run down the list opens the row it stops on
+  // and not every row on the way.
+  readonly property int calAgendaHoverSwap: 80
+  readonly property int calAgendaHoverGrace: 110
+  readonly property real calAgendaDetailSize: 11
+  readonly property int calAgendaDetailGap: 3
+  readonly property int calAgendaDetailPad: 10
   readonly property int calAgendaBlock: calAgendaMax * calAgendaHeight + (calAgendaMax - 1) * calAgendaGap
 
   // Board 13: a 1920x1080 lock surface. The surface paints its own background, so the

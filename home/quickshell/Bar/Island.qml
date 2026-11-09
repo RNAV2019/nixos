@@ -225,6 +225,9 @@ FrostedSurface {
   // The date is wider than the clock, so while the card is small the track block stops short
   // of the date.
   readonly property real centreLeft: Math.min(clockLeft, date.x)
+  // The same once the card is fully open, known before it is: what is laid out at the open size
+  // (the track's lines, which are cut to their room there) is measured against this.
+  readonly property real openCentreLeft: (Theme.islandExpandedWidth - Math.max(clockLabel.width, date.width)) / 2
 
   // A block's own stretch of the open, eased: 0 until `openness` reaches `from`, 1 once it reaches
   // `to`. Staggered stretches make the blocks arrive one after another and, the spring running
@@ -331,8 +334,10 @@ FrostedSurface {
       ContentFade {}
     }
 
-    // Track block clipped rather than elided while it moves; animating font size re-fits glyphs
-    // every frame and the trailing letters flicker against the ellipsis.
+    // The track's lines are laid out once, at the room they have in the open card, ellipsis and
+    // all, and the growing block uncovers them. Cut to the live width they re-fitted every frame;
+    // left uncut until the card had settled, a long title was sliced by the clip all the way open
+    // and then lost its last letters to an ellipsis in one frame.
     Item {
       id: media
 
@@ -378,6 +383,9 @@ FrostedSurface {
 
         readonly property real shown: root.reveal(0.3, 0.8)
 
+        // The room the lines have in the open card.
+        readonly property real openWidth: Math.max(0, root.openCentreLeft - 28 - media.x - 84)
+
         x: 84 - root.flight * (1 - shown)
         width: Math.max(0, parent.width - 84)
         height: parent.height
@@ -387,9 +395,8 @@ FrostedSurface {
           id: title
 
           y: parent.height / 2 - 8 - height / 2
-          width: parent.width
-          // Only once the morph stops, so the ellipsis never appears mid-motion.
-          elide: root.settled ? Text.ElideRight : Text.ElideNone
+          width: track.openWidth
+          elide: Text.ElideRight
           text: Media.title
           color: Theme.text
           font.family: Theme.uiFont
@@ -399,12 +406,36 @@ FrostedSurface {
 
         Text {
           y: parent.height / 2 + 9.5 - height / 2
-          width: parent.width
-          elide: root.settled ? Text.ElideRight : Text.ElideNone
+          width: track.openWidth
+          elide: Text.ElideRight
           text: Media.artist
           color: Theme.subtle
           font.family: Theme.uiFont
           font.pixelSize: Theme.islandCaptionSize
+        }
+
+        // While the block is narrower than its lines they run out under a soft edge, not a cut
+        // through a letter; gone by the time the card is open, where the lines end inside it.
+        Rectangle {
+          x: parent.width - width
+          width: 22
+          height: parent.height
+          opacity: 1 - root.reveal(0.8, 1)
+          visible: opacity > 0
+
+          gradient: Gradient {
+            orientation: Gradient.Horizontal
+
+            GradientStop {
+              position: 0
+              color: Theme.withAlpha(Theme.surface, 0)
+            }
+
+            GradientStop {
+              position: 1
+              color: Theme.surface
+            }
+          }
         }
       }
     }
