@@ -11,6 +11,9 @@
 //   move DX DY MS      glide by (DX, DY) over MS ms
 //   down | up          press or release the left button ("down right" for another button)
 //   click              down, 40 ms, up
+//   scroll DX DY MS    two fingers on a touchpad moving the content by (DX, DY) px over MS ms, then
+//                      lifting: finger-source axis events at about 120 Hz and an axis stop, which a
+//                      toolkit reads as a scroll with a beginning and an end (not wheel notches)
 //   wait MS
 // Each step prints "t=<ms> <step>" on stdout, so a runner can line screenshots up with motion.
 
@@ -103,6 +106,29 @@ static void button(uint32_t code, bool down) {
     wl_display_flush(display);
 }
 
+// Fingers move the content with them, and the protocol counts the other way (positive scrolls
+// down and right), hence the signs.
+static void scroll(double dx, double dy, int ms) {
+    const int  steps = ms / 8 > 0 ? ms / 8 : 1;
+    const long start = now_ms();
+    for (int i = 1; i <= steps; i++) {
+        zwlr_virtual_pointer_v1_axis_source(vp, WL_POINTER_AXIS_SOURCE_FINGER);
+        if (dx != 0)
+            zwlr_virtual_pointer_v1_axis(vp, stamp(), WL_POINTER_AXIS_HORIZONTAL_SCROLL, wl_fixed_from_double(-dx / steps));
+        if (dy != 0)
+            zwlr_virtual_pointer_v1_axis(vp, stamp(), WL_POINTER_AXIS_VERTICAL_SCROLL, wl_fixed_from_double(-dy / steps));
+        zwlr_virtual_pointer_v1_frame(vp);
+        wl_display_flush(display);
+        const long due = start + (long)((double)ms * i / steps);
+        pump(due > now_ms() ? (int)(due - now_ms()) : 0);
+    }
+    zwlr_virtual_pointer_v1_axis_source(vp, WL_POINTER_AXIS_SOURCE_FINGER);
+    zwlr_virtual_pointer_v1_axis_stop(vp, stamp(), WL_POINTER_AXIS_HORIZONTAL_SCROLL);
+    zwlr_virtual_pointer_v1_axis_stop(vp, stamp(), WL_POINTER_AXIS_VERTICAL_SCROLL);
+    zwlr_virtual_pointer_v1_frame(vp);
+    wl_display_flush(display);
+}
+
 static uint32_t buttonCode(const char* rest) {
     if (strstr(rest, "right"))
         return 0x111;
@@ -129,6 +155,8 @@ static void step(const char* line) {
         glide(x, y, ms);
     else if (sscanf(line, "move %lf %lf %d", &x, &y, &ms) == 3)
         glide(curX + x, curY + y, ms);
+    else if (sscanf(line, "scroll %lf %lf %d", &x, &y, &ms) == 3)
+        scroll(x, y, ms);
     else if (sscanf(line, "wait %d", &ms) == 1)
         pump(ms);
     else if (!strncmp(line, "down", 4))

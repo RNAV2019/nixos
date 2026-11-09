@@ -488,6 +488,18 @@ Item {
               desktopEntry: slot.row ? slot.row.desktopEntry : ""
               urgent: slot.row ? slot.row.urgent : false
               onDismissed: slot.dismiss()
+
+              // Dragged or thrown sideways, either way, the row follows the hand and goes: the
+              // card leaves first, then the slot shuts on what is left, as it does for the X.
+              x: swipe.offset
+              opacity: swipe.fade
+
+              SwipeAway {
+                id: swipe
+
+                name: "history." + slot.index
+                onDismissed: slot.dismiss()
+              }
             }
           }
         }

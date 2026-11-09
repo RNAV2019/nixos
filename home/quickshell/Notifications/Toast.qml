@@ -58,8 +58,39 @@ Item {
   // old fade was); out, it is spent over the first 0.3 of the travel, measurably quicker than in. Either
   // starts from the opacity the card has when its direction turns, so a card leaving mid-enter
   // (or coming back mid-exit) goes on from there rather than jumping. `held` is that opacity.
-  opacity: toast.held
+  //
+  // A swipe moves the contents inside the card and dims them on top of that; the card's own shape
+  // is the island's and is left alone.
+  opacity: toast.held * swipe.fade
   visible: opacity > 0 && toast.n !== null
+
+  // In the hand or on its way: the window holds the countdown, as it does under the pointer.
+  readonly property bool swiping: swipe.busy
+
+  transform: Translate {
+    x: swipe.offset
+  }
+
+  // The slot is reused: the next notification it draws starts at rest.
+  onNChanged: swipe.reset()
+
+  // Thrown sideways, the notification is dismissed the way its Dismiss button does it, and the
+  // surface then closes (or shows the next one) as it always does. It names the notification it
+  // was drawing, since a newer one may have taken the card while this one flew.
+  SwipeAway {
+    id: swipe
+
+    extent: Theme.notifWidth
+    // The window's click area lies under the card, so the drag is read there: over the card it
+    // would swallow the click that opens the sender.
+    grip: toast.host ? toast.host.cardArea : swipe
+    armed: toast.live
+    name: "toast." + toast.slot
+    onDismissed: {
+      if (toast.n)
+        toast.host.close(toast.n.ref);
+    }
+  }
 
   property real held: 0
   property real fromOpacity: 0

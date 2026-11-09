@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(here, "../../../home/quickshell/Ui/Motion.js"), "utf8").replace(/^\.pragma.*$/m, "");
-const M = new Function(`${src}; return { springStep, seedVelocity, progress, ramp, snap, satelliteStep, satelliteRest, satelliteGap, satelliteKick };`)();
+const M = new Function(`${src}; return { springStep, seedVelocity, progress, ramp, snap, project, thrown, satelliteStep, satelliteRest, satelliteGap, satelliteKick };`)();
 
 // The formula MorphSpring.step inlined before Motion.js (critically damped branch, then ringing).
 function oldStep(x, v, w, z, dt) {
@@ -221,4 +221,21 @@ test("satellite: the rest states carry no neck, stubs or swell (the reduce-motio
     assert.equal(r.v, 0);
     assert.equal(r.x, out ? SAT.dock : 0);
   }
+});
+
+test("thrown: far enough or fast enough goes, the way it was heading; a flick back stays", () => {
+  const rate = 0.994, limit = 150;
+  // Let go at rest: only the distance counts, either side.
+  assert.equal(M.thrown(149, 0, rate, limit), 0);
+  assert.equal(M.thrown(151, 0, rate, limit), 1);
+  assert.equal(M.thrown(-151, 0, rate, limit), -1);
+  // A flick from close to rest coasts project(v) further: about 166 px per 1000 px/s here.
+  assert.ok(Math.abs(M.project(1000, rate) - 165.67) < 0.01);
+  assert.equal(M.thrown(10, 800, rate, limit), 0);
+  assert.equal(M.thrown(10, 1000, rate, limit), 1);
+  assert.equal(M.thrown(-10, -1000, rate, limit), -1);
+  // Thrown the other way from where it was dragged, it leaves on the side it was thrown to.
+  assert.equal(M.thrown(60, -1500, rate, limit), -1);
+  // Past the line but flicked back toward rest: it stays.
+  assert.equal(M.thrown(200, -600, rate, limit), 0);
 });

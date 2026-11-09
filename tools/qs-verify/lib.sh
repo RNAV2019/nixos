@@ -112,10 +112,12 @@ masked() {
 # ---- the virtual pointer ----
 
 # build_vpointer OUT: compile vpointer.c (the scripted zwlr_virtual_pointer client) into OUT,
-# with the compiler and protocol XML from the repo's nixpkgs.
+# with the compiler and protocol XML from the repo's nixpkgs. A binary older than the source is
+# rebuilt, and moved into place in one step: the cache is shared, and another harness may be
+# running the old one.
 build_vpointer() {
   local out=$1 wl_dev wl_lib scanner wlr cc xml
-  [[ -x $out ]] && return 0
+  [[ -x $out && $out -nt $QSV_DIR/vpointer.c ]] && return 0
   pkg() { nix build --inputs-from "$QSV_REPO" --no-link --print-out-paths "nixpkgs#$1" | head -n1; }
   wl_dev=$(pkg 'wayland^dev')
   wl_lib=$(pkg 'wayland^out')
@@ -129,9 +131,10 @@ build_vpointer() {
   mkdir -p "$(dirname "$out")"
   "$scanner/bin/wayland-scanner" client-header "$xml" "$tmp/wlr-virtual-pointer-unstable-v1-client-protocol.h"
   "$scanner/bin/wayland-scanner" private-code "$xml" "$tmp/wlr-vp.c"
-  "$cc" -o "$out" "$QSV_DIR/vpointer.c" "$tmp/wlr-vp.c" -O2 -Wall -Wno-unused-parameter \
+  "$cc" -o "$out.$$" "$QSV_DIR/vpointer.c" "$tmp/wlr-vp.c" -O2 -Wall -Wno-unused-parameter \
     -I"$tmp" -I"$wl_dev/include" -L"$wl_lib/lib" -Wl,-rpath,"$wl_lib/lib" -lwayland-client -lm \
     || die "vpointer failed to build"
+  mv -f "$out.$$" "$out"
   rm -rf "$tmp"
 }
 
