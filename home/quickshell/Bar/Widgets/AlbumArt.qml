@@ -23,7 +23,7 @@ Item {
 
   property real cornerRadius: Theme.islandArtRadius * (width / Theme.islandArtSize)
 
-  readonly property bool hasArt: Media.artUrl !== "" && art.status === Image.Ready
+  readonly property bool hasArt: art.hasArt
 
   implicitWidth: Theme.islandArtSize
   implicitHeight: Theme.islandArtSize
@@ -39,7 +39,8 @@ Item {
 
     Item {
       anchors.fill: parent
-      visible: !root.hasArt
+      // Under the art until it has wholly arrived, so the two cross-fade.
+      visible: art.presence < 1
 
       Bloom {
         blobColor: Theme.love
@@ -69,15 +70,14 @@ Item {
       }
     }
 
-    Image {
+    // A new cover fades in over the last, and a first or a lost one over the blooms.
+    ArtFade {
       id: art
 
       anchors.fill: parent
       source: Media.artUrl
-      fillMode: Image.PreserveAspectCrop
-      asynchronous: true
-      cache: true
-      visible: root.hasArt
+      opacity: presence
+      visible: opacity > 0
     }
 
     Rectangle {

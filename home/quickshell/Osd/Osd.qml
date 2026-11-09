@@ -47,13 +47,19 @@ Scope {
   signal swapping
   signal swapped
 
+  // Up while one level is being replaced by another: the reading, glyph and ink then change
+  // with the content swap and not on motions of their own.
+  property bool modeSwapping: false
+
   function flash(which) {
     if (blocked)
       return;
     if (showing && mode !== which) {
+      modeSwapping = true;
       root.swapping();
       mode = which;
       root.swapped();
+      modeSwapping = false;
     } else {
       mode = which;
     }
@@ -141,6 +147,44 @@ Scope {
       }
 
       IslandPill {
+        id: pill
+
+        // Within one level, while the pill is up, a change is animated: the digits roll, the
+        // glyph turns over and the ink tints. None of it queues behind a held key: each takes
+        // the newest value at once.
+        readonly property bool animated: window.open && !root.modeSwapping
+
+        // A cross-fade caught by the pill shutting or the level changing lands at once.
+        onAnimatedChanged: {
+          if (!animated) {
+            glyphFade.stop();
+            glyphMix = 1;
+          }
+        }
+
+        property color ink: root.ink
+
+        Behavior on ink {
+          enabled: pill.animated
+
+          Tint {}
+        }
+
+        // The glyph cross-fade's clock, and the path it last settled on.
+        property real glyphMix: 1
+        property string shownGlyph: ""
+
+        NumberAnimation {
+          id: glyphFade
+
+          target: pill
+          property: "glyphMix"
+          from: 0
+          to: 1
+          duration: Theme.duration(Theme.morphState)
+          easing.type: Easing.OutCubic
+        }
+
         x: window.surface.snap((parent.width - width) / 2)
         // The same level as the control centre's slider for it, which this turns into and out of;
         // else a pill like any other (a moment's, the sharing pill).
@@ -149,7 +193,9 @@ Scope {
         layout: "glyphTrackReading"
         alert: root.current.alarming
         reading: root.current.reading
-        readingColor: root.ink
+        readingColor: pill.ink
+        rollReading: true
+        rollPaused: root.modeSwapping
         value: root.current.value
         showFill: !root.current.stateOnly
         fillDuration: Theme.morphFill
@@ -159,7 +205,37 @@ Scope {
           anchors.centerIn: parent
           size: Theme.islandPillGlyphSize
           path: root.current.glyph
-          color: root.ink
+          color: pill.ink
+          opacity: pill.glyphMix
+          scale: Theme.glyphSwapDip + (1 - Theme.glyphSwapDip) * pill.glyphMix
+
+          // A new glyph for the same level (the speaker gaining a wave, or its cross) fades in
+          // over the one before, both dipping a little; a restart mid-fade starts from the newest.
+          onPathChanged: {
+            var before = pill.shownGlyph;
+            pill.shownGlyph = path;
+            if (!pill.animated || Theme.reduceMotion) {
+              glyphFade.stop();
+              pill.glyphMix = 1;
+              return;
+            }
+            glyphBefore.path = before;
+            glyphFade.restart();
+          }
+        }
+
+        // The glyph on its way out, only there during the cross-fade.
+        StrokeIcon {
+          id: glyphBefore
+
+          readonly property bool morphIgnore: true
+
+          anchors.centerIn: parent
+          size: Theme.islandPillGlyphSize
+          color: pill.ink
+          opacity: 1 - pill.glyphMix
+          scale: 1 - (1 - Theme.glyphSwapDip) * pill.glyphMix
+          visible: opacity > 0
         }
       }
     }

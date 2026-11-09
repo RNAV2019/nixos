@@ -27,12 +27,13 @@ Item {
         required property int index
         required property real modelData
 
-        // Animating a separate property lets height fall back to its binding on pause.
+        // What the bar draws: the loop below moves it while playing, and a pause eases it back
+        // to its resting height from wherever the loop left it rather than dropping it there.
         property real level: modelData
 
         anchors.verticalCenter: parent.verticalCenter
         width: root.barWidth
-        height: root.playing ? level : modelData
+        height: level
         radius: width / 2
         color: Theme.accent
 
@@ -52,6 +53,27 @@ Item {
             to: root.implicitHeight
             duration: Theme.eqFallBase + bar.index * Theme.eqFallStagger
             easing.type: Easing.InOutSine
+          }
+        }
+
+        NumberAnimation {
+          id: settle
+
+          target: bar
+          property: "level"
+          to: bar.modelData
+          duration: Theme.duration(Theme.eqSettle)
+          easing.type: Easing.OutCubic
+        }
+
+        Connections {
+          target: root
+
+          function onPlayingChanged() {
+            if (root.playing)
+              settle.stop();
+            else
+              settle.restart();
           }
         }
       }

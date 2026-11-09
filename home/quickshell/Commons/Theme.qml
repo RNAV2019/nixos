@@ -1169,6 +1169,22 @@ Singleton {
   readonly property int clockRoll: reduceMotion ? 1 : 110
   readonly property int clockRollFade: reduceMotion ? 1 : 170
 
+  // A glyph that turns into another in place (the OSD's speaker gaining its cross, the login
+  // disc's arrow giving way to the spinner) dips to this scale as the two cross-fade, so the
+  // change reads as one mark turning over rather than two overlapping.
+  readonly property real glyphSwapDip: 0.8
+
+  // A state's contents giving way to another's where they stand (the hover card's track block
+  // and its week, the phone's screen starting to ring): PillState's cross-fade, twice a content
+  // swap, so both are seen to pass.
+  readonly property int stateSwap: morphContent * 2
+
+  // The equaliser's bars easing down to their resting heights when the music pauses.
+  readonly property int eqSettle: reduceMotion ? 1 : 260
+
+  // The dictation transcript moving up one line as a new one arrives under it.
+  readonly property int dictationLineSlide: reduceMotion ? 1 : 160
+
   // How long a still holds when nothing claimed the island from it: a deliberate beat.
   readonly property int morphHold: 240
 

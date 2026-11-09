@@ -176,6 +176,10 @@ The key rules, all in `Panel.take`:
   quarter of one turning.
 - **`PillMarks`**, **`IslandClock`**, **`RollingClock`**, **`CollapsedPill`**: the shut pill and
   what it carries over to a surface. You only touch these for the pill itself.
+- **`DigitRoll`**: the clock's roll for a `Text` that already exists (the OSD's reading through
+  `IslandPill.rollReading`, the lock's clock): changed glyphs roll, the newest text always wins.
+- **`ArtFade`**: a picture whose `source` changes on a cross-fade, the last held until the next
+  is ready; `presence` fades it over what stands in for no picture (album art, the media card).
 - **`LoginPill`**: the lock screen's and the polkit prompt's pill.
 
 ## Controls
