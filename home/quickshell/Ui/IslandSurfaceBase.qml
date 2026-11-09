@@ -439,8 +439,11 @@ PanelWindow {
 
   function updatePace() {
     var p = win.paceFor(widthSpring.target - widthSpring.value, heightSpring.target - heightSpring.value, !win.open && !origin.held);
-    win.paceW = p.w;
-    win.paceH = p.h;
+    // A shape already on its way keeps the quicker of its pace and the new one: slowed in mid-flight,
+    // the speed it has would carry it past its target.
+    var moving = widthSpring.running || heightSpring.running;
+    win.paceW = moving ? Math.max(win.paceW, p.w) : p.w;
+    win.paceH = moving ? Math.max(win.paceH, p.h) : p.h;
     win.paceDamping = p.z;
   }
 
