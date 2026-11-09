@@ -163,8 +163,9 @@ one. Count the dwell on screen only (`Timer { running: win.open }`).
   with `confirms` arms on the first press. The power menu and the profiles card.
 - **`ChoiceTiles`**: the one-of-three grid itself (also the recorder picker's capture row).
 - **`RowList`**: a `ListView` that scrolls only once its rows overflow; **`ScrollView`** is a
-  wheel-stepped `Flickable` for a body taller than the card (`scrollable`, `wheelStep`); its thumb is
-  bound straight to the view, so it never trails the content.
+  `Flickable` for a body taller than the card (`scrollable`, `wheelStep`): wheel notches add up onto a
+  spring, a touchpad tracks the fingers and coasts, and past either end the body gives
+  (`Motion.rubberBand`) and comes back. Its thumb sits in a gutter beside the rows and fades out when idle.
 
 The key rules, all in `Panel.take`:
 

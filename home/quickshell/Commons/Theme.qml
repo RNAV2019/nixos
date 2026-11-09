@@ -1298,10 +1298,9 @@ Singleton {
   readonly property int morphProgress: 250
   // One loop of the sharing pill's three connecting dots.
   readonly property int sharingPulse: 1200
-  // The Nearby hover preview fading in, and a staged file row appearing.
+  // The Nearby hover preview fading in.
   readonly property int nearbyPreviewFade: 140
-  readonly property int nearbyFileAppear: 160
-  // A Nearby device card's progress catching up: live (with a small overshoot) and dismissed.
+  // A Nearby device card's progress catching up: live and dismissed, neither overshooting.
   readonly property int nearbyCardLive: 260
   readonly property int nearbyCardDismiss: 200
   // The phone panel's ringing pulse: one ring's expansion, and the wait between rings.
