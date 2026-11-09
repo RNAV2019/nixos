@@ -75,7 +75,7 @@ Tile {
   interactive: filesReady && peer !== null && !sending
   accessibleName: label + (talking ? ", " + subLabel : "")
   opacity: appear * (enabled ? 1 : Theme.disabledAlpha)
-  scale: (0.9 + 0.1 * appear) * (pressedAny ? Theme.pressScale : 1)
+  scale: (0.9 + 0.1 * appear) * pressedScale
 
   Component.onCompleted: appear = 1
 

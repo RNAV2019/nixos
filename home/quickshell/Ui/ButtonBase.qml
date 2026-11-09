@@ -35,6 +35,11 @@ Item {
 
   readonly property bool hovered: area.containsMouse && root.enabled
   readonly property bool pressed: area.pressed
+  // What holds the control down. A control with a second target of its own (Tile's badge) adds it.
+  property bool held: root.pressed
+  // The press scale as it stands, 1 at rest. A control that scales for a reason of its own
+  // multiplies this in rather than writing `scale` over it.
+  readonly property real pressedScale: press.value
   // Focus that arrived by Tab, not by a click: only that one draws the ring.
   readonly property bool keyFocused: root.activeFocus && !root.pointerFocused
   property bool pointerFocused: false
@@ -59,7 +64,7 @@ Item {
   // composite twice where they overlap at half opacity, a bright ring around each glyph.
   // Rasterising first makes the dim even.
   layer.enabled: opacity > 0 && opacity < 1
-  scale: root.pressed ? Theme.pressScale : 1
+  scale: root.pressedScale
 
   Behavior on opacity {
     Morph {
@@ -67,10 +72,17 @@ Item {
     }
   }
 
-  Behavior on scale {
-    Morph {
-      duration: Theme.morphState
-    }
+  // The press is a spring, not a timed ease: it goes down fast, comes back a little slower, and a
+  // release before it is down turns round from where it is with the speed it has. It only runs
+  // while the scale is moving, so a control at rest costs nothing.
+  MorphSpring {
+    id: press
+
+    target: root.held ? Theme.pressScale : 1
+    omega: root.held ? Theme.pressOmega : Theme.pressReleaseOmega
+    // A scale, not pixels: at rest within a twentieth of a percent.
+    epsilon: 0.0005
+    label: Theme.motionLog ? "press." + root.toString().replace(/^.*\(0x([0-9a-f]+)\).*$/, "$1") : ""
   }
 
   onActiveFocusChanged: if (!root.activeFocus)
@@ -83,11 +95,19 @@ Item {
     z: 1
     anchors.fill: parent
     anchors.margins: root.ringInset
-    visible: root.keyFocused
+    // Fades both ways, so moving the focus hands the ring over rather than blinking it.
+    opacity: root.keyFocused ? 1 : 0
+    visible: opacity > 0
     radius: root.ringRadius
     color: "transparent"
     border.width: 1
     border.color: Theme.focusRing
+
+    Behavior on opacity {
+      Morph {
+        duration: Theme.focusFade
+      }
+    }
   }
 
   MouseArea {

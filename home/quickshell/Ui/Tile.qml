@@ -146,7 +146,7 @@ ButtonBase {
   accessibleRole: isChoice ? Accessible.RadioButton : isControl && !opensView ? Accessible.CheckBox : Accessible.Button
   checkable: accessibleRole !== Accessible.Button
   checked: active
-  scale: pressedAny ? Theme.pressScale : 1
+  held: pressedAny
   Accessible.name: accessibleName !== "" ? accessibleName : label
   Accessible.focused: isChoice ? current : activeFocus
   Accessible.description: {
@@ -369,10 +369,15 @@ ButtonBase {
     width: Theme.nearbyDeviceSize
     height: Theme.nearbyDeviceSize
 
+    // The ring, the turning arc, the glyph and the check are never swapped by `visible`: each
+    // fades (the glyph and the check with a slight scale) out the way it came in, so one state
+    // dissolves into the next.
+
     // Sized one notch over the disc so the pair reads as one object.
     Ring {
       anchors.centerIn: parent
-      visible: root.sending && !root.sent
+      opacity: root.sending && !root.sent ? 1 : 0
+      visible: opacity > 0
       size: Theme.nearbyRingSize
       stroke: Theme.nearbyRingWidth
       trackColor: Theme.withAlpha(Theme.separator, 0.9)
@@ -380,15 +385,28 @@ ButtonBase {
       animated: true
       // Events arrive at most every 250 ms, so the arc eases for that long.
       duration: Theme.duration(Theme.morphProgress)
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.morphState
+        }
+      }
     }
 
     // The quarter arc that turns where the total is not known, over the ring's own track.
     Spinner {
       anchors.centerIn: parent
-      visible: root.indeterminate
+      opacity: root.indeterminate ? 1 : 0
+      visible: opacity > 0
       size: Theme.nearbyRingSize
       stroke: Theme.nearbyRingWidth
       track: false
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.morphState
+        }
+      }
     }
 
     Rectangle {
@@ -403,10 +421,10 @@ ButtonBase {
       }
     }
 
-    // Done: the glyph is replaced by a check that draws in.
+    // Done: the glyph gives way to a check that draws in, and comes back the same way.
     StrokeIcon {
       anchors.centerIn: parent
-      visible: root.sent
+      visible: opacity > 0
       size: Theme.nearbyCheckSize
       strokeWidth: 2.2
       path: IconPaths.check
@@ -429,11 +447,25 @@ ButtonBase {
 
     StrokeIcon {
       anchors.centerIn: parent
-      visible: !root.sent
+      visible: opacity > 0
       size: Theme.nearbyDeviceGlyph
       strokeWidth: 1.75
       path: root.glyph
       color: Theme.accentFill
+      opacity: root.sent ? 0 : 1
+      scale: root.sent ? 0.6 : 1
+
+      Behavior on opacity {
+        Morph {
+          duration: Theme.morphState
+        }
+      }
+
+      Behavior on scale {
+        Morph {
+          duration: Theme.morphState
+        }
+      }
     }
   }
 

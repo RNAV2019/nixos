@@ -223,9 +223,11 @@ All pressable controls are on **`ButtonBase`**: hover and press tracking, the pr
 **The recipe, on `ButtonBase`:** inner fills are white lifts over the ground (`Theme.lift(a)`):
 neutral controls step `liftControl` to `liftControlHover`, tiles and grouped rows `liftTile` to
 `liftHover` under a `liftEdge` hairline; filled kinds lift by
-`fillLift`; pressed scales by `Theme.pressScale`; disabled is the same control at
+`fillLift`; pressed scales by `Theme.pressScale` on a spring that a release can turn round
+(`held` is what holds it down, `pressedScale` the scale as it stands, for a control that scales for
+a reason of its own to multiply in); disabled is the same control at
 `Theme.disabledAlpha`, rasterised so overlapping glyphs dim evenly; the ring shows only for a
-focus that arrived by Tab. Do not hand-roll these; if a new control needs a state, it goes in
+focus that arrived by Tab, and fades. Do not hand-roll these; if a new control needs a state, it goes in
 `ButtonBase` or the primitive.
 
 ## Motion and colour
