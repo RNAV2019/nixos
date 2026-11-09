@@ -307,6 +307,14 @@ satellite included, and no motion label runs past 80 ms (`record.sh ... reduce`,
 through `Theme.duration(ms)`, which shortens it then; the named ones (`morphState`, `tintFade`)
 already do.
 
+**Everything is drawn on the GPU.** The scene graph runs on OpenGL with the threaded render loop;
+shapes use the curve renderer, text is distance fields (never `Text.NativeRendering`), and blur,
+clip, shadow and morph are shaders. There is no `Canvas` in the shell: it paints on the CPU and
+uploads, so a new drawing is a `Shape` or a shader (`DashedOutline` is a dashed `ShapePath`).
+`Ui/RenderGuard.qml`, carried by the bar, logs `render: ...` at start and warns if Qt Quick ever
+comes up on the software renderer. What stays on the CPU is the animation logic itself: the springs
+and the morph step in JavaScript once a frame on the GUI thread.
+
 ## Services
 
 The contracts a service file follows; a singleton file takes the contract as its root type.

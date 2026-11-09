@@ -1,48 +1,39 @@
 import QtQuick
+import QtQuick.Shapes
 import qs.Commons
 
 // A dashed rounded outline, since Rectangle's pen carries no dash pattern. The two drop
-// targets (boards 16e, 16f) are the only dashed edges in the shell.
-Canvas {
+// targets (boards 16e, 16f) are the only dashed edges in the shell. A Shape on the curve renderer,
+// so it is drawn on the GPU like everything else: it was a Canvas, the one thing in the shell
+// painted on the CPU and uploaded.
+Shape {
   id: root
 
   property color strokeColor: Theme.separator
   property real strokeWidth: 1.5
   property real cornerRadius: 20
+  // Dash and gap, in px.
   property var dashPattern: [7, 5]
 
-  onPaint: {
-    var ctx = getContext("2d");
-    ctx.clearRect(0, 0, width, height);
-    var inset = strokeWidth / 2;
-    var x = inset;
-    var y = inset;
-    var w = width - strokeWidth;
-    var h = height - strokeWidth;
-    var r = Math.min(cornerRadius, w / 2, h / 2);
+  preferredRendererType: Shape.CurveRenderer
 
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
+  ShapePath {
+    strokeColor: root.strokeColor
+    strokeWidth: root.strokeWidth
+    fillColor: "transparent"
+    capStyle: ShapePath.FlatCap
+    strokeStyle: ShapePath.DashLine
+    // ShapePath counts a dash in stroke widths.
+    dashPattern: root.dashPattern.map(function (d) {
+      return d / Math.max(0.1, root.strokeWidth);
+    })
 
-    ctx.lineWidth = strokeWidth;
-    ctx.strokeStyle = strokeColor;
-    ctx.setLineDash(dashPattern);
-    ctx.stroke();
+    PathRectangle {
+      x: root.strokeWidth / 2
+      y: root.strokeWidth / 2
+      width: Math.max(0, root.width - root.strokeWidth)
+      height: Math.max(0, root.height - root.strokeWidth)
+      radius: Math.max(0, Math.min(root.cornerRadius, width / 2, height / 2))
+    }
   }
-
-  onWidthChanged: requestPaint()
-  onHeightChanged: requestPaint()
-  onStrokeColorChanged: requestPaint()
-  onStrokeWidthChanged: requestPaint()
-  onCornerRadiusChanged: requestPaint()
-  onDashPatternChanged: requestPaint()
 }

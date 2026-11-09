@@ -14,6 +14,8 @@ Variants {
   PanelWindow {
     id: bar
 
+    RenderGuard {}
+
     required property var modelData
 
     screen: modelData
