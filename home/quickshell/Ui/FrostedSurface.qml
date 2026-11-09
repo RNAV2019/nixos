@@ -24,6 +24,9 @@ Item {
   // The drop shadow (Ui/DropShadow.qml): off for a surface flush with the screen edge.
   property bool shadowEnabled: true
   property real shadowStrength: Theme.surfaceShadowAlpha
+  // The shadow goes with the ground unless told otherwise (the bar's pill, whose shadow outlasts
+  // it by the length of a hand-over).
+  property real shadowOpacity: backdropOpacity
 
   default property alias content: contentHolder.data
 
@@ -93,8 +96,8 @@ Item {
     radius: root.surfaceRadius
     strength: root.shadowStrength
     pixelRatio: root.pixelRatio
-    opacity: root.backdropOpacity
-    visible: root.shadowEnabled && root.backdropOpacity > 0 && root.width > 0 && root.height > 0
+    opacity: root.shadowOpacity
+    visible: root.shadowEnabled && root.shadowOpacity > 0 && root.width > 0 && root.height > 0
   }
 
   Item {

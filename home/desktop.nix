@@ -431,10 +431,13 @@ in {
         }
       ];
 
-      # Quickshell panels animate themselves, so no compositor fade.
+      # Quickshell surfaces animate themselves, so no compositor animation on any of them, by
+      # prefix rather than by name: a surface left off a list of names (the phone panel was) is
+      # stretched by Hyprland for the length of its layer animation each time it comes out of its
+      # parked sliver, a squashed copy of the pill sliding down from the screen edge.
       layer_rule = [
         {
-          match.namespace = "quickshell-(bar|launcher|control|wallpaper|theme|recorder|calendar|session|profiles|nearby|auth|sharing|notifications|osd|panel)";
+          match.namespace = "quickshell-.*";
           no_anim = true;
         }
       ];

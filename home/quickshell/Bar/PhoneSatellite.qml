@@ -13,8 +13,10 @@ import "../Ui/Motion.js" as Motion
 // into rounded tips, and the disc settles into its dock with a little give. Coming in, a pull
 // that grows as the gap closes draws it home; on contact the neck re-forms and the pill's end
 // swells and relaxes. Shaders/satellite.frag draws it. A full panel taking the island draws it
-// back in, at once (Theme.phonePull0Taken); clicking it does the same, and the phone panel is asked
-// for as the disc touches the pill, so the panel grows out as it sinks in.
+// back in, at once (Theme.phonePull0Taken); clicking it does the same. The phone panel is asked for
+// on the click, while the disc is still at rest, and held as the pill it grows out of until the
+// disc touches the pill (Bus.holdPresent), so the panel grows out as the disc sinks in and the
+// panel's first frame, the dear one, is not paid for in the middle of the disc's flight.
 //
 // This item holds the logic and the geometry. The geometry goes to Bus.satellite every frame it
 // changes; the bar's SatelliteLayer draws it, and a transient surface's window draws it instead
@@ -126,9 +128,10 @@ Item {
 
   // ---- out or in ----
 
-  // A click draws it in first; see openPanel().
+  // A click draws it in first; see openPanel(). `landing` from the click until the disc touches
+  // the pill, which is as long as the panel it asked for is held back.
   property bool retreating: false
-  property bool panelAsked: false
+  property bool landing: false
 
   readonly property bool panelUp: Bus.islandCovered(screenName) || Bus.islandOpenFor(screenName)
   // A lock does not draw it in: like the bar it stays, so the snapshot behind the lock screen
@@ -238,6 +241,8 @@ Item {
 
   onSettlingChanged: Bus.holdLock(holdKey, settling)
   Component.onDestruction: {
+    if (landing)
+      Bus.holdPresent("phone", false);
     Bus.holdLock(holdKey, false);
     Bus.setSatellite(screenName, null);
   }
@@ -245,12 +250,22 @@ Item {
   // Docked: out, settled near enough to take a click.
   readonly property bool docked: wantOut && p > 0.9
 
-  // The spring's frame handler is no place to open a surface: that waits for the turn.
-  onPChanged: {
-    if (retreating && !panelAsked && p < Theme.phoneOpenAt) {
-      panelAsked = true;
-      Qt.callLater(Bus.toggleSurface, "phone");
-    }
+  // The disc touches the pill: the panel, up since the click, is let go.
+  onPChanged: if (landing && p < Theme.phoneOpenAt)
+    land()
+
+  function land() {
+    landing = false;
+    landGiveUp.stop();
+    Bus.holdPresent("phone", false);
+  }
+
+  // The disc is home well inside this; a hold must never outlive what it waits for.
+  Timer {
+    id: landGiveUp
+
+    interval: 400
+    onTriggered: root.land()
   }
 
   onPanelUpChanged: if (panelUp)
@@ -273,9 +288,15 @@ Item {
   function openPanel() {
     if (!docked)
       return;
-    panelAsked = false;
+    landing = true;
+    landGiveUp.restart();
+    Bus.holdPresent("phone", true);
     retreating = true;
     retreatGiveUp.restart();
+    // A panel taking the island turns the disc back by itself (panelUp), reduced motion at once.
+    Bus.toggleSurface("phone");
+    if (landing && p < Theme.phoneOpenAt)
+      land();
   }
 
   // ---- geometry ----

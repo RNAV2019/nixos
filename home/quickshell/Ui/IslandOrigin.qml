@@ -89,6 +89,16 @@ QtObject {
   property bool presentArmed: false
   property bool presentSynced: false
 
+  // Set by the owner to keep the first frame from counting yet: the surface is up, drawn as the
+  // shape it grows out of over the island it is taking, and nothing else has been told. Whoever
+  // asked for the surface early, so that the cost of its first frame falls before the motion it
+  // must not interrupt, lets go when that motion is ready for it (Bus.holdPresent).
+  property bool presentHeld: false
+  property bool presentPending: false
+
+  onPresentHeldChanged: if (!presentHeld && presentPending)
+    markPresented()
+
   onPresentableChanged: {
     if (presentable)
       origin.armPresent();
@@ -96,6 +106,7 @@ QtObject {
       presentArmed = false;
       presentSynced = false;
       presentFallback.stop();
+      presentPending = false;
       presented = false;
     }
   }
@@ -105,6 +116,7 @@ QtObject {
       return;
     presentArmed = true;
     presentSynced = false;
+    presentPending = false;
     presentFallback.restart();
     // Nothing guarantees the window has anything new to draw; ask for a frame regardless.
     if (frameWindow)
@@ -117,6 +129,11 @@ QtObject {
     presentFallback.stop();
     if (presented)
       return;
+    if (presentHeld) {
+      presentPending = true;
+      return;
+    }
+    presentPending = false;
     presented = true;
     Bus.reportPresented(screenName, ownSerial);
   }
@@ -129,6 +146,7 @@ QtObject {
     presentArmed = false;
     presentSynced = false;
     presentFallback.stop();
+    presentPending = false;
     presented = false;
   }
 

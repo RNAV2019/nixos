@@ -65,6 +65,7 @@ PanelWindow {
     window: win
     frameItem: surface
     presentable: !Bus.locking && win.tall
+    presentHeld: Bus.presentHolds[win.key] === true
   }
 
   // Raised while the island is being handed to another surface. The still held for it rides
@@ -261,6 +262,8 @@ PanelWindow {
     function onPresentedChanged() {
       if (origin.presented)
         snapRelease.restart();
+      if (origin.presented && win.openShadow < 1)
+        openShadowIn.restart();
       if (Theme.motionLog)
         console.info("morph ev " + win.key + " presented=" + origin.presented + " morphing=" + win.morphing + " " + Date.now());
       if (origin.presented && win.morphing)
@@ -308,6 +311,8 @@ PanelWindow {
       enterTravel = 0;
       morphPending = true;
     }
+    openShadowIn.stop();
+    openShadow = origin.presented ? 1 : 0;
     open = true;
     // Down only now: until `open` is up, a surface that took the hover card's shape reads as
     // showing and shut, which is what a closing one covering the island looks like.
@@ -870,6 +875,31 @@ PanelWindow {
   // that one fades in (Bar/Island.qml), over Theme.shadowHandover, so they never stack.
   property real shadowLevel: 1
 
+  // And on the way out of the pill. A surface's first frame is drawn over the bar's pill, which
+  // goes only once that frame is up and until then casts its own shadow: two at once were a dark
+  // bloom round the pill for a frame or two before every open. So this one casts none on its
+  // first frame and fades in from the frame that counts, as the pill's fades out under it
+  // (Bar/Island.qml). The two windows' frames need not land together, and a cross-fade does not
+  // mind which is a frame ahead, where a cut left a frame or two with two shadows or with none.
+  property real openShadow: 1
+  // A still's, under the taker that is fading its own in.
+  property real stillShadow: win.farewell && origin.takerPresented ? 0 : 1
+
+  Behavior on stillShadow {
+    NumberAnimation {
+      duration: Theme.duration(Theme.shadowHandover)
+    }
+  }
+
+  NumberAnimation {
+    id: openShadowIn
+
+    target: win
+    property: "openShadow"
+    to: 1
+    duration: Theme.duration(Theme.shadowHandover)
+  }
+
   NumberAnimation {
     id: shadowFade
 
@@ -919,9 +949,10 @@ PanelWindow {
     backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
     maskActive: win.morphing
     ghostActive: win.morphing
-    // A still's shadow goes the moment its taker is on screen, not with its ground: the taker
-    // starts from this very shape and casts its own, and two would stack while the ground fades.
-    shadowStrength: win.farewell && origin.takerPresented ? 0 : Theme.surfaceShadowAlpha * win.shadowLevel
+    // A still's shadow goes from the moment its taker is on screen, not with its ground: the
+    // taker starts from this very shape and casts its own, and two would stack while the ground
+    // fades. The taker's comes in from that same frame (openShadow) as this one goes (stillShadow).
+    shadowStrength: Theme.surfaceShadowAlpha * win.shadowLevel * win.stillShadow * (win.open ? win.openShadow : 1)
 
     // Only the fade out is animated; the reset lands off screen in one frame. Guarded on
     // `handover`, not `farewell`: a Behavior's enabled binding is evaluated before farewell changes.

@@ -1419,10 +1419,11 @@ Singleton {
   // Rests within this many px of its end (so the settling hand-off to the snapped grid is not
   // chasing a tail).
   readonly property real phoneRestEps: 0.05
-  // How far back into its retreat a clicked satellite is before the panel is asked for, as
-  // satellite progress: as it touches the pill. The panel's first frame comes a few frames after
-  // it is asked for, so asked for on contact it grows out as the disc sinks in; asked for at half
-  // way, the disc was home and the pill had swelled and settled before anything grew.
+  // How far back into its retreat a clicked satellite is before the panel grows, as satellite
+  // progress: as it touches the pill, so the panel grows out as the disc sinks in; at half way,
+  // the disc was home and the pill had swelled and settled before anything grew. The panel is
+  // asked for on the click and held until here (Bar/PhoneSatellite.qml): its first frame stalls
+  // every window for a frame or more, and asked for here that froze the disc in mid flight.
   readonly property real phoneOpenAt: 0.7
 
   // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid beside it (readings

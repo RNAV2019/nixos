@@ -38,10 +38,15 @@ FrostedSurface {
     closeGrace.restart()
 
   // Keep the pill out of Hyprland's backdrop-blur sample while another surface grows over it.
-  opacity: suppressed ? 0 : 1
+  // The pill and all it carries go at once; its shadow, which lies outside it, fades.
+  opacity: suppressed && shadowLevel <= 0 ? 0 : 1
+  backdropOpacity: suppressed ? 0 : 1
+  contentOpacity: suppressed ? 0 : 1
+  shadowOpacity: 1
 
   // Back from under a closing surface, the pill's shadow fades in while that surface's fades out
-  // (Ui/IslandSurfaceBase.qml), so for the frames both are on screen the two never stack.
+  // (Ui/IslandSurfaceBase.qml), so for the frames both are on screen the two never stack; and
+  // under a surface that has just covered it, out while that surface's fades in.
   property real shadowLevel: suppressed ? 0 : 1
   shadowStrength: Theme.surfaceShadowAlpha * shadowLevel
 

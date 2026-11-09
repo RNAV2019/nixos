@@ -111,6 +111,15 @@ Singleton {
     surfaceWarmed(key);
   }
 
+  // Surfaces whose first frame is not to count yet (Ui/IslandOrigin.qml presentHeld), by key: asked
+  // for ahead of the moment they are wanted, they stand as the pill they grow out of until let go.
+  // Whoever holds one must let it go on a timer of its own too.
+  property var presentHolds: ({})
+
+  function holdPresent(key, held) {
+    presentHolds = writeMap(presentHolds, key, held ? true : null);
+  }
+
   function toggleSurface(key) {
     surfaceToggled(key);
   }

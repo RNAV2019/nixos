@@ -197,7 +197,7 @@ sc_satellite() {
 sc_satellite_click() {
   ph_up
   sleep 1.5
-  cursor 1046 26
+  cursor "${SAT_X:-1046}" "${SAT_Y:-26}"
   sleep 0.5
   click
   sleep 1.8
@@ -206,7 +206,7 @@ sc_satellite_click() {
   # Again, warm: the first click pays for the panel's window and contents being built.
   cursor 200 900
   sleep 0.6
-  cursor 1046 26
+  cursor "${SAT_X:-1046}" "${SAT_Y:-26}"
   sleep 0.6
   click
   sleep 1.8
