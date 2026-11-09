@@ -103,6 +103,14 @@ Singleton {
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 
+  // Asks a surface to have its window ready without opening it (Ui/IslandSurfaceBase.qml parks
+  // windows and lets them go after a while; one made on demand costs the open a beat).
+  signal surfaceWarmed(string key)
+
+  function warmSurface(key) {
+    surfaceWarmed(key);
+  }
+
   function toggleSurface(key) {
     surfaceToggled(key);
   }

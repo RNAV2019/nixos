@@ -95,7 +95,10 @@ PanelWindow {
 
   // The whole time the bar must keep its island hidden: from this surface's first frame on
   // screen, never before it, so the pill is never taken away with nothing drawn in its place.
-  readonly property bool covering: showing && (origin.presented || !open)
+  // (Not in the middle of its own claim: taking the open hover card's shape makes it `showing`
+  // a moment before it is `open`, and read then it covered the island with nothing drawn, which
+  // shut the card under the pointer for all the frames until the panel's first.)
+  readonly property bool covering: showing && (origin.presented || (!open && !claiming))
 
   // Shared gate for the shape springs: no motion when asked, no travel when the surface was
   // snapped onto a shape, and no travelling while a still is being cut away from.
@@ -298,7 +301,6 @@ PanelWindow {
     // Ui/IslandOrigin.qml; the arguments are the morph the holder rides with this surface.
     claiming = true;
     origin.claim(win.openWidth, win.openHeight, win.openRadius, Theme.morphSurface);
-    claiming = false;
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     // Out of a surface that gave its contents, they turn into this one's rather than travelling in.
@@ -307,6 +309,9 @@ PanelWindow {
       morphPending = true;
     }
     open = true;
+    // Down only now: until `open` is up, a surface that took the hover card's shape reads as
+    // showing and shut, which is what a closing one covering the island looks like.
+    claiming = false;
     beginMorph();
     // Carry on the motion of the surface that let go (zero out of the pill): per axis, towards
     // the open shape only, and no faster than a spring that does not overshoot could be. Armed
@@ -881,6 +886,14 @@ PanelWindow {
     // this surface's place, so this one cuts, even on its way down: left to finish its close,
     // it would shrink beside the taker growing out of the pill. On any other output an open
     // one takes its own close and one already closing carries on.
+    // Made ready ahead of an open someone sees coming, on the output that has the focus.
+    function onSurfaceWarmed(key) {
+      if (key !== win.key || !win.focused || win.showing || Bus.locking)
+        return;
+      win.retained = true;
+      retainTimer.restart();
+    }
+
     function onIslandClaimed(screen) {
       if (win.claiming || origin.held)
         return;

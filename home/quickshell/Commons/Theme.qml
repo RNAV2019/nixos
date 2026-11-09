@@ -1394,6 +1394,9 @@ Singleton {
   // Coming in: the pull on a loose disc, px/s^2, and what is added as the gap closes (squared),
   // with a little drag; then, joined, a critically damped spring home.
   readonly property real phonePull0: 500
+  // The same when a panel takes the island or the disc is clicked: it is wanted in now, so it
+  // sets off at once rather than gathering way (the gap closes in about 80 ms, not 170).
+  readonly property real phonePull0Taken: 2600
   readonly property real phonePull1: 7000
   readonly property real phonePullDrag: 6
   readonly property real phoneMergeOmega: 22
@@ -1415,8 +1418,10 @@ Singleton {
   // chasing a tail).
   readonly property real phoneRestEps: 0.05
   // How far back into its retreat a clicked satellite is before the panel is asked for, as
-  // satellite progress: by then the bridge has re-formed and it reads as going in.
-  readonly property real phoneOpenAt: 0.5
+  // satellite progress: as it touches the pill. The panel's first frame comes a few frames after
+  // it is asked for, so asked for on contact it grows out as the disc sinks in; asked for at half
+  // way, the disc was home and the pill had swelled and settled before anything grew.
+  readonly property real phoneOpenAt: 0.7
 
   // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid beside it (readings
   // above, stacked control tiles for the actions below) with the grid's foot on the phone's, so

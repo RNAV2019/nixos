@@ -13,8 +13,8 @@ import "../Ui/Motion.js" as Motion
 // into rounded tips, and the disc settles into its dock with a little give. Coming in, a pull
 // that grows as the gap closes draws it home; on contact the neck re-forms and the pill's end
 // swells and relaxes. Shaders/satellite.frag draws it. A full panel taking the island draws it
-// back in; clicking it does the same, and the phone panel is asked for once it is mostly in, so
-// the panel reads as growing out of it.
+// back in, at once (Theme.phonePull0Taken); clicking it does the same, and the phone panel is asked
+// for as the disc touches the pill, so the panel grows out as it sinks in.
 //
 // This item holds the logic and the geometry. The geometry goes to Bus.satellite every frame it
 // changes; the bar's SatelliteLayer draws it, and a transient surface's window draws it instead
@@ -160,7 +160,7 @@ Item {
       maxHold: Theme.phoneMaxHold / 1000,
       neckK: Theme.phoneNeckK,
       neckOn: Theme.phoneNeckOn / 1000,
-      pull0: Theme.phonePull0,
+      pull0: root.retreating || root.panelUp ? Theme.phonePull0Taken : Theme.phonePull0,
       pull1: Theme.phonePull1,
       pullDrag: Theme.phonePullDrag,
       mergeOmega: Theme.phoneMergeOmega,
@@ -260,6 +260,12 @@ Item {
     interval: 1500
     onTriggered: root.retreating = false
   }
+
+  // The pointer on the docked disc is most often a click coming: the phone panel's window is made
+  // ready (parked), so the click does not wait out a window being built after the disc is home.
+  readonly property bool hovered: docked && layer.hovered
+  onHoveredChanged: if (hovered)
+    Bus.warmSurface("phone")
 
   function openPanel() {
     if (!docked)

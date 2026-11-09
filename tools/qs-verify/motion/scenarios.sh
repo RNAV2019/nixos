@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open segmented carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through moment-swap toast-stack dictation-levels wifi-pass launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -199,6 +199,15 @@ sc_satellite_click() {
   sleep 1.5
   cursor 1046 26
   sleep 0.5
+  click
+  sleep 1.8
+  qsipc phone close >/dev/null 2>&1
+  sleep 1.6
+  # Again, warm: the first click pays for the panel's window and contents being built.
+  cursor 200 900
+  sleep 0.6
+  cursor 1046 26
+  sleep 0.6
   click
   sleep 1.8
   qsipc phone close >/dev/null 2>&1
@@ -546,4 +555,19 @@ sc_ping_pong() {
 # is still settling.
 sc_ping_pong_slow() {
   QS_PING_STEP=0.3 sc_ping_pong
+}
+
+# The satellite riding the open hover card when a panel takes the island: the pointer rests on the
+# island (the card opens, the disc rides its edge), then the wallpaper picker opens over it.
+sc_satellite_hover_panel() {
+  ph_up
+  sleep 1.5
+  cursor 960 26
+  sleep 1.3
+  toggle wallpaper
+  sleep 1.5
+  qsipc wallpaper close >/dev/null 2>&1
+  sleep 1.4
+  cursor 200 900
+  sleep 0.8
 }

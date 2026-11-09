@@ -27,6 +27,16 @@ FrostedSurface {
   // card is not found open underneath; the OSD does not, since a volume key should not close it.
   property bool replaced: false
 
+  // A panel has claimed the island and is not on screen yet. Its window takes the pointer the
+  // moment it is asked for, which reads here as the pointer leaving: the hover card would shut
+  // for the frames before the panel's first, and the panel then grow out of the open card it
+  // measured when it claimed. So the card stays as it is until the panel covers it.
+  property bool claimed: false
+
+  // A claim that ended with nothing covering the island leaves the card to the pointer again.
+  onClaimedChanged: if (!claimed && !suppressed && hoverOpen && !hover.containsMouse && !pinned)
+    closeGrace.restart()
+
   // Keep the pill out of Hyprland's backdrop-blur sample while another surface grows over it.
   opacity: suppressed ? 0 : 1
 
@@ -68,7 +78,7 @@ FrostedSurface {
     id: closeGrace
 
     interval: Theme.islandHoverCloseDelay
-    onTriggered: if (!root.suppressed && !hover.containsMouse && !root.pinned)
+    onTriggered: if (!root.suppressed && !root.claimed && !hover.containsMouse && !root.pinned)
       root.hoverOpen = false
   }
 
