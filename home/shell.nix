@@ -4,31 +4,11 @@
   repoDir,
   ...
 }: {
-  # Repaints already-open Ghostty windows over OSC when the universal `theme_osc`
-  # (set by the theme's fish fragment in theme.nix) changes.
-  xdg.configFile."fish/functions/__theme_osc.fish".text = ''
-    function __theme_rgb
-      string join / "rgb:"(string sub --length 2 --start 1 $argv[1]) \
-        (string sub --length 2 --start 3 $argv[1]) \
-        (string sub --length 2 --start 5 $argv[1])
-    end
-
-    function __theme_osc --on-variable theme_osc --description "Recolour the terminal after a theme switch"
-      test -t 1; or return 0
-      set -l c (string split ' ' -- $theme_osc)
-      test (count $c) -eq 5; or return 0
-      printf '\033]11;%s\007\033]10;%s\007\033]12;%s\007\033]17;%s\007\033]19;%s\007' \
-        (__theme_rgb $c[1]) (__theme_rgb $c[2]) (__theme_rgb $c[3]) (__theme_rgb $c[4]) (__theme_rgb $c[5])
-    end
-  '';
-
   programs.fish = {
     enable = true;
 
     interactiveShellInit = ''
       set fish_greeting ""
-      # Load the theme OSC handler now, so fish registers its --on-variable hook.
-      functions -q __theme_osc
     '';
 
     shellAliases = {

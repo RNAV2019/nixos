@@ -206,11 +206,17 @@
     set -U fish_pager_color_selected_description ${c p.text}
   '';
 
-  # bg, fg, cursor, selection bg/fg for shell.nix's OSC handler, which repaints
-  # already-open Ghostty windows that a config reload doesn't.
-  oscFragment = p: ''
-    set -U theme_osc "${bare p.base} ${bare (termText p)} ${bare (termCursor p)} ${bare p.highlightMed} ${bare p.text}"
-  '';
+  # OSC 11/10/12/17/19 (bg, fg, cursor, selection bg/fg). theme-switch writes these to every
+  # open Ghostty window, since a config reload leaves an open window's background alone,
+  # and the Helix themes are transparent, so they show whatever that background is.
+  oscFragment = p: let
+    esc = builtins.fromJSON ''"\u001b"'';
+    bel = builtins.fromJSON ''"\u0007"'';
+    osc = n: hex: let
+      h = bare hex;
+    in "${esc}]${toString n};rgb:${builtins.substring 0 2 h}/${builtins.substring 2 2 h}/${builtins.substring 4 2 h}${bel}";
+  in
+    osc 11 p.base + osc 10 (termText p) + osc 12 (termCursor p) + osc 17 p.highlightMed + osc 19 p.text;
 
   starshipFragment = p:
     lib.recursiveUpdate config.programs.starship.settings {
@@ -354,7 +360,8 @@
       '';
       "ghostty" = text "ghostty" x.ghostty;
       "helix.toml" = x.helix;
-      "fish.fish" = text "fish.fish" (fishFragment p + oscFragment p);
+      "fish.fish" = text "fish.fish" (fishFragment p);
+      "terminal.osc" = text "terminal.osc" (oscFragment p);
       "starship.toml" = toml.generate "${id}-starship.toml" (starshipFragment p);
       "fzf" = text "fzf" (fzfFragment p);
       "bat" = text "bat" "--theme=\"${x.bat}\"\n";
@@ -455,13 +462,41 @@
       if command -v hyprctl >/dev/null; then
         hyprctl reload >/dev/null || true
       fi
-      # Ghostty runs as `.ghostty-wrapped`, hence no -x. Open windows are repainted
-      # by the fish OSC handler when `theme_osc` changes.
+      # Ghostty runs as `.ghostty-wrapped`, hence no -x. The reload recolours an open
+      # window's palette and text but not its background, so the colours are also written
+      # to each window's pty, which Ghostty reads as output. (A fish --on-variable handler
+      # used to send them, but it only reached the window from a prompt sitting directly in
+      # it: never while hx or herdr was in front, and inside herdr it hit the pane instead.)
       pkill -USR2 ghostty || true
-      pkill -USR1 -x hx || true
+      if ghostty="$(pgrep -d, ghostty)"; then
+        for t in $(ps -o tty= --ppid "$ghostty" | sort -u); do
+          case "$t" in
+          pts/*) cat "$state/current/terminal.osc" >"/dev/$t" 2>/dev/null || true ;;
+          esac
+        done
+      fi
       if command -v herdr >/dev/null; then
         herdr server reload-config >/dev/null 2>&1 || true
+        # A pane whose program once set its own default colours keeps them over the host's
+        # for good, and the old fish handler did that to every pane. Resetting hands them back.
+        servers="$(pgrep -d, -f '^[^ ]*herdr server' || true)"
+        if [ -n "$servers" ]; then
+          for t in $(ps -o tty= --ppid "$servers" | sort -u); do
+            case "$t" in
+            pts/*) printf '\033]110\007\033]111\007\033]112\007' >"/dev/$t" 2>/dev/null || true ;;
+            esac
+          done
+        fi
+        # Clients cache the host's colours and re-read them on SIGWINCH, or on a light/dark
+        # flip, which a switch between these dark themes never is.
+        for pid in $(pgrep -x herdr || true); do
+          case ",$servers," in
+          *",$pid,"*) ;;
+          *) kill -WINCH "$pid" 2>/dev/null || true ;;
+          esac
+        done
       fi
+      pkill -USR1 -x hx || true
       fish -c "source '$state/current/fish.fish'" || true
     '';
   };
