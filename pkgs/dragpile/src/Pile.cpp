@@ -648,7 +648,7 @@ static double toBoxRot(double clockwiseDeg) {
     return clockwiseDeg * M_PI / 180.0;
 }
 
-void CPile::render(PHLMONITOR monitor) {
+void CPile::render(Render::CRenderContext& ctx, PHLMONITOR monitor) {
     if (m_state == STATE_IDLE || m_state == STATE_PENDING || !monitor)
         return;
 
@@ -668,7 +668,7 @@ void CPile::render(PHLMONITOR monitor) {
         data.tex = tex;
         data.box = box;
         data.a   = m_alpha;
-        g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(std::move(data)));
+        Render::IHyprRenderer::addPassElement(ctx, makeUnique<CTexPassElement>(std::move(data)));
     };
 
     for (size_t i = m_cards.size(); i-- > 0;) {

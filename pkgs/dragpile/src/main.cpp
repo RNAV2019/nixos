@@ -13,10 +13,10 @@
 #include <glib.h>
 
 #include <hyprland/src/Compositor.hpp>
-#include <hyprland/src/debug/HyprCtl.hpp>
+#include <hyprland/src/ipc/s1/S1.hpp>
 #include <hyprland/src/event/EventBus.hpp>
 #include <hyprland/src/helpers/time/Time.hpp>
-#include <hyprland/src/managers/EventManager.hpp>
+#include <hyprland/src/ipc/s2/S2.hpp>
 #include <hyprland/src/managers/input/InputManager.hpp>
 #include <hyprland/src/output/Monitor.hpp>
 #include <hyprland/src/pointer/cursor/CursorShapeOverrideController.hpp>
@@ -40,7 +40,7 @@ APICALL EXPORT std::string PLUGIN_API_VERSION() {
 using namespace Hyprutils::OS;
 
 typedef void (*FInitiateDrag)(CWLDataDeviceProtocol*, WP<CWLDataSourceResource>, SP<CWLSurfaceResource>, SP<CWLSurfaceResource>);
-typedef void (*FRenderDND)(CWLDataDeviceProtocol*, PHLMONITOR, const Time::steady_tp&);
+typedef void (*FRenderDND)(CWLDataDeviceProtocol*, Render::CRenderContext&, PHLMONITOR, const Time::steady_tp&);
 typedef void (*FVoid)(CWLDataDeviceProtocol*);
 
 static struct {
@@ -64,8 +64,8 @@ static struct {
 static wl_event_source* g_demoTimer = nullptr;
 
 static void             postEvent(const std::string& name, const std::string& data) {
-    if (g_pEventManager)
-        g_pEventManager->postEvent(SHyprIPCEvent{name, data});
+    if (const auto& sock = IPC::Socket2::sock())
+        sock->postEvent(IPC::Socket2::SEvent{name, data});
 }
 
 static void cancelRead() {
@@ -214,9 +214,9 @@ static void hkInitiateDrag(CWLDataDeviceProtocol* self, WP<CWLDataSourceResource
     startRead(src);
 }
 
-static void hkRenderDND(CWLDataDeviceProtocol* self, PHLMONITOR monitor, const Time::steady_tp& when) {
+static void hkRenderDND(CWLDataDeviceProtocol* self, Render::CRenderContext& ctx, PHLMONITOR monitor, const Time::steady_tp& when) {
     if (!g_pPile) {
-        ((FRenderDND)g_hooks.render->m_original)(self, monitor, when);
+        ((FRenderDND)g_hooks.render->m_original)(self, ctx, monitor, when);
         return;
     }
 
@@ -229,9 +229,9 @@ static void hkRenderDND(CWLDataDeviceProtocol* self, PHLMONITOR monitor, const T
         if (const auto surf = self->m_dnd.dndSurface.lock(); surf && surf->m_current.texture)
             surf->frame(when);
     } else
-        ((FRenderDND)g_hooks.render->m_original)(self, monitor, when);
+        ((FRenderDND)g_hooks.render->m_original)(self, ctx, monitor, when);
 
-    g_pPile->render(monitor);
+    g_pPile->render(ctx, monitor);
 }
 
 static void hkDropDrag(CWLDataDeviceProtocol* self) {
@@ -254,8 +254,8 @@ static int onDemoTimeout(void*) {
 // hyprctl dragpile                      the pile's state, as JSON
 // hyprctl dragpile demo <path> ...      a pile without a drag, for tuning; ends by itself
 // hyprctl dragpile end drop|cancel      end a demo pile now
-static std::string onHyprctl(eHyprCtlOutputFormat, std::string request) {
-    Hyprutils::String::CVarList args(request, 0, ' ');
+static IPC::Socket1::SResponse onHyprctl(const IPC::Socket1::SRequest& request) {
+    Hyprutils::String::CVarList args(request.command, 0, ' ');
     const std::string           verb = args.size() > 1 ? args[1] : "";
 
     if (verb.empty() || verb == "state")
@@ -390,7 +390,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
         throw std::runtime_error("[dragpile] hook failed");
     }
 
-    HyprlandAPI::registerHyprCtlCommand(PHANDLE, SHyprCtlCommand{.name = "dragpile", .exact = false, .fn = onHyprctl});
+    HyprlandAPI::registerHyprCtlCommand(PHANDLE, IPC::Socket1::SCommand{.name = "dragpile", .match = IPC::Socket1::COMMAND_MATCH_PREFIX, .handler = onHyprctl});
 
     HyprlandAPI::reloadConfig();
 

@@ -68,8 +68,6 @@ in
         enable = true;
         withUWSM = true;
       };
-      security.wrappers.Hyprland.source =
-        lib.mkForce "${config.programs.hyprland.package}/bin/.Hyprland-wrapped";
       programs.fish.enable = true;
       security.pam.services.quickshell-password = {
         unixAuth = true;
@@ -93,9 +91,6 @@ in
       ];
 
       environment.systemPackages = [
-        # As modules/system/default.nix: the wrapper override skips the PATH suffix, and a
-        # safe-mode Hyprland without hyprland-dialog crashes opening its safe-mode box.
-        pkgs.hyprland-qtutils
         pkgs.quickshell
         pkgs.lock-session
         pkgs.start-desktop

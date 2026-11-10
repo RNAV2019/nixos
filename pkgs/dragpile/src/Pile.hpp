@@ -17,6 +17,9 @@
 #include "Cards.hpp"
 
 class CWLSurfaceResource;
+namespace Render {
+    class CRenderContext;
+}
 
 // The pile of file cards that trails the cursor while files are dragged. All positions are
 // global layout coordinates and all angles are clockwise degrees, as Penpot reports them.
@@ -41,7 +44,7 @@ class CPile {
 
     bool        hidesClientIcon() const;
     bool        idle() const;
-    void        render(PHLMONITOR monitor);
+    void        render(Render::CRenderContext& ctx, PHLMONITOR monitor);
     // Something moved or arrived: make sure a frame gets drawn where the pile is.
     void        poke();
     std::string describe() const;

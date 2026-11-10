@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # The nixpkgs before the 2026-11-10 update. anki, tectonic and aube fail to build at the
+    # newer commit (and Hydra has no build either), so they come from here until fixed.
+    nixpkgs-prev.url = "github:NixOS/nixpkgs/3ec636362e1816bc2f0888fa0fa2c69f1bc9e504";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -69,6 +73,7 @@
   outputs = inputs @ {
     self,
     nixpkgs,
+    nixpkgs-prev,
     home-manager,
     helium-browser,
     llm-agents,
@@ -174,7 +179,7 @@
         user,
       }: let
         args = {
-          inherit helium-browser llm-agents sonora helix-steel fenix user;
+          inherit nixpkgs-prev helium-browser llm-agents sonora helix-steel fenix user;
           repoDir = "/home/${user}/nixos";
         };
       in

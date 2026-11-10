@@ -26,8 +26,8 @@
   helium-extensions = {
     bitwarden = {
       id = "nngceckbapebfimnlniiiahkandclblb";
-      version = "2026.10.0";
-      hash = "sha256-8v63/EbSVQvvm2mvHMNYrqJrkKlHZF+d4W7BTZKW72k=";
+      version = "2026.10.2";
+      hash = "sha256-HJlRefdYYxBMim44nhBQVoqCwNLAfWrPa2JwPSSUMMk=";
     };
     better-lyrics = {
       id = "effdbpeggelllpfkjppbokhmmiinhlmg";
@@ -36,8 +36,8 @@
     };
     better-lyrics-shaders = {
       id = "mffpncjphfmkppebdoaehdlnagnlpfai";
-      version = "1.5.1";
-      hash = "sha256-zizbSfpoBI+Hn+PhHdi4qz/wZH4ZaOCn0e9vlknfYP4=";
+      version = "1.7.0";
+      hash = "sha256-fjymnr6ZB6n5wXOzQoNRgV7qgGHrpGf4wKUeE2JcLz8=";
     };
   };
 
@@ -59,13 +59,16 @@
     src = pkgs.requireFile {
       name = "helium-zen-0.20.1.1";
       hashMode = "recursive";
-      hash = "sha256-2JZ4SHvBbbNZUGIiYmwQj9t3Sf+7vCxoS/7NXpVL0C4=";
+      # Recovered 2026-11-10 from an installed build's opt/helium (autoPatchelf redoes
+      # the ELF paths), after GC took the original. ~/.local/state/nix/gcroots holds it now.
+      hash = "sha256-GPvJHkD3/VlUyuPX760sdMNZpRETahfU08oeR4U4XSg=";
       message = ''
         Build Helium 0.20.1.1 with pkgs/helium/patches applied (out/Default on the build
         PC), copy helium, the .pak files, locales/ and the rest of a release dir into a
         directory named helium-zen-0.20.1.1, then run
-          nix-store --add-fixed --recursive sha256 helium-zen-0.20.1.1
-        and update the hash here.
+          nix-store --add-root ~/.local/state/nix/gcroots/helium-zen-0.20.1.1 --realise \
+            $(nix-store --add-fixed --recursive sha256 helium-zen-0.20.1.1)
+        and update the hash here. Without the root, GC deletes it (it is build-time only).
       '';
     };
     postFixup =

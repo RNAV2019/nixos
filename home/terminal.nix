@@ -17,8 +17,11 @@
     background-opacity = 0.75
     # herdr paints explicit cell backgrounds, which would otherwise be opaque.
     background-opacity-cells = true
-    # Linear modes break Hyprland's blur behind the window.
-    alpha-blending = native
+    # Since 1.4, Ghostty asks for blur itself (ext-background-effect-v1), and with blur off
+    # Hyprland no longer blurs behind it. And `native` now draws the 0.75 background about
+    # 3× lighter; linear-corrected matches the old 1.3 look (measured in nested Hyprland).
+    background-blur = true
+    alpha-blending = linear-corrected
     minimum-contrast = 1.1
 
     cursor-style = "block"

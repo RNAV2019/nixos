@@ -3,6 +3,7 @@
   lib,
   pkgs,
   fenix,
+  nixpkgs-prev,
   ...
 }: {
   imports = [
@@ -89,14 +90,18 @@
     withUWSM = true;
   };
 
-  # Modern Hyprland packages wrap bin/Hyprland in a shell script, which the
-  # capability wrapper's ELF check rejects (NixOS/nixpkgs#573049). Point the
-  # wrapper at the real binary inside the wrapper instead.
-  security.wrappers.Hyprland.source =
-    lib.mkForce "${config.programs.hyprland.package}/bin/.Hyprland-wrapped";
-
   nixpkgs.overlays = [
     fenix.overlays.default
+
+    # Broken at the current nixpkgs (see nixpkgs-prev in flake.nix); drop once they build.
+    (final: _prev: let
+      prev-pkgs = import nixpkgs-prev {
+        inherit (final.stdenv.hostPlatform) system;
+        config.allowUnfree = true;
+      };
+    in {
+      inherit (prev-pkgs) anki tectonic aube;
+    })
 
     # Whole Rust toolchain from one stable manifest, so rust-analyzer never drifts
     # from rustc. Bump with `nix flake update fenix`.
@@ -134,9 +139,6 @@
     wget
     curl
     vim
-    # The Hyprland wrapper override above skips the script's PATH suffix, so the
-    # dialog helpers Hyprland probes for (hyprland-dialog) must be on PATH here.
-    hyprland-qtutils
     # Multiboot USB writer. Writes raw block devices, so not home.packages: sudo resets PATH.
     ventoy-full
   ];
