@@ -1,0 +1,23 @@
+--- a/helix-tui/src/backend/termina.rs
++++ b/helix-tui/src/backend/termina.rs
+@@ -296,16 +296,13 @@
+     }
+ 
+     fn reset_background_color(&mut self) -> io::Result<()> {
++        // A plain reset rather than the colour seen at startup, which goes stale when the
++        // terminal is recoloured while Helix runs, and which a multiplexer such as herdr then
++        // keeps as the pane's own background.
+         write!(
+             self.terminal,
+             "{}",
+-            match self.original_background_color {
+-                Some(color) => Osc::ChangeDynamicColors(
+-                    osc::DynamicColorNumber::TextBackgroundColor,
+-                    vec![color.into()]
+-                ),
+-                None => Osc::ResetDynamicColor(osc::DynamicColorNumber::TextBackgroundColor),
+-            }
++            Osc::ResetDynamicColor(osc::DynamicColorNumber::TextBackgroundColor)
+         )
+     }
+ 

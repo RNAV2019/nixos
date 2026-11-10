@@ -144,12 +144,16 @@ in {
         grammarOverlays = grammarFixes;
         includeGrammarIf = grammar: builtins.elem grammar.name grammars;
       })
-      .overrideAttrs {
+      .overrideAttrs (old: {
         # The fork dropped steel from helix-term's default features (2026-10), which
         # silently builds a plain Helix that never runs init.scm. cargoBuildFeatures is what
         # the build hook reads; buildFeatures is only copied into it before overrideAttrs.
         cargoBuildFeatures = ["helix-term/steel"];
-      };
+        # Helix "resets" the terminal background for a transparent theme by re-sending the
+        # colour it saw at startup. After a theme switch that is the old theme's, and herdr
+        # then keeps it as the pane's background. Send a real reset (OSC 111) instead.
+        patches = (old.patches or []) ++ [./helix/reset-background.patch];
+      });
 
     settings = {
       # themes/current.toml links to the active theme's file; see theme.nix.
