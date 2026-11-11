@@ -18,6 +18,8 @@ final: prev: {
   sf-pro = final.callPackage ./sf-pro {};
   # Offline dictation: nixpkgs' build, given its typing tools.
   handy = final.callPackage ./handy {inherit (prev) handy;};
+  # Godot with Helix keybindings built into its code editors.
+  godot-helix = final.callPackage ./godot-helix {};
 
   # Command-line tools
   gen-commit = final.callPackage ./gen-commit {};

@@ -243,7 +243,8 @@ in {
     jdk21
     ghc
     gcc
-    godot
+    # Defined in pkgs/godot-helix: Godot with Helix keybindings in its code editors.
+    godot-helix
     cabal-install
     stack
     haskellPackages.haskell-language-server
