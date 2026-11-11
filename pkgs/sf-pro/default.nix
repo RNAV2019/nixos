@@ -1,4 +1,5 @@
-# Apple's SF Pro, the shell's UI face (home/quickshell/Commons/Theme.qml). Only the static
+# Apple's SF Pro, kept for the OpenPencil designs that name it; the shell uses SF Compact
+# (pkgs/sf-compact). Only the static
 # Text and Display cuts are installed: Qt's FreeType engine draws a variable font's default
 # instance whatever weight is asked for, so the variable SF-Pro.ttf would lose the weights.
 {

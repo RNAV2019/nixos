@@ -51,6 +51,8 @@
       zoom-min = 10;
       guioptions = "";
       font = "JetBrainsMono Nerd Font 11";
+      # Yank selections to the system clipboard, not the primary selection.
+      selection-clipboard = "clipboard";
     };
     mappings = {
       "f" = "toggle_fullscreen";

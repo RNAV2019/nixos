@@ -179,6 +179,8 @@
     # The shell's one icon set (home/quickshell/Commons/Icons.qml).
     material-symbols-filled
     # The shell's UI face (home/quickshell/Commons/Theme.qml).
+    sf-compact
+    # SF Pro, which the OpenPencil designs name.
     sf-pro
   ];
 

@@ -10,7 +10,7 @@ Item {
   property font font
   property color color
 
-  // SF Pro's default figures are proportional; tabular ones keep every digit slot the same
+  // SF Compact's default figures are proportional; tabular ones keep every digit slot the same
   // width, so a narrow 1 rolling to a 2 does not shove the digits after it.
   font.features: ({
       "tnum": 1

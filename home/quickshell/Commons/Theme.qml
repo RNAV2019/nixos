@@ -171,10 +171,10 @@ Singleton {
   // instance filled at weight 400 (pkgs/material-symbols-filled), so an icon Text keeps its
   // regular weight.
   readonly property string iconFont: "Material Symbols Rounded Filled"
-  // SF Pro (pkgs/sf-pro), as static cuts: Text for UI sizes, Display for type big enough that
-  // the Text cut looks loose.
-  readonly property string uiFont: "SF Pro Text"
-  readonly property string displayFont: "SF Pro Display"
+  // SF Compact (pkgs/sf-compact), as static cuts: Text for UI sizes, Display for type big
+  // enough that the Text cut looks loose.
+  readonly property string uiFont: "SF Compact Text"
+  readonly property string displayFont: "SF Compact Display"
 
   readonly property int weightRegular: Font.Normal
   readonly property int weightMedium: Font.Medium
