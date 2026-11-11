@@ -284,6 +284,7 @@ if [ "${1:-}" = --inner ]; then
     for s in "${surfaces[@]}"; do ipc "$s" close 2>/dev/null || true; done
     ipc authpreview hide 2>/dev/null || true
     ipc activities dismissMoments 2>/dev/null || true
+    ipc keys close 2>/dev/null || true
     jump 1500 760
     hold 1.2
   }
@@ -412,6 +413,9 @@ if [ "${1:-}" = --inner ]; then
   s_notification() { notify-send -a "nix" -i nix-snowflake -t 8000 "Rebuild finished" "Switched to generation 412 in 38 s"; }
   s_session() { ipc session toggle; }
   t_session() { ipc session toggle; }
+  # The cheatsheet, as Hyprland asks for it while AltGr is held.
+  s_keys() { ipc keys open; }
+  t_keys() { ipc keys close; }
   s_lock() {
     ipc lockpreview preview true
     hold 2.5
@@ -498,6 +502,7 @@ if [ "${1:-}" = --inner ]; then
     still notification 1.5 s_notification
     hold 8
     still session 1.2 s_session t_session
+    still keys 1.2 s_keys t_keys
     still lock 0.5 s_lock t_lock
     hold 1
     still rebuild 1.4 s_rebuild t_rebuild
@@ -578,6 +583,13 @@ if [ "${1:-}" = --inner ]; then
     mark editor
     terminal_with "hx ~/nixos/home/themes/palettes.nix"
     hold 1.6
+
+    # Every keybind, for as long as AltGr is held.
+    mark keys
+    ipc keys open
+    hold 2.4
+    ipc keys close
+    hold 0.6
 
     # The browser, on its own workspace.
     mark browser
@@ -703,6 +715,8 @@ themedir=$(sed -n "s|^ *$theme) dir=\(/nix/store/[^ ]*\) ;;\$|\1|p" "$(readlink 
   exit 1
 }
 emoji=$(readlink -f "$HOME/.local/share/quickshell/emoji.tsv")
+# The cheatsheet lists the binds of the running system, which are not personal.
+keys=$(readlink -f "$HOME/.local/share/quickshell/keys.json")
 
 stage=""
 unit=""
@@ -737,6 +751,10 @@ build_home() {
     [ -e "$HOME/.config/$c" ] && cp -rL "$HOME/.config/$c" "$home/.config/"
   done
   rm -f "$home/.config/fish/fish_variables"
+  # A second `ghostty` asks the first for a window, and without a systemd on the stage's bus the
+  # first often never opens one; each launch is its own process here.
+  chmod u+w "$home/.config/ghostty/config"
+  printf '\ngtk-single-instance = false\n' >>"$home/.config/ghostty/config"
   # Helix's Steel plugins live outside its config directory.
   mkdir -p "$home/.local/share"
   cp -rL "$HOME/.local/share/steel" "$home/.local/share/"
@@ -762,6 +780,9 @@ build_home() {
   demo_label "$shell/Services/Battery.qml" 'UPower.displayDevice' 'DemoDevices.battery'
   demo_label "$shell/Services/AppSearch.qml" 'if (e.noDisplay || !e.name)' 'if (e.noDisplay || !e.name || DemoDevices.apps.indexOf(String(e.id)) < 0)'
   demo_label "$shell/Services/Rebuild.qml" 'Date.now()' 'DemoDevices.elapsed'
+  # The same frozen clock stalls a hand-over between two surfaces: the content morph reads wall
+  # time once a frame, so on the stage it reads the frame timer's own count.
+  demo_label "$shell/Ui/MorphLayer.qml" $'      var now = Date.now();\n      if (morph.clockStart === 0)' $'      var now = 1 + clockAnim.elapsedTime * 1000;\n      if (morph.clockStart === 0)'
 
   ln -s "$themedir" "$home/.local/state/theme/current"
   echo "$theme" >"$home/.local/state/theme/name"
@@ -925,7 +946,7 @@ socat "UNIX-LISTEN:\$XDG_RUNTIME_DIR/handy/overlay.sock,fork" "EXEC:tail -n0 -F 
 : >"\$XDG_RUNTIME_DIR/quickshell-secured-\$HYPRLAND_INSTANCE_SIGNATURE"
 export SHOWCASE_NEARBY="$stage/nearby.events" SHOWCASE_PROFILE="$stage/profile"
 export SHOWCASE_DAY="${clock%% *}"
-export QUICKSHELL_CHARGE_TYPES="$stage/fake/charge_types" QS_EMOJI_DATA="$emoji"
+export QUICKSHELL_CHARGE_TYPES="$stage/fake/charge_types" QS_EMOJI_DATA="$emoji" QS_KEYS_DATA="$keys"
 PATH="$stage/bin:\$PATH" datefudge --static "$clock" qs -p "\$HOME/.config/quickshell" >"$stage/qs.log" 2>&1 &
 bash "$self" --inner $pass "$stage" >"$stage/tour.log" 2>&1 || touch "$stage/failed"
 EOF
