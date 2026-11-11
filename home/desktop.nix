@@ -34,6 +34,160 @@
 
   workspaces = lib.range 1 9;
 
+  towards = dispatcher: chord:
+    map (d: bind "${chord} + ${d}" ''${dispatcher}({ direction = "${lib.toLower d}" })'') ["LEFT" "RIGHT" "UP" "DOWN"];
+
+  # Omarchy's screenshot bindings. The extra keysyms cover the screenshot key when keyd or
+  # its f16 mapping isn't active.
+  onPrint = chord: cmd: map (key: bind "${chord}${key}" (exec cmd)) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"];
+
+  # One line of the cheatsheet (home/quickshell/Keys) with the binds behind it, so the sheet
+  # lists what is bound and cannot fall behind it. `keyAs` names the keycaps where a line stands
+  # for several binds; otherwise they are read off its first bind.
+  key = label: binds: {
+    inherit label;
+    binds = lib.toList binds;
+  };
+  keyAs = caps: label: binds: key label binds // {inherit caps;};
+
+  # What a key is called on its cap, where that is not Hyprland's name for it.
+  capNames = {
+    SUPER = "Super";
+    SHIFT = "Shift";
+    CTRL = "Ctrl";
+    ALT = "Alt";
+    RETURN = "Enter";
+    SPACE = "Space";
+    ESCAPE = "Esc";
+    Print = "PrtSc";
+    EQUAL = "=";
+    MINUS = "−";
+  };
+  capsOf = keys: map (k: capNames.${k} or k) (lib.splitString " + " keys);
+
+  # The sheet's columns, each a list of sections.
+  keymap = [
+    [
+      {
+        title = "Windows";
+        keys = [
+          (key "Close window" (bind "${mod} + W" "hl.dsp.window.close()"))
+          (key "Fullscreen" (bind "${mod} + F" "hl.dsp.window.fullscreen()"))
+          (key "Float or tile" (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })''))
+          (key "Flip the split direction" (bind "${mod} + J" ''hl.dsp.layout("togglesplit")''))
+          (keyAs ["Super" "← ↑ ↓ →"] "Move focus" (towards "hl.dsp.focus" mod))
+          (keyAs ["Super" "Shift" "← ↑ ↓ →"] "Swap with a neighbour" (towards "hl.dsp.window.swap" "${mod} + SHIFT"))
+          (key "Grow window" (resizeBinds resizeStep ["${mod} + EQUAL" "${mod} + SHIFT + PLUS"]))
+          (key "Shrink window" (resizeBinds (-resizeStep) ["${mod} + MINUS" "${mod} + SHIFT + UNDERSCORE"]))
+          (keyAs ["Super" "Drag"] "Move window" (bindm "${mod} + mouse:272" "hl.dsp.window.drag()"))
+          (keyAs ["Super" "Right drag"] "Resize window" (bindm "${mod} + mouse:273" "hl.dsp.window.resize()"))
+        ];
+      }
+    ]
+    [
+      {
+        title = "Apps";
+        keys = [
+          (key "Launcher" (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle")))
+          (key "Terminal" (bind "${mod} + RETURN" (exec "ghostty")))
+          (key "Browser" (bind "${mod} + SHIFT + B" (exec "helium")))
+          (key "Files" (bind "${mod} + SHIFT + F" (exec "nautilus")))
+        ];
+      }
+      {
+        title = "Shell";
+        keys = [
+          (key "Control Center" (bind "ALT + A" (exec "qs ipc call control toggle")))
+          (key "Calendar" (bind "ALT + C" (exec "qs ipc call calendar toggle")))
+          (key "Nearby sharing" (bind "ALT + N" (exec "qs ipc call nearby toggle")))
+          (key "Power profiles" (bind "ALT + P" (exec "qs ipc call profiles toggle")))
+          (key "Theme" (bind "ALT + T" (exec "qs ipc call theme toggle")))
+          (key "Wallpaper" (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle")))
+          (key "Session menu" (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle")))
+          (key "Lock" (bind "${mod} + L" (exec "lock-session")))
+        ];
+      }
+    ]
+    [
+      {
+        title = "Workspaces";
+        keys = [
+          (keyAs ["Super" "1 – 9"] "Go to workspace"
+            (map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces))
+          (keyAs ["Super" "Shift" "1 – 9"] "Send window to workspace"
+            (map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces))
+        ];
+      }
+      {
+        title = "Capture";
+        keys = [
+          (key "Screenshot an area" (onPrint "" "grimblast --notify copysave area"))
+          (key "Screenshot this display" (onPrint "ALT + " "grimblast --notify copysave output"))
+          (key "Screenshot every display" (onPrint "${mod} + CTRL + " "grimblast --notify copysave screen"))
+          (key "Pick a colour" (onPrint "${mod} + " "pkill hyprpicker || hyprpicker -a"
+            # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
+            # With Super already held its press is too early to join, so SUPER + PrtSc
+            # arrives as SUPER + SHIFT + S instead.
+            ++ [(bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))]))
+          # Opens the picker, or stops and saves a running recording.
+          (key "Record the screen, or stop" (bind "ALT + R" (exec "qs ipc call recorder toggle")))
+        ];
+      }
+      {
+        title = "Dictation";
+        keys = [
+          # Tap to start and stop, or hold to talk. Letting go of SUPER first skips the
+          # release, which leaves it recording as if tapped.
+          (key "Dictate: tap, or hold to talk" [
+            (bind "${mod} + D" (exec "dictate press"))
+            (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
+          ])
+          # The same, cleaned up by a model before it is typed; see home/dictation.nix.
+          (key "Dictate, then tidy the text" [
+            (bind "${mod} + SHIFT + D" (exec "dictate press --post-process"))
+            (bindWith {release = true;} "${mod} + SHIFT + D" (exec "dictate release --post-process"))
+          ])
+        ];
+      }
+    ]
+  ];
+
+  # Holding AltGr for `after` ms shows the cheatsheet, and letting go hides it. The key stays
+  # AltGr: the press is passed on, and a quick AltGr+4 for € is over before the sheet would
+  # show. One timer, running only while the key is down, counts the hold and sees the release.
+  peekKey = "ISO_Level3_Shift";
+  peekKeys =
+    bindWith {
+      non_consuming = true;
+      ignore_mods = true;
+    }
+    peekKey ''
+      (function()
+        local tick, after = 40, 320
+        local timer, held, shown = nil, 0, false
+        local function watch()
+          if hl.is_key_down("${peekKey}") then
+            held = held + tick
+            if not shown and held >= after then
+              shown = true
+              hl.exec_cmd("qs ipc call keys open")
+            end
+            return
+          end
+          timer:set_enabled(false)
+          if shown then hl.exec_cmd("qs ipc call keys close") end
+          shown = false
+        end
+        return function()
+          held = 0
+          if timer then
+            timer:set_enabled(true)
+          else
+            timer = hl.timer(watch, { timeout = tick, type = "repeat" })
+          end
+        end
+      end)()'';
+
   # With an external monitor connected, workspace 5 lives only there and the
   # rest only on the laptop panel. Rules fix where a workspace is created, so
   # focusing a missing one never opens it on the wrong output.
@@ -302,74 +456,11 @@ in {
         }
       ];
 
+      # Everything on the cheatsheet, then what it leaves out: keys that say what they do.
       bind =
-        [
-          (bind "${mod} + RETURN" (exec "ghostty"))
-          (bind "${mod} + SHIFT + B" (exec "helium"))
-          (bind "${mod} + SHIFT + F" (exec "nautilus"))
-
-          (bind "${mod} + W" "hl.dsp.window.close()")
-          (bind "${mod} + T" ''hl.dsp.window.float({ action = "toggle" })'')
-          (bind "${mod} + J" ''hl.dsp.layout("togglesplit")'')
-          (bind "${mod} + F" "hl.dsp.window.fullscreen()")
-        ]
-        ++ resizeBinds resizeStep ["${mod} + EQUAL" "${mod} + SHIFT + PLUS"]
-        ++ resizeBinds (-resizeStep) ["${mod} + MINUS" "${mod} + SHIFT + UNDERSCORE"]
+        lib.concatMap (line: line.binds) (lib.concatMap (section: section.keys) (lib.concatLists keymap))
         ++ [
-          (bind "${mod} + LEFT" ''hl.dsp.focus({ direction = "left" })'')
-          (bind "${mod} + RIGHT" ''hl.dsp.focus({ direction = "right" })'')
-          (bind "${mod} + UP" ''hl.dsp.focus({ direction = "up" })'')
-          (bind "${mod} + DOWN" ''hl.dsp.focus({ direction = "down" })'')
-
-          (bind "${mod} + SHIFT + LEFT" ''hl.dsp.window.swap({ direction = "left" })'')
-          (bind "${mod} + SHIFT + RIGHT" ''hl.dsp.window.swap({ direction = "right" })'')
-          (bind "${mod} + SHIFT + UP" ''hl.dsp.window.swap({ direction = "up" })'')
-          (bind "${mod} + SHIFT + DOWN" ''hl.dsp.window.swap({ direction = "down" })'')
-        ]
-        ++ map (i: bind "${mod} + ${toString i}" "hl.dsp.focus({ workspace = ${toString i} })") workspaces
-        ++ map (i: bind "${mod} + SHIFT + ${toString i}" "hl.dsp.window.move({ workspace = ${toString i} })") workspaces
-        ++ lib.concatMap (key: [
-          # Omarchy screenshot bindings. The extra keysyms cover the screenshot
-          # key when keyd or its f16 mapping isn't active.
-          (bind key (exec "grimblast --notify copysave area"))
-          (bind "ALT + ${key}" (exec "grimblast --notify copysave output"))
-          (bind "${mod} + ${key}" (exec "pkill hyprpicker || hyprpicker -a"))
-          (bind "${mod} + CTRL + ${key}" (exec "grimblast --notify copysave screen"))
-        ]) ["Print" "XF86SelectiveScreenshot" "XF86Launch7"]
-        ++ [
-          # PrtSc sends Shift+Meta+S, which keyd turns into Print only as a three-key chord.
-          # With Super already held its press is too early to join, so SUPER + PrtSc
-          # arrives as SUPER + SHIFT + S instead.
-          (bind "${mod} + SHIFT + S" (exec "pkill hyprpicker || hyprpicker -a"))
-
-          (bind "${mod} + L" (exec "lock-session"))
-
-          (bind "${mod} + ESCAPE" (exec "qs ipc call session toggle"))
-
-          (bind "${mod} + SPACE" (exec "qs ipc call launcher toggle"))
-
-          (bind "ALT + A" (exec "qs ipc call control toggle"))
-
-          (bind "CTRL + ${mod} + SPACE" (exec "qs ipc call wallpaper toggle"))
-
-          (bind "ALT + T" (exec "qs ipc call theme toggle"))
-
-          # Opens the picker, or stops and saves a running recording.
-          (bind "ALT + R" (exec "qs ipc call recorder toggle"))
-
-          (bind "ALT + C" (exec "qs ipc call calendar toggle"))
-
-          (bind "ALT + P" (exec "qs ipc call profiles toggle"))
-
-          (bind "ALT + N" (exec "qs ipc call nearby toggle"))
-
-          # Dictation: tap to start and stop, or hold to talk. Letting go of SUPER
-          # first skips the release, which leaves it recording as if tapped.
-          (bind "${mod} + D" (exec "dictate press"))
-          (bindWith {release = true;} "${mod} + D" (exec "dictate release"))
-          # The same, cleaned up by a model before it is typed; see home/dictation.nix.
-          (bind "${mod} + SHIFT + D" (exec "dictate press --post-process"))
-          (bindWith {release = true;} "${mod} + SHIFT + D" (exec "dictate release --post-process"))
+          peekKeys
 
           (bind "XF86AudioMute" (exec "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
           (bind "XF86AudioPlay" (exec "playerctl play-pause"))
@@ -378,9 +469,6 @@ in {
 
           # A short press locks; logind powers off on a long press (modules/system/session.nix).
           (bind "XF86PowerOff" (exec "lock-session"))
-
-          (bindm "${mod} + mouse:272" "hl.dsp.window.drag()")
-          (bindm "${mod} + mouse:273" "hl.dsp.window.resize()")
 
           # Routed through Quickshell so the OSD shows even at the limits.
           (bindel "XF86AudioRaiseVolume" (exec "qs ipc call volume up"))
@@ -547,6 +635,21 @@ in {
   # The launcher's emoji table, generated from nixpkgs' Unicode data. The config above is
   # out of store, so it reads this from a fixed path; see Services/EmojiSearch.qml.
   xdg.dataFile."quickshell/emoji.tsv".source = "${pkgs.quickshell-emoji}/share/quickshell/emoji.tsv";
+
+  # The cheatsheet's lines, from the binds above; see Services/Keymap.qml.
+  xdg.dataFile."quickshell/keys.json".text = builtins.toJSON {
+    columns =
+      map (map (section: {
+        inherit (section) title;
+        rows =
+          map (line: {
+            inherit (line) label;
+            caps = line.caps or (capsOf (lib.head (lib.head line.binds)._args));
+          })
+          section.keys;
+      }))
+      keymap;
+  };
 
   # The account picture, read by the lock screen. Out of store, so replacing
   # profile.jpg in this repo shows on the next lock without a rebuild.

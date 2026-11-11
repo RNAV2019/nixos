@@ -8,6 +8,7 @@ import qs.Calendar
 import qs.Commons
 import qs.Control
 import qs.Dictation
+import qs.Keys
 import qs.Launcher
 import qs.Lock
 import qs.Nearby
@@ -39,6 +40,9 @@ ShellRoot {
   CalendarPanel {}
   DictationPill {}
   ControlCenter {}
+  KeysSheet {
+    id: keysSheet
+  }
   Launcher {}
   NearbyPanel {}
   PhonePanel {}
@@ -138,6 +142,21 @@ ShellRoot {
     // Jump straight to the receive view: `qs ipc call nearby receive`.
     function receive(): void {
       Nearby.requestReceive();
+    }
+  }
+
+  // The cheatsheet follows a held key: Hyprland calls `open` once AltGr has been down a moment
+  // and `close` when it comes up (home/desktop.nix). Not `show`: `qs ipc call keys show` is read
+  // as the `ipc show` subcommand and never arrives.
+  IpcHandler {
+    target: "keys"
+
+    function open(): void {
+      keysSheet.wanted = true;
+    }
+
+    function close(): void {
+      keysSheet.wanted = false;
     }
   }
 

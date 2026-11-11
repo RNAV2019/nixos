@@ -1485,4 +1485,27 @@ Singleton {
   readonly property int phoneNotePad: 12
   // How many of the phone's notifications the preview's screen draws as stubs.
   readonly property int phoneNotesMax: 2
+
+  // The keybinds cheatsheet (Keys/KeysSheet.qml). A keycap is 22 tall and 6 round, with 7 either
+  // side of a word and 4 to the next cap. A line is 30 tall, its label 12 after the last cap; a
+  // section's title has 24, sections sit 20 apart and columns 40. The card keeps 28 clear all
+  // round, and its columns start 76 down, under the title.
+  readonly property int keycapHeight: 22
+  readonly property int keycapRadius: 6
+  readonly property int keycapPad: 7
+  readonly property int keycapGap: 4
+  readonly property real keycapLabelSize: 11.5
+  readonly property int keysRowHeight: 30
+  readonly property int keysLabelSize: 13
+  readonly property int keysChordGap: 12
+  readonly property int keysTitleHeight: 24
+  readonly property int keysSectionGap: 20
+  readonly property int keysColumnGap: 40
+  readonly property int keysPad: 28
+  readonly property int keysHeaderHeight: 76
+  // It comes up over a dimmed desktop, from a little under its size, at the press's pace: it is
+  // a glance, so it has to be there by the time the eye is.
+  readonly property real keysScrimAlpha: 0.45
+  readonly property real keysGrowFrom: 0.97
+  readonly property real keysOmega: pressOmega
 }

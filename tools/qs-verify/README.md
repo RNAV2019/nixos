@@ -54,6 +54,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
   transcribing, polishing.
 - Sharing pill: connecting, offer, receiving, saved.
 - Moments: plugged in, Wi-Fi sign-in.
+- The keybinds cheatsheet, alone and over an open control centre.
 - Notification toasts: basic, critical, long text; the control centre's notification list.
 - The phone (last, so nothing before it sees it): the satellite docked, hovered, on a low battery
   and riding the volume OSD, and the phone panel at rest, with the pointer over a notification and
@@ -78,6 +79,7 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | dictation pill | JSON lines through a `socat` listener on `$XDG_RUNTIME_DIR/handy/overlay.sock` |
 | sharing pill, nearby panel | a stub `nearby` on PATH replaying `nearby.events` (peers, status, transfers) |
 | moments | the shell's own `activities` ipc (`plug`, `wifi`) |
+| keybinds cheatsheet | `qs ipc call keys open`, as Hyprland does while AltGr is held; its lines are the installed `keys.json`, or `QS_KEYS_DATA=FILE run.sh ...` for a config not yet switched to |
 | calendar agenda | off by default (the stub `ical-agenda` fails as on a fresh machine); put ical-agenda's own tab-separated output in `$QS_VERIFY_WORK/cal-events.tsv` after `run.sh` and press `r` in the panel |
 | auth prompt | the shell's own `authpreview` ipc |
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |

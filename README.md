@@ -270,4 +270,4 @@ backup now | status | list [ARCHIVE] | restore [PATH...] | mount [ARCHIVE] | che
 | `Super + Escape` | Session menu | `Alt + P` | Power profiles |
 | `PrtSc` | Screenshot region | `Super + PrtSc` | Colour picker |
 
-The full list is in [`home/desktop.nix`](home/desktop.nix).
+Hold `AltGr` for the whole list on screen; it is generated from the binds in [`home/desktop.nix`](home/desktop.nix).

@@ -42,6 +42,7 @@ reset_ui() {
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
+  qsipc keys close >/dev/null 2>&1
   qsipc activities dismissMoments >/dev/null 2>&1
   cursor 200 900
   sleep 1.6
@@ -126,6 +127,13 @@ setup_profiles() { open_panel profiles; }
 setup_theme() { open_panel theme; }
 setup_wallpaper() { open_panel wallpaper; }
 setup_recorder() { open_panel recorder; }
+# The cheatsheet, as Hyprland asks for it while AltGr is held, alone and over an open panel.
+setup_keys() { qsipc keys open >/dev/null; }
+setup_keys_over_panel() {
+  open_panel control
+  sleep 1.2
+  qsipc keys open >/dev/null
+}
 # The picker starts a screen capture on Return; the stub `wl-screenrec` fails, and the pill says so.
 # It takes no pointer and dwells 8 s, so the next state waits it out.
 setup_recorder_failed() {
@@ -675,6 +683,8 @@ shot panel-profiles 1.5 0.3 setup_profiles
 shot panel-theme 1.5 0.3 setup_theme
 shot panel-wallpaper 1.5 0.3 setup_wallpaper
 shot panel-recorder 1.5 0.3 setup_recorder
+shot keys 1.2 0.3 setup_keys
+shot keys-over-panel 1.2 0.3 setup_keys_over_panel
 
 shot auth-pkexec 1.5 0.3 setup_auth_pkexec
 shot auth-plain 1.5 0.3 setup_auth_plain
