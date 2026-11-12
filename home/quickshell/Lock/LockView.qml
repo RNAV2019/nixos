@@ -28,6 +28,8 @@ Item {
   // The reveal's clocks (Lock/LockReveal.qml).
   property real ground: 0
   property real flight: 0
+  property real swell: 0
+  property real wobble: 0
   property real rise: 0
   property bool away: false
   property bool leaving: false
@@ -279,13 +281,14 @@ Item {
           }
         }
 
-        // The wallpaper as the desktop shows it, never drawn itself: the patch below reads it.
+        // The wallpaper as the desktop shows it, never drawn itself: the patch below reads it,
+        // and it is what the clock's glass looks through at.
         Image {
           id: wallpaperImage
 
           anchors.fill: parent
           visible: false
-          source: view.standing ? Wallpapers.url : ""
+          source: Wallpapers.url
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
         }
@@ -631,6 +634,13 @@ Item {
       readonly property real pad: Math.ceil(digits * Theme.lockClockPad)
       // Plain ink in and out of the pill, glass once it is clear of it.
       readonly property real solid: 1 - canvas.ramp(t, Theme.lockGlassFrom, Theme.lockGlassTo)
+      // Its size, which swells past rest and settles, and its wobble: taller and narrower
+      // while it travels, squat and wide as it lands. Nothing wobbles while it is still ink.
+      readonly property real size: fromScale + (1 - fromScale) * Math.max(0, view.swell)
+      // The lead is toward wherever the flight is headed, so on the way home its sign turns.
+      readonly property real stretch: Math.max(-Theme.lockWobbleMax, Math.min(Theme.lockWobbleMax, Theme.lockWobble * view.wobble * (view.leaving ? -1 : 1))) * (1 - solid)
+      readonly property real sizeX: size * (1 - stretch)
+      readonly property real sizeY: size * (1 + stretch)
 
       // The line as its glyphs advance, less the tracking the last one trails, by the height of
       // a digit: the digits' own box, which is what is centred and scaled.
@@ -638,10 +648,15 @@ Item {
       height: bigDigit.tightBoundingRect.height
       x: Math.round(canvas.width / 2 + Bus.pillOffsetX * canvas.outputScale * (1 - t) - width / 2)
       y: fromY + (toY - fromY) * t - height / 2
-      transformOrigin: Item.Center
-      scale: fromScale + (1 - fromScale) * t
       opacity: canvas.swap
       visible: opacity > 0
+
+      transform: Scale {
+        origin.x: clockBox.width / 2
+        origin.y: clockBox.height / 2
+        xScale: clockBox.sizeX
+        yScale: clockBox.sizeY
+      }
 
       Item {
         id: plate
@@ -716,7 +731,7 @@ Item {
           }
           blurEnabled: true
           blur: 1
-          blurMax: Math.max(2, Math.round(clockBox.digits * Theme.lockGlassBevel))
+          blurMax: Math.max(2, Math.min(64, Math.round(clockBox.digits * Theme.lockGlassBevel)))
           autoPaddingEnabled: false
         }
 
@@ -729,18 +744,19 @@ Item {
           visible: false
         }
 
-        // What lies behind the plate, wherever the flight has put it and at whatever size:
-        // the glass looks through at this. Half size and mipmapped; the glass softens it.
+        // The wallpaper behind the plate, wherever the flight has put it and at whatever size:
+        // the glass looks through at this rather than at the desktop standing on it (the
+        // ground stands in until the wallpaper has loaded). Half size; the glass
+        // blurs it a little.
         ShaderEffectSource {
           id: backdropTexture
 
-          readonly property real spanX: plate.width * clockBox.scale
-          readonly property real spanY: plate.height * clockBox.scale
+          readonly property real spanX: plate.width * clockBox.sizeX
+          readonly property real spanY: plate.height * clockBox.sizeY
 
-          sourceItem: groundLayer
+          sourceItem: wallpaperImage.status === Image.Ready ? wallpaperImage : groundLayer
           sourceRect: Qt.rect(clockBox.x + clockBox.width / 2 - spanX / 2, clockBox.y + clockBox.height / 2 - spanY / 2, spanX, spanY)
           textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
-          mipmap: true
           visible: false
         }
 
@@ -759,7 +775,7 @@ Item {
           autoPaddingEnabled: true
         }
 
-        // The digits as frosted glass (Shaders/lockglass.frag).
+        // The digits as bubbles of glass (Shaders/lockglass.frag).
         ShaderEffect {
           anchors.fill: parent
 
@@ -767,10 +783,12 @@ Item {
           property var soft: softTexture
           property var backdrop: backdropTexture
           property size itemSize: Qt.size(width, height)
-          property real bevel: clockBox.digits * Theme.lockGlassBevel
+          property real bevel: softCover.blurMax
           property real rim: Math.max(1.5, clockBox.digits * Theme.lockGlassRim)
+          property real relief: Theme.lockGlassRelief
+          property real film: Theme.lockGlassFilm
           property real bend: clockBox.digits * Theme.lockGlassBend
-          property real soften: Theme.lockGlassSoften
+          property real soften: clockBox.digits * Theme.lockGlassSoften
           property real lighten: Theme.lockGlassLighten
           property real milk: Theme.lockGlassMilk
           property real shine: Theme.lockGlassShine

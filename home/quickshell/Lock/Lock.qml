@@ -332,6 +332,8 @@ Scope {
         faults: root.faults
         ground: reveal.ground
         flight: reveal.flight
+        swell: reveal.swell
+        wobble: reveal.wobble
         rise: reveal.rise
         away: reveal.widthAway
         leaving: reveal.leaving

@@ -18,6 +18,12 @@ Item {
   // 0 with the clock in the pill, 1 with it at rest mid-screen; runs a little past 1 going in and
   // a little under 0 coming home.
   readonly property real flight: flightSpring.value
+  // The clock's size on the same journey, on a looser spring of its own: it swells well past
+  // its resting size and settles back, as a bubble does when it is let go.
+  readonly property real swell: swellSpring.value
+  // A quicker, looser spring still, on the same journey. How far it leads or trails the flight
+  // is the clock's wobble: stretched along its travel while it moves, squashed as it lands.
+  readonly property real wobble: wobbleSpring.value - flightSpring.value
   // 0 with the pill where the island rests, 1 with it dropped to its locked place.
   readonly property real rise: riseSpring.value
   // Where the flight and the pill's width are headed. The width follows a beat behind on the
@@ -114,7 +120,29 @@ Item {
     target: reveal.away ? 1 : 0
     animate: !reveal.snapping
     omega: reveal.away ? Theme.lockFlightOmega : Theme.lockFlightOmegaOut
-    damping: Theme.lockFlightDamping
+    damping: reveal.away ? Theme.lockFlightDamping : Theme.lockFlightDampingOut
+    epsilon: 0.0005
+  }
+
+  MorphSpring {
+    id: swellSpring
+
+    label: "lock.swell"
+    target: reveal.away ? 1 : 0
+    animate: !reveal.snapping
+    omega: reveal.away ? Theme.lockSwellOmega : Theme.lockFlightOmegaOut
+    damping: reveal.away ? Theme.lockSwellDamping : Theme.lockFlightDampingOut
+    epsilon: 0.0005
+  }
+
+  MorphSpring {
+    id: wobbleSpring
+
+    label: "lock.wobble"
+    target: reveal.away ? 1 : 0
+    animate: !reveal.snapping
+    omega: Theme.lockWobbleOmega
+    damping: Theme.lockWobbleDamping
     epsilon: 0.0005
   }
 

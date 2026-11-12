@@ -903,21 +903,26 @@ Singleton {
   readonly property real lockClockTracking: -0.035
   // Room kept round the digits' texture, as a share of a digit's height.
   readonly property real lockClockPad: 0.16
-  // The digits are frosted glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's opaque
-  // ink copied his wallpaper's look rather than suiting ours). The desktop behind shows through
-  // them, softened by lockGlassSoften mip levels, lightened by lockGlassLighten and milked with
-  // lockGlassMilk of the ink so the time reads on any wallpaper. The outline is a bevel
-  // lockGlassBevel deep that bends the backdrop by up to lockGlassBend, under a bright rim
-  // lockGlassRim wide (all shares of a digit's height) lit from the upper left. The clock is
-  // plain ink in and out of the pill and turns to glass over this stretch of the flight.
-  readonly property real lockGlassBevel: 0.085
-  readonly property real lockGlassRim: 0.014
-  readonly property real lockGlassBend: 0.11
-  readonly property real lockGlassSoften: 2.2
-  readonly property real lockGlassLighten: 1.3
-  readonly property real lockGlassMilk: 0.24
+  // The digits are bubbles of glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's
+  // opaque ink copied his wallpaper's look rather than suiting ours, and the glass was to be
+  // bubbly). Each stroke is an inflated tube, read off the digits' coverage blurred over
+  // lockGlassBevel of a digit's height and lockGlassRelief steep. The wallpaper itself shows
+  // through them, not the desktop standing on it (his choice): bent as through a lens by up to
+  // lockGlassBend, blurred over lockGlassSoften of a digit's height, lightened by lockGlassLighten and
+  // milked with lockGlassMilk of the ink so the time reads on any wallpaper. A light from the
+  // upper left leaves a glint on the slope facing it, the outline is bright lockGlassRim wide,
+  // and the turning edge takes a soap film's colours (lockGlassFilm). The clock is plain ink in
+  // and out of the pill and turns to glass over this stretch of the flight.
+  readonly property real lockGlassBevel: 0.12
+  readonly property real lockGlassRelief: 1.9
+  readonly property real lockGlassRim: 0.012
+  readonly property real lockGlassBend: 0.13
+  readonly property real lockGlassSoften: 0.016
+  readonly property real lockGlassLighten: 1.08
+  readonly property real lockGlassMilk: 0.13
   readonly property real lockGlassShine: 1.0
-  readonly property real lockGlassLightX: -0.6
+  readonly property real lockGlassFilm: 0.24
+  readonly property real lockGlassLightX: -0.55
   readonly property real lockGlassLightY: -0.8
   readonly property real lockGlassFrom: 0.12
   readonly property real lockGlassTo: 0.6
@@ -1008,19 +1013,30 @@ Singleton {
   readonly property real lockScrimBottom: 0.35
   readonly property real lockScrimBottomReach: 0.29
 
-  // The lock's clocks (Lock/LockReveal.qml), all read off the video at 60 fps. The ground (blur,
-  // scrim) comes up over lockIn; the flight starts lockFlightDelay in, on a spring that runs
-  // about 1.5% past (lockFlightDamping) at lockFlightOmega in and lockFlightOmegaOut back, the
-  // pill's rise back trailing at lockRiseOmegaOut. The ground clears over lockOut once the clock
-  // is home.
+  // The lock's clocks (Lock/LockReveal.qml), read off the video at 60 fps, then loosened:
+  // Ryan wanted the clock's way out of the pill bubbly (2026-11-12). The ground (blur, scrim)
+  // comes up over lockIn; the flight starts lockFlightDelay in, on a spring that runs about 8%
+  // past the middle of the screen and bobs back (lockFlightDamping; the video's was 0.8, 1.5%
+  // past). The clock's size rides a looser spring (lockSwell*, about 15% past its resting size),
+  // and it wobbles as it goes: stretched by up to lockWobble times the lead of a third, quicker
+  // spring (lockWobble*) over the flight, squashed as that one falls behind on landing. Home is
+  // tighter (lockFlightOmegaOut, lockFlightDampingOut), the pill's rise back trailing at
+  // lockRiseOmegaOut. The ground clears over lockOut once the clock is home.
   // The way in starts on the lock surface's first frame, or this long after it was asked for.
   readonly property int lockPresentWait: 400
   readonly property int lockIn: 140
   readonly property int lockFlightDelay: 155
   readonly property int lockOut: 300
-  readonly property real lockFlightOmega: 20
+  readonly property real lockFlightOmega: 18
   readonly property real lockFlightOmegaOut: 16
-  readonly property real lockFlightDamping: 0.8
+  readonly property real lockFlightDamping: 0.62
+  readonly property real lockFlightDampingOut: 0.8
+  readonly property real lockSwellOmega: 19
+  readonly property real lockSwellDamping: 0.52
+  readonly property real lockWobbleOmega: 30
+  readonly property real lockWobbleDamping: 0.34
+  readonly property real lockWobble: 0.3
+  readonly property real lockWobbleMax: 0.16
   readonly property real lockRiseOmegaOut: 13
   // The pill's width: to the lock glyph (10% past, then back), a dot at a time, down to the
   // checking lozenge, and back out to the island (15% past).

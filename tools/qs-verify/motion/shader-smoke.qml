@@ -126,12 +126,14 @@ Window {
             property variant backdrop: back4
             property real bend: 0
             property real bevel: 4
+            property real film: 0
             property variant glyphs: src4
             property color ink: "red"
             property size itemSize: Qt.size(100, 40)
             property point light: Qt.point(-0.6, -0.8)
             property real lighten: 1
             property real milk: 0
+            property real relief: 1
             property real rim: 1
             property real shine: 0
             property variant soft: src4
