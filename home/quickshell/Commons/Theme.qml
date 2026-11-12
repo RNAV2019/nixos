@@ -415,7 +415,11 @@ Singleton {
   readonly property int launcherListTop: 80
   readonly property int launcherRowHeight: 42
   readonly property int launcherRowGap: 3
-  readonly property int launcherRowRadius: 8
+  // A row's corner runs concentric with the panel's: the panel's radius less the list's inset
+  // (Ryan, 2026-11-12), so the last row sits in the panel's bottom corners at an even margin.
+  // That is past half a plain row's height, which makes it a capsule the shape of the shut
+  // pill; a taller entry (the answer card) takes the radius as it is.
+  readonly property int launcherRowRadius: launcherRadius - launcherInset
   readonly property int launcherPadBottom: 14
   readonly property int launcherIconLeft: 27
   readonly property int launcherIconSize: 26
