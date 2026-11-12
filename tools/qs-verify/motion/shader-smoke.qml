@@ -126,6 +126,7 @@ Window {
             property variant backdrop: back4
             property real bend: 0
             property real bevel: 4
+            property real feather: 0
             property real film: 0
             property variant glyphs: src4
             property color ink: "red"
@@ -139,12 +140,6 @@ Window {
             property variant soft: src4
             property real soften: 0
             property real solid: 0
-            property color tint: "green"
-            property real washAngle: 0
-            property point washCentre: Qt.point(0, 0)
-            property real washCore: 0.5
-            property real washDepth: 0
-            property size washRadii: Qt.size(10, 10)
 
             anchors.fill: parent
             fragmentShader: Qt.resolvedUrl("../../../home/quickshell/Shaders/lockglass.frag.qsb")

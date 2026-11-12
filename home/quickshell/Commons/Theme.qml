@@ -916,7 +916,12 @@ Singleton {
   // and out of the pill and turns to glass over this stretch of the flight.
   readonly property real lockGlassBevel: 0.12
   readonly property real lockGlassRelief: 1.9
-  readonly property real lockGlassRim: 0.012
+  readonly property real lockGlassRim: 0.006
+  // The glass's outline is softened over a disc whose radius is this share of a digit's height
+  // (about 1.2 device px at Ryan's 2880x1800 panel, a ramp of 2 px or so): an edge that sits in
+  // the desktop rather than one cut out of it (Ryan, 2026-11-12), never so much that it reads as
+  // blur. Plain ink is not softened, so the hand-over to the pill's clock keeps its edge.
+  readonly property real lockGlassFeather: 0.0035
   readonly property real lockGlassBend: 0.13
   readonly property real lockGlassSoften: 0.016
   readonly property real lockGlassLighten: 1.3
@@ -927,16 +932,6 @@ Singleton {
   readonly property real lockGlassLightY: -0.8
   readonly property real lockGlassFrom: 0.12
   readonly property real lockGlassTo: 0.6
-  // The accent pooled in the first digits, as coloured glass: an ellipse this far across the
-  // digits and down them, this big (shares of their width and height), leaning down to the
-  // right, solid over lockClockWashCore of its radius, tinting the glass by lockClockWashDepth.
-  readonly property real lockClockWashX: 0.13
-  readonly property real lockClockWashY: 0.4
-  readonly property real lockClockWashWidth: 0.46
-  readonly property real lockClockWashHeight: 0.8
-  readonly property real lockClockWashAngle: 26
-  readonly property real lockClockWashCore: 0.5
-  readonly property real lockClockWashDepth: 0.55
   // Its shadow: black, blurred and dropped by these shares of a digit's height.
   readonly property real lockClockShadowAlpha: 0.3
   readonly property real lockClockShadowBlur: 0.09

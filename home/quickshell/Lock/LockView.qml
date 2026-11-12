@@ -698,13 +698,19 @@ Item {
           }
         }
 
+        // Twice the plate's size and multisampled: at rest every device pixel is the mean of a
+        // 2x2 block of 4x-multisampled texels, 16 samples, so a shallow curve's antialiasing
+        // ramp runs smooth instead of in the 4 steps the multisampling alone leaves. Mipmapped,
+        // because in flight it is drawn at a few percent of its size and would otherwise
+        // shimmer.
         ShaderEffectSource {
           id: glyphTexture
 
           sourceItem: outlines
           hideSource: true
           samples: 4
-          textureSize: Qt.size(plate.width, plate.height)
+          mipmap: true
+          textureSize: Qt.size(plate.width * 2, plate.height * 2)
           visible: false
         }
 
@@ -784,6 +790,7 @@ Item {
           property size itemSize: Qt.size(width, height)
           property real bevel: softCover.blurMax
           property real rim: Math.max(1.5, clockBox.digits * Theme.lockGlassRim)
+          property real feather: clockBox.digits * Theme.lockGlassFeather
           property real relief: Theme.lockGlassRelief
           property real film: Theme.lockGlassFilm
           property real bend: clockBox.digits * Theme.lockGlassBend
@@ -793,13 +800,7 @@ Item {
           property real shine: Theme.lockGlassShine
           property real solid: clockBox.solid
           property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
-          property point washCentre: Qt.point(clockBox.pad + clockBox.width * Theme.lockClockWashX, clockBox.pad + clockBox.height * Theme.lockClockWashY)
-          property size washRadii: Qt.size(clockBox.width * Theme.lockClockWashWidth / 2, clockBox.height * Theme.lockClockWashHeight / 2)
-          property real washAngle: Theme.lockClockWashAngle * Math.PI / 180
-          property real washCore: Theme.lockClockWashCore
-          property real washDepth: Theme.lockClockWashDepth
           property color ink: Theme.lockTextPrimary
-          property color tint: Theme.accent
 
           fragmentShader: Qt.resolvedUrl("../Shaders/lockglass.frag.qsb")
         }
