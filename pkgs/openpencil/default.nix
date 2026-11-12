@@ -29,7 +29,9 @@ in
     # second; with --die-with-parent that exit kills the whole sandbox, app and all.
     dieWithParent = false;
 
-    extraPkgs = _: [mcpBridge];
+    # The bundled libgcrypt links libgpg-error, which the AppImage leaves out and the FHS env
+    # no longer provides since the 2026-11-10 nixpkgs update.
+    extraPkgs = pkgs: [mcpBridge pkgs.libgpg-error];
 
     # `openpencil` is the CLI's name (pkgs/openpencil/cli), so the app gets its own.
     extraInstallCommands = ''
