@@ -918,16 +918,24 @@ Singleton {
   // hairline round the outline; and each stroke one round dome across its whole width, not a
   // flat top on a steep bevel; the frosted, milky body he kept, so the time reads over any
   // window. The dome is read off the digits' coverage blurred over lockGlassBevel of a digit's
-  // height, lockGlassRelief steep. Through it the desktop is bent as through a lens by up to
-  // lockGlassBend, most where the surface turns edge-on, so the rim gathers a wide slice of what
-  // lies round it; blurred over lockGlassSoften of a digit's height (three times that at the
-  // rim), lightened by lockGlassLighten and milked with lockGlassMilk of the ink. Over
-  // lockGlassRim in from the outline what the rim gathers is made lockGlassVivid more saturated
-  // and lockGlassGlow brighter (a grey stays grey). A light from the upper left leaves a broad
-  // sheen on the slopes facing it (lockGlassShine), the far slopes fall lockGlassShade into
-  // shade, and the light that passes through pools in a crescent inside the far edge
-  // (lockGlassPool), tinted by the desktop seen there. The clock is plain ink in and out of the
-  // pill and turns to glass over this stretch of the flight.
+  // height, lockGlassRelief steep. Through it the desktop is bent as through a lens by a fifth
+  // of lockGlassBend on the shoulders and not at all at the outline, so the rim shows the colour
+  // right behind it; blurred over lockGlassSoften of a digit's height, lightened by
+  // lockGlassLighten and milked with lockGlassMilk of the ink. Over lockGlassRim in from the
+  // outline what is seen is made lockGlassVivid more saturated and lockGlassGlow brighter (a grey
+  // stays grey). A light from the upper left leaves one broad highlight on the shoulder facing it
+  // (lockGlassShine), the far slopes fall lockGlassShade into shade, and the light that passes
+  // through pools in a crescent inside the far edge (lockGlassPool), tinted by the desktop seen
+  // there. The clock is plain ink in and out of the pill and turns to glass over this stretch of
+  // the flight.
+  //
+  // A review of that first jelly (2026-11-12) found a groove along every spine and a dimple in
+  // the colon (the sheen was switched off where the surface is level), a body lit to opaque grey
+  // (a sheen that reached the whole top), and neon rims (light tinted by the desktop's hue at
+  // full brightness, a rim that reached 70 px across, mixing blue and amber into mauve behind
+  // the colon). The light is now local and smooth across the spine, the body's median tone sits
+  // about 15/255 over the soap-film glass's on a dark desktop, and Vivid/Glow came down from
+  // 0.6/0.4; Shade went up from 0.18 and Milk down from 0.2, so the volume stays.
   readonly property real lockGlassBevel: 0.16
   readonly property real lockGlassRelief: 3.0
   readonly property real lockGlassRim: 0.07
@@ -939,11 +947,11 @@ Singleton {
   readonly property real lockGlassBend: 0.2
   readonly property real lockGlassSoften: 0.04
   readonly property real lockGlassLighten: 1.25
-  readonly property real lockGlassMilk: 0.2
-  readonly property real lockGlassVivid: 0.6
-  readonly property real lockGlassGlow: 0.4
+  readonly property real lockGlassMilk: 0.17
+  readonly property real lockGlassVivid: 0.4
+  readonly property real lockGlassGlow: 0.25
   readonly property real lockGlassShine: 1.0
-  readonly property real lockGlassShade: 0.18
+  readonly property real lockGlassShade: 0.3
   readonly property real lockGlassPool: 1.0
   readonly property real lockGlassLightX: -0.55
   readonly property real lockGlassLightY: -0.8
