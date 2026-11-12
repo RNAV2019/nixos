@@ -50,6 +50,12 @@ PanelWindow {
   // key item here, so the one it handles is the same whether a content item or it has focus.
   property list<Item> contentKeyTargets
 
+  // Whether this surface carries on what the bar's hover card shows (the Now playing panel: the
+  // cover, the title and the artist). Out of the open card its contents then grow out of the
+  // card's as they would out of another surface's: the card hands over a reading of them
+  // (Bar/Island.qml handContents, Ui/IslandOrigin.qml adopt) and the pairs fly.
+  property bool takesCard: false
+
   // Raised inside show(), before the island is claimed, so a caller can reset the state its
   // own open shape is computed from.
   signal opening
@@ -147,6 +153,10 @@ PanelWindow {
   property bool morphPending: false
   // Leaver: this surface's contents went to its taker, whose ghosts take them over at its first frame.
   property bool morphHanded: false
+  // Taker: the morph is out of the hover card, not another surface. What the card handed over is
+  // this surface's ground (a cover) and what stands on it, so the ghosts fly under the contents
+  // that come up around them, not over them.
+  readonly property bool morphFromCard: origin.fromCard && !origin.handedOver && !morphLayer.inPlace
 
   // This surface's contents as the eye sees them, for a taker's morph.
   function readContents() {
@@ -160,6 +170,8 @@ PanelWindow {
     if (!win.morphPending || !win.tall || !surface.visible || !bodyHolder.visible)
       return;
     surface.ghostBox = win.morphBox(origin.fromWidth, origin.fromHeight);
+    // The card's reading is in the card's own coordinates, and this surface stands on its shape.
+    var from = origin.fromCard && !origin.handedOver ? MorphScan.shift(origin.fromMorph, surface.x, surface.y) : origin.fromMorph;
     win.morphPending = false;
     win.morphing = true;
     win.bodyOpacity = 1;
@@ -169,7 +181,7 @@ PanelWindow {
     var t0 = Date.now();
     morphLayer.useShape = true;
     morphLayer.inPlace = false;
-    morphLayer.begin(origin.fromMorph, morphLayer.rescan());
+    morphLayer.begin(from, morphLayer.rescan());
     morphLayer.carriedBlur = origin.fromBlur;
     if (Theme.motionLog)
       console.info("morph begin " + win.key + " in " + (Date.now() - t0) + " ms");
@@ -324,8 +336,9 @@ PanelWindow {
     origin.claim(win.openWidth, win.openHeight, win.openRadius, Theme.morphSurface);
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
-    // Out of a surface that gave its contents, they turn into this one's rather than travelling in.
-    if (origin.handedOver && origin.fromMorph && !Theme.reduceMotion) {
+    // Out of a surface that gave its contents, or the hover card that did, they turn into this
+    // one's rather than travelling in.
+    if ((origin.handedOver || origin.fromCard) && origin.fromMorph && !Theme.reduceMotion) {
       enterTravel = 0;
       morphPending = true;
     }
@@ -967,6 +980,7 @@ PanelWindow {
     backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
     maskActive: win.morphing
     ghostActive: win.morphing
+    ghostsBelow: win.morphing && win.morphFromCard
     // A still's shadow goes from the moment its taker is on screen, not with its ground: the
     // taker starts from this very shape and casts its own, and two would stack while the ground
     // fades. The taker's comes in from that same frame (openShadow) as this one goes (stillShadow).
@@ -1028,6 +1042,7 @@ PanelWindow {
 
       label: "surface." + win.key + ".morph"
       soft: !win.small
+      below: win.morphFromCard
       visible: win.morphing
       opacity: bodyHolder.opacity
       shapeProgress: win.shapeProgress

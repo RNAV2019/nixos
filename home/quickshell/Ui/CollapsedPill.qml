@@ -25,6 +25,8 @@ Item {
   // Cut rather than faded, as the clock is: a shape from another surface had no pill showing,
   // a still is going, and the drop well had hidden all three.
   readonly property bool cut: root.origin !== null && (root.origin.handedOver || root.origin.held || !root.origin.fromClock)
+  // Carried over from the open hover card, which has its clock up but none of the shut pill's marks.
+  readonly property bool fromCard: root.origin !== null && root.origin.fromCard
 
   // Centred, as the bar pill's clock is: the marks are balanced either side of it.
   IslandClock {
@@ -47,7 +49,7 @@ Item {
     recording: root.recording
     camera: root.camera
     microphone: root.microphone
-    visible: leftExtent + rightExtent > 0 && opacity > 0
+    visible: leftExtent + rightExtent > 0 && opacity > 0 && !root.fromCard
     opacity: root.progressDriven && !root.cut ? root.amount : root.shown ? 1 : 0
 
     Behavior on opacity {

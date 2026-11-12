@@ -67,6 +67,9 @@ Item {
   // a 42 px row is a smudge, and what the surface before had would outlast the shape shrinking
   // through it, so there the leavers go on the short clock and nothing is softened.
   property bool soft: true
+  // The ghosts are drawn under this surface's contents (FrostedSurface.ghostsBelow): there is
+  // nothing under them for a long flight to hide, so none flies on a backing.
+  property bool below: false
   readonly property real outTime: inPlace ? Theme.morphPillOut : soft ? Theme.morphDissolveOut : Theme.morphFarewell
 
   readonly property bool landed: running && clockRunning && clock > Math.max(Theme.morphPillIn + Theme.morphPillRoll, Theme.morphGlyphTravel, inPlace ? 0 : outTime + 60) && progress >= 0.999
@@ -84,8 +87,12 @@ Item {
   // The ghosts soften as the leavers among them go, and are sharp again before the pairs land.
   // (Out of a surface taken in the middle of its own morph they start as soft as it was showing them,
   // `carriedBlur`, so what was half dissolved does not come back sharp for a frame.)
+  // (With nothing leaving there is nothing to soften: the pairs alone stay sharp all the way.)
   property real carriedBlur: 0
-  readonly property real ghostBlur: !running || inPlace || ghostsDone ? 0 : !clockRunning ? carriedBlur : Motion.lerp(carriedBlur, soft ? Theme.morphDissolveBlur : 0, Motion.ramp(clock, 0, outTime * 0.7)) * (1 - Motion.ramp(clock, outTime * 0.7, outTime + 60))
+  readonly property bool leaving: entries.some(function (e) {
+    return e.out;
+  })
+  readonly property real ghostBlur: !running || inPlace || ghostsDone || !leaving && carriedBlur <= 0 ? 0 : !clockRunning ? carriedBlur : Motion.lerp(carriedBlur, soft ? Theme.morphDissolveBlur : 0, Motion.ramp(clock, 0, outTime * 0.7)) * (1 - Motion.ramp(clock, outTime * 0.7, outTime + 60))
   // How soft this surface is showing its contents just now, for whoever takes over mid-morph.
   readonly property real shownBlur: !running || inPlace ? 0 : Math.max(ghostBlur, dissolveT > 0.05 ? dissolveBlur : 0)
 
@@ -247,14 +254,25 @@ Item {
     var inside = function (e, c) {
       return e.x >= c.x - 2 && e.y >= c.y - 2 && e.x + e.w <= c.x + c.w + 2 && e.y + e.h <= c.y + c.h + 2;
     };
-    var first = [], rest = [];
+    // And once more, last, for a held box that a bigger arriving one lies well across without
+    // holding it (the Now playing panel's title, which starts on its cover's far end): painted
+    // over, the start of the words showed at their landing place while their ghost was still on
+    // its way. Small things arriving on a big held one (a glyph on that cover) still show.
+    var across = function (e, c) {
+      return c.w * c.h > e.w * e.h && Math.min(e.x + e.w, c.x + c.w) - Math.max(e.x, c.x) > 4 && Math.min(e.y + e.h, c.y + c.h) - Math.max(e.y, c.y) > 4;
+    };
+    var first = [], rest = [], again = [];
     list.forEach(function (e) {
       var under = e.paired && !arriving.some(function (c) {
         return inside(e, c);
       });
       (under ? first : rest).push(e);
+      if (under && arriving.some(function (c) {
+        return across(e, c);
+      }))
+        again.push(e);
     });
-    return first.concat(rest);
+    return first.concat(rest, again);
   }
 
   // An anchor whose pair is still flying in: this panel's copy waits for it. So does what cannot be
@@ -443,6 +461,9 @@ Item {
         parentIndex: m.pairs.findIndex(function (o) {
           return o.a === p.a.parent;
         }),
+        // It sets off from inside an anchor that is leaving (a title on the control centre's media
+        // card): drawn over what leaves, or that anchor's plate would hide it until it was clear.
+        lifted: !!p.a.parent && pairedA.indexOf(p.a.parent) < 0,
         out: false
       };
     });

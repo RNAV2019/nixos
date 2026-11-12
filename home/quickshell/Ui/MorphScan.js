@@ -250,6 +250,8 @@ function scan(root, box, fade) {
         var role = parentReal ? parentReal.role + "." + child.morphRole : child.morphRole;
         target = newAnchor(child, role, child.morphKey || "", child.morphSlot, parentReal);
         target.opacity = op;
+        // Its parts lie over one another and go as one picture (MorphGhost.grouped).
+        target.group = child.morphGroup === true;
         if (box) {
           var p = child.mapToItem(box, 0, 0);
           target.box = {
@@ -345,6 +347,25 @@ function assignSlots(anchors) {
   });
 }
 
+// A reading moved by (dx, dy), in place: one made in one window's coordinates (the bar's hover
+// card) for a surface that stands in the same spot in a window of its own.
+function shift(anchors, dx, dy) {
+  var move = function (r) {
+    if (r) {
+      r.x += dx;
+      r.y += dy;
+    }
+  };
+  anchors.forEach(function (a) {
+    move(a.rect);
+    a.parts.forEach(function (p) {
+      move(p);
+      move(p.clip);
+    });
+  });
+  return anchors;
+}
+
 function centre(r) {
   return {
     x: r.x + r.w / 2,
@@ -421,6 +442,13 @@ function match(from, to, opts) {
     return base(a.role) === base(b.role);
   }
 
+  // Whether an anchor's own fill or picture lies under one inside it: the plate that one stands on.
+  function platedUnder(parent, child) {
+    return parent.parts.some(function (p) {
+      return (p.type === "rect" || p.type === "image") && p.x <= child.rect.x + 1 && p.y <= child.rect.y + 1 && p.x + p.w >= child.rect.x + child.rect.w - 1 && p.y + p.h >= child.rect.y + child.rect.h - 1;
+    });
+  }
+
   var byDepth = function (x, y) {
     return x.depth - y.depth;
   };
@@ -456,8 +484,14 @@ function match(from, to, opts) {
     return x.cost - y.cost || x.a.depth - y.a.depth || x.a.rect.y - y.a.rect.y || x.b.rect.y - y.b.rect.y || x.order - y.order;
   });
   candidates.forEach(function (c) {
-    if (free(from, usedA, c.a) && free(to, usedB, c.b))
-      take(c.a, c.b, "same");
+    if (!free(from, usedA, c.a) || !free(to, usedB, c.b))
+      return;
+    // Between two surfaces, nothing flies to a place on a plate that is itself only arriving (a
+    // title on the control centre's media card): held back for its ghost, it would be a hole in
+    // that plate until it landed. It comes up with its plate instead. (Parents are taken first.)
+    if (!inPlace && c.b.parent && usedB.indexOf(c.b.parent) < 0 && platedUnder(c.b.parent, c.b))
+      return;
+    take(c.a, c.b, "same");
   });
 
   // A ghost the surface before was still fading out (MorphLayer.snapshot) that this surface has in

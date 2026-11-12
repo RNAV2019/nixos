@@ -107,6 +107,10 @@ Item {
   Text {
     id: title
 
+    // An anchor of its own inside the card's: the Now playing panel's title is this one.
+    property string morphRole: "title"
+    property string morphKey: "media.title"
+
     x: 16
     y: 36
     width: Math.max(0, transport.x - x - 12)
@@ -119,6 +123,9 @@ Item {
   }
 
   Text {
+    property string morphRole: "artist"
+    property string morphKey: "media.artist"
+
     x: title.x
     y: 61
     width: title.width
@@ -164,6 +171,8 @@ Item {
         // Large enough that play's triangle keeps the ink the hand-drawn one had (about 13 x 15).
         iconSize: 30
         icon: Icons.transportGlyph(button.modelData.kind === "toggle" ? (Media.playing ? "pause" : "play") : button.modelData.kind)
+        // The Now playing panel's transport is these three.
+        morphKey: "media." + button.modelData.kind
         enabled: Media.active
         accessibleName: modelData.kind === "toggle" ? (Media.playing ? "Pause" : "Play") : modelData.name
         onClicked: {
@@ -178,7 +187,7 @@ Item {
     }
   }
 
-  // The scrub bar (Ui/MediaScrub.qml).
+  // The scrub bar, shared with the Now playing panel.
   MediaScrub {
     x: 16
     width: root.width - 32

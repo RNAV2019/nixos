@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(here, "../../../home/quickshell/Ui/MorphScan.js"), "utf8").replace(/^\.pragma.*$/m, "");
-const M = new Function(`${src}; return { match, assignSlots };`)();
+const M = new Function(`${src}; return { match, assignSlots, shift };`)();
 
 const anchor = (role, x, y, w, h, extra = {}) => ({
   role, key: "", slot: undefined, parent: null, depth: 0, drawable: true,
@@ -137,4 +137,31 @@ test("between two surfaces only a shared key pairs: the same place alone does no
   const m = M.match(a, b);
   assert.deepEqual(m.pairs.map((p) => p.a.key), ["level.volume"]);
   assert.equal(m.outs.length, 1);
+});
+
+test("between surfaces nothing pairs onto a plate that is only arriving; its own plate pairing lets it", () => {
+  const plate = (x, y, w, h) => ({ type: "rect", name: "rect0", x, y, w, h });
+  const title = (parent, x, y) => anchor("media.title", x, y, 200, 24, { key: "media.title", parent, depth: parent ? 1 : 0 });
+  // Out of a plate that is leaving, onto bare ground: the title flies.
+  const cardA = anchor("media", 20, 300, 400, 140, { key: "media", parts: [plate(20, 300, 400, 140)] });
+  const out = M.match([cardA, title(cardA, 36, 336)], [title(null, 222, 48)]);
+  assert.deepEqual(out.pairs.map((p) => p.a.key), ["media.title"]);
+  // Onto a plate that has no partner of its own: it comes up with the plate.
+  const cardB = anchor("media", 20, 300, 400, 140, { key: "media", parts: [plate(20, 300, 400, 140)] });
+  const onto = M.match([title(null, 222, 48)], [cardB, title(cardB, 36, 336)]);
+  assert.equal(onto.pairs.length, 0);
+  // The plates pairing, so does what stands on them.
+  const both = M.match([cardA, title(cardA, 36, 336)], [cardB, title(cardB, 36, 336)]);
+  assert.deepEqual(both.pairs.map((p) => p.a.key), ["media", "media.title"]);
+  // And inside one surface the rule does not apply.
+  const swap = M.match([title(null, 222, 48)], [cardB, title(cardB, 36, 336)], { inPlace: true });
+  assert.deepEqual(swap.pairs.map((p) => p.a.key), ["media.title"]);
+});
+
+test("shift moves a reading, its parts and their clips together", () => {
+  const a = anchor("cover", 0, 0, 118, 84, { parts: [{ type: "image", x: 0, y: 0, w: 118, h: 84, clip: { x: 16, y: 0, w: 90, h: 84 } }] });
+  M.shift([a], 700, 10);
+  assert.deepEqual(a.rect, { x: 700, y: 10, w: 118, h: 84 });
+  assert.deepEqual([a.parts[0].x, a.parts[0].y], [700, 10]);
+  assert.deepEqual(a.parts[0].clip, { x: 716, y: 10, w: 90, h: 84 });
 });

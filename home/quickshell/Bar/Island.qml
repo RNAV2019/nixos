@@ -4,13 +4,14 @@ import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
+import "../Ui/MorphScan.js" as MorphScan
 
 // The centred surface, the only one that changes shape. The open is not a cross-fade and nothing
 // scales but the clock: each block is drawn at its true size, rides the card's live edge, and
 // flies in on its own stretch of the open (saneAspect's shared-element card), while the growing
 // shape uncovers it and the track block clips, revealing the title letter by letter. While
 // something plays, the card's left is its cover, title and artist, and a click there opens the
-// Now playing panel.
+// Now playing panel, which carries those three on (handContents).
 FrostedSurface {
   id: root
 
@@ -108,6 +109,20 @@ FrostedSurface {
 
   // Read by the surface growing out of this shape: the drop well has no clock up.
   readonly property bool clockShown: !dropArmed
+
+  // What a surface that carries the card on takes over from it (Ui/IslandOrigin.qml adopt): what
+  // is playing, read as a content morph reads a surface (Ui/MorphScan.js) but in the card's own
+  // coordinates, since the taker stands on this shape in a window of its own. Null with nothing
+  // playing. The clock, the date and the gauges are not handed on: they go as the card goes.
+  function handContents() {
+    if (!Media.active || dropArmed || !card.visible)
+      return null;
+    var at = root.mapToItem(null, 0, 0);
+    var read = MorphScan.scan(playing, null, playing.opacity).filter(function (a) {
+      return !a.rest;
+    });
+    return MorphScan.shift(read, -at.x, -at.y);
+  }
 
   onOnOfferChanged: {
     if (onOffer)
@@ -541,8 +556,8 @@ FrostedSurface {
       }
     }
 
-    // A click on what is playing opens the Now playing panel; the mouse's back and forward
-    // buttons skip.
+    // A click on what is playing opens the Now playing panel, which grows out of this card with
+    // the cover, title and artist carried on; the mouse's back and forward buttons skip.
     MouseArea {
       x: 0
       y: 0

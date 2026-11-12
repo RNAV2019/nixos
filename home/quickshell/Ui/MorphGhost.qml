@@ -161,8 +161,9 @@ Item {
     var cy = (pa.y + pa.h / 2 - ra.y) / Math.max(1, ra.h) - (pb.y + pb.h / 2 - rb.y) / Math.max(1, rb.h);
     var big = Math.max(pa.w * pa.h, pb.w * pb.h), small = Math.max(1, Math.min(pa.w * pa.h, pb.w * pb.h));
     // A fill that spans its anchor one way stretches to any size (a pill's track and its level into a
-    // slider's, however full); a mark of another size is another mark (a battery's fill, a level dot).
-    var spans = pa.type === "rect" && (pa.w >= 0.6 * ra.w && pb.w >= 0.6 * rb.w || pa.h >= 0.6 * ra.h && pb.h >= 0.6 * rb.h);
+    // slider's, however full), and so does a picture that does (a cover growing with its surface);
+    // a mark of another size is another mark (a battery's fill, a level dot).
+    var spans = (pa.type === "rect" || pa.type === "image") && (pa.w >= 0.6 * ra.w && pb.w >= 0.6 * rb.w || pa.h >= 0.6 * ra.h && pb.h >= 0.6 * rb.h);
     return Math.hypot(cx, cy) < 0.3 && (spans || big / small < 4);
   }
 
@@ -216,8 +217,9 @@ Item {
 
   // A long flight's backing: the card's own ground under the pair, on the paint list just below its
   // parts, so it hides what it crosses rather than print over it. Invisible where it sets off and
-  // lands, on that same ground.
-  readonly property bool backed: !entry.out && host && Motion.travel(rectA, rectB) >= Theme.morphBackingTravel
+  // lands, on that same ground. (Not for one that sets off from a plate that is leaving, where the
+  // ground under it would show as a bar across that plate.)
+  readonly property bool backed: !entry.out && host && !host.below && entry.lifted !== true && Motion.travel(rectA, rectB) >= Theme.morphBackingTravel
   // It covers what the pair draws, not its whole anchor: a slider's bar, not the row it sits in.
   function drawn(parts, fallback) {
     if (parts.length === 0)
@@ -256,11 +258,41 @@ Item {
     return low === Infinity ? 0 : low;
   }
 
+  // Paint order is each panel's own, and the two do not compare: a pair is drawn in this panel's
+  // order, a leaver in the one before's. A pair that sets off from inside a leaver goes over them all.
+  readonly property real band: entry.lifted === true ? 100000 : 0
+
+  // A leaver whose parts lie over one another and are one picture (a cover under the ground it
+  // runs out into) goes as one: faded a part at a time, what is underneath shows through what
+  // covers it. Its parts are drawn here, at full strength, and this fades.
+  readonly property bool grouped: entry.out && entry.a.group === true
+
+  Item {
+    id: group
+
+    parent: ghost.host ? ghost.host.paint : ghost
+    visible: ghost.grouped && opacity > 0
+    z: ghost.lowestSeq
+    x: ghost.rectA.x - 2
+    y: ghost.rectA.y - 2
+    width: ghost.rectA.w + 4
+    height: ghost.rectA.h + 4
+    opacity: ghost.fade
+    layer.enabled: ghost.grouped
+
+    Item {
+      id: groupList
+
+      x: -group.x
+      y: -group.y
+    }
+  }
+
   Rectangle {
     parent: ghost.host ? ghost.host.paint : ghost
     // A pair that leads the panel has nothing under it to hide.
     visible: ghost.backed && !ghost.host.leads(ghost.entry)
-    z: ghost.lowestSeq - 0.5
+    z: ghost.band + ghost.lowestSeq - 0.5
     x: ghost.backing.x
     y: ghost.backing.y
     width: ghost.backing.w
@@ -283,8 +315,8 @@ Item {
     MorphPart {
       required property var modelData
 
-      parent: ghost.host ? ghost.host.paint : ghost
-      z: pb ? pb.seq : pa ? pa.seq : 0
+      parent: ghost.grouped ? groupList : ghost.host ? ghost.host.paint : ghost
+      z: ghost.band + (pb ? pb.seq : pa ? pa.seq : 0)
       pa: ghost.partA(modelData)
       pb: ghost.partB(modelData)
       owner: ghost

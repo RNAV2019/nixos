@@ -32,7 +32,9 @@ QtObject {
   property real fromVH: 0
 
   // The contents of the surface handed over from, read for a content morph (Ui/MorphScan.js);
-  // null out of the pill, or when that surface had nothing on screen to give.
+  // null out of the pill, or when that surface had nothing on screen to give. Out of the hover
+  // card (`fromCard` and not `handedOver`), what the card hands a surface that carries it on
+  // (Bar/Island.qml handContents), in the card's own coordinates.
   property var fromMorph: null
   // The corner radius of the shape handed over.
   property real fromRadius: 0
@@ -298,11 +300,14 @@ QtObject {
 
     var w = card.width;
     var h = card.height;
+    // A surface that carries on what the card shows reads it now, while it is still up.
+    var contents = origin.window && origin.window.takesCard === true && card.handContents ? card.handContents() : null;
 
     snapping = true;
     fromWidth = w;
     fromHeight = h;
     fromClock = card.clockShown !== false;
+    fromMorph = contents && contents.length > 0 ? contents : null;
     snapping = false;
   }
 

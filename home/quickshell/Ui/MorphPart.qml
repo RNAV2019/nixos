@@ -466,6 +466,18 @@ Item {
   readonly property var clipRect: {
     if (!owner || !owner.rectA || !d0)
       return null;
+    // The same words at another size are drawn as the line they land as, scaled: shown only as
+    // wide as the line they came from, growing to their own, or a long title cut short in a
+    // narrow card would be there in full, and over its neighbours, on the first frame.
+    if (resized) {
+      var g = solved.one.g;
+      return {
+        x: g.x - 1,
+        y: g.y - 4,
+        w: Motion.lerp(pa.w, pb.w, q) + 2,
+        h: Math.max(pa.h, pb.h) + 8
+      };
+    }
     if (both)
       return pa.clip && pb.clip ? Motion.lerpRect(pa.clip, pb.clip, q) : null;
     var p = pa !== null ? pa : pb;
@@ -482,7 +494,8 @@ Item {
     }, pa !== null ? owner.rectA : owner.rectB, owner.rect);
   }
 
-  opacity: owner ? owner.fade : 0
+  // (A grouped leaver's parts are whole inside a group that does the fading, MorphGhost.grouped.)
+  opacity: !owner ? 0 : owner.grouped ? 1 : owner.fade
   visible: opacity > 0
   x: clipRect ? clipRect.x : 0
   y: clipRect ? clipRect.y : 0
@@ -623,7 +636,7 @@ Item {
         };
       }
 
-      // Up to three stops, the last repeated where there are fewer.
+      // Up to four stops, the last repeated where there are fewer.
       Gradient {
         id: grad
 
@@ -642,6 +655,11 @@ Item {
         GradientStop {
           position: plate.stop(2).p
           color: Qt.rgba(plate.stop(2).c.r, plate.stop(2).c.g, plate.stop(2).c.b, plate.stop(2).c.a)
+        }
+
+        GradientStop {
+          position: plate.stop(3).p
+          color: Qt.rgba(plate.stop(3).c.r, plate.stop(3).c.g, plate.stop(3).c.b, plate.stop(3).c.a)
         }
       }
     }

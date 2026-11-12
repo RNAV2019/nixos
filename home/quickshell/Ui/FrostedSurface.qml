@@ -165,6 +165,8 @@ Item {
     height: contentHolder.height
     visible: root.clipContent && root.contentOpacity > 0 && root.contentDissolve > 0
     opacity: root.contentOpacity * root.contentDissolve
+    // Over the ghosts, which are declared after it, when they fly below.
+    z: root.ghostsBelow ? 1 : 0
 
     property variant source: contentTexture
     property size boxSize: Qt.size(root.width, root.height)
@@ -210,6 +212,9 @@ Item {
   // text it lands on.
   property bool ghostActive: false
   property rect ghostBox: Qt.rect(0, 0, 0, 0)
+  // The ghosts drawn under the contents, not over them: what flies is the surface's ground (a
+  // cover out of the hover card) and the contents come up on it.
+  property bool ghostsBelow: false
 
   Item {
     id: ghostHolder

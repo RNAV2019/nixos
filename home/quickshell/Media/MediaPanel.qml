@@ -23,6 +23,7 @@ Variants {
     openWidth: Theme.mediaWidth
     openHeight: Theme.mediaHeight
     openRadius: Theme.mediaRadius
+    takesCard: true
     openable: Media.active
 
     readonly property var sink: Pipewire.defaultAudioSink
