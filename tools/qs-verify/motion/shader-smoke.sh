@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Loads Shaders/roundedclip.frag.qsb, hills.frag.qsb and lockwash.frag.qsb in a real Qt scene graph and checks the clip,
-# the hills colour and the wash.
+# Loads Shaders/roundedclip.frag.qsb, hills.frag.qsb, lockglass.frag.qsb and lockpatch.frag.qsb in a real Qt scene
+# graph and checks the clip, the hills colour, the glass's see-through and the island patch.
 # ShaderEffect needs an RHI GL/Vulkan backend, which the offscreen QPA plugin lacks,
 # so this runs under a private headless sway (pixman, no GPU needed). Prints PASS or FAIL.
 set -u
@@ -43,11 +43,14 @@ chan() { nix shell --inputs-from ../../.. nixpkgs#imagemagick -c magick "$OUT.$1
 r=$(chan 3 50,29 r); a=$(chan 3 50,29 a)
 [[ $a -ge 218 && $a -le 228 ]] || { echo "FAIL case3 hills alpha $a, want ~223"; fail=1; }
 [[ $r -ge 250 ]] || { echo "FAIL case3 hills red $r, want ~255 (colour multiplied by alpha twice?)"; fail=1; }
-# case 4: lockwash, blue inside the wash's core, red past its reach, clear below the source's ink
-b=$(chan 4 10,10 b); r=$(chan 4 10,10 r)
-[[ $b -ge 250 && $r -le 5 ]] || { echo "FAIL case4 lockwash core r$r b$b, want blue"; fail=1; }
-b=$(chan 4 90,10 b); r=$(chan 4 90,10 r)
-[[ $r -ge 250 && $b -le 5 ]] || { echo "FAIL case4 lockwash ink r$r b$b, want red"; fail=1; }
-expect 4 90,10 255 "case4 ink"
-expect 4 50,30 0 "case4 below the source"
+# case 4: lockglass, the backdrop seen through the digits, clear below them
+b=$(chan 4 50,10 b); r=$(chan 4 50,10 r)
+[[ $b -ge 250 && $r -le 5 ]] || { echo "FAIL case4 lockglass r$r b$b, want the blue backdrop"; fail=1; }
+expect 4 50,10 255 "case4 digits"
+expect 4 50,30 0 "case4 below the digits"
+# case 5: lockpatch, the wallpaper inside the island, the capture outside it
+b=$(chan 5 50,20 b); r=$(chan 5 50,20 r)
+[[ $b -ge 250 && $r -le 5 ]] || { echo "FAIL case5 lockpatch island r$r b$b, want the blue wallpaper"; fail=1; }
+b=$(chan 5 5,35 b); r=$(chan 5 5,35 r)
+[[ $r -ge 250 && $b -le 5 ]] || { echo "FAIL case5 lockpatch outside r$r b$b, want the red capture"; fail=1; }
 [[ $fail == 0 ]] && echo PASS || exit 1

@@ -295,7 +295,8 @@ focus that arrived by Tab, and fades. Do not hand-roll these; if a new control n
 - **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
   surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,
   `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU,
-  `lockwash` the lock clock's digits under their accent wash.
+  `lockglass` the lock clock's digits as frosted glass, `lockpatch` takes the bar's island (and its
+  shadow) out of the capture the lock stands on.
   After editing a `.frag`, run `tools/qs-shaders.sh` (regenerates the `.qsb`); `tools/qs-shaders.sh
   --check` and the flake check `quickshell-shaders` fail when one is stale. A new shader gets a case
   in `tools/qs-verify/motion/shader-smoke.sh`.

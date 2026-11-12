@@ -901,17 +901,36 @@ Singleton {
   // A digit's height as a share of the font's pixel size (SF Compact Rounded's figures).
   readonly property real lockClockDigitRatio: 0.694
   readonly property real lockClockTracking: -0.035
-  // The accent wash over the clock's first digits: an ellipse this far across the text and down
-  // it, this big (shares of the text's width and its digits' height), leaning down to the right.
-  // His accent is a pastel; ours is taken nearly half way to the ink, so it reads as light.
-  readonly property color lockClockWash: Qt.tint(accent, withAlpha(inkPrimary, 0.45))
+  // Room kept round the digits' texture, as a share of a digit's height.
+  readonly property real lockClockPad: 0.16
+  // The digits are frosted glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's opaque
+  // ink copied his wallpaper's look rather than suiting ours). The desktop behind shows through
+  // them, softened by lockGlassSoften mip levels, lightened by lockGlassLighten and milked with
+  // lockGlassMilk of the ink so the time reads on any wallpaper. The outline is a bevel
+  // lockGlassBevel deep that bends the backdrop by up to lockGlassBend, under a bright rim
+  // lockGlassRim wide (all shares of a digit's height) lit from the upper left. The clock is
+  // plain ink in and out of the pill and turns to glass over this stretch of the flight.
+  readonly property real lockGlassBevel: 0.085
+  readonly property real lockGlassRim: 0.014
+  readonly property real lockGlassBend: 0.11
+  readonly property real lockGlassSoften: 2.2
+  readonly property real lockGlassLighten: 1.3
+  readonly property real lockGlassMilk: 0.24
+  readonly property real lockGlassShine: 1.0
+  readonly property real lockGlassLightX: -0.6
+  readonly property real lockGlassLightY: -0.8
+  readonly property real lockGlassFrom: 0.12
+  readonly property real lockGlassTo: 0.6
+  // The accent pooled in the first digits, as coloured glass: an ellipse this far across the
+  // digits and down them, this big (shares of their width and height), leaning down to the
+  // right, solid over lockClockWashCore of its radius, tinting the glass by lockClockWashDepth.
   readonly property real lockClockWashX: 0.13
   readonly property real lockClockWashY: 0.4
   readonly property real lockClockWashWidth: 0.46
   readonly property real lockClockWashHeight: 0.8
   readonly property real lockClockWashAngle: 26
-  // The share of the ellipse that is solid accent before it fades out.
   readonly property real lockClockWashCore: 0.5
+  readonly property real lockClockWashDepth: 0.55
   // Its shadow: black, blurred and dropped by these shares of a digit's height.
   readonly property real lockClockShadowAlpha: 0.3
   readonly property real lockClockShadowBlur: 0.09

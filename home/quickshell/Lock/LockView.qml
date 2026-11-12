@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
@@ -278,31 +279,58 @@ Item {
           }
         }
 
+        // The wallpaper as the desktop shows it, never drawn itself: the patch below reads it.
+        Image {
+          id: wallpaperImage
+
+          anchors.fill: parent
+          visible: false
+          source: view.standing ? Wallpapers.url : ""
+          fillMode: Image.PreserveAspectCrop
+          asynchronous: true
+        }
+
         // The capture carries the bar's island, its shadow and the phone beside it; left in,
-        // they would stay behind as a smudge when the pill drops. The wallpaper is laid back
-        // over that patch as the blur comes up, and lifted as it clears.
-        Item {
+        // they would stay behind as a smudge when the pill drops. Over the stretch they reach,
+        // the island's pill and the satellite are filled with the wallpaper (nothing else is
+        // ever under the bar) and the island's shadow is lifted off what it fell on, a window's
+        // top edge included (Shaders/lockpatch.frag); the rest of the stretch is the capture
+        // untouched. It comes as the blur comes up, and goes as it clears.
+        ShaderEffect {
           id: patch
 
           readonly property real room: Theme.surfaceShadowRoom * canvas.outputScale
+          readonly property var satellite: view.outputScreen ? Bus.satelliteFor(view.outputScreen.name) : null
+          readonly property bool budded: !!satellite && !!satellite.disc && satellite.p > 0.05
+          readonly property rect stretch: Qt.rect(x, y, width, height)
 
           x: Math.round(pill.restX - room)
           y: 0
           width: Math.round(canvas.islandWidth + 2 * room + canvas.px(Theme.phoneSatelliteSize * 2))
           height: Math.round(pill.restY + pill.height + room)
-          clip: true
-          opacity: canvas.ramp(view.ground, 0, 0.6)
-          visible: view.standing && !canvas.covered && view.ground > 0
+          visible: view.standing && !canvas.covered && view.ground > 0 && wallpaperImage.status === Image.Ready
 
-          Image {
-            x: -patch.x
-            y: -patch.y
-            width: canvas.width
-            height: canvas.height
-            source: view.standing ? Wallpapers.url : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
+          property var capture: ShaderEffectSource {
+            sourceItem: shot
+            sourceRect: patch.stretch
           }
+          property var wallpaper: ShaderEffectSource {
+            sourceItem: wallpaperImage
+            sourceRect: patch.stretch
+          }
+          property size itemSize: Qt.size(width, height)
+          property point boxOrigin: Qt.point(Math.round(pill.restX) - x, Math.round(pill.restY) - y)
+          property size boxSize: Qt.size(canvas.islandWidth, pill.height)
+          property real radius: pill.height / 2
+          property real sigma: Theme.surfaceShadowSigma * canvas.outputScale
+          property point offset: Qt.point(0, Theme.surfaceShadowOffsetY * canvas.outputScale)
+          property real strength: Theme.surfaceShadowAlpha
+          property point discCentre: budded ? Qt.point(satellite.disc.x * canvas.outputScale - x, satellite.disc.y * canvas.outputScale - y) : Qt.point(0, 0)
+          property real discRadius: budded ? satellite.disc.z * canvas.outputScale : 0
+          property real aa: 1
+          property real amount: canvas.ramp(view.ground, 0, 0.6)
+
+          fragmentShader: Qt.resolvedUrl("../Shaders/lockpatch.frag.qsb")
         }
       }
 
@@ -400,7 +428,7 @@ Item {
           scale: Theme.islandClockSize / Theme.islandDisplaySize
           opacity: 1 - canvas.swap
           visible: opacity > 0
-          text: clockText.text
+          text: clockBox.time
           color: Theme.text
           font.family: Theme.uiFont
           font.pixelSize: Theme.islandDisplaySize
@@ -575,13 +603,21 @@ Item {
     TextMetrics {
       id: bigDigit
 
-      font: clockText.font
+      font: clockFace.font
       text: "0"
+    }
+
+    TextMetrics {
+      id: clockLine
+
+      font: clockFace.font
+      text: clockBox.time
     }
 
     Item {
       id: clockBox
 
+      readonly property string time: Qt.formatDateTime(clock.date, "HH:mm")
       readonly property real digits: canvas.height * Theme.lockClockDigits
       readonly property int fontSize: Math.round(digits / Theme.lockClockDigitRatio)
       readonly property real tracking: fontSize * Theme.lockClockTracking
@@ -591,8 +627,14 @@ Item {
       readonly property real fromScale: islandDigit.tightBoundingRect.height * canvas.outputScale / Math.max(1, bigDigit.tightBoundingRect.height)
       readonly property real fromY: pill.restY + pill.height / 2
       readonly property real toY: canvas.height / 2
+      // Room round the digits for the ink that overhangs its advance and for the shadow.
+      readonly property real pad: Math.ceil(digits * Theme.lockClockPad)
+      // Plain ink in and out of the pill, glass once it is clear of it.
+      readonly property real solid: 1 - canvas.ramp(t, Theme.lockGlassFrom, Theme.lockGlassTo)
 
-      width: clockText.width
+      // The line as its glyphs advance, less the tracking the last one trails, by the height of
+      // a digit: the digits' own box, which is what is centred and scaled.
+      width: clockLine.advanceWidth - tracking
       height: bigDigit.tightBoundingRect.height
       x: Math.round(canvas.width / 2 + Bus.pillOffsetX * canvas.outputScale * (1 - t) - width / 2)
       y: fromY + (toY - fromY) * t - height / 2
@@ -601,70 +643,149 @@ Item {
       opacity: canvas.swap
       visible: opacity > 0
 
-      // The digits alone, in white, drawn into a texture and never shown as they are: the
-      // shadow is cast from it, and the shader below redraws it in the ink under the wash.
-      Text {
-        id: clockText
+      Item {
+        id: plate
 
-        // The trailing glyph carries its tracking too; take it back so the digits are centred.
-        x: clockBox.tracking / 2
-        // Its digits' middle on the box's middle.
-        y: parent.height / 2 - (baselineOffset + bigDigit.tightBoundingRect.y + bigDigit.tightBoundingRect.height / 2)
-        text: Qt.formatDateTime(clock.date, "HH:mm")
-        color: "white"
-        font.family: Theme.lockClockFont
-        font.weight: Theme.lockClockWeight
-        font.pixelSize: clockBox.fontSize
-        font.letterSpacing: clockBox.tracking
-        renderType: Text.QtRendering
-        visible: false
-        layer.enabled: true
-        layer.smooth: true
-      }
+        x: -clockBox.pad
+        y: -clockBox.pad
+        width: Math.ceil(clockBox.width) + 2 * clockBox.pad
+        height: Math.ceil(clockBox.height) + 2 * clockBox.pad
 
-      // The shadow: the digits in black, blurred and dropped.
-      MultiEffect {
-        x: clockText.x
-        y: clockText.y + clockBox.digits * Theme.lockClockShadowDrop
-        width: clockText.width
-        height: clockText.height
-        source: clockText
-        opacity: Theme.lockClockShadowAlpha
-        colorization: 1
-        colorizationColor: "black"
-        blurEnabled: true
-        blur: 1
-        blurMax: Math.max(2, Math.round(clockBox.digits * Theme.lockClockShadowBlur))
-        autoPaddingEnabled: true
-      }
+        // The digits as outlines, filled: text this big is otherwise a small distance field
+        // blown up (lumpy curves) or a raster with the panel's subpixel fringes. Never shown as
+        // it is; the two textures below are taken from it. The geometry renderer does not
+        // antialias (and the curve renderer draws nothing on a lock surface, see
+        // StrokeIcon.curve), so the texture the glass reads is multisampled.
+        Shape {
+          id: outlines
 
-      // The glyphs again, for the shader: MultiEffect pads the layer it casts the shadow from,
-      // so that texture no longer lies over the text.
-      ShaderEffectSource {
-        id: glyphs
+          anchors.fill: parent
+          preferredRendererType: Shape.GeometryRenderer
 
-        anchors.fill: clockText
-        sourceItem: clockText
-        visible: false
-      }
+          ShapePath {
+            fillColor: "white"
+            strokeColor: "transparent"
+            strokeWidth: -1
 
-      // The digits in the ink, with the accent wash across the first of them
-      // (Shaders/lockwash.frag).
-      ShaderEffect {
-        anchors.fill: clockText
+            PathText {
+              id: clockFace
 
-        readonly property real digitsTop: clockText.baselineOffset + bigDigit.tightBoundingRect.y
+              x: clockBox.pad
+              // PathText hangs the line from the top of its own ink, which a round digit
+              // overshoots and a flat one does not; the difference is taken back, so the
+              // baseline stays put whatever the time.
+              y: clockBox.pad + clockLine.tightBoundingRect.y - bigDigit.tightBoundingRect.y
+              text: clockBox.time
+              font.family: Theme.lockClockFont
+              font.weight: Theme.lockClockWeight
+              font.pixelSize: clockBox.fontSize
+              font.letterSpacing: clockBox.tracking
+            }
+          }
+        }
 
-        property var source: glyphs
-        property size itemSize: Qt.size(width, height)
-        property point centre: Qt.point(width * Theme.lockClockWashX, digitsTop + bigDigit.tightBoundingRect.height * Theme.lockClockWashY)
-        property size radii: Qt.size(width * Theme.lockClockWashWidth / 2, bigDigit.tightBoundingRect.height * Theme.lockClockWashHeight / 2)
-        property real angle: Theme.lockClockWashAngle * Math.PI / 180
-        property real core: Theme.lockClockWashCore
-        property color ink: Theme.lockTextPrimary
-        property color tint: Theme.lockClockWash
+        ShaderEffectSource {
+          id: glyphTexture
 
-        fragmentShader: Qt.resolvedUrl("../Shaders/lockwash.frag.qsb")
+          sourceItem: outlines
+          hideSource: true
+          samples: 4
+          textureSize: Qt.size(plate.width, plate.height)
+          visible: false
+        }
+
+        // A quarter-size copy for the shadow, which is blurred anyway. Its own, because
+        // MultiEffect pads the texture it is given.
+        ShaderEffectSource {
+          id: shadowTexture
+
+          sourceItem: outlines
+          textureSize: Qt.size(Math.ceil(plate.width / 4), Math.ceil(plate.height / 4))
+          visible: false
+        }
+
+        // The digits' coverage blurred over the bevel's depth: the glass reads how near the
+        // outline is, and which way it faces, off this.
+        MultiEffect {
+          id: softCover
+
+          anchors.fill: parent
+          source: ShaderEffectSource {
+            sourceItem: outlines
+            textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
+          }
+          blurEnabled: true
+          blur: 1
+          blurMax: Math.max(2, Math.round(clockBox.digits * Theme.lockGlassBevel))
+          autoPaddingEnabled: false
+        }
+
+        ShaderEffectSource {
+          id: softTexture
+
+          sourceItem: softCover
+          hideSource: true
+          textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
+          visible: false
+        }
+
+        // What lies behind the plate, wherever the flight has put it and at whatever size:
+        // the glass looks through at this. Half size and mipmapped; the glass softens it.
+        ShaderEffectSource {
+          id: backdropTexture
+
+          readonly property real spanX: plate.width * clockBox.scale
+          readonly property real spanY: plate.height * clockBox.scale
+
+          sourceItem: groundLayer
+          sourceRect: Qt.rect(clockBox.x + clockBox.width / 2 - spanX / 2, clockBox.y + clockBox.height / 2 - spanY / 2, spanX, spanY)
+          textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
+          mipmap: true
+          visible: false
+        }
+
+        // The shadow: the digits in black, blurred and dropped.
+        MultiEffect {
+          y: clockBox.digits * Theme.lockClockShadowDrop
+          width: plate.width
+          height: plate.height
+          source: shadowTexture
+          opacity: Theme.lockClockShadowAlpha
+          colorization: 1
+          colorizationColor: "black"
+          blurEnabled: true
+          blur: 1
+          blurMax: Math.max(2, Math.round(clockBox.digits * Theme.lockClockShadowBlur))
+          autoPaddingEnabled: true
+        }
+
+        // The digits as frosted glass (Shaders/lockglass.frag).
+        ShaderEffect {
+          anchors.fill: parent
+
+          property var glyphs: glyphTexture
+          property var soft: softTexture
+          property var backdrop: backdropTexture
+          property size itemSize: Qt.size(width, height)
+          property real bevel: clockBox.digits * Theme.lockGlassBevel
+          property real rim: Math.max(1.5, clockBox.digits * Theme.lockGlassRim)
+          property real bend: clockBox.digits * Theme.lockGlassBend
+          property real soften: Theme.lockGlassSoften
+          property real lighten: Theme.lockGlassLighten
+          property real milk: Theme.lockGlassMilk
+          property real shine: Theme.lockGlassShine
+          property real solid: clockBox.solid
+          property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
+          property point washCentre: Qt.point(clockBox.pad + clockBox.width * Theme.lockClockWashX, clockBox.pad + clockBox.height * Theme.lockClockWashY)
+          property size washRadii: Qt.size(clockBox.width * Theme.lockClockWashWidth / 2, clockBox.height * Theme.lockClockWashHeight / 2)
+          property real washAngle: Theme.lockClockWashAngle * Math.PI / 180
+          property real washCore: Theme.lockClockWashCore
+          property real washDepth: Theme.lockClockWashDepth
+          property color ink: Theme.lockTextPrimary
+          property color tint: Theme.accent
+
+          fragmentShader: Qt.resolvedUrl("../Shaders/lockglass.frag.qsb")
+        }
       }
     }
   }

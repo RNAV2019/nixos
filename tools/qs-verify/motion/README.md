@@ -132,9 +132,9 @@ are exercised. Prints `PASS` or `FAIL <case> ...`. Frames go to a per-run temp d
 The shader's uniforms: `boxSize`, `boxOrigin`, `itemSize` (all item px), `radius`, `aa`
 (1/devicePixelRatio). Copy the pattern to smoke-test later shaders. A third case draws `hills.frag` with three half-transparent red layers and checks the RGB of the
 bottom row (alpha 223, red 255 once un-premultiplied): a shader that multiplies the colour uniform by
-its alpha again (Qt delivers it premultiplied) reads red 128 there. A fourth draws `lockwash.frag` (red ink, a
-blue wash centred on the left edge, over a source that is inked in its top half only) and checks blue in
-the wash's core, red past its reach and nothing below the ink.
+its alpha again (Qt delivers it premultiplied) reads red 128 there. A fourth draws `lockglass.frag` with
+everything but its see-through off (a blue backdrop behind digits inked in the top half only: blue there,
+nothing below), a fifth `lockpatch.frag` (blue wallpaper inside the island, red capture outside it).
 
 ## Other scenarios
 
