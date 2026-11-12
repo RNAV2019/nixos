@@ -1157,8 +1157,8 @@ Item {
           visible: false
         }
 
-        // The digits' coverage blurred over about half a stroke: the glass reads each stroke's
-        // dome off this, its height and which way it faces, and how near the outline is.
+        // The digits' coverage blurred over about half a stroke: the glass reads off this
+        // how far in from the outline each pixel is, and which way the outline faces.
         MultiEffect {
           id: softCover
 
@@ -1173,8 +1173,9 @@ Item {
           autoPaddingEnabled: false
         }
 
-        // Kept in half floats: near a stroke's spine the dome's slope is a difference of a few
-        // 8-bit levels, which the light on it would turn into streaks along the stroke.
+        // Kept in half floats: toward the inner edge of the glass's edge band the blurred coverage
+        // is near 1, where 8-bit levels would step the distance read off it by a third of a px
+        // and draw faint rings round the band.
         ShaderEffectSource {
           id: softTexture
 
@@ -1242,11 +1243,10 @@ Item {
           autoPaddingEnabled: true
         }
 
-        // The digits as frosted jelly (Shaders/lockglass.frag), with their contact shadow: the
-        // line, and while a minute rolls the digits on their way out, each layer read from its
-        // own colour channel (rollLineInk, rollLeavingInk) and shaded on its own, so neither
-        // takes the other's shape, and both seen through the row's window. At rest only the line
-        // is drawn, as it always was.
+        // The digits as liquid glass (Shaders/lockglass.frag): the line, and while a minute rolls
+        // the digits on their way out, each layer read from its own colour channel (rollLineInk,
+        // rollLeavingInk) and shaded on its own, so neither takes the other's shape, and both seen
+        // through the row's window. At rest only the line is drawn, as it always was.
         Repeater {
           model: 2
 
@@ -1261,28 +1261,25 @@ Item {
             property var backdrop: backdropTexture
             property size itemSize: Qt.size(width, height)
             property real bevel: softCover.blurMax
-            property real rim: clockBox.digits * Theme.lockGlassRim
+            property real band: clockBox.digits * Theme.lockGlassBand
             property real feather: clockBox.digits * Theme.lockGlassFeather
-            property real relief: Theme.lockGlassRelief
             property real bend: clockBox.digits * Theme.lockGlassBend
+            property real smear: Theme.lockGlassSmear
+            property real lens: Theme.lockGlassLens
             property real soften: clockBox.digits * Theme.lockGlassSoften
-            property real lighten: Theme.lockGlassLighten
-            property real milk: Theme.lockGlassMilk
-            property real vivid: Theme.lockGlassVivid
-            property real glow: Theme.lockGlassGlow
-            property real shine: Theme.lockGlassShine
+            property real reach: clockBox.digits * Theme.lockGlassReach
+            property real veil: Theme.lockGlassVeil
+            property vector3d tone: Theme.lockGlassTone
+            property real rim: Theme.lockGlassRim
+            property real rimFloor: Theme.lockGlassRimFloor
+            property real rimTint: Theme.lockGlassRimTint
             property real shade: Theme.lockGlassShade
-            property real pool: Theme.lockGlassPool
-            property real contact: Theme.lockClockContactAlpha
-            property real drop: clockBox.digits * Theme.lockClockContactDrop
+            property real catchLight: Theme.lockGlassCatch
             property real solid: clockBox.solid
             property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
             property color ink: Theme.lockTextPrimary
             property vector4d pick: index === 0 ? Qt.vector4d(1, 0, 0, 0) : Qt.vector4d(0, 1, 0, 0)
             property vector4d window: clockBox.rolling ? clockBox.rollWindow : clockBox.openWindow
-            // A contact shadow is cast by the stroke just above it, and shows as much as its
-            // caster does.
-            property real lag: drop + bevel / 2
 
             fragmentShader: Qt.resolvedUrl("../Shaders/lockglass.frag.qsb")
           }

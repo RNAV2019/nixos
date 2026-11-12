@@ -1,25 +1,30 @@
 #version 440
-// The lock clock's digits as frosted jelly. `glyphs` holds the digits' coverage, `soft` that
-// coverage blurred over about half a stroke's width, `backdrop` what is seen through them (the
+// The lock clock's digits as liquid glass, after Apple's Lock Screen clock. `glyphs` holds the
+// digits' coverage, `soft` that coverage blurred, `backdrop` what is seen through them (the
 // blurred desktop under the scrim).
 //
-// The blurred coverage rises from the outline to a stroke's spine and falls again beyond it, so
-// it is read as the height of each stroke: one round dome across the stroke's whole width,
-// steepest at the outline and level only along the spine. Everything is read off that surface.
-// The backdrop is seen through it as through a lens, bent a little toward the spine on the
-// shoulders and not at all at the outline, so the rim shows what lies right behind it. What the
-// rim shows is made a little more vivid and brighter, and a little of the ink is milked over the
-// body so the time reads on any desktop; no colour of the glass's own is added, so the edge always
-// takes the desktop's colours, and on a grey desktop it is grey. A light from the upper left leaves
-// one broad soft highlight on the shoulder that faces it, falling away smoothly in every direction
-// (across the spine too), the far slopes fall into a gentle shade, and the light that passes
-// through pools in a soft crescent just inside the far edge, tinted by what is seen there. All of
-// it is read off the surface's normal, which turns smoothly through the spine, so no line is drawn
-// along a stroke and a round dot is one plain droplet. Under the digits a
-// contact shadow, the blurred coverage dropped a little, sits them on the desktop. The outline is
-// feathered over a pixel or two, so the glass sits in the backdrop instead of looking cut out of
-// it. `solid` turns the whole digit to plain ink with a crisp outline and no shadow of its own,
-// which is what leaves and enters the pill. Output is premultiplied alpha.
+// Each stroke is a flat slab of clear glass: its face is level, and only in a narrow band at the
+// outline (`band` px) does the surface roll off to the edge. How far in from the outline a pixel
+// is, the blurred coverage says: read back through the normal distribution it is a distance in
+// px, so the band is as wide on a thick stroke as on a thin one or round a counter.
+//
+// Through the face the desktop is seen softly blurred and a little magnified (the whole clock is
+// one weak lens), under a veil set by how bright the desktop round it is: a smoky lift over a
+// dark desktop, a pale one over a bright one, so the body is always a little lighter than what
+// lies behind and the time reads without hiding it. In the band the glass bends the light hard:
+// it shows a wide slice of the desktop just outside the outline, squeezed into a few px and drawn
+// out along the edge, so a bright colour near a digit streaks along its rim.
+//
+// The light comes from two opposite corners. A thin bright line runs just inside the outline,
+// counters included, brightest where the edge faces the upper left or the lower right and faint,
+// never gone, on the other diagonals; it is white leaning toward the colour the band shows. Just
+// inside it a soft darker band gives the slab its thickness, and on the edges facing the light a
+// little light is caught in the band, fading in from the line. Nothing has a colour of the
+// glass's own: over a grey desktop the glass is grey.
+//
+// The outline is feathered over a pixel or two, so the glass sits in the backdrop instead of
+// looking cut out of it. `solid` turns the whole digit to plain ink with a crisp outline, which
+// is what leaves and enters the pill. Output is premultiplied alpha.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 
@@ -28,26 +33,25 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     vec2 itemSize;   // the ShaderEffect item size, item px (maps qt_TexCoord0 to px)
     float bevel;     // the reach the coverage was blurred over, item px
-    float rim;       // how far in from the outline the rim's colours reach, item px
+    float band;      // how far in from the outline the surface rolls off, item px
     float feather;   // the radius the outline is softened over, item px
-    float relief;    // how steeply the dome falls to the outline
-    float bend;      // how far the backdrop is displaced where the surface turns edge-on, item px
+    float bend;      // how far outside the outline the edge band reaches for what it shows, item px
+    float smear;     // how much more the edge band blurs along the edge than across it
+    float lens;      // how much the face magnifies what is behind it (a share)
     float soften;    // the radius the backdrop is blurred over inside the glass, item px
-    float lighten;   // the backdrop's gain inside the glass
-    float milk;      // the share of ink laid over the backdrop on the dome's top
-    float vivid;     // how much more saturated the rim shows what it gathers
-    float glow;      // how much brighter the rim shows what it gathers
-    float shine;     // the strength of the light on the surface
-    float shade;     // how much darker the slopes facing away from the light are
-    float pool;      // the strength of the light pooled inside the far edge
-    float contact;   // the contact shadow's opacity
-    float drop;      // how far the contact shadow is dropped, item px
+    float reach;     // the radius the desktop's brightness round a pixel is taken over, item px
+    float veil;      // the share of what is seen that the veil replaces
+    vec3 tone;       // the body's tone over a black, a mid-grey and a white desktop
+    float rim;       // the strength of the bright line inside the outline
+    float rimFloor;  // its strength where the edge faces across the light, as a share
+    float rimTint;   // how much of the colour the band shows the line takes
+    float shade;     // how much darker the band just inside the line is
+    float catchLight; // the light caught in the band on edges facing the light
     float solid;     // 0 glass, 1 plain ink
-    vec2 light;      // where the light comes from on screen (y down); it also leans toward the eye
+    vec2 light;      // where the light comes from on screen (y down); its opposite lights too
     vec4 ink;        // the digits' plain colour (premultiplied by Qt)
     vec4 pick;       // which channels of `glyphs` and `soft` hold the coverage of the layer drawn here
     vec4 window;     // the row it shows through, item px down: none above x, all from y to z, none below w
-    float lag;       // how far above its own pixel a contact shadow's caster stands, item px
 };
 
 layout(binding = 1) uniform sampler2D glyphs;
@@ -68,11 +72,11 @@ float softAt(vec2 uv) {
     return dot(texture(soft, uv), pick);
 }
 
-// How much of the row `window` shows at this pixel's height less `above` (item px). A minute
-// rolling over slides whole digits through it; only what is drawn is faded, never the coverage the
-// glass is read from, so a digit at the row's edge is still whole glass, only fainter.
-float windowAt(float above) {
-    float y = qt_TexCoord0.y * itemSize.y - above;
+// How much of the row `window` shows at this pixel's height. A minute rolling over slides whole
+// digits through it; only what is drawn is faded, never the coverage the glass is read from, so a
+// digit at the row's edge is still whole glass, only fainter.
+float windowAt() {
+    float y = qt_TexCoord0.y * itemSize.y;
     return smoothstep(window.x, window.y, y) * (1.0 - smoothstep(window.z, window.w, y));
 }
 
@@ -90,10 +94,6 @@ float coverage(vec2 uv, float r) {
     return a / 13.0;
 }
 
-// The blurred coverage below which the dome has no height: under the outline's own half, so
-// even a thin stroke, whose blurred coverage peaks lower, keeps a round top.
-const float floor_ = 0.3;
-
 // Light past a white is eased into it rather than cut off at it, so a bright desktop does not
 // blow the glass out to a flat white.
 vec3 shoulder(vec3 c) {
@@ -102,15 +102,17 @@ vec3 shoulder(vec3 c) {
     return min(c, vec3(knee)) + (1.0 - knee) * (1.0 - exp(-over / (1.0 - knee)));
 }
 
-// The highlight: centred where the surface has turned this far (0 level, 1 edge-on) toward the
-// light, and this wide in the same measure. Off-centre and broad, so it lies on the shoulder and
-// still crosses the spine as a gentle fall-off rather than stopping at it.
-const float sheenAt = 0.7;
-const float sheenWidth = 0.3;
-// The light takes on the desktop's hue only this much, and a dark desktop's hue less (the floor
-// is added before its brightest channel is divided out), so it is lit glass, never a glow.
-const float tintShare = 0.6;
-const float tintFloor = 0.15;
+const vec3 rec709 = vec3(0.2126, 0.7152, 0.0722);
+
+
+// The normal distribution's quantile: the distance, in sigmas, at which its cumulative share is
+// p (Abramowitz and Stegun 26.2.23, good to 5e-4 of a sigma).
+float probit(float p) {
+    float q = clamp(min(p, 1.0 - p), 1e-6, 0.5);
+    float u = sqrt(-2.0 * log(q));
+    float t = u - (2.515517 + u * (0.802853 + u * 0.010328)) / (1.0 + u * (1.432788 + u * (0.189269 + u * 0.001308)));
+    return p < 0.5 ? -t : t;
+}
 
 void main() {
     vec2 px = 1.0 / itemSize;
@@ -121,82 +123,86 @@ void main() {
     // whose edge is crisp.
     float a = coverage(qt_TexCoord0, feather * glass);
 
-    // The contact shadow, under the feathered outline and round it: where the blurred coverage
-    // a little above is more than here, which is below a stroke and not beside it.
-    float shadow = 0.0;
-    if (a < 1.0 && glass > 0.0) {
-        float above = softAt(qt_TexCoord0 - vec2(0.0, drop) * px);
-        shadow = contact * glass * smoothstep(0.0, 0.3, above - s) * smoothstep(0.0, 0.5, above);
-    }
     if (a <= 0.0) {
-        fragColor = vec4(0.0, 0.0, 0.0, shadow * windowAt(lag) * qt_Opacity);
+        fragColor = vec4(0.0);
         return;
     }
 
-    // The dome: the square root of the blurred coverage above floor_, so the surface falls ever
-    // more steeply toward the outline and is round across the top. Its slope comes from the
-    // blurred coverage's own, read over a step wide enough to smooth out the coarse levels the
-    // blur is built from.
+    // How far inside the outline this point is, in px (negative outside). Across a straight
+    // outline the blurred coverage climbs like a normal distribution's cumulative share, so read
+    // backwards through the quantile it is a distance; the blur is a little wider in its tails
+    // than one Gaussian, which the cubic term takes up (fitted off MultiEffect's blur at the
+    // clock's size: within half a px over the edge band). It keeps growing toward a stroke's
+    // spine. The slope of the coverage (read a step ahead in x and in y, wide enough to smooth
+    // out the coarse levels the blur is built from) gives only the way the outline faces. `x`
+    // runs from 0 at the outline to 1 where the face begins, `e` the other way.
+    float t = probit(s);
+    float depth = bevel * t * (0.2 + 0.041 * t * t);
     float step_ = max(1.0, bevel * 0.2);
-    vec2 grad = vec2(softAt(qt_TexCoord0 + vec2(step_, 0.0) * px) - softAt(qt_TexCoord0 - vec2(step_, 0.0) * px),
-                     softAt(qt_TexCoord0 + vec2(0.0, step_) * px) - softAt(qt_TexCoord0 - vec2(0.0, step_) * px)) / (2.0 * step_);
-    vec2 slope = grad / (2.0 * sqrt(max(s - floor_, 0.02))) * relief * bevel;
-    vec3 normal = normalize(vec3(-slope, 1.0));
-    // 0 where the surface faces the eye, 1 where it has turned edge-on, and which way it faces.
-    float tilt = length(normal.xy);
-    float t4 = tilt * tilt * tilt * tilt;
-    vec2 facing = normal.xy / max(tilt, 1e-4);
+    vec2 grad = vec2(softAt(qt_TexCoord0 + vec2(step_, 0.0) * px), softAt(qt_TexCoord0 + vec2(0.0, step_) * px)) - s;
+    float slope = length(grad);
+    float x = clamp(depth / max(band, 1.0), 0.0, 1.0);
+    float e = 1.0 - x;
+    float e2 = e * e;
+    // Which way the outline faces (out of the glass), and how squarely toward the light or away.
+    vec2 out_ = slope > 1e-6 ? -grad / slope : vec2(0.0);
+    float facing = dot(out_, normalize(light));
 
-    // How far inside the outline this point is, in px: the blurred coverage over its own slope
-    // (negative outside). The rim's colours fade in from the outline over `rim` px measured so,
-    // as wide on thick strokes as on thin ones, and with no step where they end.
-    float depth = (s - 0.5) / max(length(grad), 1e-4);
-    float edge = exp(-3.0 * max(depth, 0.0) / max(rim, 1.0));
-
-    // Seen through the lens: bent toward the spine on the shoulders, most where the surface has
-    // turned about half way, and back to none at the outline, so the rim shows the colour right
-    // behind it (a rim that reached across the stroke mixed two colours meeting behind a dot into
-    // a mauve). Softened over a disc: a dozen taps on a golden-angle spiral (the texture's mip
-    // levels are not filtered between, and show as blocks).
-    vec2 uv = qt_TexCoord0 - facing * bend * 0.2 * tilt * (1.0 - tilt * tilt * tilt) * px;
+    // What is seen: the face magnifies a little about the plate's middle; the band reaches out
+    // past the outline, as far as `bend` at the outline itself and less going in, so it shows a
+    // wide slice of what lies round the digit squeezed into its few px (the mapping only runs one
+    // way, so nothing folds). Softened over a disc (the texture's mip levels are not filtered
+    // between, and show as blocks), drawn out along the edge in the band.
+    vec2 uv = 0.5 + (qt_TexCoord0 - 0.5) * (1.0 - lens) + out_ * bend * e2 * px;
+    vec2 along = vec2(-out_.y, out_.x);
+    float stretch = 1.0 + smear * e2;
     vec3 seen = texture(backdrop, uv).rgb;
-    for (int i = 1; i <= 12; i++) {
+    for (int i = 1; i <= 7; i++) {
         float turn = float(i) * 2.39996;
-        float out_ = sqrt(float(i) / 12.0) * soften;
-        seen += texture(backdrop, uv + vec2(cos(turn), sin(turn)) * out_ * px).rgb;
+        vec2 d = vec2(cos(turn), sin(turn)) * sqrt(float(i) / 7.0) * soften;
+        vec2 o = out_ == vec2(0.0) ? d : along * dot(d, along) * stretch + out_ * dot(d, out_);
+        seen += texture(backdrop, uv + o * px).rgb;
     }
-    seen /= 13.0;
+    seen /= 8.0;
 
-    // Toward the rim, what is seen is lifted: more saturated about its own grey (so a grey stays
-    // grey) and brighter. The light's colour is that hue at full brightness, only partly.
-    const vec3 rec709 = vec3(0.2126, 0.7152, 0.0722);
-    float luma = dot(seen, rec709);
-    vec3 vivified = clamp(mix(vec3(luma), seen, 1.0 + vivid * edge), 0.0, 1.0);
-    vivified *= lighten * (1.0 + glow * edge);
-    vec3 hue = (vivified + tintFloor) / (max(max(vivified.r, vivified.g), vivified.b) + tintFloor);
-    vec3 tint = mix(vec3(dot(hue, rec709)), hue, tintShare);
+    // The veil, set by how bright the desktop is round this pixel (eight reads on two rings, far
+    // apart on the blurred desktop, so a bright shape near a digit moves it only a little). The
+    // body's tone over a uniform desktop of that brightness is `tone` for black, mid-grey and
+    // white, and in between it eases from one to the next, so a dark desktop with a little colour
+    // in it is lifted hardly more than a black one. Neutral: it lifts or dims, it never tints.
+    float area = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float turn = float(i) * 0.7854;
+        float far = (i % 2 == 0 ? 1.0 : 0.5) * reach;
+        area += dot(texture(backdrop, qt_TexCoord0 + vec2(cos(turn), sin(turn)) * far * px).rgb, rec709);
+    }
+    area = clamp(area / 8.0, 0.0, 1.0);
+    vec3 at = tone - vec3(0.0, 0.5, 1.0) * (1.0 - veil);
+    float lift = area < 0.5 ? mix(at.x, at.y, smoothstep(0.0, 0.5, area)) : mix(at.y, at.z, smoothstep(0.5, 1.0, area));
+    vec3 body = seen * (1.0 - veil) + lift;
 
-    // The milk thins toward the rim, where the jelly is thinnest and the desktop's colours show.
-    vec3 body = mix(vivified, ink.rgb, milk * (1.0 - 0.3 * edge));
+    // The line's colour: white, leaning toward the hue the band shows (that hue at full
+    // brightness; a dark one counts for less, the floor being added before its brightest channel
+    // is divided out, so black gives white).
+    const float hueFloor = 0.15;
+    vec3 hue = (seen + hueFloor) / (max(max(seen.r, seen.g), seen.b) + hueFloor);
+    vec3 lineColour = mix(vec3(1.0), hue, rimTint);
 
-    // The light, all of it local, so the body keeps the tone of what is seen through it. One
-    // broad highlight on the shoulder facing it; the slopes facing away a shade darker, and light
-    // pooled in a crescent just inside the far edge. Where the surface turns edge-on it gathers a
-    // little more of the desktop's light, tinted as the desktop is; over a bright desktop it
-    // darkens there a little instead, as a glass on white paper is ringed in grey, so the digits
-    // keep their shape where there is no light left to add. Only the normal itself is used near
-    // the spine (`facing` turns over there), so nothing changes abruptly along a stroke.
-    vec2 toward = normalize(light);
-    vec2 off = normal.xy - toward * sheenAt;
-    float sheen = exp(-dot(off, off) / (2.0 * sheenWidth * sheenWidth));
-    float away = max(dot(facing, -toward), 0.0);
-    float crescent = away * away * smoothstep(0.3, 1.0, tilt) * (0.4 + 0.6 * edge);
-    body *= 1.0 - shade * smoothstep(0.0, 1.0, -dot(normal.xy, toward)) - 0.2 * t4 * luma * luma;
-    vec3 shone = mix(ink.rgb, tint, 0.3) * (shine * 0.5 * sheen)
-               + tint * (pool * crescent * (0.45 + 0.6 * luma) + glow * 0.1 * t4 * (0.2 + luma));
-    body = shoulder(max(body, 0.0) + shone);
+    // The slab's edge: a soft darker band just inside the line, deeper on the far side; light
+    // caught in the band where the edge faces the light, fading in from it; and the line itself,
+    // right inside the feathered outline, strongest facing either lit corner.
+    float inner = max(depth - feather, 0.0);
+    float off = (inner - 0.45 * band) / (0.4 * band);
+    float shadeBand = exp(-off * off);
+    body *= 1.0 - shade * shadeBand * (0.4 + 0.6 * max(-facing, 0.0));
+    body += lineColour * catchLight * max(facing, 0.0) * exp(-inner / (0.4 * band));
+    float lit = rimFloor + (1.0 - rimFloor) * facing * facing;
+    float across = inner / max(0.08 * band, 0.75);
+    float line = exp(-across * across);
+    body = mix(body, lineColour, clamp(rim * lit * line, 0.0, 1.0));
+    body = shoulder(max(body, 0.0));
 
     vec3 colour = mix(body, ink.rgb, solid);
-    float shown = windowAt(0.0);
-    fragColor = vec4(colour * a * shown, a * shown + shadow * windowAt(lag) * (1.0 - a * shown)) * qt_Opacity;
+    float shown = windowAt();
+    fragColor = vec4(colour, 1.0) * a * shown * qt_Opacity;
 }

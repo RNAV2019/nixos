@@ -908,63 +908,59 @@ Singleton {
   // Room kept round the digits' texture, as a share of a digit's height.
   readonly property real lockClockPad: 0.16
   // The digits are glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's opaque ink
-  // copied his wallpaper's look rather than suiting ours, and the glass was to be bubbly). The
-  // desktop behind shows through them (the blurred capture under the scrim; he tried the bare
-  // wallpaper there and took the desktop back the same night).
+  // copied his wallpaper's look rather than suiting ours). The desktop behind shows through them
+  // (the blurred capture under the scrim; he tried the bare wallpaper there and took the desktop
+  // back the same night).
   //
-  // Later the same day (2026-11-12) he found the first glass bevelled plastic with a soap film round it, and
-  // chose "frosted jelly" instead: no film colours (no pink or green), and no colour of the
-  // glass's own at all, so the rim takes the desktop's colours, made more vivid; no bright
-  // hairline round the outline; and each stroke one round dome across its whole width, not a
-  // flat top on a steep bevel; the frosted, milky body he kept, so the time reads over any
-  // window. The dome is read off the digits' coverage blurred over lockGlassBevel of a digit's
-  // height, lockGlassRelief steep. Through it the desktop is bent as through a lens by a fifth
-  // of lockGlassBend on the shoulders and not at all at the outline, so the rim shows the colour
-  // right behind it; blurred over lockGlassSoften of a digit's height, lightened by
-  // lockGlassLighten and milked with lockGlassMilk of the ink. Over lockGlassRim in from the
-  // outline what is seen is made lockGlassVivid more saturated and lockGlassGlow brighter (a grey
-  // stays grey). A light from the upper left leaves one broad highlight on the shoulder facing it
-  // (lockGlassShine), the far slopes fall lockGlassShade into shade, and the light that passes
-  // through pools in a crescent inside the far edge (lockGlassPool), tinted by the desktop seen
-  // there. The clock is plain ink in and out of the pill and turns to glass over this stretch of
-  // the flight.
-  //
-  // A review of that first jelly (2026-11-12) found a groove along every spine and a dimple in
-  // the colon (the sheen was switched off where the surface is level), a body lit to opaque grey
-  // (a sheen that reached the whole top), and neon rims (light tinted by the desktop's hue at
-  // full brightness, a rim that reached 70 px across, mixing blue and amber into mauve behind
-  // the colon). The light is now local and smooth across the spine, the body's median tone sits
-  // about 15/255 over the soap-film glass's on a dark desktop, and Vivid/Glow came down from
-  // 0.6/0.4; Shade went up from 0.18 and Milk down from 0.2, so the volume stays.
-  readonly property real lockGlassBevel: 0.16
-  readonly property real lockGlassRelief: 3.0
-  readonly property real lockGlassRim: 0.07
+  // Later that day he had them as "frosted jelly", each stroke an inflated dome; on his real lock
+  // he asked for them "more 'liquid glass' similar to Apple's implementation/design of the clock"
+  // instead of "bubbly" (2026-11-12). So they are now Apple's Lock Screen material: each stroke a
+  // flat slab of clear glass whose surface rolls off only in a band lockGlassBand of a digit's
+  // height wide at the outline (about 17 device px at his panel, a fifth of a stroke or so),
+  // its distance read off the coverage blurred over lockGlassBevel. Through the face the desktop is
+  // blurred over lockGlassSoften and magnified lockGlassLens about the clock's middle, under a
+  // neutral veil: lockGlassVeil of what is seen is replaced by a tone that follows the desktop's
+  // brightness lockGlassReach round each pixel, giving the body lockGlassTone over a black, a
+  // mid-grey and a white desktop (as measured off Apple's footage: about 30/255 over black, 60-70
+  // over a sky blue, a shade under a white). In the band the glass shows the desktop up to
+  // lockGlassBend outside the outline, squeezed in and blurred lockGlassSmear times longer along
+  // the edge, so nearby colour streaks along the rim. Lit from two opposite corners (the light at
+  // lockGlassLightX/Y and its opposite): a bright line just inside the outline (lockGlassRim, never
+  // under lockGlassRimFloor of it where the edge faces across the light), white leaning
+  // lockGlassRimTint toward the colour behind; a soft darker band inside it (lockGlassShade), and
+  // light caught in the band on the edges facing the light (lockGlassCatch). Still no colour of
+  // the glass's own (he rejected a soap film and a blue tint), still see-through (he rejected an
+  // opaque grey body), and no contact shadow under the strokes: Apple has none, and with a flat
+  // slab it read as an emboss. The clock is plain ink in and out of the pill and turns to glass
+  // over this stretch of the flight (lockGlassFrom to lockGlassTo).
+  readonly property real lockGlassBevel: 0.11
+  readonly property real lockGlassBand: 0.05
   // The glass's outline is softened over a disc whose radius is this share of a digit's height
   // (about 1.2 device px at Ryan's 2880x1800 panel, a ramp of 2 px or so): an edge that sits in
   // the desktop rather than one cut out of it (Ryan, 2026-11-12), never so much that it reads as
   // blur. Plain ink is not softened, so the hand-over to the pill's clock keeps its edge.
   readonly property real lockGlassFeather: 0.0035
-  readonly property real lockGlassBend: 0.2
-  readonly property real lockGlassSoften: 0.04
-  readonly property real lockGlassLighten: 1.25
-  readonly property real lockGlassMilk: 0.17
-  readonly property real lockGlassVivid: 0.4
-  readonly property real lockGlassGlow: 0.25
-  readonly property real lockGlassShine: 1.0
-  readonly property real lockGlassShade: 0.3
-  readonly property real lockGlassPool: 1.0
-  readonly property real lockGlassLightX: -0.55
-  readonly property real lockGlassLightY: -0.8
+  readonly property real lockGlassBend: 0.3
+  readonly property real lockGlassSmear: 4.0
+  readonly property real lockGlassLens: 0.04
+  readonly property real lockGlassSoften: 0.03
+  readonly property real lockGlassReach: 0.6
+  readonly property real lockGlassVeil: 0.24
+  readonly property vector3d lockGlassTone: Qt.vector3d(0.11, 0.7, 0.9)
+  readonly property real lockGlassRim: 1.0
+  readonly property real lockGlassRimFloor: 0.35
+  readonly property real lockGlassRimTint: 0.8
+  readonly property real lockGlassShade: 0.12
+  readonly property real lockGlassCatch: 0.4
+  readonly property real lockGlassLightX: -0.85
+  readonly property real lockGlassLightY: -0.5
   readonly property real lockGlassFrom: 0.12
   readonly property real lockGlassTo: 0.6
-  // Its shadow: black, blurred and dropped by these shares of a digit's height.
-  readonly property real lockClockShadowAlpha: 0.3
+  // Its shadow: black, blurred and dropped by these shares of a digit's height; faint, as
+  // Apple's clock has hardly any.
+  readonly property real lockClockShadowAlpha: 0.15
   readonly property real lockClockShadowBlur: 0.09
   readonly property real lockClockShadowDrop: 0.03
-  // And under the glass alone, a contact shadow: tighter and darker, only below the strokes,
-  // which sits the domes on the desktop rather than floating them over it.
-  readonly property real lockClockContactAlpha: 0.35
-  readonly property real lockClockContactDrop: 0.035
   // A new minute rolls in as the pill's clock rolls (clockRoll), upward, whole: a changed digit
   // slides up and out through a soft fade at the top of the row while its successor slides in
   // from below through one at the bottom, the two a row apart, as on a counter's drum. Ryan chose
