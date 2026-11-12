@@ -6,7 +6,7 @@ import qs.Commons
 import qs.Services
 
 // The lock screen on a rehearsal stage: same LockView and LockReveal, no session lock, driven
-// over IPC (`qs ipc call lockpreview preview|password|busy|refuse|fault|unlock|background`).
+// over IPC (`qs ipc call lockpreview preview|password|busy|refuse|fault|unlock|background|time`).
 Scope {
   id: root
 
@@ -18,6 +18,9 @@ Scope {
   // A capture to stand on, as the real lock has (a prefix, see Lock.qml snapshotFile); empty
   // stands on the wallpaper, as the boot lock does.
   property string background: ""
+  // A time to show instead of the clock's ("HH:mm"); changing it rolls the minute over as the
+  // clock does. Empty follows the clock.
+  property string time: ""
 
   LockReveal {
     id: reveal
@@ -52,6 +55,7 @@ Scope {
         outputScreen: win.modelData
         captured: root.background.length > 0
         backgroundSource: captured ? "file://" + root.background + "-" + win.modelData.name + ".png" : Wallpapers.url
+        timeOverride: root.time
         password: root.password
         busy: root.busy
         refusals: root.refusals
@@ -171,6 +175,11 @@ Scope {
       root.busy = false;
       root.password = "";
       root.faults += 1;
+    }
+
+    // The time to show, "HH:mm", to rehearse a change of minute; "" follows the clock again.
+    function time(text: string): void {
+      root.time = text;
     }
 
     // The capture prefix to stand on (`grim -o OUT PREFIX-OUT.png`), or "" for the wallpaper.

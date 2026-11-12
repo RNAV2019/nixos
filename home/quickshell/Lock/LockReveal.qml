@@ -18,8 +18,8 @@ Item {
   // 0 with the clock in the pill, 1 with it at rest mid-screen; runs a little past 1 going in and
   // a little under 0 coming home.
   readonly property real flight: flightSpring.value
-  // The clock's size on the same journey, on a looser spring of its own: it swells well past
-  // its resting size and settles back, as a bubble does when it is let go.
+  // The clock's size on the same journey, on a looser spring of its own: it swells a little
+  // past its resting size and settles back, as a bubble does when it is let go.
   readonly property real swell: swellSpring.value
   // A quicker, looser spring still, on the same journey. How far it leads or trails the flight
   // is the clock's wobble: stretched along its travel while it moves, squashed as it lands.
@@ -141,8 +141,8 @@ Item {
     label: "lock.wobble"
     target: reveal.away ? 1 : 0
     animate: !reveal.snapping
-    omega: Theme.lockWobbleOmega
-    damping: Theme.lockWobbleDamping
+    omega: reveal.away ? Theme.lockWobbleOmega : Theme.lockWobbleOmegaOut
+    damping: reveal.away ? Theme.lockWobbleDamping : Theme.lockWobbleDampingOut
     epsilon: 0.0005
   }
 

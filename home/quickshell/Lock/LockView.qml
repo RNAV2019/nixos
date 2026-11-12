@@ -36,6 +36,10 @@ Item {
   property bool flying: false
   property bool snapping: false
 
+  // A time to show instead of the clock's, "HH:mm" (the rehearsal stage's, to play a change of
+  // minute on demand); empty follows the clock.
+  property string timeOverride: ""
+
   // The screen this view draws on - the lock surface's or the preview's.
   property var outputScreen
   property string backgroundSource: Wallpapers.url
@@ -62,6 +66,40 @@ Item {
 
     function onFrameSwapped() {
       view.presented();
+    }
+  }
+
+  // One character of the big clock as an outline, filled, hung from the top of its own ink at
+  // its pen position (see the roll in clockBox). A turning one is squashed to `squash` of its
+  // height about the row `anchor` (its own coordinates) and moved by `shift`.
+  component RollGlyph: Shape {
+    property alias glyph: glyphText.text
+    property alias face: glyphText.font
+    property real squash: 1
+    property real anchor: 0
+    property real shift: 0
+
+    preferredRendererType: Shape.GeometryRenderer
+    visible: squash > 0
+
+    transform: [
+      Scale {
+        origin.y: anchor
+        yScale: squash
+      },
+      Translate {
+        y: shift
+      }
+    ]
+
+    ShapePath {
+      fillColor: "white"
+      strokeColor: "transparent"
+      strokeWidth: -1
+
+      PathText {
+        id: glyphText
+      }
     }
   }
 
@@ -616,10 +654,65 @@ Item {
       text: clockBox.time
     }
 
+    // Where each character of a line starts, as the line is shaped (kerning, the tracking, the
+    // raised colon between digits): the cursor positions of a field never shown.
+    TextInput {
+      id: penProbe
+
+      visible: false
+      font: clockFace.font
+    }
+
+    // The exact height of a line's ink, read off its outlines: FontMetrics rounds the ink's
+    // edges out to whole pixels, which is enough to lay out a line but not to put one
+    // character back exactly where the whole line had it.
+    Shape {
+      id: inkProbe
+
+      visible: false
+
+      ShapePath {
+        strokeColor: "transparent"
+        strokeWidth: -1
+
+        PathText {
+          id: inkProbeText
+
+          font: rollFont.font
+        }
+      }
+
+      // How far above the baseline the top of `text`'s ink stands, from a fixed origin. A
+      // circumflex set after it stands above every digit and ends above the foot of the raised
+      // colon (which floats clear of the baseline), so it takes the top and leaves the bottom:
+      // the height it adds is how much lower the text's own top is. The mark's own top is the
+      // same every time and cancels in every difference this is used for.
+      function topOf(text) {
+        inkProbeText.text = text;
+        const own = inkProbe.boundingRect.height;
+        inkProbeText.text = text + "\u02c6";
+        return inkProbe.boundingRect.height - own;
+      }
+    }
+
+    // The clock's face for one character on its own; `case` gives the colon the raised form it
+    // takes between digits in the line.
+    FontMetrics {
+      id: rollFont
+
+      font.family: Theme.lockClockFont
+      font.weight: Theme.lockClockWeight
+      font.pixelSize: clockBox.fontSize
+      font.letterSpacing: clockBox.tracking
+      font.features: ({
+          "case": 1
+        })
+    }
+
     Item {
       id: clockBox
 
-      readonly property string time: Qt.formatDateTime(clock.date, "HH:mm")
+      readonly property string time: view.timeOverride !== "" ? view.timeOverride : Qt.formatDateTime(clock.date, "HH:mm")
       readonly property real digits: canvas.height * Theme.lockClockDigits
       readonly property int fontSize: Math.round(digits / Theme.lockClockDigitRatio)
       readonly property real tracking: fontSize * Theme.lockClockTracking
@@ -641,11 +734,135 @@ Item {
       readonly property real sizeX: size * (1 - stretch)
       readonly property real sizeY: size * (1 + stretch)
 
-      // The line as its glyphs advance, less the tracking the last one trails, by the height of
-      // a digit: the digits' own box, which is what is centred and scaled.
-      width: clockLine.advanceWidth - tracking
+      // The line as its glyphs advance, less the tracking the last one trails: its width.
+      readonly property real lineWidth: clockLine.advanceWidth - tracking
+
+      // Where a line this wide starts, centred as the box is.
+      function leftFor(w) {
+        return Math.round(canvas.width / 2 + Bus.pillOffsetX * canvas.outputScale * (1 - t) - w / 2);
+      }
+
+      // ---- a new minute rolling in ----
+      //
+      // Only the characters that changed turn over, upward, as on the pill's clock
+      // (Ui/RollingClock.qml), on a longer clock for digits this big. At rest the line is one
+      // PathText (clockFace); for the roll each character is drawn on its own, put exactly where
+      // its line puts it, so the roll starts on the old line's pixels and ends on the new one's.
+      // SF Compact's figures are proportional (a 1 is narrow) and the line is kerned, so a new
+      // minute can change where every character stands and how wide the line is: the
+      // characters that stay slide to their new places as the line re-centres, on the roll's
+      // clock, and a changing one turns over in a slot that slides and resizes with them.
+      //
+      // It rolls only on the glass at rest. Into and out of the pill, and with the lock just
+      // up, the time changes where it stands, as the pill's clock does under the lock.
+      readonly property bool rests: view.away && !view.flying && !view.leaving && !view.snapping && solid === 0
+      // The time the line last settled on, the line rolling away (empty at rest), its width,
+      // and its characters with where each stands in both lines.
+      property string shownTime: ""
+      property string rollFrom: ""
+      readonly property bool rolling: rollFrom !== ""
+      property real rollFromWidth: 0
+      property var rollSlots: []
+      // Each line's baseline in the plate, less a constant that every use cancels.
+      property real rollFromBase: 0
+      property real rollToBase: 0
+      // The roll's clock.
+      property real rollTravel: 0
+      // A changing character turns over upward, as the pill's digits roll: the old one folds
+      // up into the top of the digits' row as the new one opens up from the bottom, the two
+      // sharing the row's height between them (as a drum's faces do, foreshortened as they
+      // turn), kept apart by the room round the digits. Squashed rather than slid through a
+      // clipped window, because the glass is read off the digits' coverage: a hard cut draws a
+      // rim along it, and coverage faded toward the cut (or faded as the pill's digits are)
+      // turns the glass into flat milky film. Squashed, every character stays whole and solid,
+      // the two never touch (touching glass merges into one blob), and neither leaves the plate.
+      readonly property real rollLeaving: Math.pow(Math.cos(rollTravel * Math.PI / 2), 2)
+      readonly property real rollArriving: 1 - rollLeaving
+      readonly property real rollTop: pad
+      // The two lines' starts in the plate, as the box stands now.
+      readonly property real rollFromLeft: pad + leftFor(rollFromWidth) - x
+      readonly property real rollToLeft: pad + leftFor(lineWidth) - x
+
+      // Where each character of `text` starts along the line, and where the line ends.
+      function pensOf(text) {
+        penProbe.text = text;
+        const pens = [];
+        for (let i = 0; i <= text.length; i++)
+          pens.push(penProbe.positionToRectangle(i).x);
+        return pens;
+      }
+
+      // The PathText rule below, less its line's own ink top: the baseline.
+      function baseOf(text) {
+        return pad + rollMetrics.tightBoundingRect(text).y - bigDigit.tightBoundingRect.y - inkProbe.topOf(text);
+      }
+
+      function settleRoll() {
+        rollAnimation.stop();
+        rollFrom = "";
+        rollSlots = [];
+      }
+
+      onTimeChanged: {
+        const from = shownTime;
+        settleRoll();
+        shownTime = time;
+        if (!rests || from === "" || from === time || from.length !== time.length)
+          return;
+
+        const fromPens = pensOf(from);
+        const toPens = pensOf(time);
+        const slots = [];
+        for (let i = 0; i < time.length; i++)
+          slots.push({
+            from: from.charAt(i),
+            to: time.charAt(i),
+            changed: from.charAt(i) !== time.charAt(i),
+            fromX: fromPens[i],
+            toX: toPens[i],
+            fromAdvance: fromPens[i + 1] - fromPens[i],
+            toAdvance: toPens[i + 1] - toPens[i],
+            fromTop: inkProbe.topOf(from.charAt(i)),
+            toTop: inkProbe.topOf(time.charAt(i))
+          });
+        rollFromBase = baseOf(from);
+        rollToBase = baseOf(time);
+        rollFromWidth = rollMetrics.advanceWidth(from) - tracking;
+        rollSlots = slots;
+        rollFrom = from;
+        rollAnimation.restart();
+      }
+      // Leaving mid-roll (an unlock): the new minute stands where it is.
+      onRestsChanged: {
+        if (!rests)
+          settleRoll();
+      }
+      Component.onCompleted: shownTime = time
+
+      FontMetrics {
+        id: rollMetrics
+
+        font: clockFace.font
+      }
+
+      NumberAnimation {
+        id: rollAnimation
+
+        target: clockBox
+        property: "rollTravel"
+        from: 0
+        to: 1
+        duration: Theme.lockClockRoll
+        easing.type: Easing.OutCubic
+
+        onFinished: clockBox.settleRoll()
+      }
+
+      // The digits' own box, which is what is centred and scaled: as wide as the line, or
+      // while a minute rolls over as the wider of the two lines, by the height of a digit.
+      width: rolling ? Math.max(rollFromWidth, lineWidth) : lineWidth
       height: bigDigit.tightBoundingRect.height
-      x: Math.round(canvas.width / 2 + Bus.pillOffsetX * canvas.outputScale * (1 - t) - width / 2)
+      x: leftFor(width)
       y: fromY + (toY - fromY) * t - height / 2
       opacity: canvas.swap
       visible: opacity > 0
@@ -670,30 +887,82 @@ Item {
         // it is; the two textures below are taken from it. The geometry renderer does not
         // antialias (and the curve renderer draws nothing on a lock surface, see
         // StrokeIcon.curve), so the texture the glass reads is multisampled.
-        Shape {
+        Item {
           id: outlines
 
           anchors.fill: parent
-          preferredRendererType: Shape.GeometryRenderer
 
-          ShapePath {
-            fillColor: "white"
-            strokeColor: "transparent"
-            strokeWidth: -1
+          // The line at rest. Only faded out for a roll, never hidden, so its new outlines
+          // are built while the roll plays and are there for the frame it hands back.
+          Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.GeometryRenderer
+            opacity: clockBox.rolling ? 0 : 1
 
-            PathText {
-              id: clockFace
+            ShapePath {
+              fillColor: "white"
+              strokeColor: "transparent"
+              strokeWidth: -1
 
-              x: clockBox.pad
-              // PathText hangs the line from the top of its own ink, which a round digit
-              // overshoots and a flat one does not; the difference is taken back, so the
-              // baseline stays put whatever the time.
-              y: clockBox.pad + clockLine.tightBoundingRect.y - bigDigit.tightBoundingRect.y
-              text: clockBox.time
-              font.family: Theme.lockClockFont
-              font.weight: Theme.lockClockWeight
-              font.pixelSize: clockBox.fontSize
-              font.letterSpacing: clockBox.tracking
+              PathText {
+                id: clockFace
+
+                x: clockBox.pad
+                // PathText hangs the line from the top of its own ink, which a round digit
+                // overshoots and a flat one does not; the difference is taken back, so the
+                // baseline stays put whatever the time.
+                y: clockBox.pad + clockLine.tightBoundingRect.y - bigDigit.tightBoundingRect.y
+                text: clockBox.time
+                font.family: Theme.lockClockFont
+                font.weight: Theme.lockClockWeight
+                font.pixelSize: clockBox.fontSize
+                font.letterSpacing: clockBox.tracking
+              }
+            }
+          }
+
+          // A minute rolling over, a character at a time. Each one hangs from its own ink's
+          // top, so it is lowered by the line's top less its own to sit on the line's baseline.
+          Repeater {
+            model: clockBox.rollSlots
+
+            Item {
+              id: slot
+
+              required property var modelData
+
+              readonly property real travel: clockBox.rollTravel
+              // Where the character starts in the old line and in the new.
+              readonly property real fromStart: clockBox.rollFromLeft + modelData.fromX
+              readonly property real toStart: clockBox.rollToLeft + modelData.toX
+              // A changing slot's middle, from the old line's to the new's: the two characters
+              // turn over about it, whatever their widths.
+              readonly property real middle: (fromStart + modelData.fromAdvance / 2) * (1 - travel) + (toStart + modelData.toAdvance / 2) * travel
+
+              // The old character: one that stays slides to its place in the new line (onto
+              // the new baseline, which can differ from the old by a fraction of a pixel); one
+              // that changed folds up into the top of the row.
+              RollGlyph {
+                glyph: slot.modelData.from
+                face: rollFont.font
+                x: slot.modelData.changed ? slot.middle - slot.modelData.fromAdvance / 2 : slot.fromStart * (1 - slot.travel) + slot.toStart * slot.travel
+                y: slot.modelData.changed ? clockBox.rollFromBase + slot.modelData.fromTop : clockBox.rollFromBase * (1 - slot.travel) + clockBox.rollToBase * slot.travel + slot.modelData.fromTop
+                squash: slot.modelData.changed ? clockBox.rollLeaving : 1
+                anchor: clockBox.rollTop - y
+                shift: slot.modelData.changed ? -clockBox.pad * clockBox.rollArriving : 0
+              }
+
+              // The new character opening up from the bottom.
+              RollGlyph {
+                glyph: slot.modelData.to
+                face: rollFont.font
+                x: slot.middle - slot.modelData.toAdvance / 2
+                y: clockBox.rollToBase + slot.modelData.toTop
+                visible: slot.modelData.changed && squash > 0
+                squash: clockBox.rollArriving
+                anchor: clockBox.rollTop + clockBox.height - y
+                shift: clockBox.pad * clockBox.rollLeaving
+              }
             }
           }
         }

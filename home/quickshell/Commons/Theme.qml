@@ -936,6 +936,10 @@ Singleton {
   readonly property real lockClockShadowAlpha: 0.3
   readonly property real lockClockShadowBlur: 0.09
   readonly property real lockClockShadowDrop: 0.03
+  // A new minute turns over as the pill's clock rolls (clockRoll), upward, only slower for
+  // digits this big: a changed digit leaves through the top of its window as its successor
+  // comes up through the bottom, over lockClockRoll.
+  readonly property int lockClockRoll: reduceMotion ? 1 : 320
   // The flight swaps the island's own clock for the big one over the very first of its travel:
   // in the video the heavy digits are already the ones leaving the pill, and the ones landing in it.
   readonly property real lockClockSwapFrom: 0.005
@@ -1010,14 +1014,18 @@ Singleton {
   readonly property real lockScrimBottomReach: 0.29
 
   // The lock's clocks (Lock/LockReveal.qml), read off the video at 60 fps, then loosened:
-  // Ryan wanted the clock's way out of the pill bubbly (2026-11-12). The ground (blur, scrim)
-  // comes up over lockIn; the flight starts lockFlightDelay in, on a spring that runs about 8%
-  // past the middle of the screen and bobs back (lockFlightDamping; the video's was 0.8, 1.5%
-  // past). The clock's size rides a looser spring (lockSwell*, about 15% past its resting size),
-  // and it wobbles as it goes: stretched by up to lockWobble times the lead of a third, quicker
-  // spring (lockWobble*) over the flight, squashed as that one falls behind on landing. Home is
-  // tighter (lockFlightOmegaOut, lockFlightDampingOut), the pill's rise back trailing at
-  // lockRiseOmegaOut. The ground clears over lockOut once the clock is home.
+  // Ryan wanted the clock's way out of the pill bubbly (2026-11-12), then found the first take
+  // (8% past the middle, 15% past its size, a wobble that pinned its limit as it left) too
+  // aggressive the same day; this is the softer second take. The ground (blur, scrim) comes up
+  // over lockIn; the flight starts lockFlightDelay in, on a spring that runs about 3.7% past
+  // the middle of the screen and settles (lockFlightDamping; the video's was 0.8, 1.5% past).
+  // The clock's size rides a looser spring of its own (lockSwell*, about 6% past its resting
+  // size), and it wobbles as it goes: stretched by lockWobble times the lead of a third,
+  // quicker spring (lockWobble*) over the flight, about 6% at most a tenth of a second in,
+  // squashed under 1% as it lands, with no second bounce to see; lockWobbleMax only guards
+  // against a lead the springs never reach. Home is tighter (lockFlightOmegaOut,
+  // lockFlightDampingOut) with a gentler wobble (lockWobble*Out, about 5%), the pill's rise
+  // back trailing at lockRiseOmegaOut. The ground clears over lockOut once the clock is home.
   // The way in starts on the lock surface's first frame, or this long after it was asked for.
   readonly property int lockPresentWait: 400
   readonly property int lockIn: 140
@@ -1025,14 +1033,16 @@ Singleton {
   readonly property int lockOut: 300
   readonly property real lockFlightOmega: 18
   readonly property real lockFlightOmegaOut: 16
-  readonly property real lockFlightDamping: 0.62
+  readonly property real lockFlightDamping: 0.72
   readonly property real lockFlightDampingOut: 0.8
   readonly property real lockSwellOmega: 19
-  readonly property real lockSwellDamping: 0.52
-  readonly property real lockWobbleOmega: 30
-  readonly property real lockWobbleDamping: 0.34
+  readonly property real lockSwellDamping: 0.66
+  readonly property real lockWobbleOmega: 22
+  readonly property real lockWobbleDamping: 0.6
   readonly property real lockWobble: 0.3
-  readonly property real lockWobbleMax: 0.16
+  readonly property real lockWobbleMax: 0.08
+  readonly property real lockWobbleOmegaOut: 19
+  readonly property real lockWobbleDampingOut: 0.7
   readonly property real lockRiseOmegaOut: 13
   // The pill's width: to the lock glyph (10% past, then back), a dot at a time, down to the
   // checking lozenge, and back out to the island (15% past).
