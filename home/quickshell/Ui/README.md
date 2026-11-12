@@ -58,7 +58,9 @@ take the pill's clock and marks off their timed fade while closing.
   keyboard, a click off the card closes it, and Escape closes it unless the contents take the key
   first. Give it `key`, `openWidth`, `openHeight`, `openRadius` and a body (a `Panel`).
   `focusTarget` names the item that takes the keyboard on open (a text field); `passThrough`
-  narrows the input region to the card; `wanted` lets an owner (the polkit prompt) open it.
+  narrows the input region to the card; `wanted` lets an owner (the polkit prompt) open it;
+  `openable` says whether a toggle may open it just now (Now playing, only while something
+  plays); `takesCard` says it carries on what the hover card shows (below).
 - **`TransientSurface`**: a pill that opens by itself. Bind `wanted`; it grows out of the
   island, takes its turn by `rank` and melts back when `wanted` drops. `cardInput: false` makes
   the window click-through. It never takes the keyboard. Ranks in use: OSD 4, dictation 3,
@@ -84,7 +86,10 @@ and pairs them with its own (`MorphScan.match`):
 - an **anchor** is an item with a `morphRole`; the primitives declare one (`Tile`: tile, choice,
   carousel or device; `ListRow`: row; `Button`; `Switch`; `PanelHeader` and `PanelFooter`, keyed
   `header` and `footer`; `SectionLabel`; `Segmented`; `TextField`; `LevelTrack`; `IslandPill`,
-  keyed `pill`; `BigSlider`; `MediaCard`, keyed `media`). An anchor inside an anchor is its own,
+  keyed `pill`; `BigSlider`; `MediaCard`, keyed `media`; `CoverBleed`, keyed `media.cover`). A
+  `Text` can be one by declaring the two properties itself: what is playing is `media.title` and
+  `media.artist` in the hover card, the media card and the Now playing panel, whose transport
+  buttons are `media.previous`, `media.toggle` and `media.next`. An anchor inside an anchor is its own,
   role prefixed (`header.button`). A part is named by its item's `objectName`, else by type and
   ordinal, so name a primitive's texts when their order varies (`IslandPill`, `PanelFooter`).
 - pairs are the same `morphKey` (several may be listed, most particular first: `level.volume|pill`),
@@ -92,7 +97,14 @@ and pairs them with its own (`MorphScan.match`):
   that merely holds the same place dissolves with the rest. Inside one surface (`swapBegin`) the same
   role and slot (declared, or the ordinal in reading order among those not clipped away) pair when
   alike in size and close, whatever their keys.
+  Nothing pairs onto a plate that is itself only arriving (a title landing on the control centre's
+  media card would be a hole in that card until it landed): it comes up with its plate
+  (`MorphScan.match`, `platedUnder`). A pair that sets off from inside an anchor that is leaving is
+  drawn over every leaver and has no backing (`lifted`), since the two panels' paint orders do not compare.
   A pair flies on the shape's progress, kept inside the card; changed text rolls, changed icons dip, pictures dissolve.
+  The same words at another size are one line scaled from the one size to the other, shown only as wide
+  as the line it came from and growing to its own (`MorphPart.resized`), and a picture that spans
+  its anchor stretches to any size as a fill does (`MorphGhost.alike`).
   Words, glyphs and colours change on the clock (`morphRoll*`), not the shape. A panel's title slides
   from where the old one was to where the new one lands. On a plate that changes colour a long way
   (a chosen tile's fill going, `MorphGhost.plateTurns`) the new words keep the old ink until the
@@ -113,10 +125,15 @@ and pairs them with its own (`MorphScan.match`):
 - between two surfaces the rest is a dissolve: what the surface before had with no partner softens
   and fades over `Theme.morphDissolveOut` (`MorphGhost.fade`, `MorphLayer.ghostBlur`), and the taker's
   contents come up as one through a blur over `morphDissolve`, starting `morphDissolveDelay` in
-  (`MorphLayer.dissolve*`), so the two overlap and neither is cut. That is for a card. Into a pill
+  (`MorphLayer.dissolve*`), so the two overlap and neither is cut. With nothing leaving nothing is
+  softened, and the pairs stay sharp all the way. A leaver whose parts lie over one another and are
+  one picture (`morphGroup`, the cover under the ground it runs out into) fades as one
+  (`MorphGhost.grouped`). That is for a card. Into a pill
   (`MorphLayer.soft` off) nothing is softened and the leavers go over `morphFarewell`: the blur
   smudged a 42 px row, and a card's contents outlasted the shape shrinking through them. `MorphMask`, read by
-  `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back until its ghost lands. A
+  `Shaders/roundedclip.frag`, holds the taker's own copy of each pair back until its ghost lands
+  (what arrives is painted over a held box, but a held box that a bigger arriving one lies across
+  is held again over it, `MorphLayer.maskFor`). A
   swap inside one surface keeps its cut and cascade (`morphPillOut`, `morphArrive*`).
 - what cannot be redrawn (a Shape, a Canvas, a shader) never pairs; inside a pair it waits for it.
 - the still keeps its contents and ground until the taker's first frame, then cuts both, since the
@@ -139,6 +156,21 @@ and pairs them with its own (`MorphScan.match`):
   reached). Elements that mean the same thing in two panels but play different roles (a device's name
   as a label in Nearby and as the Phone panel's title) are left unpaired by choice: a flight across the
   card read worse than the cut and cascade.
+
+**The hover card hands on what is playing.** The bar's island is not a surface, and a panel that
+grows out of the open card takes only its shape (`IslandOrigin.adopt`, `Bus.islandCardFor`) and
+its clock; the rest of the card is cut. A surface that sets `takesCard` (Now playing) also takes
+the card's reading of what is playing (`Bar/Island.qml` `handContents`: the cover, the title and
+the artist as `MorphScan.scan` reads them, in the card's own coordinates, moved by
+`MorphScan.shift` to where the taker stands on that shape) as its `IslandOrigin.fromMorph`, and
+runs the same morph a handover runs: the cover grows in place with the card's left edge, the
+title and artist travel and grow to the panel's, and the panel's own copies wait under the mask.
+Two things differ from a handover (`IslandSurfaceBase.morphFromCard`): the ghosts are drawn
+under the taker's contents, not over them (`FrostedSurface.ghostsBelow`, `MorphLayer.below`),
+since what flies is the panel's ground and the contents come up on it, and no pair flies on a
+backing. Out of the shut pill, or with nothing playing, the panel grows as any panel does. To
+give another surface something of the card's, key the two alike and set `takesCard`; what the
+card reads is everything under its `playing` item.
 
 Recording and reviewing these: `tools/qs-verify/motion/transitions.sh OUTDIR A:B ...` records each
 handover in the headless harness, and `sheet.py OUTDIR` turns each into a 12-frame contact sheet
@@ -211,7 +243,16 @@ The key rules, all in `Panel.take`:
 - **`DigitRoll`**: the clock's roll for a `Text` that already exists (the OSD's reading through
   `IslandPill.rollReading`): changed glyphs roll, the newest text always wins.
 - **`ArtFade`**: a picture whose `source` changes on a cross-fade, the last held until the next
-  is ready; `presence` fades it over what stands in for no picture (album art, the media card).
+  is ready; `presence` fades it over what stands in for no picture (the media card, a cover);
+  `sourceSize` bounds what is decoded.
+- **`CoverBleed`**: the playing track's cover bled in from a surface's start edge and run out
+  into its ground (the hover card's left, the Now playing panel's): size it, and it does the rest,
+  dim when paused and nothing at all with no cover (`presence`). Its picture is decoded at
+  `Theme.coverSourceSize` wherever it is drawn, so a morph's ghost of it is the cached one.
+- **`MediaScrub`**: the scrub bar of what is playing, with its hills: the control centre's media
+  card and the Now playing panel. Its width is the track's; `trackY` and `timeY` place the track
+  and the times, `countsDown` and `padded` say how the times read, `nudge(seconds)` is the
+  keyboard's step. Whoever shows one holds `Media.holdPosition(name, true)` meanwhile.
 - **`LoginPill`**: the polkit prompt's pill. The lock screen has none: it is the island itself
   (`Lock/LockView.qml` draws the pill where the bar's rests, with the same `RollingClock` and
   `PillMarks`, and takes the clock out of it; `Lock/LockReveal.qml` holds its clocks). The big
@@ -299,7 +340,7 @@ focus that arrived by Tab, and fades. Do not hand-roll these; if a new control n
   its header once outside the slide and clips only the body below it, so what both directions share stays still.
 - **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
   surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,
-  `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU,
+  `aa`), `satellite` draws the phone satellite, `hills` the scrub bar's waves on the GPU (`MediaScrub`),
   `lockglass` the lock clock's digits as bubbles of glass, `lockpatch` takes the bar's island (and its
   shadow) out of the capture the lock stands on.
   After editing a `.frag`, run `tools/qs-shaders.sh` (regenerates the `.qsb`); `tools/qs-shaders.sh
@@ -345,6 +386,15 @@ The contracts a service file follows; a singleton file takes the contract as its
   `restored(text)`, `loaded`.
 - **`PolledFile`**: a `FileView` re-read every `interval`, for procfs and sysfs files no watch
   can follow.
+- **`Weather`**: the hover card's weather, from Open-Meteo through `curl` in a `QueuedProcess`.
+  The place is private and never in the config: `qs ipc call weather set <lat> <lon>` keeps it
+  in a `PersistedValue` (`weather-location`), `clear` forgets it, `refresh` asks again; the
+  request carries it to two decimals. `available`, `temperature` (whole °C), `code` (WMO),
+  `isDay`, `glyph`. Read every 15 minutes, on `Bus.clockRefreshed` and when the place
+  changes; a reading that cannot be renewed is kept two hours. With no place nothing is fetched.
+- **`Media`**: what is playing (MPRIS). Besides the transport: `shuffle`, `loop` and whether the
+  player has them, and `holdPosition(who, held)`, by which each surface with a scrub bar keeps
+  the position polled while it shows (`trackPosition`).
 - **`Provider`**: a launcher provider's base. `section`, `prefix`, `results`, `emptyResults`,
   `activate(row, modifiers)`; the row shape and the scope rules are in `Services/Omnibox.qml`.
 - **`Activities/MomentSource`**: one source of moments. `kind`, `show(spec)`, `withdraw()`,
