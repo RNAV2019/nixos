@@ -214,7 +214,12 @@ The key rules, all in `Panel.take`:
   is ready; `presence` fades it over what stands in for no picture (album art, the media card).
 - **`LoginPill`**: the polkit prompt's pill. The lock screen has none: it is the island itself
   (`Lock/LockView.qml` draws the pill where the bar's rests, with the same `RollingClock` and
-  `PillMarks`, and takes the clock out of it; `Lock/LockReveal.qml` holds its clocks).
+  `PillMarks`, and takes the clock out of it; `Lock/LockReveal.qml` holds its clocks). The big
+  clock is one `PathText` at rest; a new minute is drawn a character at a time, each put exactly
+  where the line puts it, and a changed one turns over upward like `RollingClock`'s, folding
+  into the top of the row rather than sliding and fading, because the glass is read off the
+  digits' coverage and a clipped or faded digit stops looking like glass. It turns over only on
+  the glass at rest; into and out of the pill the time changes where it stands.
 
 ## Controls
 
