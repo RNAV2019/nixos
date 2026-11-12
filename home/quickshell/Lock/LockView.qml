@@ -69,40 +69,6 @@ Item {
     }
   }
 
-  // One character of the big clock as an outline, filled, hung from the top of its own ink at
-  // its pen position (see the roll in clockBox). A turning one is squashed to `squash` of its
-  // height about the row `anchor` (its own coordinates) and moved by `shift`.
-  component RollGlyph: Shape {
-    property alias glyph: glyphText.text
-    property alias face: glyphText.font
-    property real squash: 1
-    property real anchor: 0
-    property real shift: 0
-
-    preferredRendererType: Shape.GeometryRenderer
-    visible: squash > 0
-
-    transform: [
-      Scale {
-        origin.y: anchor
-        yScale: squash
-      },
-      Translate {
-        y: shift
-      }
-    ]
-
-    ShapePath {
-      fillColor: "white"
-      strokeColor: "transparent"
-      strokeWidth: -1
-
-      PathText {
-        id: glyphText
-      }
-    }
-  }
-
   // The colour the padlock wears while refusalHold runs.
   property color verdictColor: Theme.love
 
