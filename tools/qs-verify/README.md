@@ -98,8 +98,10 @@ OLED orbit would move the pill one pixel every three minutes).
   The views are captured in their empty ("Wi-Fi is off", "No Bluetooth controller") state.
 - **A real polkit request.** The prompt is covered through `authpreview`; the polkit listener
   itself fails to register (allowed in `allowed-log.txt`).
-- **Lock screen.** Time and wallpaper dependent, and `lockpreview` needs a lock surface; the
-  `LoginPill` is only seen through the real lock.
+- **Lock screen.** Time and wallpaper dependent. Its picture can be rehearsed on the `lockpreview`
+  stage (`preview`, `password`, `busy`, `refuse`, `unlock`, and `background PREFIX` to stand it
+  on a `grim -o OUT PREFIX-OUT.png` capture as the real lock stands on one); PAM and the session
+  lock are only seen through the real lock.
 - **Motion.** One settled frame per state; transitions, springs and handoffs are covered by the
   separate 120 Hz recorder and checker in `motion/` (`motion/README.md`: `record.sh`, `check.mjs`,
   `video.py`, `shader-smoke.sh`).

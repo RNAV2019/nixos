@@ -209,10 +209,12 @@ The key rules, all in `Panel.take`:
 - **`PillMarks`**, **`IslandClock`**, **`RollingClock`**, **`CollapsedPill`**: the shut pill and
   what it carries over to a surface. You only touch these for the pill itself.
 - **`DigitRoll`**: the clock's roll for a `Text` that already exists (the OSD's reading through
-  `IslandPill.rollReading`, the lock's clock): changed glyphs roll, the newest text always wins.
+  `IslandPill.rollReading`): changed glyphs roll, the newest text always wins.
 - **`ArtFade`**: a picture whose `source` changes on a cross-fade, the last held until the next
   is ready; `presence` fades it over what stands in for no picture (album art, the media card).
-- **`LoginPill`**: the lock screen's and the polkit prompt's pill.
+- **`LoginPill`**: the polkit prompt's pill. The lock screen has none: it is the island itself
+  (`Lock/LockView.qml` draws the pill where the bar's rests, with the same `RollingClock` and
+  `PillMarks`, and takes the clock out of it; `Lock/LockReveal.qml` holds its clocks).
 
 ## Controls
 
@@ -292,7 +294,8 @@ focus that arrived by Tab, and fades. Do not hand-roll these; if a new control n
   its header once outside the slide and clips only the body below it, so what both directions share stays still.
 - **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
   surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,
-  `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU.
+  `aa`), `satellite` draws the phone satellite, `hills` the media card's waves on the GPU,
+  `lockwash` the lock clock's digits under their accent wash.
   After editing a `.frag`, run `tools/qs-shaders.sh` (regenerates the `.qsb`); `tools/qs-shaders.sh
   --check` and the flake check `quickshell-shaders` fail when one is stale. A new shader gets a case
   in `tools/qs-verify/motion/shader-smoke.sh`.

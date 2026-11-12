@@ -8,55 +8,81 @@ import qs.Ui
 
 // The lock screen's picture only: no session lock, no PAM, no watchdog. Hosted by
 // Lock.qml and the IPC preview in LockPreview.qml so visuals can be rehearsed live.
+//
+// It is the island's own lock: the pill starts exactly where the bar's island rests, the clock
+// flies out of it to the middle of the screen while the pill drops and narrows to a lock glyph,
+// a typed password grows the pill a dot at a time, and a good one plays it all back
+// (Lock/LockReveal.qml holds the clocks, Commons/Theme.qml the measurements).
 Item {
   id: view
 
   // submittedPassword never reaches this file: the field wipes the frame Enter lands.
   property string password: ""
-  property string status: ""
-  property bool statusIsError: false
   property bool busy: false
-  // Board 13 draws the field from its first frame rather than waiting for a keystroke.
-  property bool inputStarted: false
+  // Counts the tries that were refused; each one shakes the pill and turns the padlock red.
+  property int refusals: 0
+  // Counts the tries that were never judged; each one turns the padlock gold, without the shake.
+  property int faults: 0
+
+  // The reveal's clocks (Lock/LockReveal.qml).
   property real ground: 0
-  property real dateAlpha: 0
-  property real timeAlpha: 0
-  property real loginAlpha: 0
-  // 1 with the element at rest, 0 a lockSlideTravel away (LockReveal).
-  property real dateSlide: 1
-  property real timeSlide: 1
-  property real loginSlide: 1
+  property real flight: 0
+  property real rise: 0
+  property bool away: false
+  property bool leaving: false
+  property bool flying: false
+  property bool snapping: false
 
   // The screen this view draws on - the lock surface's or the preview's.
   property var outputScreen
   property string backgroundSource: Wallpapers.url
+  // The background is a capture of the desktop, so it carries the bar's own island.
+  property bool captured: false
+  // The capture could not be read (an output plugged in while locked has none): the wallpaper
+  // stands in, as it does for the boot lock.
+  property bool captureLost: false
+  readonly property bool standing: captured && !captureLost
+
+  onBackgroundSourceChanged: captureLost = false
+
+  // Up while the reveal waits for this view's first frame; `presented` says it is on screen.
+  property bool armed: false
 
   signal passwordEdited(string text)
   signal accepted
+  signal presented
 
-  // The account and its picture, and Caps Lock, come from Services (Account, Keyboard).
-  readonly property string facePath: Account.facePath
-  readonly property int faceRevision: Account.faceRevision
-  readonly property string displayName: Account.displayName
+  Connections {
+    target: view.Window.window
+    enabled: view.armed
+    ignoreUnknownSignals: true
 
-  readonly property bool capsLock: Keyboard.capsLock
-  // Lets the IPC preview rehearse the caption without a physical Caps Lock.
-  property bool forceCapsLock: false
-
-  function checkCapsLock() {
-    Keyboard.check();
+    function onFrameSwapped() {
+      view.presented();
+    }
   }
 
-  Timer {
-    interval: Theme.lockCapsPollMs
-    running: view.visible && view.loginAlpha > 0
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: view.checkCapsLock()
+  // The colour the padlock wears while refusalHold runs.
+  property color verdictColor: Theme.love
+
+  onRefusalsChanged: {
+    if (refusals <= 0)
+      return;
+    verdictColor = Theme.love;
+    refusalHold.restart();
+    if (!Theme.reduceMotion)
+      shakeAnimation.restart();
   }
 
-  // The lock hides the pointer; moving the mouse brings it back so the submit disc can be
-  // reached, and the next key hides it again. The first report is the surface entry, not a move.
+  onFaultsChanged: {
+    if (faults <= 0)
+      return;
+    verdictColor = Theme.gold;
+    refusalHold.restart();
+  }
+
+  // The lock hides the pointer; moving the mouse brings it back, and the next key hides it
+  // again. The first report is the surface entry, not a move.
   property bool pointerShown: false
   property point pointerOrigin: Qt.point(-1, -1)
 
@@ -76,30 +102,66 @@ Item {
     }
   }
 
-  // Board 13's layout is in board units; scale the canvas into Qt's.
+  // The password field: it holds the keyboard and draws nothing; the dots are the pill's.
+  TextInput {
+    id: input
+
+    // A point, under everything: a field's own I-beam must not show over the lock.
+    width: 1
+    height: 1
+    opacity: 0
+    focus: true
+    // Read-only rather than disabled while a try is out, so it keeps the focus it needs when PAM
+    // asks again.
+    readOnly: view.busy || view.leaving
+    echoMode: TextInput.NoEcho
+    color: "transparent"
+    cursorVisible: false
+    cursorDelegate: Item {}
+    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+
+    Accessible.role: Accessible.EditableText
+    Accessible.name: "Password"
+    Accessible.passwordEdit: true
+
+    text: view.password
+    onTextChanged: view.passwordEdited(text)
+    onAccepted: view.accepted()
+
+    Keys.onPressed: function (event) {
+      view.pointerShown = false;
+      event.accepted = false;
+    }
+  }
+
+  // Laid out in device pixels and scaled back, so the pill lands on the same pixels as the
+  // bar's island and the glyphs are crisp under a fractional scale.
   Item {
     id: canvas
 
-    // Qt rounds devicePixelRatio, so use Hyprland's fractional scale.
+    // The screen's devicePixelRatio is rounded up to a whole number, so use Hyprland's
+    // fractional scale, or failing that the window's own ratio (as Ui/FrostedSurface.qml does).
     readonly property var monitor: view.outputScreen ? Hyprland.monitorFor(view.outputScreen) : null
+    readonly property real windowRatio: view.QsWindow.window && view.QsWindow.window.devicePixelRatio > 0 ? view.QsWindow.window.devicePixelRatio : 0
 
     readonly property real outputScale: {
       if (monitor && monitor.scale > 0)
         return monitor.scale;
+      if (windowRatio > 0)
+        return windowRatio;
       return view.outputScreen ? view.outputScreen.devicePixelRatio : 1;
     }
 
-    // The board draws 1080 units tall, so the block keeps its proportions on any panel.
-    readonly property real ui: height / 1080
+    // A window covering the bar: the capture then has no island in it to stand on.
+    readonly property bool covered: !!monitor && !!monitor.activeWorkspace && monitor.activeWorkspace.hasFullscreen === true
 
-    function u(v) {
-      return Math.round(v * ui);
+    // Logical px to this canvas's device px, on the grid.
+    function px(v) {
+      return Math.round(v * outputScale);
     }
 
-    // How far an element sits from its place while it slides (the date and time start above it, the field below), in whole device px so it is crisp the
-    // moment it lands (exactly 0 at rest); none with reduced motion.
-    function lift(slide) {
-      return Theme.reduceMotion ? 0 : Math.round((1 - slide) * u(Theme.lockSlideTravel));
+    function ramp(v, from, to) {
+      return Math.max(0, Math.min(1, (v - from) / (to - from)));
     }
 
     width: view.width * outputScale
@@ -107,11 +169,77 @@ Item {
     transformOrigin: Item.TopLeft
     scale: 1 / outputScale
 
+    // ---- the island, as the bar draws it and as the lock leaves it ----
+
+    // On the device-pixel grid, as the island's own width is (Ui/FrostedSurface.qml snap).
+    readonly property real islandWidth: px(Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone))
+    readonly property int shownDots: Math.min(view.password.length, Theme.lockIslandMaxDots)
+    // The dots as drawn. Enter wipes the password at once, but the row is held as it stood
+    // while its dots fade where they are (the pill closes over them), and is emptied after.
+    property int heldDots: 0
+    property bool dotsSnapping: false
+    readonly property bool dotsLit: !view.busy && !view.leaving
+
+    onShownDotsChanged: {
+      if (dotsLit)
+        heldDots = shownDots;
+    }
+    onDotsLitChanged: {
+      if (!dotsLit) {
+        dotsClear.restart();
+        return;
+      }
+      // Lit again before the row was emptied (a quick refusal): the old dots must not return.
+      dotsClear.stop();
+      dotsSnapping = true;
+      heldDots = shownDots;
+      dotsSnapping = false;
+    }
+
+    Timer {
+      id: dotsClear
+
+      interval: Theme.duration(Theme.lockDotPop) + 20
+      onTriggered: {
+        // Typed again since (a refusal came back first): the row is live, leave it.
+        if (canvas.dotsLit && canvas.shownDots > 0)
+          return;
+        canvas.dotsSnapping = true;
+        canvas.heldDots = canvas.shownDots;
+        canvas.dotsSnapping = false;
+      }
+    }
+    readonly property real dotsWidth: (2 * Theme.lockIslandPad + Theme.lockIslandDot + (shownDots - 1) * Theme.lockIslandDotPitch) * outputScale
+    readonly property real lockedWidth: {
+      if (view.busy || view.leaving)
+        return px(Theme.lockIslandBusyWidth);
+      return Math.max(px(Theme.lockIslandWidth), shownDots > 0 ? Math.round(dotsWidth) : 0);
+    }
+
+    // How far the big clock has taken over from the island's own.
+    readonly property real swap: ramp(view.flight, Theme.lockClockSwapFrom, Theme.lockClockSwapTo)
+
+    MorphSpring {
+      id: widthSpring
+
+      label: "lock.pill.w"
+      target: view.away ? canvas.lockedWidth : canvas.islandWidth
+      animate: !view.snapping
+      // To the island and back out of it the width runs past and settles, as the video's does;
+      // typing and checking it only follows.
+      readonly property bool closing: view.busy || view.leaving
+
+      omega: !view.away ? Theme.lockWidthOmegaOut : closing ? Theme.lockWidthOmegaBusy : view.flying ? Theme.lockWidthOmegaIn : Theme.lockWidthOmegaType
+      damping: !view.away ? Theme.lockWidthDampingOut : view.flying && !closing ? Theme.lockWidthDampingIn : Theme.morphDamping
+    }
+
     Rectangle {
       anchors.fill: parent
       color: Theme.canvas
       z: -2
     }
+
+    // ---- the ground: the capture, softly blurred, under the scrim ----
 
     Item {
       id: groundLayer
@@ -120,162 +248,423 @@ Item {
       clip: true
       z: -1
 
-      Image {
+      // Drawn through its own layer's effect rather than hidden behind a separate one: what is
+      // inside a hidden item is never redrawn, and the patch below comes and goes.
+      Item {
         id: blurSource
 
         anchors.fill: parent
-        source: view.backgroundSource
-        fillMode: Image.PreserveAspectCrop
-        cache: false
-        asynchronous: false
-        visible: false
+        visible: shot.status === Image.Ready
         layer.enabled: true
-      }
+        layer.effect: MultiEffect {
+          blurEnabled: true
+          blur: view.ground * Theme.lockBlur
+          blurMax: Theme.lockBlurMax
+          blurMultiplier: 1
+        }
 
-      MultiEffect {
-        anchors.fill: parent
-        source: blurSource
-        visible: blurSource.status === Image.Ready
-        blurEnabled: true
-        blur: view.ground * Theme.lockBlur
-        blurMax: Theme.lockBlurMax
-        blurMultiplier: 1
+        Image {
+          id: shot
+
+          anchors.fill: parent
+          source: view.captureLost ? Wallpapers.url : view.backgroundSource
+          fillMode: Image.PreserveAspectCrop
+          cache: false
+          asynchronous: false
+
+          onStatusChanged: {
+            if (status === Image.Error && view.captured && !view.captureLost)
+              view.captureLost = true;
+          }
+        }
+
+        // The capture carries the bar's island, its shadow and the phone beside it; left in,
+        // they would stay behind as a smudge when the pill drops. The wallpaper is laid back
+        // over that patch as the blur comes up, and lifted as it clears.
+        Item {
+          id: patch
+
+          readonly property real room: Theme.surfaceShadowRoom * canvas.outputScale
+
+          x: Math.round(pill.restX - room)
+          y: 0
+          width: Math.round(canvas.islandWidth + 2 * room + canvas.px(Theme.phoneSatelliteSize * 2))
+          height: Math.round(pill.restY + pill.height + room)
+          clip: true
+          opacity: canvas.ramp(view.ground, 0, 0.6)
+          visible: view.standing && !canvas.covered && view.ground > 0
+
+          Image {
+            x: -patch.x
+            y: -patch.y
+            width: canvas.width
+            height: canvas.height
+            source: view.standing ? Wallpapers.url : ""
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+          }
+        }
       }
 
       Rectangle {
         anchors.fill: parent
-        color: Theme.lockVeilColor
-        opacity: Theme.lockVeilOpacity * view.ground
+        color: "black"
+        opacity: Theme.lockScrim * view.ground
       }
-    }
 
-    Text {
-      id: date
-
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockDateTop) - canvas.lift(view.dateSlide)
-      opacity: view.dateAlpha
-
-      // Keep the board's weekday-first date order independent of locale.
-      text: Qt.formatDate(clock.date, "dddd, MMMM d")
-      color: Theme.lockTextPrimary
-      font.family: Theme.uiFont
-      font.weight: Theme.weightMedium
-      font.pixelSize: canvas.u(Theme.lockDateSize)
-      // Avoid RGB subpixel fringes from native text rendering.
-      renderType: Text.QtRendering
-    }
-
-    Text {
-      id: time
-
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockClockTop) - canvas.lift(view.timeSlide)
-      opacity: view.timeAlpha
-      // The resting clock; while a minute turns over the roll below draws it.
-      visible: !timeRoll.rolling
-
-      text: Qt.formatDateTime(clock.date, "HH:mm")
-      color: Theme.lockTextPrimary
-      font.family: Theme.displayFont
-      font.weight: Theme.weightBold
-      font.pixelSize: canvas.u(Theme.lockClockSize)
-      renderType: Text.QtRendering
-    }
-
-    // The island clock's roll, on this clock's own glyphs: a changed digit travels and
-    // cross-fades, the rest stay where they are.
-    DigitRoll {
-      id: timeRoll
-
-      label: time
-      centred: true
-      opacity: view.timeAlpha
-    }
-
-    // Board 13: one pill carrying the avatar, the name, the password and the submit disc,
-    // with the Caps Lock caption hanging under it. States are board 13b's five.
-    Item {
-      id: login
-
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: canvas.u(Theme.lockPillTop) + canvas.lift(view.loginSlide)
-      width: canvas.u(Theme.lockPillWidth)
-      height: canvas.u(Theme.lockPillHeight + Theme.lockCaptionGap) + caption.height
-      opacity: view.loginAlpha
-
-      LoginPill {
-        id: pill
-
+      Rectangle {
         width: parent.width
-        height: canvas.u(Theme.lockPillHeight)
-        ui: canvas.ui
-        curveIcons: false
+        height: parent.height * Theme.lockScrimTopReach
+        opacity: view.ground
 
-        title: view.displayName
-        initial: view.displayName
-        facePath: view.facePath
-        faceRevision: view.faceRevision
-        password: view.password
-        failed: view.statusIsError
-        status: view.status
-        busy: view.busy
-
-        onPasswordEdited: text => view.passwordEdited(text)
-        onAccepted: view.accepted()
-        onKeyPressed: {
-          view.pointerShown = false;
-          view.checkCapsLock();
-        }
-        // Caps Lock's own state lands after its press, so ask again on the release.
-        onKeyReleased: view.checkCapsLock()
-      }
-
-      Connections {
-        target: view
-
-        function onStatusIsErrorChanged() {
-          if (view.statusIsError)
-            pill.shakeOnce();
+        gradient: Gradient {
+          GradientStop {
+            position: 0
+            color: Qt.rgba(0, 0, 0, Theme.lockScrimTop)
+          }
+          GradientStop {
+            position: 1
+            color: Qt.rgba(0, 0, 0, 0)
+          }
         }
       }
 
-      Row {
-        id: caption
+      Rectangle {
+        y: parent.height - height
+        width: parent.width
+        height: parent.height * Theme.lockScrimBottomReach
+        opacity: view.ground
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: pill.height + canvas.u(Theme.lockCaptionGap)
-        spacing: canvas.u(Theme.lockCaptionGlyphGap)
-        opacity: view.capsLock || view.forceCapsLock ? 1 : 0
+        gradient: Gradient {
+          GradientStop {
+            position: 0
+            color: Qt.rgba(0, 0, 0, 0)
+          }
+          GradientStop {
+            position: 1
+            color: Qt.rgba(0, 0, 0, Theme.lockScrimBottom)
+          }
+        }
+      }
+    }
 
-        // Hangs from the pill, so it shakes with it.
-        transform: Translate {
-          x: pill.shakeX
+    // ---- the pill ----
+
+    Rectangle {
+      id: pill
+
+      // Where the bar's island rests (Bar/Bar.qml), in this canvas's pixels.
+      readonly property real restX: (canvas.width - canvas.islandWidth) / 2 + Bus.pillOffsetX * canvas.outputScale
+      readonly property real restY: (Theme.barMarginTop + Bus.pillOffsetY) * canvas.outputScale
+
+      x: Math.round((canvas.width - width) / 2 + Bus.pillOffsetX * canvas.outputScale)
+      y: Math.round(restY + view.rise * Theme.lockIslandDrop * canvas.outputScale)
+      width: widthSpring.value
+      height: canvas.px(Theme.barHeight)
+      radius: height / 2
+      color: Theme.surface
+      // Over a window that covered the bar there was no island to take over from, so it comes
+      // up with the ground instead of appearing.
+      opacity: view.standing && canvas.covered ? canvas.ramp(view.ground, 0, 0.6) : 1
+
+      transform: Translate {
+        id: shake
+      }
+
+      DropShadow {
+        radius: pill.radius
+        sigma: Theme.surfaceShadowSigma * canvas.outputScale
+        offsetY: Theme.surfaceShadowOffsetY * canvas.outputScale
+        room: Theme.surfaceShadowRoom * canvas.outputScale
+      }
+
+      // The island's face, as the bar draws it: its clock and its marks, laid out in the bar's
+      // own pixels. The clock gives way to the big one as the flight leaves; the marks go with
+      // the ground.
+      Item {
+        id: face
+
+        width: pill.width / canvas.outputScale
+        height: Theme.barHeight
+        transformOrigin: Item.TopLeft
+        scale: canvas.outputScale
+
+        // The same clock the bar's island carries (Bar/Island.qml), placed as it places it, so
+        // the one stands exactly where the other did.
+        RollingClock {
+          id: islandClock
+
+          x: (parent.width - width) / 2
+          y: (parent.height - height) / 2
+          transformOrigin: Item.Center
+          scale: Theme.islandClockSize / Theme.islandDisplaySize
+          opacity: 1 - canvas.swap
+          visible: opacity > 0
+          text: clockText.text
+          color: Theme.text
+          font.family: Theme.uiFont
+          font.pixelSize: Theme.islandDisplaySize
+          font.weight: Theme.weightSemi
         }
 
-        Behavior on opacity {
-          NumberAnimation {
+        PillMarks {
+          anchors.fill: parent
+          clockLeft: parent.width / 2 - islandClock.width * islandClock.scale / 2
+          clockRight: parent.width / 2 + islandClock.width * islandClock.scale / 2
+          mediaActive: Media.active
+          playing: Media.playing
+          recording: Recorder.recording
+          camera: Privacy.camera
+          microphone: Privacy.microphone
+          opacity: 1 - canvas.ramp(view.ground, 0, 0.6)
+          visible: leftExtent + rightExtent > 0 && opacity > 0
+        }
+      }
+
+      // Locked: the glyph, in love for a moment after a refusal.
+      StrokeIcon {
+        id: glyph
+
+        readonly property bool wanted: !view.leaving && !view.busy && canvas.shownDots === 0
+        property real shown: wanted ? 1 : 0
+
+        anchors.centerIn: parent
+        size: canvas.px(Theme.lockIslandGlyph)
+        strokeWidth: 1.7 * canvas.outputScale
+        // The geometry renderer the lock needs (see StrokeIcon.curve) does not antialias; a
+        // multisampled layer does it for it.
+        curve: false
+        layer.enabled: true
+        layer.samples: 4
+        path: IconPaths.lockOutline
+        color: refusalHold.running ? view.verdictColor : Theme.text
+        opacity: shown * canvas.ramp(view.flight, Theme.lockGlyphFrom, Theme.lockGlyphTo)
+        scale: Theme.glyphSwapDip + (1 - Theme.glyphSwapDip) * shown
+        visible: opacity > 0
+
+        Behavior on shown {
+          Morph {
             duration: Theme.duration(Theme.lockStateFade)
           }
         }
 
-        StrokeIcon {
-          anchors.verticalCenter: parent.verticalCenter
-          size: canvas.u(Theme.lockCaptionGlyph)
-          strokeWidth: 1.5 * canvas.ui
-          color: Theme.gold
-          path: IconPaths.capsLock
+        Behavior on color {
+          Tint {}
         }
+      }
 
-        Text {
-          anchors.verticalCenter: parent.verticalCenter
-          text: "Caps Lock is on"
-          color: Theme.gold
-          font.family: Theme.uiFont
-          font.weight: Theme.weightMedium
-          font.pixelSize: canvas.u(Theme.lockCaptionSize)
-          renderType: Text.QtRendering
+      // The password: a dot a character, the row centred, so each new one pushes the rest left
+      // as the pill grows around them.
+      Row {
+        id: dots
+
+        anchors.centerIn: parent
+        height: pill.height
+
+        Repeater {
+          model: Theme.lockIslandMaxDots
+
+          Item {
+            id: slot
+
+            required property int index
+
+            readonly property bool filled: index < canvas.heldDots
+            readonly property bool lit: filled && canvas.dotsLit
+
+            width: filled ? Theme.lockIslandDotPitch * canvas.outputScale : 0
+            height: dots.height
+
+            Behavior on width {
+              enabled: !view.snapping && !canvas.dotsSnapping
+
+              NumberAnimation {
+                duration: Theme.duration(Theme.lockDotPop)
+                easing.type: Easing.OutQuad
+              }
+            }
+
+            Rectangle {
+              anchors.centerIn: parent
+              width: Theme.lockIslandDot * canvas.outputScale
+              height: width
+              radius: width / 2
+              color: Theme.text
+
+              scale: slot.lit ? 1 : 0.4
+              opacity: slot.lit ? 1 : 0
+              visible: opacity > 0
+
+              Behavior on scale {
+                NumberAnimation {
+                  duration: Theme.duration(Theme.lockDotPop)
+                  easing.type: slot.lit ? Easing.OutQuad : Easing.InQuad
+                }
+              }
+
+              Behavior on opacity {
+                NumberAnimation {
+                  duration: Theme.duration(Theme.lockDotPop)
+                }
+              }
+            }
+          }
         }
+      }
+    }
+
+    // Three swings across the travel, over Theme.lockShake.
+    SequentialAnimation {
+      id: shakeAnimation
+
+      readonly property real travel: Theme.lockShakeTravel * canvas.outputScale
+      readonly property int step: Theme.lockShake / 6
+
+      NumberAnimation {
+        target: shake
+        property: "x"
+        to: -shakeAnimation.travel
+        duration: shakeAnimation.step
+        easing.type: Easing.OutQuad
+      }
+      NumberAnimation {
+        target: shake
+        property: "x"
+        to: shakeAnimation.travel
+        duration: shakeAnimation.step * 2
+        easing.type: Easing.InOutQuad
+      }
+      NumberAnimation {
+        target: shake
+        property: "x"
+        to: -shakeAnimation.travel
+        duration: shakeAnimation.step * 2
+        easing.type: Easing.InOutQuad
+      }
+      NumberAnimation {
+        target: shake
+        property: "x"
+        to: 0
+        duration: shakeAnimation.step
+        easing.type: Easing.InQuad
+      }
+    }
+
+    Timer {
+      id: refusalHold
+
+      interval: Theme.lockRefusalHold
+    }
+
+    // ---- the clock in flight ----
+
+    // The island clock's digits and the big clock's, measured, so the flight starts at exactly
+    // the size and place of the one it takes over from.
+    TextMetrics {
+      id: islandDigit
+
+      font.family: Theme.uiFont
+      font.pixelSize: Theme.islandClockSize
+      font.weight: Theme.weightSemi
+      font.features: ({
+          "tnum": 1
+        })
+      text: "0"
+    }
+
+    TextMetrics {
+      id: bigDigit
+
+      font: clockText.font
+      text: "0"
+    }
+
+    Item {
+      id: clockBox
+
+      readonly property real digits: canvas.height * Theme.lockClockDigits
+      readonly property int fontSize: Math.round(digits / Theme.lockClockDigitRatio)
+      readonly property real tracking: fontSize * Theme.lockClockTracking
+      // The share of the way from the pill to the middle; it may run a little past either end
+      // of the scale, but never sits above the pill.
+      readonly property real t: Math.max(0, view.flight)
+      readonly property real fromScale: islandDigit.tightBoundingRect.height * canvas.outputScale / Math.max(1, bigDigit.tightBoundingRect.height)
+      readonly property real fromY: pill.restY + pill.height / 2
+      readonly property real toY: canvas.height / 2
+
+      width: clockText.width
+      height: bigDigit.tightBoundingRect.height
+      x: Math.round(canvas.width / 2 + Bus.pillOffsetX * canvas.outputScale * (1 - t) - width / 2)
+      y: fromY + (toY - fromY) * t - height / 2
+      transformOrigin: Item.Center
+      scale: fromScale + (1 - fromScale) * t
+      opacity: canvas.swap
+      visible: opacity > 0
+
+      // The digits alone, in white, drawn into a texture and never shown as they are: the
+      // shadow is cast from it, and the shader below redraws it in the ink under the wash.
+      Text {
+        id: clockText
+
+        // The trailing glyph carries its tracking too; take it back so the digits are centred.
+        x: clockBox.tracking / 2
+        // Its digits' middle on the box's middle.
+        y: parent.height / 2 - (baselineOffset + bigDigit.tightBoundingRect.y + bigDigit.tightBoundingRect.height / 2)
+        text: Qt.formatDateTime(clock.date, "HH:mm")
+        color: "white"
+        font.family: Theme.lockClockFont
+        font.weight: Theme.lockClockWeight
+        font.pixelSize: clockBox.fontSize
+        font.letterSpacing: clockBox.tracking
+        renderType: Text.QtRendering
+        visible: false
+        layer.enabled: true
+        layer.smooth: true
+      }
+
+      // The shadow: the digits in black, blurred and dropped.
+      MultiEffect {
+        x: clockText.x
+        y: clockText.y + clockBox.digits * Theme.lockClockShadowDrop
+        width: clockText.width
+        height: clockText.height
+        source: clockText
+        opacity: Theme.lockClockShadowAlpha
+        colorization: 1
+        colorizationColor: "black"
+        blurEnabled: true
+        blur: 1
+        blurMax: Math.max(2, Math.round(clockBox.digits * Theme.lockClockShadowBlur))
+        autoPaddingEnabled: true
+      }
+
+      // The glyphs again, for the shader: MultiEffect pads the layer it casts the shadow from,
+      // so that texture no longer lies over the text.
+      ShaderEffectSource {
+        id: glyphs
+
+        anchors.fill: clockText
+        sourceItem: clockText
+        visible: false
+      }
+
+      // The digits in the ink, with the accent wash across the first of them
+      // (Shaders/lockwash.frag).
+      ShaderEffect {
+        anchors.fill: clockText
+
+        readonly property real digitsTop: clockText.baselineOffset + bigDigit.tightBoundingRect.y
+
+        property var source: glyphs
+        property size itemSize: Qt.size(width, height)
+        property point centre: Qt.point(width * Theme.lockClockWashX, digitsTop + bigDigit.tightBoundingRect.height * Theme.lockClockWashY)
+        property size radii: Qt.size(width * Theme.lockClockWashWidth / 2, bigDigit.tightBoundingRect.height * Theme.lockClockWashHeight / 2)
+        property real angle: Theme.lockClockWashAngle * Math.PI / 180
+        property real core: Theme.lockClockWashCore
+        property color ink: Theme.lockTextPrimary
+        property color tint: Theme.lockClockWash
+
+        fragmentShader: Qt.resolvedUrl("../Shaders/lockwash.frag.qsb")
       }
     }
   }

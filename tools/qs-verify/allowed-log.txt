@@ -8,7 +8,8 @@ Could not (launch service|start) org\.freedesktop\.UPower|UPower service will no
 Failed to create DBusObjectManagerInterface for "org\.bluez"
 Network will not work\. Could not find an available backend
 failed to register listener
-# Scratch HOME has no face picture or wallpaper (the lock view's fallbacks draw instead).
+# Scratch HOME has no face picture (the polkit prompt's initial draws instead) or wallpaper (the
+# lock view then stands on the theme's ground).
 LoginPill\.qml.*Cannot open: .*/\.face
 LockView\.qml.*Cannot open: .*/wallpaper/current
 # Present in the source today: the Variants-made IpcHandlers reassign modelData on creation.

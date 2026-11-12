@@ -4,15 +4,16 @@ import QtQuick
 import Quickshell
 
 // The icons StrokeIcon draws. Each is a Material Symbols Rounded name, the shell's one icon
-// set (Commons/Icons.qml), except the few marks Material has no counterpart for: board 13's
-// submit arrow and Caps Lock, the Android and Apple platform marks and the battery outline the
-// plugged-in moment fills itself. Those stay 24-grid SVG path data.
+// set (Commons/Icons.qml), except the few marks Material has no counterpart for: the login
+// pill's submit arrow, the lock screen's outlined padlock, the Android and Apple platform marks
+// and the battery outline the plugged-in moment fills itself. Those stay 24-grid SVG path data.
 Singleton {
   readonly property string arrowUp: "arrow_upward"
   readonly property string arrowDown: "arrow_downward"
-  // Board 13's submit arrow and Caps Lock mark, drawn there on 18 and 14 grids.
+  // The login pill's submit arrow.
   readonly property string arrowRight: "M4.67 12h14.67M13.33 6l6 6-6 6"
-  readonly property string capsLock: "M12 3.09L3.77 12h4.8v5.14h6.86V12h4.8zM8.57 21.26h6.86"
+  // The locked island's padlock: an outline with its keyhole, where the shell's set is filled.
+  readonly property string lockOutline: "M7.6 10.2h8.8a2.4 2.4 0 0 1 2.4 2.4v5.8a2.4 2.4 0 0 1-2.4 2.4H7.6a2.4 2.4 0 0 1-2.4-2.4v-5.8a2.4 2.4 0 0 1 2.4-2.4zM8.5 10.2V7.4a3.5 3.5 0 0 1 7 0v2.8M12 15.2v0.6"
   readonly property string upload: "upload"
   readonly property string download: "download"
   readonly property string plus: "add"

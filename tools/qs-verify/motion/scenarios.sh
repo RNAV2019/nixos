@@ -464,8 +464,8 @@ sc_nearby_switch() {
 }
 
 # The lock screen's reveal on the preview stage (never the real lock): in, then out the way an
-# unlock does it. The log carries lock.date.y, lock.time.y and lock.field.y (offset from rest in
-# reference px). Frames land in $OUT/lock-reveal-*.png.
+# unlock does it. The log carries lock.flight and lock.rise (0 in the pill, 1 mid-screen) and
+# lock.pill.w (the pill's width, device px). Frames land in $OUT/lock-reveal-*.png.
 sc_lock_reveal() {
   local shot="$OUT/lock-reveal"
   sleep 0.5

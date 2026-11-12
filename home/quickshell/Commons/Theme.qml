@@ -887,19 +887,63 @@ Singleton {
   readonly property int calAgendaDetailPad: 10
   readonly property int calAgendaBlock: calAgendaMax * calAgendaHeight + (calAgendaMax - 1) * calAgendaGap
 
-  // Board 13: a 1920x1080 lock surface. The surface paints its own background, so the
-  // session-lock protocol never exposes a black frame.
-  readonly property int lockDateTop: 162
-  readonly property int lockDateSize: 20
-  readonly property int lockClockTop: 175
-  readonly property int lockClockSize: 112
+  // The lock screen (Lock/LockView.qml), measured frame by frame off saneAspect's 2026-11 island
+  // video: the island's clock flies out of the pill to the middle of the screen while the pill
+  // drops a little and shrinks to a lock glyph; typing grows it a dot at a time; a good password
+  // plays it back. The surface paints its own background, so the session-lock protocol never
+  // exposes a black frame.
+  //
+  // The clock at rest: SF Compact Rounded Heavy, tracked in, its digits this share of the
+  // screen's height and centred on the screen.
+  readonly property string lockClockFont: "SF Compact Rounded"
+  readonly property int lockClockWeight: Font.ExtraBold
+  readonly property real lockClockDigits: 0.194
+  // A digit's height as a share of the font's pixel size (SF Compact Rounded's figures).
+  readonly property real lockClockDigitRatio: 0.694
+  readonly property real lockClockTracking: -0.035
+  // The accent wash over the clock's first digits: an ellipse this far across the text and down
+  // it, this big (shares of the text's width and its digits' height), leaning down to the right.
+  // His accent is a pastel; ours is taken nearly half way to the ink, so it reads as light.
+  readonly property color lockClockWash: Qt.tint(accent, withAlpha(inkPrimary, 0.45))
+  readonly property real lockClockWashX: 0.13
+  readonly property real lockClockWashY: 0.4
+  readonly property real lockClockWashWidth: 0.46
+  readonly property real lockClockWashHeight: 0.8
+  readonly property real lockClockWashAngle: 26
+  // The share of the ellipse that is solid accent before it fades out.
+  readonly property real lockClockWashCore: 0.5
+  // Its shadow: black, blurred and dropped by these shares of a digit's height.
+  readonly property real lockClockShadowAlpha: 0.3
+  readonly property real lockClockShadowBlur: 0.09
+  readonly property real lockClockShadowDrop: 0.03
+  // The flight swaps the island's own clock for the big one over the very first of its travel:
+  // in the video the heavy digits are already the ones leaving the pill, and the ones landing in it.
+  readonly property real lockClockSwapFrom: 0.005
+  readonly property real lockClockSwapTo: 0.045
+  // The padlock comes up over this stretch of the flight, once the pill has closed around it.
+  readonly property real lockGlyphFrom: 0.55
+  readonly property real lockGlyphTo: 0.8
+
+  // The pill while locked, in the island's own pixels: this wide around the lock glyph, this far
+  // below where the island rests, narrower still while a password is being checked.
+  readonly property int lockIslandWidth: 60
+  readonly property int lockIslandBusyWidth: 51
+  readonly property int lockIslandDrop: 33
+  readonly property int lockIslandGlyph: 21
+  // The password: dots this big on this pitch, the pill keeping this much either side of the row.
+  // Past lockIslandMaxDots the row stops growing.
+  readonly property int lockIslandDot: 8
+  readonly property int lockIslandDotPitch: 14
+  readonly property int lockIslandPad: 24
+  readonly property int lockIslandMaxDots: 24
+  // The glyph stays in love this long after a refusal.
+  readonly property int lockRefusalHold: 1100
   // The longest a manual lock waits for something still coming to rest (Bus.lockHeld) before
   // it captures the desktop anyway: the phone satellite's return takes about 400 ms.
   readonly property int lockSettleMax: 700
 
-  // The login pill: avatar, name over the password line, submit disc. Offsets are from the
-  // pill's own top-left; the radius is height / 2.
-  readonly property int lockPillTop: 908
+  // The login pill (the polkit prompt's, Ui/LoginPill.qml): avatar, name over the password
+  // line, submit disc. Offsets are from the pill's own top-left; the radius is height / 2.
   readonly property int lockPillWidth: 360
   readonly property int lockPillHeight: 60
   readonly property int lockPillInset: 8
@@ -916,18 +960,11 @@ Singleton {
   readonly property int lockArrowSize: 18
   readonly property int lockSpinnerSize: 20
   readonly property int lockSpinnerTurn: 900
-  readonly property int lockCaptionGap: 12
-  readonly property int lockCaptionGlyph: 14
-  readonly property int lockCaptionGlyphGap: 6
-  readonly property int lockCaptionSize: 11
   readonly property real lockErrorOutline: 0.6
   // A refusal shakes the pill three times across 6 units.
   readonly property int lockShakeTravel: 6
   readonly property int lockShake: 240
   readonly property int lockStateFade: 120
-  // Caps Lock has no Hyprland event; keys in the field ask too, so this only catches a
-  // toggle from another keyboard.
-  readonly property int lockCapsPollMs: 1500
 
   readonly property real lockCaretWidth: 1.5
   readonly property int lockCaretHeight: 12
@@ -937,16 +974,46 @@ Singleton {
   // The caret blink on the field, at the standard text-caret period.
   readonly property int lockCaretBlinkMs: 530
 
-  // The veil comes from the captured desktop, not the compositor backdrop, and tints the
-  // blurred capture rather than covering it; at 1.0 the background reads as one flat fill.
-  readonly property color lockVeilColor: surface
-  readonly property real lockVeilOpacity: 0.55
   readonly property color lockTextPrimary: inkPrimary
   readonly property color lockCaretColor: focusRing
+
+  // Behind the lock: the captured desktop, softly blurred (Ryan kept the blur and the desktop,
+  // and left out the video's 3% zoom, 2026-11-11) under the video's scrim: black at lockScrim
+  // everywhere, deepening to lockScrimTop more at the top edge over the top lockScrimTopReach of
+  // the screen, and to lockScrimBottom more at the bottom over lockScrimBottomReach.
   readonly property int lockBlurMax: surfaceBlurMax
-  readonly property real lockBlur: surfaceBlur
-  readonly property int lockIn: 350
-  readonly property int lockOut: 350
+  readonly property real lockBlur: 0.32
+  readonly property real lockScrim: 0.22
+  readonly property real lockScrimTop: 0.28
+  readonly property real lockScrimTopReach: 0.28
+  readonly property real lockScrimBottom: 0.35
+  readonly property real lockScrimBottomReach: 0.29
+
+  // The lock's clocks (Lock/LockReveal.qml), all read off the video at 60 fps. The ground (blur,
+  // scrim) comes up over lockIn; the flight starts lockFlightDelay in, on a spring that runs
+  // about 1.5% past (lockFlightDamping) at lockFlightOmega in and lockFlightOmegaOut back, the
+  // pill's rise back trailing at lockRiseOmegaOut. The ground clears over lockOut once the clock
+  // is home.
+  // The way in starts on the lock surface's first frame, or this long after it was asked for.
+  readonly property int lockPresentWait: 400
+  readonly property int lockIn: 140
+  readonly property int lockFlightDelay: 155
+  readonly property int lockOut: 300
+  readonly property real lockFlightOmega: 20
+  readonly property real lockFlightOmegaOut: 16
+  readonly property real lockFlightDamping: 0.8
+  readonly property real lockRiseOmegaOut: 13
+  // The pill's width: to the lock glyph (10% past, then back), a dot at a time, down to the
+  // checking lozenge, and back out to the island (15% past).
+  readonly property real lockWidthOmegaIn: 28
+  readonly property real lockWidthDampingIn: 0.6
+  readonly property real lockWidthOmegaType: 30
+  readonly property real lockWidthOmegaBusy: 45
+  readonly property real lockWidthOmegaOut: 16
+  readonly property real lockWidthDampingOut: 0.55
+  // The width starts this long after the flight does, out and back.
+  readonly property int lockWidthInDelay: 30
+  readonly property int lockWidthOutDelay: 70
 
   // The Nearby panel (boards 16a-16h). The 520 column carries two segmented tracks over
   // a send body (the Choose files button or the staged rows, then the devices) or a receive
@@ -1321,8 +1388,6 @@ Singleton {
   readonly property int morphHoldBuffer: 260
   // Short value-fill tween, e.g. the OSD bar filling to the new level.
   readonly property int morphFill: 80
-  // A small pause beat in sequences, e.g. LockReveal.
-  readonly property int morphBeat: 50
   // The wait after a panel closes and before its chosen action runs, so the pill is back
   // to its resting shape first (session, profiles, recorder launches). A close on the morph
   // spring is within half a pixel of the pill by about 450 ms.
@@ -1356,18 +1421,6 @@ Singleton {
   readonly property int islandGaugeSize: 48
   readonly property int islandGaugeRadius: 21
   readonly property int islandGaugeLabelY: 38
-
-  // The lock screen's two cross-fades, fitted frame by frame at 60 fps; neither is a morph.
-  // One progress drives blur and veil (tracking within 0.02); content lags in and leads out.
-  readonly property int lockInClock: 70
-  readonly property int lockInLogin: 100
-  readonly property int lockInContent: 280
-  readonly property int lockOutClock: 20
-  readonly property int lockOutContent: 180
-  // The date, time and field slide as they fade: the time trails the date by lockStagger going in and leads it
-  // coming out; the travel is in the lock canvas's reference units (LockView scales it).
-  readonly property int lockStagger: 50
-  readonly property int lockSlideTravel: 12
 
   // ---- the phone (Bar/PhoneSatellite.qml, Phone/PhonePanel.qml) ----
 

@@ -1,182 +1,178 @@
 import QtQuick
 import qs.Commons
+import qs.Ui
 
-// The lock's one reveal clock, held apart from the surfaces that read it.
+// The lock's one clock, held apart from the surfaces that read it, so every output plays the
+// same frame of it.
 //
-// The date, the time and the password field each have an alpha and a slide: the slide is 1 with
-// the element at rest and 0 with it a lockSlideTravel away, so LockView puts it at
-// (1 - slide) * travel. It rides the same delay and duration as the alpha. In, both ease out (the
-// element decelerates into place); out, the slide eases in (it accelerates away) while the alpha
-// fades as before. The time follows the date by lockStagger on the way in and leads it on the
-// way out.
+// In: the ground (blur and scrim) comes up over Theme.lockIn; Theme.lockFlightDelay in, the
+// flight starts: the clock leaves the pill for the middle of the screen on a spring that runs a
+// little past and settles, the pill drops with it and narrows to its lock glyph. Out is the same
+// played back: the clock flies home, the pill rises a little behind it and widens a beat later,
+// and once the clock is in the pill the ground clears and revealOutFinished is raised.
 Item {
   id: reveal
 
+  // 0 with the desktop as it was, 1 with it blurred under the scrim.
   property real ground: 0
-  property real dateAlpha: 0
-  property real timeAlpha: 0
-  property real loginAlpha: 0
-  property real dateSlide: 0
-  property real timeSlide: 0
-  property real loginSlide: 0
+  // 0 with the clock in the pill, 1 with it at rest mid-screen; runs a little past 1 going in and
+  // a little under 0 coming home.
+  readonly property real flight: flightSpring.value
+  // 0 with the pill where the island rests, 1 with it dropped to its locked place.
+  readonly property real rise: riseSpring.value
+  // Where the flight and the pill's width are headed. The width follows a beat behind on the
+  // way home, so it has a flag of its own.
+  property bool away: false
+  property bool widthAway: false
+  // Up from animateOut() until the next reset: nothing new is shown in a pill on its way home.
+  property bool leaving: false
+  // Up across a reset: every spring that reads this takes its target at once.
+  property bool snapping: false
+  // Up once the way out has begun clearing the ground: the flight is still settling then, and
+  // must not start the clearing (and raise revealOutFinished) a second time.
+  property bool clearing: false
 
-  readonly property bool animatingIn: inAnim.running
+  // Up from arm() until a surface has a frame on screen: the way in starts from the frame the
+  // user sees, not from the moment the surface was asked for (a lock surface takes a while to
+  // map, and the ground would be half up before anything showed).
+  property bool armed: false
 
-  // Raised once the foreground out-ramp has cleared; the opaque base holds until then.
+  readonly property bool flying: flightSpring.running
+  readonly property bool animatingIn: armed || groundIn.running || flightDelay.running || (away && flying)
+
+  // Raised once the clock is home and the ground has cleared; the opaque base holds until then.
   signal revealOutFinished
 
+  function arm() {
+    armed = true;
+    armFallback.restart();
+  }
+
+  // A surface's first frame is on screen (Lock/LockView.qml), or none ever said so.
+  function presented() {
+    if (!armed)
+      return;
+    armed = false;
+    armFallback.stop();
+    animateIn();
+  }
+
   function animateIn() {
-    outAnim.stop();
-    ground = 0;
-    inAnim.restart();
+    armed = false;
+    armFallback.stop();
+    groundOut.stop();
+    clearing = false;
+    leaving = false;
+    groundIn.restart();
+    flightDelay.restart();
   }
 
   function animateOut() {
-    inAnim.stop();
-    outAnim.restart();
+    armed = false;
+    armFallback.stop();
+    groundIn.stop();
+    flightDelay.stop();
+    leaving = true;
+    away = false;
+    widthDelay.interval = Theme.duration(Theme.lockWidthOutDelay);
+    widthDelay.restart();
+    // Asked for before the flight ever left, or with motion off: there is nothing to wait for.
+    landed();
   }
 
   function reset() {
-    inAnim.stop();
-    outAnim.stop();
+    armed = false;
+    armFallback.stop();
+    groundIn.stop();
+    groundOut.stop();
+    flightDelay.stop();
+    widthDelay.stop();
+    snapping = true;
+    away = false;
+    widthAway = false;
+    leaving = false;
+    clearing = false;
+    snapping = false;
     // Stay opaque while the lock is secured, so the compositor never shows a black frame.
     ground = 0;
-    dateAlpha = 0;
-    timeAlpha = 0;
-    loginAlpha = 0;
-    dateSlide = 0;
-    timeSlide = 0;
-    loginSlide = 0;
   }
 
-  // The slide's signed offset from rest in the motion log (y grows down: date and time start above, the field below), in reference px (QS_MOTION_LOG=1; check.mjs reads it).
-  property var logLast: ({})
-
-  function logSlide(label, slide, target, sign) {
-    if (!Theme.motionLog || !(inAnim.running || outAnim.running))
+  // The clock is home once the big one has given way to the island's own.
+  function landed() {
+    if (!leaving || clearing || flight > Theme.lockClockSwapFrom)
       return;
-    const now = Date.now();
-    const prev = logLast[label];
-    const v = sign * (1 - slide) * Theme.lockSlideTravel;
-    const vel = prev && now > prev.t ? (v - prev.v) / ((now - prev.t) / 1000) : 0;
-    logLast[label] = {
-      "t": now,
-      "v": v
-    };
-    console.info("motion " + label + " " + now + " " + v.toFixed(4) + " " + vel.toFixed(4) + " " + (sign * (1 - target) * Theme.lockSlideTravel).toFixed(4));
+    clearing = true;
+    groundOut.restart();
   }
 
-  onDateSlideChanged: logSlide("lock.date.y", dateSlide, inAnim.running ? 1 : 0, -1)
-  onTimeSlideChanged: logSlide("lock.time.y", timeSlide, inAnim.running ? 1 : 0, -1)
-  onLoginSlideChanged: logSlide("lock.field.y", loginSlide, inAnim.running ? 1 : 0, 1)
+  onFlightChanged: landed()
 
-  // One element's reveal: wait `delay`, then ease the alpha and the slide to `to`.
-  component Lift: SequentialAnimation {
-    id: lift
+  MorphSpring {
+    id: flightSpring
 
-    property string alpha
-    property string slide
-    property int delay: 0
-    property int length: Theme.duration(Theme.lockInContent)
-    property real to: 1
-    // Out, the slide accelerates; in, it decelerates into place.
-    property int slideEasing: Easing.OutCubic
+    label: "lock.flight"
+    target: reveal.away ? 1 : 0
+    animate: !reveal.snapping
+    omega: reveal.away ? Theme.lockFlightOmega : Theme.lockFlightOmegaOut
+    damping: Theme.lockFlightDamping
+    epsilon: 0.0005
+  }
 
-    PauseAnimation {
-      duration: lift.delay
-    }
+  MorphSpring {
+    id: riseSpring
 
-    ParallelAnimation {
-      NumberAnimation {
-        target: reveal
-        property: lift.alpha
-        to: lift.to
-        duration: lift.length
-        easing.type: Easing.OutCubic
-      }
+    label: "lock.rise"
+    target: reveal.away ? 1 : 0
+    animate: !reveal.snapping
+    omega: reveal.away ? Theme.lockFlightOmega : Theme.lockRiseOmegaOut
+    damping: reveal.away ? Theme.lockFlightDamping : Theme.morphDamping
+    epsilon: 0.0005
+  }
 
-      NumberAnimation {
-        target: reveal
-        property: lift.slide
-        to: lift.to
-        duration: lift.length
-        easing.type: lift.slideEasing
-      }
+  Timer {
+    id: armFallback
+
+    interval: Theme.lockPresentWait
+    onTriggered: reveal.presented()
+  }
+
+  Timer {
+    id: flightDelay
+
+    interval: Theme.duration(Theme.lockFlightDelay)
+    onTriggered: {
+      reveal.away = true;
+      widthDelay.interval = Theme.duration(Theme.lockWidthInDelay);
+      widthDelay.restart();
     }
   }
 
-  ParallelAnimation {
-    id: inAnim
+  // The pill's width follows the flight a beat behind, both ways.
+  Timer {
+    id: widthDelay
+
+    onTriggered: reveal.widthAway = reveal.away
+  }
+
+  NumberAnimation {
+    id: groundIn
+
+    target: reveal
+    property: "ground"
+    to: 1
+    duration: Theme.duration(Theme.lockIn)
+    easing.type: Easing.OutQuad
+  }
+
+  SequentialAnimation {
+    id: groundOut
 
     NumberAnimation {
       target: reveal
       property: "ground"
-      to: 1
-      duration: Theme.duration(Theme.lockIn)
+      to: 0
+      duration: Theme.duration(Theme.lockOut)
       easing.type: Easing.OutQuad
-    }
-
-    Lift {
-      alpha: "dateAlpha"
-      slide: "dateSlide"
-      delay: Theme.duration(Theme.lockInClock)
-    }
-
-    Lift {
-      alpha: "timeAlpha"
-      slide: "timeSlide"
-      delay: Theme.duration(Theme.lockInClock) + Theme.duration(Theme.lockStagger)
-    }
-
-    Lift {
-      alpha: "loginAlpha"
-      slide: "loginSlide"
-      delay: Theme.duration(Theme.lockInLogin)
-    }
-  }
-
-  SequentialAnimation {
-    id: outAnim
-
-    ParallelAnimation {
-      NumberAnimation {
-        target: reveal
-        property: "ground"
-        to: 0
-        duration: Theme.duration(Theme.lockOut)
-        easing.type: Easing.OutCubic
-      }
-
-      Lift {
-        alpha: "loginAlpha"
-        slide: "loginSlide"
-        to: 0
-        length: Theme.duration(Theme.lockOutContent)
-        slideEasing: Easing.InCubic
-      }
-
-      // The time leads on the way out, the date follows.
-      Lift {
-        alpha: "timeAlpha"
-        slide: "timeSlide"
-        to: 0
-        delay: Theme.duration(Theme.lockOutClock)
-        length: Theme.duration(Theme.lockOutContent)
-        slideEasing: Easing.InCubic
-      }
-
-      Lift {
-        alpha: "dateAlpha"
-        slide: "dateSlide"
-        to: 0
-        delay: Theme.duration(Theme.lockOutClock) + Theme.duration(Theme.lockStagger)
-        length: Theme.duration(Theme.lockOutContent)
-        slideEasing: Easing.InCubic
-      }
-    }
-
-    PauseAnimation {
-      duration: Theme.duration(Theme.morphBeat)
     }
 
     ScriptAction {

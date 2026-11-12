@@ -13,12 +13,12 @@ Scope {
   // field wipes the frame Enter lands, long before the conversation answers.
   property string password: ""
   property string submittedPassword: ""
-  property string status: ""
-  property bool statusIsError: false
   property bool busy: false
-  // False until the first keystroke; the field itself is present from the first frame.
-  property bool inputStarted: false
-  property int attempts: 0
+  // Counts the tries PAM refused; each one shakes the pill and turns its padlock red.
+  property int refusals: 0
+  // Counts the tries PAM never judged (a dead or wedged worker): the padlock turns gold and
+  // the pill stays still, so a right password is not told it was wrong.
+  property int faults: 0
   // A prefix: each output is captured to <prefix>-<output>.png, so every lock surface shows
   // its own screen rather than the whole layout squeezed onto it.
   readonly property string snapshotFile: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-lock-snapshot"
@@ -39,6 +39,9 @@ Scope {
     id: reveal
 
     onRevealOutFinished: {
+      // Only the lock that is letting go: a later one's capture is not this one's to delete.
+      if (!lockContext.locked || !reveal.leaving)
+        return;
       root.snapshotCleanupPath = root.snapshotPath;
       root.snapshotPath = "";
       lockContext.locked = false;
@@ -60,11 +63,9 @@ Scope {
     Bus.prepareForLock();
     root.password = "";
     root.submittedPassword = "";
-    root.status = "";
-    root.statusIsError = false;
     root.busy = false;
-    root.inputStarted = false;
-    root.attempts = 0;
+    root.refusals = 0;
+    root.faults = 0;
     reveal.reset();
     lockContext.locked = true;
     passwordPam.start();
@@ -85,7 +86,7 @@ Scope {
     if (Bus.locking || lockContext.locked || snapshotCapture.running || snapshotPending)
       return;
     // Close the shell's panels before the capture so the lock background never contains its
-    // own UI. The bar stays, so it blurs with the desktop behind the lock.
+    // own UI. The bar stays: the lock's pill starts on the island in the capture.
     Bus.prepareForLock();
     root.snapshotPath = root.snapshotFile;
     snapshotPending = true;
@@ -110,31 +111,23 @@ Scope {
     passwordPam.abort();
     root.password = "";
     root.submittedPassword = "";
-    root.status = "";
-    root.statusIsError = false;
     root.busy = false;
-    // The bar comes back on the first frame of the fade, not after it.
+    // The bar comes back on the first frame of the way out, not after it.
     Bus.finishUnlock();
     reveal.animateOut();
   }
 
-  function fail(reason) {
-    // submit already wiped the dots, so a refusal just relabels the empty field.
-    root.attempts += 1;
-    root.statusIsError = true;
-    root.status = reason + " · try " + root.attempts;
-    failTimeout.restart();
+  function fail() {
+    // submit already wiped the dots, so a refusal only shakes the pill back to its glyph.
+    root.refusals += 1;
   }
 
   function submit() {
     if (root.busy || root.password.length === 0)
       return;
     root.busy = true;
-    root.inputStarted = true;
-    root.status = "";
-    root.statusIsError = false;
     root.submittedPassword = root.password;
-    // The field wipes the frame Enter lands; the placeholder turns to Authenticating.
+    // The dots go the frame Enter lands; the pill closes to its checking lozenge.
     root.password = "";
     root.pamKicks = 0;
     root.pamErrored = false;
@@ -258,9 +251,9 @@ Scope {
         root.unlock();
         return;
       }
-      // A worker that died or never came up is not a refused password; onError named it.
+      // A worker that died or never came up has already shaken the pill in onError.
       if (!root.pamErrored)
-        root.fail(result === PamResult.MaxTries ? "Too many attempts" : "Wrong password");
+        root.fail();
       root.pamErrored = false;
       // Each failed attempt ends the PAM conversation.
       passwordPam.start();
@@ -271,10 +264,8 @@ Scope {
       root.pendingPassword = "";
       root.busy = false;
       root.pamErrored = true;
-      root.statusIsError = true;
-      root.status = "Authentication unavailable";
-      // Clear it like a refusal, so the field invites another try.
-      failTimeout.restart();
+      // The lock has no words: the padlock says the check failed, and invites another try.
+      root.faults += 1;
     }
   }
 
@@ -293,8 +284,7 @@ Scope {
         passwordPam.abort();
         root.pendingPassword = "";
         root.busy = false;
-        root.statusIsError = true;
-        root.status = "Authentication unavailable";
+        root.faults += 1;
         return;
       }
       root.pamKicks += 1;
@@ -304,16 +294,6 @@ Scope {
       root.pendingPassword = root.busy ? root.submittedPassword : "";
       passwordPam.start();
       restart();
-    }
-  }
-
-  Timer {
-    id: failTimeout
-
-    interval: 2000
-    onTriggered: {
-      root.status = "";
-      root.statusIsError = false;
     }
   }
 
@@ -335,8 +315,8 @@ Scope {
       // One per screen, sharing one reveal clock, so a second screen joins the ramp in
       // progress rather than restarting it.
       Component.onCompleted: {
-        if (!reveal.animatingIn && reveal.ground === 0 && reveal.dateAlpha === 0 && reveal.timeAlpha === 0 && reveal.loginAlpha === 0)
-          reveal.animateIn();
+        if (!reveal.animatingIn && reveal.ground === 0 && !reveal.away)
+          reveal.arm();
       }
 
       LockView {
@@ -344,24 +324,24 @@ Scope {
 
         anchors.fill: parent
         outputScreen: surface.screen
-        backgroundSource: root.snapshotPath.length > 0 && surface.screen ? "file://" + root.snapshotPath + "-" + surface.screen.name + ".png" : Wallpapers.url
+        captured: root.snapshotPath.length > 0 && surface.screen !== null
+        backgroundSource: captured ? "file://" + root.snapshotPath + "-" + surface.screen.name + ".png" : Wallpapers.url
         password: root.password
-        status: root.status
-        statusIsError: root.statusIsError
         busy: root.busy
-        inputStarted: root.inputStarted
+        refusals: root.refusals
+        faults: root.faults
         ground: reveal.ground
-        dateAlpha: reveal.dateAlpha
-        timeAlpha: reveal.timeAlpha
-        loginAlpha: reveal.loginAlpha
-        dateSlide: reveal.dateSlide
-        timeSlide: reveal.timeSlide
-        loginSlide: reveal.loginSlide
+        flight: reveal.flight
+        rise: reveal.rise
+        away: reveal.widthAway
+        leaving: reveal.leaving
+        flying: reveal.flying
+        snapping: reveal.snapping
+        armed: reveal.armed
 
+        onPresented: reveal.presented()
         onPasswordEdited: function (text) {
           root.password = text;
-          if (text.length > 0 && !root.inputStarted)
-            root.inputStarted = true;
         }
         onAccepted: root.submit()
       }

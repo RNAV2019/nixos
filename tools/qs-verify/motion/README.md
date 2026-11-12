@@ -104,9 +104,9 @@ a click on the docked disc (log: `surface.phone.showing`).
 
 ## Traps
 
-- `lock-satellite` drives `lockpreview preview true`; the headless harness shows no lock surface for it
-  (see qs-verify README, "Lock screen"), so it records the satellite beside the clock only. It still
-  produces the log for whatever the shell emits.
+- `lock-satellite` drives `lockpreview preview true`: the rehearsal stage (an overlay window), not a
+  session lock. The stage covers the bar, and the lock patches the satellite out of a capture it stands
+  on, so it records the stage only. It still produces the log for whatever the shell emits.
 - Calling `stop.sh` from a shell that has loaded the harness env finds its own children; `record.sh`
   uses `env -u XDG_RUNTIME_DIR`.
 - Compare against a capture of the parent commit made in the same conditions (see memory
@@ -132,7 +132,9 @@ are exercised. Prints `PASS` or `FAIL <case> ...`. Frames go to a per-run temp d
 The shader's uniforms: `boxSize`, `boxOrigin`, `itemSize` (all item px), `radius`, `aa`
 (1/devicePixelRatio). Copy the pattern to smoke-test later shaders. A third case draws `hills.frag` with three half-transparent red layers and checks the RGB of the
 bottom row (alpha 223, red 255 once un-premultiplied): a shader that multiplies the colour uniform by
-its alpha again (Qt delivers it premultiplied) reads red 128 there.
+its alpha again (Qt delivers it premultiplied) reads red 128 there. A fourth draws `lockwash.frag` (red ink, a
+blue wash centred on the left edge, over a source that is inked in its top half only) and checks blue in
+the wash's core, red past its reach and nothing below the ink.
 
 ## Other scenarios
 
@@ -140,5 +142,6 @@ The `launcher-scroll` scenario adds twelve fixture apps matching one query and a
 (label `launcher.scroll`).
 
 `nearby-switch` (Send <-> Receive by the arrow keys, frames in `OUT/nearby-switch-*.png`) and `lock-reveal` (the lock
-preview's reveal in, then out through `qsipc lockpreview unlock`; log labels `lock.date.y`, `lock.time.y`,
-`lock.field.y` are the offsets from rest in reference px) never touch the real lock.
+preview's reveal in, then out through `qsipc lockpreview unlock`; log labels `lock.flight` and `lock.rise`,
+0 with the clock in the pill and 1 with it mid-screen, and `lock.pill.w`, the pill's width in device px)
+never touch the real lock.

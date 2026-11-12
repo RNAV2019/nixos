@@ -1,5 +1,6 @@
-// Smoke test for Shaders/roundedclip.frag.qsb: renders two red stages clipped to rounded
-// rects and saves PNGs for shader-smoke.sh to inspect (@OUT@ is substituted by the script).
+// Smoke test for the shell's shaders: renders two red stages clipped to rounded rects
+// (roundedclip), the hills and the lock clock's wash, and saves PNGs for shader-smoke.sh to
+// inspect (@OUT@ is substituted by the script).
 //   stage 1: item == box (100x100, radius 30)
 //   stage 2: item 200x160, box 100x60 at origin (40, 50), radius 20
 import QtQuick
@@ -90,6 +91,43 @@ Window {
             fragmentShader: Qt.resolvedUrl("../../../home/quickshell/Shaders/hills.frag.qsb")
         }
     }
+    // stage 4: lockwash.frag over a white block covering the top half of a 100x40 item, red ink,
+    // blue wash centred on the left edge: blue inside the wash's core, red past its reach,
+    // nothing where the source has no ink.
+    Item {
+        id: stage4
+
+        y: 110
+        width: 100
+        height: 40
+
+        Item {
+            id: src4
+
+            anchors.fill: parent
+            layer.enabled: true
+            visible: false
+
+            Rectangle {
+                width: 100
+                height: 20
+                color: "white"
+            }
+        }
+        ShaderEffect {
+            property real angle: 0
+            property point centre: Qt.point(0, 10)
+            property real core: 0.5
+            property color ink: "red"
+            property size itemSize: Qt.size(100, 40)
+            property size radii: Qt.size(50, 50)
+            property variant source: src4
+            property color tint: "blue"
+
+            anchors.fill: parent
+            fragmentShader: Qt.resolvedUrl("../../../home/quickshell/Shaders/lockwash.frag.qsb")
+        }
+    }
     Timer {
         interval: 500
         running: true
@@ -100,7 +138,10 @@ Window {
                 r2.saveToFile("@OUT@.2.png");
                 stage3.grabToImage(function (r3) {
                     r3.saveToFile("@OUT@.3.png");
-                    Qt.quit();
+                    stage4.grabToImage(function (r4) {
+                        r4.saveToFile("@OUT@.4.png");
+                        Qt.quit();
+                    });
                 });
             });
         })

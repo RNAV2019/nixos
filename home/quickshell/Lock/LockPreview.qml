@@ -3,21 +3,21 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
+import qs.Services
 
-// The lock screen on a rehearsal stage: same LockView and LockReveal, no session
-// lock, driven over IPC (`qs ipc call lockpreview preview|password|busy|status`).
+// The lock screen on a rehearsal stage: same LockView and LockReveal, no session lock, driven
+// over IPC (`qs ipc call lockpreview preview|password|busy|refuse|fault|unlock|background`).
 Scope {
   id: root
 
   property bool active: false
   property string password: ""
-  property string status: ""
-  property bool statusIsError: false
   property bool busy: false
-  // Caps Lock as the preview pretends it is; the real state still shows when it is on.
-  property bool capsLock: false
-  // Sticky, like the real flow: the pill stays up until the preview is taken down.
-  property bool inputStarted: false
+  property int refusals: 0
+  property int faults: 0
+  // A capture to stand on, as the real lock has (a prefix, see Lock.qml snapshotFile); empty
+  // stands on the wallpaper, as the boot lock does.
+  property string background: ""
 
   LockReveal {
     id: reveal
@@ -50,36 +50,55 @@ Scope {
       LockView {
         anchors.fill: parent
         outputScreen: win.modelData
+        captured: root.background.length > 0
+        backgroundSource: captured ? "file://" + root.background + "-" + win.modelData.name + ".png" : Wallpapers.url
         password: root.password
-        status: root.status
-        statusIsError: root.statusIsError
         busy: root.busy
-        forceCapsLock: root.capsLock
-        inputStarted: root.inputStarted
+        refusals: root.refusals
+        faults: root.faults
         ground: reveal.ground
-        dateAlpha: reveal.dateAlpha
-        timeAlpha: reveal.timeAlpha
-        loginAlpha: reveal.loginAlpha
-        dateSlide: reveal.dateSlide
-        timeSlide: reveal.timeSlide
-        loginSlide: reveal.loginSlide
+        flight: reveal.flight
+        rise: reveal.rise
+        away: reveal.widthAway
+        leaving: reveal.leaving
+        flying: reveal.flying
+        snapping: reveal.snapping
+        armed: reveal.armed
 
+        onPresented: reveal.presented()
         onPasswordEdited: function (text) {
           root.password = text;
+        }
+        // The stage has no PAM: Enter checks for a beat, then lets go as a good password does.
+        onAccepted: {
+          if (root.busy || root.password.length === 0)
+            return;
+          root.busy = true;
+          root.password = "";
+          verdict.restart();
         }
       }
     }
   }
 
+  Timer {
+    id: verdict
+
+    interval: 60
+    onTriggered: {
+      root.busy = false;
+      reveal.animateOut();
+    }
+  }
+
   onActiveChanged: {
     if (!active) {
+      verdict.stop();
       reveal.reset();
       password = "";
-      status = "";
-      statusIsError = false;
       busy = false;
-      capsLock = false;
-      inputStarted = false;
+      refusals = 0;
+      faults = 0;
     }
   }
 
@@ -108,44 +127,53 @@ Scope {
         return;
       if (on) {
         root.password = "";
-        root.status = "";
-        root.statusIsError = false;
         root.busy = false;
-        root.inputStarted = false;
-        root.active = true;
+        root.refusals = 0;
+        root.faults = 0;
         reveal.reset();
-        reveal.animateIn();
+        root.active = true;
+        reveal.arm();
         return;
       }
       root.active = false;
     }
 
-    // The reveal played out, as the real unlock does it; the stage comes down when it ends.
+    // The way out played as the real unlock does it; the stage comes down when it ends.
     function unlock(): void {
-      if (root.active)
-        reveal.animateOut();
+      if (!root.active)
+        return;
+      root.busy = false;
+      root.password = "";
+      reveal.animateOut();
     }
 
     function password(text: string): void {
-      root.inputStarted = true;
       root.password = text;
     }
 
-    function status(text: string, isError: bool): void {
-      root.inputStarted = true;
-      root.status = text;
-      root.statusIsError = isError;
-    }
-
     function busy(on: bool): void {
-      root.inputStarted = true;
       root.busy = on;
       if (on)
         root.password = "";
     }
 
-    function caps(on: bool): void {
-      root.capsLock = on;
+    // A refusal: the checking lozenge shakes back to the glyph, in love.
+    function refuse(): void {
+      root.busy = false;
+      root.password = "";
+      root.refusals += 1;
+    }
+
+    // A check that never came back: the lozenge opens to a gold padlock, without the shake.
+    function fault(): void {
+      root.busy = false;
+      root.password = "";
+      root.faults += 1;
+    }
+
+    // The capture prefix to stand on (`grim -o OUT PREFIX-OUT.png`), or "" for the wallpaper.
+    function background(prefix: string): void {
+      root.background = prefix;
     }
   }
 }

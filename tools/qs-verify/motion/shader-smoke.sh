@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Loads Shaders/roundedclip.frag.qsb and hills.frag.qsb in a real Qt scene graph and checks the clip and the hills colour.
+# Loads Shaders/roundedclip.frag.qsb, hills.frag.qsb and lockwash.frag.qsb in a real Qt scene graph and checks the clip,
+# the hills colour and the wash.
 # ShaderEffect needs an RHI GL/Vulkan backend, which the offscreen QPA plugin lacks,
 # so this runs under a private headless sway (pixman, no GPU needed). Prints PASS or FAIL.
 set -u
@@ -42,4 +43,11 @@ chan() { nix shell --inputs-from ../../.. nixpkgs#imagemagick -c magick "$OUT.$1
 r=$(chan 3 50,29 r); a=$(chan 3 50,29 a)
 [[ $a -ge 218 && $a -le 228 ]] || { echo "FAIL case3 hills alpha $a, want ~223"; fail=1; }
 [[ $r -ge 250 ]] || { echo "FAIL case3 hills red $r, want ~255 (colour multiplied by alpha twice?)"; fail=1; }
+# case 4: lockwash, blue inside the wash's core, red past its reach, clear below the source's ink
+b=$(chan 4 10,10 b); r=$(chan 4 10,10 r)
+[[ $b -ge 250 && $r -le 5 ]] || { echo "FAIL case4 lockwash core r$r b$b, want blue"; fail=1; }
+b=$(chan 4 90,10 b); r=$(chan 4 90,10 r)
+[[ $r -ge 250 && $b -le 5 ]] || { echo "FAIL case4 lockwash ink r$r b$b, want red"; fail=1; }
+expect 4 90,10 255 "case4 ink"
+expect 4 50,30 0 "case4 below the source"
 [[ $fail == 0 ]] && echo PASS || exit 1

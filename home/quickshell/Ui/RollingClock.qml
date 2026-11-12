@@ -53,6 +53,14 @@ Item {
             incoming.opacity = 1;
           }
 
+          // Under the lock the bar's window draws no frames, so a roll started there would only
+          // play once it is seen again: the island would show the old minute for a moment after
+          // the lock's own clock had shown the new one. The digit changes where it stands.
+          if (Bus.locking) {
+            shown = glyph;
+            return;
+          }
+
           outgoing.text = shown;
           outgoing.y = 0;
           outgoing.opacity = 1;
