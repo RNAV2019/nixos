@@ -205,6 +205,24 @@ ShellRoot {
     }
   }
 
+  // Where the hover card's weather is for. The place is private, so it is given here and kept in
+  // the state dir rather than written in the config: `qs ipc call weather set 51.5 -0.12`.
+  IpcHandler {
+    target: "weather"
+
+    function set(lat: string, lon: string): void {
+      Weather.set(lat, lon);
+    }
+
+    function clear(): void {
+      Weather.clear();
+    }
+
+    function refresh(): void {
+      Weather.refresh();
+    }
+  }
+
   // Test and automation hooks for the island's moments.
   IpcHandler {
     target: "activities"

@@ -102,6 +102,18 @@ Singleton {
   readonly property string contrast: "contrast"
   readonly property string batterySaver: "eco"
 
+  // The hover card's weather (Services/Weather.qml), by what the sky is doing; a clear or
+  // part-cloudy sky has a night form.
+  readonly property string weatherClear: "clear_day"
+  readonly property string weatherClearNight: "bedtime"
+  readonly property string weatherPartCloud: "partly_cloudy_day"
+  readonly property string weatherPartCloudNight: "partly_cloudy_night"
+  readonly property string weatherCloud: "cloud"
+  readonly property string weatherFog: "foggy"
+  readonly property string weatherRain: "rainy"
+  readonly property string weatherSnow: "weather_snowy"
+  readonly property string weatherThunder: "thunderstorm"
+
   readonly property var batteryCharging: ["battery_android_bolt"]
   readonly property var batteryDefault: ["battery_android_0", "battery_android_1", "battery_android_2", "battery_android_3", "battery_android_4", "battery_android_5", "battery_android_6", "battery_android_full"]
 
