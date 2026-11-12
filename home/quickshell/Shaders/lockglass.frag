@@ -1,7 +1,7 @@
 #version 440
 // The lock clock's digits as bubbles of glass. `glyphs` holds the digits' coverage (their
 // alpha), `soft` that coverage blurred over about half a stroke's width, `backdrop` what is
-// seen through them (the wallpaper).
+// seen through them (the blurred desktop under the scrim).
 //
 // The blurred coverage stands in for how far inside the outline a point is, and from it each
 // stroke is given the height of an inflated tube: flat-topped along its spine, falling away

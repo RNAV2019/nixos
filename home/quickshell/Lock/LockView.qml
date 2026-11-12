@@ -281,14 +281,13 @@ Item {
           }
         }
 
-        // The wallpaper as the desktop shows it, never drawn itself: the patch below reads it,
-        // and it is what the clock's glass looks through at.
+        // The wallpaper as the desktop shows it, never drawn itself: the patch below reads it.
         Image {
           id: wallpaperImage
 
           anchors.fill: parent
           visible: false
-          source: Wallpapers.url
+          source: view.standing ? Wallpapers.url : ""
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
         }
@@ -744,17 +743,17 @@ Item {
           visible: false
         }
 
-        // The wallpaper behind the plate, wherever the flight has put it and at whatever size:
-        // the glass looks through at this rather than at the desktop standing on it (the
-        // ground stands in until the wallpaper has loaded). Half size; the glass
-        // blurs it a little.
+        // The desktop behind the plate (the blurred capture under the scrim: Ryan wanted to see
+        // the desktop through the digits, not the bare wallpaper, 2026-11-12), wherever the
+        // flight has put the plate and at whatever size. Half size; the glass blurs it a
+        // little more.
         ShaderEffectSource {
           id: backdropTexture
 
           readonly property real spanX: plate.width * clockBox.sizeX
           readonly property real spanY: plate.height * clockBox.sizeY
 
-          sourceItem: wallpaperImage.status === Image.Ready ? wallpaperImage : groundLayer
+          sourceItem: groundLayer
           sourceRect: Qt.rect(clockBox.x + clockBox.width / 2 - spanX / 2, clockBox.y + clockBox.height / 2 - spanY / 2, spanX, spanY)
           textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
           visible: false

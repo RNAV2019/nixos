@@ -906,8 +906,9 @@ Singleton {
   // The digits are bubbles of glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's
   // opaque ink copied his wallpaper's look rather than suiting ours, and the glass was to be
   // bubbly). Each stroke is an inflated tube, read off the digits' coverage blurred over
-  // lockGlassBevel of a digit's height and lockGlassRelief steep. The wallpaper itself shows
-  // through them, not the desktop standing on it (his choice): bent as through a lens by up to
+  // lockGlassBevel of a digit's height and lockGlassRelief steep. The desktop behind shows
+  // through them (the blurred capture under the scrim; he tried the bare wallpaper there and
+  // took the desktop back the same night): bent as through a lens by up to
   // lockGlassBend, blurred over lockGlassSoften of a digit's height, lightened by lockGlassLighten and
   // milked with lockGlassMilk of the ink so the time reads on any wallpaper. A light from the
   // upper left leaves a glint on the slope facing it, the outline is bright lockGlassRim wide,
@@ -918,8 +919,8 @@ Singleton {
   readonly property real lockGlassRim: 0.012
   readonly property real lockGlassBend: 0.13
   readonly property real lockGlassSoften: 0.016
-  readonly property real lockGlassLighten: 1.08
-  readonly property real lockGlassMilk: 0.13
+  readonly property real lockGlassLighten: 1.3
+  readonly property real lockGlassMilk: 0.18
   readonly property real lockGlassShine: 1.0
   readonly property real lockGlassFilm: 0.24
   readonly property real lockGlassLightX: -0.55
