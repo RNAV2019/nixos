@@ -8,7 +8,9 @@ import qs.Ui
 // The centred surface, the only one that changes shape. The open is not a cross-fade and nothing
 // scales but the clock: each block is drawn at its true size, rides the card's live edge, and
 // flies in on its own stretch of the open (saneAspect's shared-element card), while the growing
-// shape uncovers it and the track block clips, revealing the title letter by letter.
+// shape uncovers it and the track block clips, revealing the title letter by letter. While
+// something plays, the card's left is its cover, title and artist, and a click there opens the
+// Now playing panel.
 FrostedSurface {
   id: root
 
@@ -334,20 +336,13 @@ FrostedSurface {
       ContentFade {}
     }
 
-    // The track's lines are laid out once, at the room they have in the open card, ellipsis and
-    // all, and the growing block uncovers them. Cut to the live width they re-fitted every frame;
-    // left uncut until the card had settled, a long title was sliced by the clip all the way open
-    // and then lost its last letters to an ellipsis in one frame.
+    // What is playing: the cover bled in from the card's left edge, with the title and artist on
+    // its last faint reach. It and the week below share this room and cross-fade when a player
+    // comes or goes, both laid out throughout.
     Item {
-      id: media
+      id: playing
 
-      x: 16
-      y: root.midline - height / 2
-      width: Math.max(0, root.centreLeft - 28 - x)
-      height: Theme.islandExpandedHeight
-      clip: true
-      // The track block and the week below share this room and cross-fade when a player comes
-      // or goes, both laid out throughout.
+      anchors.fill: parent
       opacity: Media.active ? 1 : 0
       visible: opacity > 0
 
@@ -357,83 +352,95 @@ FrostedSurface {
         }
       }
 
-      AlbumArt {
-        id: cover
-
+      // At the open card's height about the live midline and flush with the live left edge, so
+      // the growing shape uncovers the cover and its own corners crop it; never scaled.
+      CoverBleed {
         readonly property real shown: root.reveal(0.1, 0.55)
 
-        x: -root.flight * (1 - shown)
-        y: (parent.height - height) / 2
-        width: Theme.islandArtSize
-        height: width
+        y: root.midline - height / 2
+        width: Theme.islandBleedWidth
+        height: Theme.islandExpandedHeight
         opacity: shown
+        visible: opacity > 0
       }
 
-      Equaliser {
-        id: cardEq
-
-        x: 60 - root.flight * (1 - cover.shown)
-        y: (parent.height - height) / 2
-        playing: Media.playing
-        opacity: cover.shown
-      }
-
+      // The track's lines are laid out once, at the room they have in the open card, ellipsis and
+      // all, and the growing block uncovers them. Cut to the live width they re-fitted every frame;
+      // left uncut until the card had settled, a long title was sliced by the clip all the way open
+      // and then lost its last letters to an ellipsis in one frame.
       Item {
-        id: track
+        id: media
 
-        readonly property real shown: root.reveal(0.3, 0.8)
+        x: 16
+        y: root.midline - height / 2
+        width: Math.max(0, root.centreLeft - 28 - x)
+        height: Theme.islandExpandedHeight
+        clip: true
 
-        // The room the lines have in the open card.
-        readonly property real openWidth: Math.max(0, root.openCentreLeft - 28 - media.x - 84)
+        Item {
+          id: track
 
-        x: 84 - root.flight * (1 - shown)
-        width: Math.max(0, parent.width - 84)
-        height: parent.height
-        opacity: shown
+          readonly property real shown: root.reveal(0.3, 0.8)
+          readonly property real inset: Theme.islandTrackLeft - media.x
 
-        Text {
-          id: title
+          // The room the lines have in the open card.
+          readonly property real openWidth: Math.max(0, root.openCentreLeft - 28 - Theme.islandTrackLeft)
 
-          y: parent.height / 2 - 8 - height / 2
-          width: track.openWidth
-          elide: Text.ElideRight
-          text: Media.title
-          color: Theme.text
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.islandTitleSize
-          font.weight: Theme.weightSemi
-        }
-
-        Text {
-          y: parent.height / 2 + 9.5 - height / 2
-          width: track.openWidth
-          elide: Text.ElideRight
-          text: Media.artist
-          color: Theme.subtle
-          font.family: Theme.uiFont
-          font.pixelSize: Theme.islandCaptionSize
-        }
-
-        // While the block is narrower than its lines they run out under a soft edge, not a cut
-        // through a letter; gone by the time the card is open, where the lines end inside it.
-        Rectangle {
-          x: parent.width - width
-          width: 22
+          x: inset - root.flight * (1 - shown)
+          width: Math.max(0, parent.width - inset)
           height: parent.height
-          opacity: 1 - root.reveal(0.8, 1)
-          visible: opacity > 0
+          opacity: shown
 
-          gradient: Gradient {
-            orientation: Gradient.Horizontal
+          Text {
+            // A content-morph anchor (Ui/MorphScan.js): the Now playing panel's title is this one.
+            property string morphRole: "title"
+            property string morphKey: "media.title"
 
-            GradientStop {
-              position: 0
-              color: Theme.withAlpha(Theme.surface, 0)
-            }
+            y: parent.height / 2 - 8 - height / 2
+            width: track.openWidth
+            elide: Text.ElideRight
+            text: Media.title
+            color: Theme.text
+            font.family: Theme.uiFont
+            font.pixelSize: Theme.islandTitleSize
+            font.weight: Theme.weightSemi
+          }
 
-            GradientStop {
-              position: 1
-              color: Theme.surface
+          Text {
+            property string morphRole: "artist"
+            property string morphKey: "media.artist"
+
+            y: parent.height / 2 + 9.5 - height / 2
+            width: track.openWidth
+            elide: Text.ElideRight
+            text: Media.artist
+            // Over the cover's reach, where subtle would sink into the tint.
+            color: Theme.withAlpha(Theme.text, Theme.mediaSecondaryAlpha)
+            font.family: Theme.uiFont
+            font.pixelSize: Theme.islandCaptionSize
+          }
+
+          // While the block is narrower than its lines they run out under a soft edge, not a cut
+          // through a letter; gone by the time the card is open, where the lines end inside it.
+          Rectangle {
+            x: parent.width - width
+            width: 22
+            height: parent.height
+            opacity: 1 - root.reveal(0.8, 1)
+            visible: opacity > 0
+
+            gradient: Gradient {
+              orientation: Gradient.Horizontal
+
+              GradientStop {
+                position: 0
+                color: Theme.withAlpha(Theme.surface, 0)
+              }
+
+              GradientStop {
+                position: 1
+                color: Theme.surface
+              }
             }
           }
         }
@@ -466,7 +473,7 @@ FrostedSurface {
       }
     }
 
-    // Board 02's gauges: the battery 16 px in from the right like the album art, system load
+    // Board 02's gauges: the battery 16 px in from the right, system load
     // beside it, fading in once the card can hold them (sideFrom). Clipped short of the clock on
     // that side too, so nothing crosses it.
     Item {
@@ -477,7 +484,47 @@ FrostedSurface {
       height: parent.height
       clip: true
 
+      // The weather, built like a gauge without its ring: the sky's glyph where the ring's would
+      // be and the temperature in the gap, on the gauges' own line. With no reading there is
+      // nothing here, and the gauges stay where they are.
+      Item {
+        id: weather
+
+        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
+        property real presence: Weather.available ? 1 : 0
+
+        x: system.x - Theme.islandWeatherGap - width
+        y: root.midline - height / 2
+        width: Theme.islandWeatherWidth
+        height: Theme.islandGaugeSize
+        opacity: shown * presence
+        visible: opacity > 0
+
+        Behavior on presence {
+          Morph {
+            duration: Theme.stateSwap
+          }
+        }
+
+        StrokeIcon {
+          x: (parent.width - width) / 2
+          y: parent.height / 2 - Theme.islandWeatherGlyphLift - height / 2
+          size: Theme.islandWeatherGlyph
+          path: Weather.glyph
+          color: Theme.text
+        }
+
+        GaugeLabel {
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: Theme.islandGaugeLabelY
+          // A true minus below zero, as wide as a digit.
+          text: (Weather.temperature < 0 ? "\u2212" : "") + Math.abs(Weather.temperature) + "\u00b0"
+        }
+      }
+
       SystemGauge {
+        id: system
+
         readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
 
         x: gauges.width - 16 - 12 - 2 * width + root.sideFlight * (1 - shown)
@@ -494,7 +541,8 @@ FrostedSurface {
       }
     }
 
-    // Left/right buttons skip, so the card is a transport as well as a readout.
+    // A click on what is playing opens the Now playing panel; the mouse's back and forward
+    // buttons skip.
     MouseArea {
       x: 0
       y: 0
@@ -509,7 +557,7 @@ FrostedSurface {
         else if (event.button === Qt.BackButton)
           Media.previous();
         else
-          Media.toggle();
+          Bus.toggleSurface("media");
       }
     }
 

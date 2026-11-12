@@ -380,8 +380,15 @@ Singleton {
   readonly property int islandDisplaySize: 22
   readonly property int islandTitleSize: 13
   readonly property int islandCaptionSize: 11
-  readonly property int islandArtSize: 48
-  readonly property int islandArtRadius: 8
+  // The playing track's cover, bled in from the card's start edge at the card's full height
+  // (Ui/CoverBleed.qml); the title and artist start this far in, on the cover's last faint reach.
+  readonly property int islandBleedWidth: 118
+  readonly property int islandTrackLeft: 100
+  // The weather beside the gauges: a glyph with the temperature under it, this far left of them.
+  readonly property int islandWeatherGlyph: 26
+  readonly property int islandWeatherWidth: 48
+  readonly property int islandWeatherGap: 12
+  readonly property real islandWeatherGlyphLift: 4
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
