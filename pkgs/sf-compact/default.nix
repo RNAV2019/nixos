@@ -1,8 +1,8 @@
 # Apple's SF Compact, the shell's UI face (home/quickshell/Commons/Theme.qml). Apple's DMG is
 # the only source: it holds a .pkg whose Payload is a cpio, all of which 7zz unpacks. Only the
-# static Text and Display cuts are installed: Qt's FreeType engine draws a variable font's
-# default instance whatever weight is asked for, so the variable SF-Compact.ttf would lose
-# the weights.
+# static Text, Display and Rounded cuts are installed (Rounded is the lock screen's clock): Qt's
+# FreeType engine draws a variable font's default instance whatever weight is asked for, so the
+# variable SF-Compact.ttf would lose the weights.
 #
 # Apple replaces the file at this URL in place when it ships a new version, so the hash goes
 # stale then: prefetch it again (nix store prefetch-file) and bump `version`.
@@ -30,7 +30,8 @@ stdenvNoCC.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p $out/share/fonts/opentype
-    find fonts \( -name 'SF-Compact-Text-*.otf' -o -name 'SF-Compact-Display-*.otf' \) \
+    find fonts \( -name 'SF-Compact-Text-*.otf' -o -name 'SF-Compact-Display-*.otf' \
+      -o -name 'SF-Compact-Rounded-*.otf' \) \
       -exec cp {} $out/share/fonts/opentype/ \;
     runHook postInstall
   '';
