@@ -5,6 +5,8 @@ Item {
   id: root
 
   property bool playing: false
+  // Paused, the bars lie down as four quiet dots, where the shut pill's stand at their rest.
+  property bool restsFlat: false
 
   // The bars' idle heights, one per bar: a descending rhythm that still reads as a wave.
   readonly property var restHeights: [7, 12, 15, 9]
@@ -30,12 +32,22 @@ Item {
         // What the bar draws: the loop below moves it while playing, and a pause eases it back
         // to its resting height from wherever the loop left it rather than dropping it there.
         property real level: modelData
+        readonly property real rest: root.restsFlat ? root.barWidth : modelData
+
+        Component.onCompleted: if (root.restsFlat && !root.playing)
+          level = rest
 
         anchors.verticalCenter: parent.verticalCenter
         width: root.barWidth
         height: level
         radius: width / 2
-        color: Theme.accent
+        color: root.restsFlat && !root.playing ? Theme.subtle : Theme.accent
+
+        Behavior on color {
+          ColorAnimation {
+            duration: Theme.tintFade
+          }
+        }
 
         SequentialAnimation on level {
           // Visibility too: the shut pill hands the equaliser over with an opacity cross-fade,
@@ -61,7 +73,7 @@ Item {
 
           target: bar
           property: "level"
-          to: bar.modelData
+          to: bar.rest
           duration: Theme.duration(Theme.eqSettle)
           easing.type: Easing.OutCubic
         }

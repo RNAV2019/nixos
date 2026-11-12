@@ -1502,6 +1502,46 @@ Singleton {
   readonly property int eqFallBase: 400
   readonly property int eqFallStagger: 50
 
+  // ---- what is playing (Ui/CoverBleed.qml, Bar/Island.qml, Media/MediaPanel.qml) ----
+
+  // The cover is decoded no bigger than this, the panel's bleed on a 2x screen; one size
+  // everywhere, so the card's, the panel's and a morph's ghost of either are one cached picture.
+  readonly property int coverSourceSize: 512
+  // A paused track's cover goes under this much black.
+  readonly property real coverPausedDim: 0.5
+  // The second line over a cover's faint reach: the text colour let down, where subtle would sink.
+  readonly property real mediaSecondaryAlpha: 0.62
+
+  // The Now playing panel: the cover bled in from the left, and a column of output, title,
+  // artist, scrub bar and transport from mediaColumnLeft to mediaColumnRight. Rows by their middles.
+  readonly property int mediaWidth: panelColumnWidth
+  readonly property int mediaHeight: 196
+  readonly property int mediaRadius: panelRadius
+  readonly property int mediaBleedWidth: 256
+  readonly property int mediaColumnLeft: 222
+  readonly property int mediaColumnRight: 502
+  readonly property real mediaOutputMid: 30
+  readonly property int mediaOutputGlyph: 14
+  readonly property int mediaOutputGap: 6
+  readonly property int mediaCaptionSize: 11
+  readonly property real mediaTitleMid: 60
+  readonly property int mediaTitleSize: 19
+  readonly property real mediaArtistMid: 82
+  readonly property int mediaArtistSize: 13
+  readonly property int mediaTrackY: 110
+  readonly property real mediaTimeMid: 126
+  readonly property real mediaTransportMid: 160
+  // Play or pause on an accent disc, previous and next on neutral ones this far either side of
+  // its middle, and shuffle and repeat as bare glyphs at the column's ends.
+  readonly property int mediaPlaySize: 44
+  readonly property int mediaPlayGlyph: 26
+  readonly property int mediaSkipSize: 36
+  readonly property int mediaSkipGlyph: 22
+  readonly property int mediaSkipOffset: 54
+  readonly property int mediaModeGlyph: 18
+  // A player that passes through "stopped" between two tracks does not shut the panel.
+  readonly property int mediaGoneGrace: 600
+
   // The island's small round gauge (a reading like battery or volume) and where its label sits.
   readonly property int islandGaugeSize: 48
   readonly property int islandGaugeRadius: 21

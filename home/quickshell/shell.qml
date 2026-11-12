@@ -11,6 +11,7 @@ import qs.Dictation
 import qs.Keys
 import qs.Launcher
 import qs.Lock
+import qs.Media
 import qs.Nearby
 import qs.Notifications
 import qs.Osd
@@ -44,6 +45,7 @@ ShellRoot {
     id: keysSheet
   }
   Launcher {}
+  MediaPanel {}
   NearbyPanel {}
   PhonePanel {}
   SharingPill {}

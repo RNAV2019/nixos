@@ -269,12 +269,14 @@ Variants {
     }
 
     // The progress bar is the only thing needing MPRIS polled, so the poll is tied to this surface.
-    Binding {
-      target: Media
-      property: "trackPosition"
-      value: true
-      when: win.showing
-      restoreMode: Binding.RestoreBindingOrValue
+    Connections {
+      target: win
+
+      function onShowingChanged() {
+        Media.holdPosition(win.key + "@" + win.screenName, win.showing);
+      }
     }
+
+    Component.onDestruction: Media.holdPosition(win.key + "@" + win.screenName, false)
   }
 }

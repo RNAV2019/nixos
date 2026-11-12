@@ -11,6 +11,8 @@ Item {
 
   property string source: ""
   property int fillMode: Image.PreserveAspectCrop
+  // The size the picture is decoded at; left empty, its own.
+  property size sourceSize: Qt.size(0, 0)
 
   readonly property bool hasArt: source !== "" && art.status === Image.Ready
   readonly property real presence: leaving ? 1 - mix : carrying ? 1 : mix
@@ -23,6 +25,8 @@ Item {
   // There is no picture to come: the held one is on its way out.
   property bool leaving: false
   property bool armed: false
+  // The source of the picture that has wholly arrived.
+  property string settled: ""
 
   function sync() {
     fade.stop();
@@ -86,6 +90,12 @@ Item {
 
     onStatusChanged: {
       if (status === Image.Ready) {
+        // The same picture again, reloaded for its window's device-pixel ratio (a window's first
+        // map at a fractional scale): it is up already, and does not fade in a second time.
+        if (source.toString() === root.settled && !root.carrying && !root.leaving) {
+          root.mix = 1;
+          return;
+        }
         root.leaving = false;
         root.mix = 0;
         fade.restart();
@@ -93,6 +103,20 @@ Item {
         root.leave();
       }
     }
+  }
+
+  Binding {
+    target: held
+    property: "sourceSize"
+    value: root.sourceSize
+    when: root.sourceSize.width > 0
+  }
+
+  Binding {
+    target: art
+    property: "sourceSize"
+    value: root.sourceSize
+    when: root.sourceSize.width > 0
   }
 
   NumberAnimation {
@@ -111,6 +135,9 @@ Item {
       if (root.leaving) {
         root.leaving = false;
         root.mix = 0;
+        root.settled = "";
+      } else {
+        root.settled = art.source.toString();
       }
     }
   }

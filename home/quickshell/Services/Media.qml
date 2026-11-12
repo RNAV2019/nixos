@@ -41,8 +41,21 @@ Singleton {
 
   readonly property string artUrl: active && player.trackArtUrl ? player.trackArtUrl : ""
 
-  // MPRIS never pushes position, so poll only while the progress bar is on screen.
-  property bool trackPosition: false
+  // MPRIS never pushes position, so poll only while a progress bar is on screen: whoever shows
+  // one (the control centre, the Now playing panel, each per output) holds this by its own name.
+  readonly property bool trackPosition: Object.keys(positionHolders).length > 0
+  property var positionHolders: ({})
+
+  function holdPosition(who, held) {
+    var next = {};
+    for (var k in positionHolders)
+      if (k !== who)
+        next[k] = true;
+    if (held)
+      next[who] = true;
+    positionHolders = next;
+  }
+
   property int positionPulse: 0
 
   readonly property real length: active && player.lengthSupported && player.length > 0 ? player.length : 0
@@ -86,5 +99,28 @@ Singleton {
   function previous() {
     if (player && player.canGoPrevious)
       player.previous();
+  }
+
+  // Shuffle and repeat, where the player has them and takes orders (a browser tab often does not).
+  readonly property bool shuffleSupported: active && player.canControl && player.shuffleSupported
+  readonly property bool shuffle: shuffleSupported && player.shuffle
+  readonly property bool loopSupported: active && player.canControl && player.loopSupported
+  // "none", "playlist" (the whole queue) or "track" (the one playing).
+  readonly property string loop: {
+    if (!loopSupported || player.loopState === MprisLoopState.None)
+      return "none";
+    return player.loopState === MprisLoopState.Track ? "track" : "playlist";
+  }
+
+  function toggleShuffle() {
+    if (shuffleSupported)
+      player.shuffle = !player.shuffle;
+  }
+
+  // Round the three, as a player's own repeat button goes: off, the queue, the one track.
+  function cycleLoop() {
+    if (!loopSupported)
+      return;
+    player.loopState = loop === "none" ? MprisLoopState.Playlist : loop === "playlist" ? MprisLoopState.Track : MprisLoopState.None;
   }
 }

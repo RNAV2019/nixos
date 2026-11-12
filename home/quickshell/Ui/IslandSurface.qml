@@ -22,6 +22,9 @@ IslandSurfaceBase {
   // the full-screen window swallow input aimed at it. When set, only the card is a target;
   // clicks outside fall through to whatever is below.
   property bool passThrough: false
+  // Whether a toggle may open it just now: a panel about something that comes and goes (what is
+  // playing) is not opened onto nothing. Open, it still closes.
+  property bool openable: true
   // The item that takes the keyboard when the surface opens, where it is not the surface itself:
   // a text field, so typing lands in it. Keys it leaves unaccepted still reach keyPressed.
   property Item focusTarget: null
@@ -99,7 +102,7 @@ IslandSurfaceBase {
         return;
       if (win.open)
         win.hide();
-      else if (win.focused)
+      else if (win.focused && win.openable)
         win.show();
     }
 
