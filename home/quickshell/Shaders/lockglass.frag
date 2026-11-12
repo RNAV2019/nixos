@@ -43,6 +43,9 @@ layout(std140, binding = 0) uniform buf {
     float solid;     // 0 glass, 1 plain ink
     vec2 light;      // where the light comes from on screen (y down); it also leans toward the eye
     vec4 ink;        // the digits' plain colour (premultiplied by Qt)
+    vec4 pick;       // which channels of `glyphs` and `soft` hold the coverage of the layer drawn here
+    vec4 window;     // the row it shows through, item px down: none above x, all from y to z, none below w
+    float lag;       // how far above its own pixel a contact shadow's caster stands, item px
 };
 
 layout(binding = 1) uniform sampler2D glyphs;
@@ -55,12 +58,20 @@ layout(binding = 3) uniform sampler2D backdrop;
 // stays as crisp as box filtering allows, where the level the screen asks for would blend in
 // the next coarser one and blur.
 float glyph(vec2 uv) {
-    return texture(glyphs, uv, -1.0).a;
+    return dot(texture(glyphs, uv, -1.0), pick);
 }
 
 // One read of the blurred coverage: a half on a straight outline, rising toward a stroke's spine.
 float softAt(vec2 uv) {
-    return texture(soft, uv).a;
+    return dot(texture(soft, uv), pick);
+}
+
+// How much of the row `window` shows at this pixel's height less `above` (item px). A minute
+// rolling over slides whole digits through it; only what is drawn is faded, never the coverage the
+// glass is read from, so a digit at the row's edge is still whole glass, only fainter.
+float windowAt(float above) {
+    float y = qt_TexCoord0.y * itemSize.y - above;
+    return smoothstep(window.x, window.y, y) * (1.0 - smoothstep(window.z, window.w, y));
 }
 
 // The digits' coverage averaged over a disc of radius r (item px): the centre and a dozen taps
@@ -106,7 +117,7 @@ void main() {
         shadow = contact * glass * smoothstep(0.0, 0.3, above - s) * smoothstep(0.0, 0.5, above);
     }
     if (a <= 0.0) {
-        fragColor = vec4(0.0, 0.0, 0.0, shadow * qt_Opacity);
+        fragColor = vec4(0.0, 0.0, 0.0, shadow * windowAt(lag) * qt_Opacity);
         return;
     }
 
@@ -174,5 +185,6 @@ void main() {
     body = shoulder(max(body, 0.0) + shone);
 
     vec3 colour = mix(body, ink.rgb, solid);
-    fragColor = vec4(colour * a, a + shadow * (1.0 - a)) * qt_Opacity;
+    float shown = windowAt(0.0);
+    fragColor = vec4(colour * a * shown, a * shown + shadow * windowAt(lag) * (1.0 - a * shown)) * qt_Opacity;
 }

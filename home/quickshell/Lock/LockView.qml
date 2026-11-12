@@ -716,8 +716,16 @@ Item {
       // its line puts it, so the roll starts on the old line's pixels and ends on the new one's.
       // SF Compact's figures are proportional (a 1 is narrow) and the line is kerned, so a new
       // minute can change where every character stands and how wide the line is: the
-      // characters that stay slide to their new places as the line re-centres, on the roll's
-      // clock, and a changing one turns over in a slot that slides and resizes with them.
+      // characters that stay slide to their new places as the line re-centres, and a changing one
+      // turns over in a slot that slides and resizes with them (rollLayout).
+      //
+      // A changing digit slides up and out of the row whole, as its successor slides in from
+      // below a row's height behind it, so the two never meet; the row's top and bottom edges
+      // fade them. The glass is read off the digits' coverage (a clip would draw a rim along the
+      // cut, a faded or overlapping coverage turns to milky film or one merged blob), so the
+      // coverage is never touched: the fade is applied to what the glass draws (rollWindow), and
+      // the digits on their way out are drawn into a layer of their own (rollLeavingInk), shaded
+      // apart from the line coming in (rollLineInk), so nothing they pass near takes their shape.
       //
       // It rolls only on the glass at rest. Into and out of the pill, and with the lock just
       // up, the time changes where it stands, as the pill's clock does under the lock.
@@ -732,22 +740,124 @@ Item {
       // Each line's baseline in the plate, less a constant that every use cancels.
       property real rollFromBase: 0
       property real rollToBase: 0
-      // The roll's clock.
-      property real rollTravel: 0
-      // A changing character turns over upward, as the pill's digits roll: the old one folds
-      // up into the top of the digits' row as the new one opens up from the bottom, the two
-      // sharing the row's height between them (as a drum's faces do, foreshortened as they
-      // turn), kept apart by the room round the digits. Squashed rather than slid through a
-      // clipped window, because the glass is read off the digits' coverage: a hard cut draws a
-      // rim along it, and coverage faded toward the cut (or faded as the pill's digits are)
-      // turns the glass into flat milky film. Squashed, every character stays whole and solid,
-      // the two never touch (touching glass merges into one blob), and neither leaves the plate.
-      readonly property real rollLeaving: Math.pow(Math.cos(rollTravel * Math.PI / 2), 2)
-      readonly property real rollArriving: 1 - rollLeaving
-      readonly property real rollTop: pad
+      // The roll's clock in ms, and how long it runs: the last digit to go, plus its own roll.
+      property real rollClock: 0
+      property int rollSpan: 0
+      // Room the plate keeps on either side of the new line while the roll moves and its slots,
+      // held wider than the new line has them (rollLayout), reach out past it. Its textures are
+      // laid out on the plate, and a change of its size shifts their grid under the glass (the
+      // blur's own smaller copies too), so the room comes and goes only while the digits move:
+      // none on the roll's first frame, which is still the old line as it stood, and none once
+      // the line overhangs the new one by no more than 3 px a side, so the last frames are laid
+      // out exactly as the line at rest and handing back to it changes no pixel.
+      property real rollRoomWanted: 0
+      readonly property real rollRoom: rolling && rollClock > 0 && rollStretch.total / 2 > 3 ? rollRoomWanted : 0
+      // What the slots' widths add up to before the roll, less what they add up to after it.
+      property real rollSpread: 0
+      // The colour channel each layer is drawn in, which is the one its glass reads (`pick`): the
+      // line being shown (red, which the white line at rest also fills, so the same glass reads
+      // either) and the digits rolling away (green).
+      readonly property color rollLineInk: Qt.rgba(1, 0, 0, 1)
+      readonly property color rollLeavingInk: Qt.rgba(0, 1, 0, 1)
+      // The face a character is drawn in on its own; `case` gives the colon the raised form it
+      // takes between digits in the line.
+      readonly property font rollFace: rollFont.font
+      // The characters a roll can draw (Lock/RollGlyph.qml elements below): "HH:mm".
+      readonly property int rollCapacity: 5
+      // How far the characters that stay have slid to their places in the new line.
+      readonly property real rollSlide: rollSpan > 0 ? 1 - Math.pow(1 - Math.min(1, rollClock / rollSpan), 3) : 1
       // The two lines' starts in the plate, as the box stands now.
-      readonly property real rollFromLeft: pad + leftFor(rollFromWidth) - x
-      readonly property real rollToLeft: pad + leftFor(lineWidth) - x
+      readonly property real rollFromLeft: pad + rollRoom + leftFor(rollFromWidth) - x
+      readonly property real rollToLeft: pad + rollRoom + leftFor(lineWidth) - x
+      // Where each slot starts in the plate now (`pen`) and how wide it is (`advance`). A slot is
+      // as wide as the wider of its two characters (with the kerning against the next one) while
+      // either is in the row, so no two characters ever come closer than a line at rest has
+      // them: one that widens does so at the start, over lockClockRollWiden of a digit's roll,
+      // before the new character is half way up into it; one that narrows does so only once its
+      // old character, and the one to its right, have left the row, over the rest of the roll.
+      // The line re-centres as its width changes. Each pen is the new line's, plus what the slots
+      // before it are still wider than they will be, so the last frame is the new line exactly.
+      // How much wider each slot is now than in the new line, and all of them together.
+      readonly property var rollStretch: {
+        const slots = rollSlots;
+        const widen = 1 - Math.pow(1 - Math.min(1, rollClock / Math.max(1, Theme.lockClockRoll * Theme.lockClockRollWiden)), 3);
+        const extra = [];
+        let total = 0;
+        for (let i = 0; i < slots.length; i++) {
+          const q = slots[i];
+          let lag = 1 - rollSlide;
+          if (q.clearAt >= 0 && q.fromAdvance > q.toAdvance)
+            lag = Math.pow(1 - Math.max(0, Math.min(1, (rollClock - q.clearAt) / (q.settleAt - q.clearAt))), 3);
+          else if (q.clearAt >= 0)
+            lag = 1 - widen;
+          extra.push((q.fromAdvance - q.toAdvance) * lag);
+          total += extra[i];
+        }
+        return {
+          extra: extra,
+          total: total
+        };
+      }
+      readonly property var rollLayout: {
+        const slots = rollSlots;
+        const extra = rollStretch.extra;
+        const total = rollStretch.total;
+        // The two lines' starts differ by half the change of width and the rounding of each to
+        // whole pixels; the rounding is slid away over the roll.
+        const start = rollToLeft - total / 2 + (rollFromLeft - rollToLeft + rollSpread / 2) * (1 - rollSlide);
+        const layout = [];
+        let before = 0;
+        for (let i = 0; i < slots.length; i++) {
+          layout.push({
+            pen: start + slots[i].toX + before,
+            advance: slots[i].toAdvance + extra[i]
+          });
+          before += extra[i];
+        }
+        return layout;
+      }
+
+      // The row's window, in the plate's px down: nothing shows above rollWindow.x, all of it from
+      // .y to .z, nothing below .w. Its edges lie in the room round the digits (pad), clear of
+      // every digit's ink at rest and of the arriving digit's overshoot, so nothing at rest is
+      // ever faded; the bottom edge sits just under the ink, and the top as low as the overshoot
+      // allows. A changing digit travels a row and its room: it starts wholly below the plate and
+      // ends wholly above it, so before and after its roll it is not in the plate's textures
+      // at all (its blurred coverage would reach the digits beside it).
+      readonly property real rollOvershoot: Theme.lockClockRollOvershoot
+      readonly property real rollTravel: Math.ceil(height) + pad + 1
+      readonly property real rollFade: Math.max(1, Math.min(Math.round(digits * Theme.lockClockRollFade), pad - Math.ceil(rollOvershoot * rollTravel) - 2))
+      readonly property vector4d rollWindow: {
+        const top = pad - Math.ceil(rollOvershoot * rollTravel) - 2;
+        const bottom = pad + height + 2;
+        return Qt.vector4d(top - rollFade, top, bottom, bottom + rollFade);
+      }
+      // No window: everything shows (at rest).
+      readonly property vector4d openWindow: Qt.vector4d(-1e6, -1e6 + 1, 1e6, 1e6 + 1)
+      // The overshoot is an OutBack curve's (Easing.OutBack): it runs this far past, 4s³/27(s+1)²
+      // of the travel, once, and settles with no second swing.
+      readonly property real rollBack: {
+        let lo = 0;
+        let hi = 4;
+        for (let i = 0; i < 40; i++) {
+          const s = (lo + hi) / 2;
+          if (4 * s * s * s / (27 * (s + 1) * (s + 1)) < rollOvershoot)
+            lo = s;
+          else
+            hi = s;
+        }
+        return lo;
+      }
+
+      // How far along its travel the changed digit `order` places from the right is (0 to 1,
+      // a little past 1 on the way): the last digit goes first, each to its left a stagger later.
+      function riseOf(order) {
+        const t = Math.max(0, Math.min(1, (rollClock - order * Theme.lockClockRollStagger) / Math.max(1, Theme.lockClockRoll)));
+        if (t <= 0)
+          return 0;
+        const u = t - 1;
+        return 1 + (rollBack + 1) * u * u * u + rollBack * u * u;
+      }
 
       // Where each character of `text` starts along the line, and where the line ends.
       function pensOf(text) {
@@ -767,33 +877,61 @@ Item {
         rollAnimation.stop();
         rollFrom = "";
         rollSlots = [];
+        rollSpan = 0;
+        rollClock = 0;
+        rollRoomWanted = 0;
       }
 
       onTimeChanged: {
         const from = shownTime;
         settleRoll();
         shownTime = time;
-        if (!rests || from === "" || from === time || from.length !== time.length)
+        if (!rests || from === "" || from === time || from.length !== time.length || time.length > rollCapacity)
           return;
 
         const fromPens = pensOf(from);
         const toPens = pensOf(time);
         const slots = [];
-        for (let i = 0; i < time.length; i++)
-          slots.push({
+        // Counted from the right: the changed digit's place in the ripple.
+        let changed = 0;
+        for (let i = time.length - 1; i >= 0; i--) {
+          const turns = from.charAt(i) !== time.charAt(i);
+          // The character whose leaving lets this slot narrow: its own, or (for one that stays,
+          // whose kerning changes with its neighbour) the one to its right.
+          const next = slots.length > 0 && slots[0].changed ? slots[0].order : -1;
+          const gate = turns ? changed : next;
+          slots.unshift({
             from: from.charAt(i),
             to: time.charAt(i),
-            changed: from.charAt(i) !== time.charAt(i),
+            changed: turns,
+            order: turns ? changed : 0,
             fromX: fromPens[i],
             toX: toPens[i],
             fromAdvance: fromPens[i + 1] - fromPens[i],
             toAdvance: toPens[i + 1] - toPens[i],
             fromTop: inkProbe.topOf(from.charAt(i)),
-            toTop: inkProbe.topOf(time.charAt(i))
+            toTop: inkProbe.topOf(time.charAt(i)),
+            // When its old character has left the row (its travel first reaches 1 at
+            // 1/(rollBack + 1) of its roll and stays past it), and when its own roll ends.
+            clearAt: gate < 0 ? -1 : gate * Theme.lockClockRollStagger + Theme.lockClockRoll / (rollBack + 1),
+            settleAt: gate < 0 ? -1 : gate * Theme.lockClockRollStagger + Theme.lockClockRoll
           });
+          if (turns)
+            changed++;
+        }
         rollFromBase = baseOf(from);
         rollToBase = baseOf(time);
         rollFromWidth = rollMetrics.advanceWidth(from) - tracking;
+        // The widest the line gets: every slot that widens has, none that narrows has yet.
+        let widest = rollFromWidth;
+        let spread = 0;
+        for (const q of slots) {
+          widest += Math.max(0, q.toAdvance - q.fromAdvance);
+          spread += q.fromAdvance - q.toAdvance;
+        }
+        rollSpread = spread;
+        rollRoomWanted = 4 * Math.ceil(Math.max(0, (widest - (rollMetrics.advanceWidth(time) - tracking)) / 2 + 2) / 4);
+        rollSpan = Math.max(1, Theme.lockClockRoll + (changed - 1) * Theme.lockClockRollStagger);
         rollSlots = slots;
         rollFrom = from;
         rollAnimation.restart();
@@ -815,18 +953,18 @@ Item {
         id: rollAnimation
 
         target: clockBox
-        property: "rollTravel"
+        property: "rollClock"
         from: 0
-        to: 1
-        duration: Theme.lockClockRoll
-        easing.type: Easing.OutCubic
+        to: clockBox.rollSpan
+        duration: clockBox.rollSpan
 
         onFinished: clockBox.settleRoll()
       }
 
-      // The digits' own box, which is what is centred and scaled: as wide as the line, or
-      // while a minute rolls over as the wider of the two lines, by the height of a digit.
-      width: rolling ? Math.max(rollFromWidth, lineWidth) : lineWidth
+      // The digits' own box, which is what is centred and scaled: as wide as the line, by the
+      // height of a digit. A minute rolling over takes the new line's box from its first step
+      // (the plate keeps room round it for the old line, rollRoom).
+      width: rolling && rollClock <= 0 ? rollFromWidth : lineWidth
       height: bigDigit.tightBoundingRect.height
       x: leftFor(width)
       y: fromY + (toY - fromY) * t - height / 2
@@ -843,9 +981,9 @@ Item {
       Item {
         id: plate
 
-        x: -clockBox.pad
+        x: -clockBox.pad - clockBox.rollRoom
         y: -clockBox.pad
-        width: Math.ceil(clockBox.width) + 2 * clockBox.pad
+        width: Math.ceil(clockBox.width) + 2 * (clockBox.pad + clockBox.rollRoom)
         height: Math.ceil(clockBox.height) + 2 * clockBox.pad
 
         // The digits as outlines, filled: text this big is otherwise a small distance field
@@ -873,7 +1011,7 @@ Item {
               PathText {
                 id: clockFace
 
-                x: clockBox.pad
+                x: clockBox.pad + clockBox.rollRoom
                 // PathText hangs the line from the top of its own ink, which a round digit
                 // overshoots and a flat one does not; the difference is taken back, so the
                 // baseline stays put whatever the time.
@@ -887,47 +1025,107 @@ Item {
             }
           }
 
-          // A minute rolling over, a character at a time. Each one hangs from its own ink's
-          // top, so it is lowered by the line's top less its own to sit on the line's baseline.
-          Repeater {
-            model: clockBox.rollSlots
+          // A minute rolling over, a character at a time (Lock/RollGlyph.qml), in two layers:
+          // the line being shown, which is every character standing in it or rising into it,
+          // and the characters on their way out. Each layer is one path, as the line at rest is,
+          // in its own colour channel (rollLineInk, rollLeavingInk), which its glass reads.
+          Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.GeometryRenderer
+            visible: clockBox.rolling
 
-            Item {
-              id: slot
+            ShapePath {
+              fillColor: clockBox.rollLineInk
+              strokeColor: "transparent"
+              strokeWidth: -1
 
-              required property var modelData
-
-              readonly property real travel: clockBox.rollTravel
-              // Where the character starts in the old line and in the new.
-              readonly property real fromStart: clockBox.rollFromLeft + modelData.fromX
-              readonly property real toStart: clockBox.rollToLeft + modelData.toX
-              // A changing slot's middle, from the old line's to the new's: the two characters
-              // turn over about it, whatever their widths.
-              readonly property real middle: (fromStart + modelData.fromAdvance / 2) * (1 - travel) + (toStart + modelData.toAdvance / 2) * travel
-
-              // The old character: one that stays slides to its place in the new line (onto
-              // the new baseline, which can differ from the old by a fraction of a pixel); one
-              // that changed folds up into the top of the row.
               RollGlyph {
-                glyph: slot.modelData.from
-                face: rollFont.font
-                x: slot.modelData.changed ? slot.middle - slot.modelData.fromAdvance / 2 : slot.fromStart * (1 - slot.travel) + slot.toStart * slot.travel
-                y: slot.modelData.changed ? clockBox.rollFromBase + slot.modelData.fromTop : clockBox.rollFromBase * (1 - slot.travel) + clockBox.rollToBase * slot.travel + slot.modelData.fromTop
-                squash: slot.modelData.changed ? clockBox.rollLeaving : 1
-                anchor: clockBox.rollTop - y
-                shift: slot.modelData.changed ? -clockBox.pad * clockBox.rollArriving : 0
+                box: clockBox
+                index: 0
+                part: "line"
               }
-
-              // The new character opening up from the bottom.
               RollGlyph {
-                glyph: slot.modelData.to
-                face: rollFont.font
-                x: slot.middle - slot.modelData.toAdvance / 2
-                y: clockBox.rollToBase + slot.modelData.toTop
-                visible: slot.modelData.changed && squash > 0
-                squash: clockBox.rollArriving
-                anchor: clockBox.rollTop + clockBox.height - y
-                shift: clockBox.pad * clockBox.rollLeaving
+                box: clockBox
+                index: 1
+                part: "line"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 2
+                part: "line"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 3
+                part: "line"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 4
+                part: "line"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 0
+                part: "waiting"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 1
+                part: "waiting"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 2
+                part: "waiting"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 3
+                part: "waiting"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 4
+                part: "waiting"
+              }
+            }
+          }
+
+          Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.GeometryRenderer
+            visible: clockBox.rolling
+
+            ShapePath {
+              fillColor: clockBox.rollLeavingInk
+              strokeColor: "transparent"
+              strokeWidth: -1
+
+              RollGlyph {
+                box: clockBox
+                index: 0
+                part: "leaving"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 1
+                part: "leaving"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 2
+                part: "leaving"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 3
+                part: "leaving"
+              }
+              RollGlyph {
+                box: clockBox
+                index: 4
+                part: "leaving"
               }
             }
           }
@@ -1003,12 +1201,38 @@ Item {
           visible: false
         }
 
+        // While a minute rolls, the digits as much as the row's window shows of them
+        // (Shaders/lockrollshadow.frag), which is what casts the shadow then: a digit sliding
+        // out of the row takes its shadow with it. Only drawn while one rolls.
+        ShaderEffect {
+          id: rollShadow
+
+          width: plate.width
+          height: plate.height
+          visible: clockBox.rolling
+
+          property var source: shadowTexture
+          property size itemSize: Qt.size(width, height)
+          property vector4d window: clockBox.rollWindow
+
+          fragmentShader: Qt.resolvedUrl("../Shaders/lockrollshadow.frag.qsb")
+        }
+
+        ShaderEffectSource {
+          id: rollShadowTexture
+
+          sourceItem: clockBox.rolling ? rollShadow : null
+          hideSource: true
+          textureSize: shadowTexture.textureSize
+          visible: false
+        }
+
         // The shadow: the digits in black, blurred and dropped.
         MultiEffect {
           y: clockBox.digits * Theme.lockClockShadowDrop
           width: plate.width
           height: plate.height
-          source: shadowTexture
+          source: clockBox.rolling ? rollShadowTexture : shadowTexture
           opacity: Theme.lockClockShadowAlpha
           colorization: 1
           colorizationColor: "black"
@@ -1018,34 +1242,50 @@ Item {
           autoPaddingEnabled: true
         }
 
-        // The digits as frosted jelly (Shaders/lockglass.frag), with their contact shadow.
-        ShaderEffect {
-          anchors.fill: parent
+        // The digits as frosted jelly (Shaders/lockglass.frag), with their contact shadow: the
+        // line, and while a minute rolls the digits on their way out, each layer read from its
+        // own colour channel (rollLineInk, rollLeavingInk) and shaded on its own, so neither
+        // takes the other's shape, and both seen through the row's window. At rest only the line
+        // is drawn, as it always was.
+        Repeater {
+          model: 2
 
-          property var glyphs: glyphTexture
-          property var soft: softTexture
-          property var backdrop: backdropTexture
-          property size itemSize: Qt.size(width, height)
-          property real bevel: softCover.blurMax
-          property real rim: clockBox.digits * Theme.lockGlassRim
-          property real feather: clockBox.digits * Theme.lockGlassFeather
-          property real relief: Theme.lockGlassRelief
-          property real bend: clockBox.digits * Theme.lockGlassBend
-          property real soften: clockBox.digits * Theme.lockGlassSoften
-          property real lighten: Theme.lockGlassLighten
-          property real milk: Theme.lockGlassMilk
-          property real vivid: Theme.lockGlassVivid
-          property real glow: Theme.lockGlassGlow
-          property real shine: Theme.lockGlassShine
-          property real shade: Theme.lockGlassShade
-          property real pool: Theme.lockGlassPool
-          property real contact: Theme.lockClockContactAlpha
-          property real drop: clockBox.digits * Theme.lockClockContactDrop
-          property real solid: clockBox.solid
-          property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
-          property color ink: Theme.lockTextPrimary
+          ShaderEffect {
+            required property int index
 
-          fragmentShader: Qt.resolvedUrl("../Shaders/lockglass.frag.qsb")
+            anchors.fill: parent
+            visible: index === 0 || clockBox.rolling
+
+            property var glyphs: glyphTexture
+            property var soft: softTexture
+            property var backdrop: backdropTexture
+            property size itemSize: Qt.size(width, height)
+            property real bevel: softCover.blurMax
+            property real rim: clockBox.digits * Theme.lockGlassRim
+            property real feather: clockBox.digits * Theme.lockGlassFeather
+            property real relief: Theme.lockGlassRelief
+            property real bend: clockBox.digits * Theme.lockGlassBend
+            property real soften: clockBox.digits * Theme.lockGlassSoften
+            property real lighten: Theme.lockGlassLighten
+            property real milk: Theme.lockGlassMilk
+            property real vivid: Theme.lockGlassVivid
+            property real glow: Theme.lockGlassGlow
+            property real shine: Theme.lockGlassShine
+            property real shade: Theme.lockGlassShade
+            property real pool: Theme.lockGlassPool
+            property real contact: Theme.lockClockContactAlpha
+            property real drop: clockBox.digits * Theme.lockClockContactDrop
+            property real solid: clockBox.solid
+            property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
+            property color ink: Theme.lockTextPrimary
+            property vector4d pick: index === 0 ? Qt.vector4d(1, 0, 0, 0) : Qt.vector4d(0, 1, 0, 0)
+            property vector4d window: clockBox.rolling ? clockBox.rollWindow : clockBox.openWindow
+            // A contact shadow is cast by the stroke just above it, and shows as much as its
+            // caster does.
+            property real lag: drop + bevel / 2
+
+            fragmentShader: Qt.resolvedUrl("../Shaders/lockglass.frag.qsb")
+          }
         }
       }
     }

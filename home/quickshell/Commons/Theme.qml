@@ -957,10 +957,23 @@ Singleton {
   // which sits the domes on the desktop rather than floating them over it.
   readonly property real lockClockContactAlpha: 0.35
   readonly property real lockClockContactDrop: 0.035
-  // A new minute turns over as the pill's clock rolls (clockRoll), upward, only slower for
-  // digits this big: a changed digit leaves through the top of its window as its successor
-  // comes up through the bottom, over lockClockRoll.
-  readonly property int lockClockRoll: reduceMotion ? 1 : 320
+  // A new minute rolls in as the pill's clock rolls (clockRoll), upward, whole: a changed digit
+  // slides up and out through a soft fade at the top of the row while its successor slides in
+  // from below through one at the bottom, the two a row apart, as on a counter's drum. Ryan chose
+  // this on 2026-11-12 over the fold that came first (the old digit squashed flat into the top of
+  // the row as the new one opened from the bottom), and asked for it quick, with a small bounce
+  // like the bubbly flight out of the pill: each digit settles in lockClockRoll, running
+  // lockClockRollOvershoot of its travel past its place on the way, once. Several digits
+  // changing ripple from the right, as a counter carries over: the last digit goes first and each
+  // changed one to its left lockClockRollStagger after it. The row's edges fade over
+  // lockClockRollFade of a digit's height.
+  readonly property int lockClockRoll: reduceMotion ? 1 : 350
+  readonly property int lockClockRollStagger: reduceMotion ? 0 : 40
+  readonly property real lockClockRollOvershoot: 0.04
+  readonly property real lockClockRollFade: 0.09
+  // A slot that a wider digit rolls into makes room for it over this share of lockClockRoll,
+  // before the digit is half way up into the row.
+  readonly property real lockClockRollWiden: 0.18
   // The flight swaps the island's own clock for the big one over the very first of its travel:
   // in the video the heavy digits are already the ones leaving the pill, and the ones landing in it.
   readonly property real lockClockSwapFrom: 0.005
