@@ -907,31 +907,44 @@ Singleton {
   readonly property real lockClockTracking: -0.035
   // Room kept round the digits' texture, as a share of a digit's height.
   readonly property real lockClockPad: 0.16
-  // The digits are bubbles of glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's
-  // opaque ink copied his wallpaper's look rather than suiting ours, and the glass was to be
-  // bubbly). Each stroke is an inflated tube, read off the digits' coverage blurred over
-  // lockGlassBevel of a digit's height and lockGlassRelief steep. The desktop behind shows
-  // through them (the blurred capture under the scrim; he tried the bare wallpaper there and
-  // took the desktop back the same night): bent as through a lens by up to
-  // lockGlassBend, blurred over lockGlassSoften of a digit's height, lightened by lockGlassLighten and
-  // milked with lockGlassMilk of the ink so the time reads on any wallpaper. A light from the
-  // upper left leaves a glint on the slope facing it, the outline is bright lockGlassRim wide,
-  // and the turning edge takes a soap film's colours (lockGlassFilm). The clock is plain ink in
-  // and out of the pill and turns to glass over this stretch of the flight.
-  readonly property real lockGlassBevel: 0.12
-  readonly property real lockGlassRelief: 1.9
-  readonly property real lockGlassRim: 0.006
+  // The digits are glass (Shaders/lockglass.frag; Ryan, 2026-11-12: the video's opaque ink
+  // copied his wallpaper's look rather than suiting ours, and the glass was to be bubbly). The
+  // desktop behind shows through them (the blurred capture under the scrim; he tried the bare
+  // wallpaper there and took the desktop back the same night).
+  //
+  // Later the same day (2026-11-12) he found the first glass bevelled plastic with a soap film round it, and
+  // chose "frosted jelly" instead: no film colours (no pink or green), and no colour of the
+  // glass's own at all, so the rim takes the desktop's colours, made more vivid; no bright
+  // hairline round the outline; and each stroke one round dome across its whole width, not a
+  // flat top on a steep bevel; the frosted, milky body he kept, so the time reads over any
+  // window. The dome is read off the digits' coverage blurred over lockGlassBevel of a digit's
+  // height, lockGlassRelief steep. Through it the desktop is bent as through a lens by up to
+  // lockGlassBend, most where the surface turns edge-on, so the rim gathers a wide slice of what
+  // lies round it; blurred over lockGlassSoften of a digit's height (three times that at the
+  // rim), lightened by lockGlassLighten and milked with lockGlassMilk of the ink. Over
+  // lockGlassRim in from the outline what the rim gathers is made lockGlassVivid more saturated
+  // and lockGlassGlow brighter (a grey stays grey). A light from the upper left leaves a broad
+  // sheen on the slopes facing it (lockGlassShine), the far slopes fall lockGlassShade into
+  // shade, and the light that passes through pools in a crescent inside the far edge
+  // (lockGlassPool), tinted by the desktop seen there. The clock is plain ink in and out of the
+  // pill and turns to glass over this stretch of the flight.
+  readonly property real lockGlassBevel: 0.16
+  readonly property real lockGlassRelief: 3.0
+  readonly property real lockGlassRim: 0.07
   // The glass's outline is softened over a disc whose radius is this share of a digit's height
   // (about 1.2 device px at Ryan's 2880x1800 panel, a ramp of 2 px or so): an edge that sits in
   // the desktop rather than one cut out of it (Ryan, 2026-11-12), never so much that it reads as
   // blur. Plain ink is not softened, so the hand-over to the pill's clock keeps its edge.
   readonly property real lockGlassFeather: 0.0035
-  readonly property real lockGlassBend: 0.13
-  readonly property real lockGlassSoften: 0.016
-  readonly property real lockGlassLighten: 1.3
-  readonly property real lockGlassMilk: 0.18
+  readonly property real lockGlassBend: 0.2
+  readonly property real lockGlassSoften: 0.04
+  readonly property real lockGlassLighten: 1.25
+  readonly property real lockGlassMilk: 0.2
+  readonly property real lockGlassVivid: 0.6
+  readonly property real lockGlassGlow: 0.4
   readonly property real lockGlassShine: 1.0
-  readonly property real lockGlassFilm: 0.24
+  readonly property real lockGlassShade: 0.18
+  readonly property real lockGlassPool: 1.0
   readonly property real lockGlassLightX: -0.55
   readonly property real lockGlassLightY: -0.8
   readonly property real lockGlassFrom: 0.12
@@ -940,6 +953,10 @@ Singleton {
   readonly property real lockClockShadowAlpha: 0.3
   readonly property real lockClockShadowBlur: 0.09
   readonly property real lockClockShadowDrop: 0.03
+  // And under the glass alone, a contact shadow: tighter and darker, only below the strokes,
+  // which sits the domes on the desktop rather than floating them over it.
+  readonly property real lockClockContactAlpha: 0.35
+  readonly property real lockClockContactDrop: 0.035
   // A new minute turns over as the pill's clock rolls (clockRoll), upward, only slower for
   // digits this big: a changed digit leaves through the top of its window as its successor
   // comes up through the bottom, over lockClockRoll.

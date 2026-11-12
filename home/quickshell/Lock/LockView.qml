@@ -959,8 +959,8 @@ Item {
           visible: false
         }
 
-        // The digits' coverage blurred over the bevel's depth: the glass reads how near the
-        // outline is, and which way it faces, off this.
+        // The digits' coverage blurred over about half a stroke: the glass reads each stroke's
+        // dome off this, its height and which way it faces, and how near the outline is.
         MultiEffect {
           id: softCover
 
@@ -975,11 +975,14 @@ Item {
           autoPaddingEnabled: false
         }
 
+        // Kept in half floats: near a stroke's spine the dome's slope is a difference of a few
+        // 8-bit levels, which the light on it would turn into streaks along the stroke.
         ShaderEffectSource {
           id: softTexture
 
           sourceItem: softCover
           hideSource: true
+          format: ShaderEffectSource.RGBA16F
           textureSize: Qt.size(Math.ceil(plate.width / 2), Math.ceil(plate.height / 2))
           visible: false
         }
@@ -1015,7 +1018,7 @@ Item {
           autoPaddingEnabled: true
         }
 
-        // The digits as bubbles of glass (Shaders/lockglass.frag).
+        // The digits as frosted jelly (Shaders/lockglass.frag), with their contact shadow.
         ShaderEffect {
           anchors.fill: parent
 
@@ -1024,15 +1027,20 @@ Item {
           property var backdrop: backdropTexture
           property size itemSize: Qt.size(width, height)
           property real bevel: softCover.blurMax
-          property real rim: Math.max(1.5, clockBox.digits * Theme.lockGlassRim)
+          property real rim: clockBox.digits * Theme.lockGlassRim
           property real feather: clockBox.digits * Theme.lockGlassFeather
           property real relief: Theme.lockGlassRelief
-          property real film: Theme.lockGlassFilm
           property real bend: clockBox.digits * Theme.lockGlassBend
           property real soften: clockBox.digits * Theme.lockGlassSoften
           property real lighten: Theme.lockGlassLighten
           property real milk: Theme.lockGlassMilk
+          property real vivid: Theme.lockGlassVivid
+          property real glow: Theme.lockGlassGlow
           property real shine: Theme.lockGlassShine
+          property real shade: Theme.lockGlassShade
+          property real pool: Theme.lockGlassPool
+          property real contact: Theme.lockClockContactAlpha
+          property real drop: clockBox.digits * Theme.lockClockContactDrop
           property real solid: clockBox.solid
           property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
           property color ink: Theme.lockTextPrimary
