@@ -969,6 +969,12 @@ Singleton {
   // The longest a manual lock waits for something still coming to rest (Bus.lockHeld) before
   // it captures the desktop anyway: the phone satellite's return takes about 400 ms.
   readonly property int lockSettleMax: 700
+  // The longest a manual lock waits for an open panel to close on its own way down before it
+  // locks anyway (Bus.lockClosing): a full panel is back at the pill in about half a second.
+  readonly property int lockCloseMax: 900
+  // A panel closing for a lock is landed on the pill once it is this close to it, rather than
+  // settled out to the last pixel (Ui/IslandSurfaceBase.qml lockLanding).
+  readonly property real lockCloseSlack: 3
 
   // The login pill (the polkit prompt's, Ui/LoginPill.qml): avatar, name over the password
   // line, submit disc. Offsets are from the pill's own top-left; the radius is height / 2.

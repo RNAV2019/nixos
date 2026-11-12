@@ -312,7 +312,7 @@ Singleton {
       // Taken before the surfaces see the request, which they decide from.
       root.screenName = Monitors.focusedName;
       // Nobody is going to see a prompt over the lock screen, and nobody could answer one.
-      if (Bus.locking)
+      if (Bus.locking || Bus.lockClosing)
         root.cancel();
     }
   }
@@ -348,6 +348,13 @@ Singleton {
 
     function onSurfacesClosingForLock() {
       if (root.pending)
+        root.cancel();
+    }
+
+    // The same from the moment a lock is asked for with a panel open, so the prompt closes
+    // with the rest instead of holding the lock up.
+    function onLockClosingChanged() {
+      if (Bus.lockClosing && root.pending)
         root.cancel();
     }
   }

@@ -94,6 +94,24 @@ PanelWindow {
   // Read off the spring, never the snapped size: snapping depends on the window it would flip.
   readonly property bool showing: open || origin.held || morphRunning || Math.abs(widthSpring.value - origin.collapsedWidth) > 0.5 || Math.abs(heightSpring.value - Theme.barHeight) > 0.5
 
+  // A lock is waiting on this surface's way down (Bus.lockClosing). Once the shape is within
+  // Theme.lockCloseSlack of the pill it is landed there: the rest of the settle is a pixel or
+  // two that nobody sees and would hold the lock back for as long again as the close took.
+  readonly property bool lockLanding: Bus.lockClosing && !open && !origin.held && Math.abs(widthSpring.value - widthSpring.target) <= Theme.lockCloseSlack && Math.abs(heightSpring.value - heightSpring.target) <= Theme.lockCloseSlack
+
+  // Later, not in the change itself: landing moves the values this was read from.
+  onLockLandingChanged: {
+    if (lockLanding)
+      Qt.callLater(win.landForLock);
+  }
+
+  function landForLock() {
+    if (!lockLanding)
+      return;
+    widthSpring.finish();
+    heightSpring.finish();
+  }
+
   // The whole time the bar must keep its island hidden: from this surface's first frame on
   // screen, never before it, so the pill is never taken away with nothing drawn in its place.
   // (Not in the middle of its own claim: taking the open hover card's shape makes it `showing`

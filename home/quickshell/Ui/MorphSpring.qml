@@ -94,6 +94,19 @@ QtObject {
       velocity = 0;
   }
 
+  // Lands the spring on its target now. The last pixel of a settle takes as long again as the
+  // rest of it; whoever is waiting on the shape and not on that calls this (a lock waiting on
+  // a closing panel, Ui/IslandSurfaceBase.qml).
+  function finish() {
+    driver.stop();
+    velocity = 0;
+    armedVelocity = 0;
+    if (value !== target) {
+      value = target;
+      log();
+    }
+  }
+
   function log() {
     // Guarded before the string is built: nothing is formatted when the log is off.
     if (Theme.motionLog && label !== "")

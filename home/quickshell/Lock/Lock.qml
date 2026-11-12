@@ -59,6 +59,7 @@ Scope {
       root.snapshotPath = "";
     snapshotDelay.stop();
     settleCap.stop();
+    closeCap.stop();
     snapshotPending = false;
     Bus.prepareForLock();
     root.password = "";
@@ -83,10 +84,28 @@ Scope {
   }
 
   function requestManualLock() {
-    if (Bus.locking || lockContext.locked || snapshotCapture.running || snapshotPending)
+    if (Bus.locking || Bus.lockClosing || lockContext.locked || snapshotCapture.running || snapshotPending)
       return;
-    // Close the shell's panels before the capture so the lock background never contains its
-    // own UI. The bar stays: the lock's pill starts on the island in the capture.
+    // An open panel closes on its own way down first; the lock begins when the island is the
+    // pill again (onIslandShowingChanged below), or when closeCap gives up on it.
+    if (Bus.islandShowing) {
+      Bus.closeForLock();
+      closeCap.restart();
+      return;
+    }
+    beginManualLock();
+  }
+
+  function closedForLock() {
+    if (Bus.lockClosing)
+      beginManualLock();
+  }
+
+  function beginManualLock() {
+    closeCap.stop();
+    // Whatever of the shell's own UI is still up goes before the capture, so the lock
+    // background never contains it. The bar stays: the lock's pill starts on the island in
+    // the capture.
     Bus.prepareForLock();
     root.snapshotPath = root.snapshotFile;
     snapshotPending = true;
@@ -149,6 +168,24 @@ Scope {
     function onLockHeldChanged() {
       if (!Bus.lockHeld && root.snapshotPending && settleCap.running)
         snapshotDelay.restart();
+    }
+
+    function onIslandShowingChanged() {
+      // Later, not here: beginning the lock empties the owners this was read from.
+      if (Bus.lockClosing && !Bus.islandShowing)
+        Qt.callLater(root.closedForLock);
+    }
+  }
+
+  // A panel that will not close (or one that opened past the request) is not waited for: the
+  // lock takes the desktop as it is, and the panel goes in one frame as it used to.
+  Timer {
+    id: closeCap
+
+    interval: Theme.lockCloseMax
+    onTriggered: {
+      if (Bus.lockClosing)
+        root.beginManualLock();
     }
   }
 

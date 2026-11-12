@@ -11,6 +11,21 @@ Singleton {
 
   signal surfacesClosingForLock
 
+  // A lock asked for while a panel is open (Lock/Lock.qml): the panel closes on its own way
+  // down first, and the lock begins once the island is the pill again, where the lock's own
+  // pill takes over from it. Without this the panel was gone in one frame and the pill back in
+  // the next (Ryan, 2026-11-12). Up from the request until the lock begins, or until Lock.qml
+  // gives up waiting (Theme.lockCloseMax); nothing opens meanwhile.
+  property bool lockClosing: false
+
+  function closeForLock() {
+    if (locking || lockClosing)
+      return;
+    lockClosing = true;
+    for (var i = 0; i < islandKeys.length; i++)
+      surfaceClosed(islandKeys[i]);
+  }
+
   // Every surface announces its key when it is made and withdraws it when it goes (Ui/IslandSurface.qml,
   // Ui/TransientSurface.qml), once per output, so a new surface needs no entry here. The lists below
   // are what is alive; nothing listens for a key whose surface has not been made, so nothing needs
@@ -56,6 +71,7 @@ Singleton {
     if (locking)
       return;
     locking = true;
+    lockClosing = false;
     sessionReady = false;
     for (var i = 0; i < islandKeys.length; i++)
       surfaceClosed(islandKeys[i]);
@@ -121,6 +137,8 @@ Singleton {
   }
 
   function toggleSurface(key) {
+    if (lockClosing)
+      return;
     surfaceToggled(key);
   }
 
@@ -222,6 +240,9 @@ Singleton {
   function setOwner(key, screenName) {
     owners = writeMap(owners, key, screenName);
   }
+
+  // An island surface is on screen on some output: open, or still on its way down.
+  readonly property bool islandShowing: Object.keys(owners).length > 0
 
   // Which output each island surface is drawn over the pill on, from its first frame on
   // screen until it is back to pill size. Owners are taken at once (other surfaces and

@@ -47,7 +47,7 @@ Variants {
       return holder !== "" && holder !== win.key && !Bus.isTransient(holder);
     }
 
-    wanted: Polkit.pending && win.mine && !Bus.locking && !win.blocked
+    wanted: Polkit.pending && win.mine && !Bus.locking && !Bus.lockClosing && !win.blocked
 
     // ---- the request, as the pill says it ----
 

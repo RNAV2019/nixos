@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -212,6 +212,16 @@ sc_lock_osd_satellite() {
   # it last, alone: the harness is torn down after.
   qsipc lock lock >/dev/null
   sleep 2.5
+}
+
+# A lock taken with a panel open: the panel closes on its own way down (Bus.lockClosing), and
+# only then does the lock begin; the log's "morph ev control parked" comes before the first
+# lock.flight. The real lock again, so run it last, alone.
+sc_lock_panel() {
+  toggle control
+  sleep 1.5
+  qsipc lock lock >/dev/null
+  sleep 2.8
 }
 
 # The satellite on the lock screen's rehearsal surface.
