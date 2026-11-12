@@ -403,8 +403,8 @@ Singleton {
   readonly property real islandCalPlateAlpha: 0.08
 
   // The app launcher, which the island pill grows into, sharing a top edge and centre line.
-  // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap, and no
-  // section headings between providers: saneAspect's launcher has none.
+  // A 68 px search row, then rows on a 45 px pitch, each 42 px tall with a 3 px gap (an answer
+  // card is taller), and no section headings between providers: saneAspect's launcher has none.
   readonly property int launcherWidth: panelColumnWidth
   readonly property int launcherRadius: panelRadius
   readonly property int launcherInset: 14
@@ -425,6 +425,16 @@ Singleton {
   readonly property int launcherDescSize: 11
   // Past this the list scrolls rather than the panel growing further.
   readonly property int launcherMaxRows: 8
+  // A computed answer (a row of kind "answer") is a card in the list's own column: how the
+  // question was read on a quiet line, the answer large under it on a fixed baseline, which
+  // it keeps when a long one is set smaller to fit. Selected, its fill is the selection's;
+  // otherwise a tile lift, so it stays a card under other rows.
+  readonly property int launcherAnswerHeight: 74
+  readonly property int launcherAnswerPad: 13
+  readonly property int launcherAnswerReadTop: 12
+  readonly property int launcherAnswerSize: 24
+  readonly property int launcherAnswerMinSize: 15
+  readonly property int launcherAnswerBaseline: 56
   // The selected row is a plain fill; no marker, no accent. The accent stays for the caret.
   readonly property real launcherSelectedAlpha: 0.10
   // The scope chip at the search row's right end: the provider's glyph and section in the

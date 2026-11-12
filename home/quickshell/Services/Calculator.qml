@@ -4,12 +4,16 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "../Commons/CalcPhrase.js" as CalcPhrase
 
 // The launcher's calculator, an Omnibox provider. Colours and integer bases are answered
 // here in JS; clock and calendar questions go to GNU date, and everything else (arithmetic,
-// units, currency) to qalc. Each result is a row: `name` is shown, `copy` goes to the
-// clipboard. Unscoped it sees every launcher query, so `looksCalculatory` keeps an app name
-// from spawning qalc per keystroke; a leading '=' scopes the launcher to it alone.
+// units, currency) to qalc, after CalcPhrase has put everyday phrasing ("half of 340", "5 km
+// in miles") into qalc's terms. Each result is a row: `name` is shown, `copy` goes to the
+// clipboard. A single answer is an "answer" row, which the launcher draws as a card with the
+// question as it was read over it; colours and bases answer in several rows and stay a list.
+// Unscoped it sees every launcher query, so `looksCalculatory` keeps an app name from
+// spawning qalc per keystroke; a leading '=' scopes the launcher to it alone.
 Provider {
   id: root
 
@@ -29,25 +33,25 @@ Provider {
 
   onScopedChanged: compute()
 
-  // qalc runs on a private config so its mode never touches the user's own qalc.cfg:
-  // no mixed units ("3 mi + 188 yd"), no prompts, nothing saved on exit.
+  // qalc runs on a private config (CalcPhrase.qalcConfig), so its mode never touches the
+  // user's own qalc.cfg.
   readonly property string qalcHome: Paths.home + "/.cache/quickshell/qalc"
-  readonly property string qalcConfig: "[General]\nsave_config=0\nsave_mode_on_exit=0\nsave_definitions_on_exit=0\nauto_update_exchange_rates=0\ncolorize=0\n[Mode]\nmixed_units_conversion=0\n"
 
   onExprChanged: compute()
 
   function compute() {
     var q = root.expr;
+    var said = CalcPhrase.rewrite(q);
     var hit;
 
     root.qalcFor = "";
     root.dateFor = "";
 
-    if (q.length === 0 || (!root.scoped && !looksCalculatory(q))) {
+    if (q.length === 0 || (!root.scoped && !looksCalculatory(q) && !worded(q, said))) {
       root.results = [];
       return;
     }
-    root.score = root.scoped || looksLikeMaths(q) ? root.strongScore : root.weakScore;
+    root.score = root.scoped || looksLikeMaths(q) || looksLikeMaths(said) ? root.strongScore : root.weakScore;
 
     hit = colourRows(q);
     if (hit) {
@@ -81,6 +85,12 @@ Provider {
   function looksCalculatory(q) {
     var s = q.toLowerCase();
     return /[\d+*\/^%×÷=√]/.test(s) || /^#|^(rgba?|hsla?|oklch)\(/.test(s) || /\s(to|in|as)\s/.test(s) || /^(now|time)$|\stime$|^time\s/.test(s) || /^(days?|weeks?)\s/.test(s);
+  }
+
+  // Maths with its numbers spelt out ("two hundred plus fifty"), which the first look misses.
+  // A number word alone is not a sum.
+  function worded(q, said) {
+    return !/\d/.test(q) && CalcPhrase.hasNumber(q) && !/^[\d.\s]+$/.test(said);
   }
 
   // Leads with a number, a sign, a bracket or a colour, or converts a number.
@@ -641,7 +651,7 @@ Provider {
     if (root.dateKind === "clock" && f.length === 4) {
       var offset = f[3] === "+00:00" ? "UTC" : "UTC" + f[3];
       return [row("clock", f[0], root.dateLabel + " · " + f[1] + " · " + f[2] + " (" + offset + ")", {
-          glyph: Icons.clock
+          kind: "answer"
         })];
     }
     if (f.length === 2) {
@@ -657,7 +667,7 @@ Provider {
       var unit = weeks ? (n === "1" ? " week" : " weeks") : (days === 1 ? " day" : " days");
       return [row("days", n + unit, root.dateLabel.charAt(0).toUpperCase() + root.dateLabel.substr(1) + " " + f[1], {
           copy: n,
-          glyph: Icons.calendar
+          kind: "answer"
         })];
     }
     return [];
@@ -691,26 +701,14 @@ Provider {
 
   // --- qalc -------------------------------------------------------------------------------
 
-  // Raycast's spellings qalc reads differently: "10c to f" is coulombs to farads there,
-  // and "20% of 150" is not an expression at all.
-  function forQalc(q) {
-    var t = q.replace(/^(-?[\d.]+)\s*°?([cfk])\s+(to|in)\s+°?([cfk])$/i, function (_, n, a, _2, b) {
-      var unit = function (u) {
-        u = u.toLowerCase();
-        return u === "k" ? "K" : "°" + u.toUpperCase();
-      };
-      return n + " " + unit(a) + " to " + unit(b);
-    });
-    return t.replace(/(\d)\s*%\s+of\s+/gi, "$1% * ");
-  }
-
-  // Currencies come back to eight places; money reads to two, grouped.
+  // Currencies come back to eight places; money reads to two, grouped. One with no symbol
+  // of its own leads or trails with its code ("ZAR 1639.216").
   function tidy(result) {
-    var m = result.match(/^([£$€¥₹₩₽₺₪฿₫₴₦]?)(-?\d+)\.(\d+)(\s*[A-Z]{3})?$/);
+    var m = result.match(/^([£$€¥₹₩₽₺₪฿₫₴₦]|[A-Z]{3} )?(-?\d+)\.(\d+)(\s*[A-Z]{3})?$/);
     if (m && (m[1] || m[4])) {
       var n = parseFloat(m[2] + "." + m[3]);
       var s = Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      return (n < 0 ? "-" : "") + m[1] + s + (m[4] || "");
+      return (n < 0 ? "-" : "") + (m[1] || "") + s + (m[4] || "");
     }
     return result.replace(/^"(.*)"$/, "$1");
   }
@@ -740,13 +738,13 @@ Provider {
     var value = tidy(result);
     if (!value || value === shown)
       return [];
-    return [row("qalc", value, (approx ? "≈ " : "= ") + shown, {
-        glyph: Icons.calculator
+    return [row("qalc", value, shown + (approx ? " ≈" : " ="), {
+        kind: "answer"
       })];
   }
 
   Process {
-    command: ["sh", "-c", 'mkdir -p "$1/qalculate" && printf "%s" "$2" > "$1/qalculate/qalc.cfg"', "sh", root.qalcHome, root.qalcConfig]
+    command: ["sh", "-c", 'mkdir -p "$1/qalculate" && printf "%s" "$2" > "$1/qalculate/qalc.cfg"', "sh", root.qalcHome, CalcPhrase.qalcConfig]
     running: true
   }
 
@@ -755,8 +753,13 @@ Provider {
 
     stamp: root.qalcFor
 
-    // A 1 s ceiling keeps "99999!" from wedging the launcher.
-    command: ["qalc", "-m", "1000", root.forQalc(root.qalcFor)]
+    // A 1 s ceiling keeps "99999!" from wedging the launcher. So would a qalc left waiting
+    // on its input, with every later sum queued behind it: given no expression it opens its
+    // prompt, and unsure how to read one ("100 + 10%") it stops to ask. So it is never started
+    // on an empty expression, which a run queued just before the query became a colour or a
+    // time would be, and its input is closed, so a question reads end-of-file and takes its
+    // default.
+    command: ["sh", "-c", '[ -n "$1" ] && exec qalc -m 1000 "$1" </dev/null', "sh", CalcPhrase.rewrite(root.qalcFor)]
     environment: ({
         XDG_CONFIG_HOME: root.qalcHome
       })
@@ -769,6 +772,13 @@ Provider {
     }
 
     stderr: StdioCollector {}
+  }
+
+  // Whatever else might hold qalc up, it is not waited on past this.
+  Timer {
+    interval: 3000
+    running: qalc.running
+    onTriggered: qalc.running = false
   }
 
   // Exchange rates live in qalc's shared data dir; refresh them in the background when

@@ -46,6 +46,7 @@ Singleton {
       icon: "",
       glyph: "",
       swatch: "",
+      kind: "",
       score: 0,
       matches: []
     }, fields);

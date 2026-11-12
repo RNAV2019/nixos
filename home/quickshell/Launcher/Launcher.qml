@@ -34,10 +34,14 @@ Variants {
     property bool userMoved: false
 
     // Up to Theme.launcherMaxRows rows, then the list scrolls. Nothing to show leaves no list,
-    // and the panel closes up to the search row rather than saying so.
+    // and the panel closes up to the search row rather than saying so. An answer card is taller
+    // than a row, so the heights are added up.
     readonly property int listHeight: {
       var shown = Math.min(Theme.launcherMaxRows, win.results.length);
-      return shown > 0 ? shown * (Theme.launcherRowHeight + Theme.launcherRowGap) - Theme.launcherRowGap : 0;
+      var height = 0;
+      for (var i = 0; i < shown; i++)
+        height += win.heightOf(win.results[i].kind) + Theme.launcherRowGap;
+      return shown > 0 ? height - Theme.launcherRowGap : 0;
     }
     readonly property bool listEmpty: win.results.length === 0
     readonly property int contentHeight: listEmpty ? Theme.launcherSearchHeight : Theme.launcherListTop + listHeight + Theme.launcherPadBottom
@@ -46,6 +50,10 @@ Variants {
       Omnibox.reset();
       query.text = "";
       win.selectFirst();
+    }
+
+    function heightOf(kind) {
+      return kind === "answer" ? Theme.launcherAnswerHeight : Theme.launcherRowHeight;
     }
 
     function selectedRow() {
@@ -144,9 +152,10 @@ Variants {
         rowIcon: String(item.icon || ""),
         rowGlyph: String(item.glyph || ""),
         rowSwatch: String(item.swatch || ""),
-        rowEmoji: String(item.emoji || "")
+        rowEmoji: String(item.emoji || ""),
+        rowKind: String(item.kind || "")
       };
-      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji].join("\u0001");
+      row.rowKey = [row.rowName, row.rowDesc, row.rowIcon, row.rowGlyph, row.rowSwatch, row.rowEmoji, row.rowKind].join("\u0001");
       return row;
     }
 
@@ -395,23 +404,53 @@ Variants {
         required property string rowGlyph
         required property string rowSwatch
         required property string rowEmoji
+        required property string rowKind
+
+        readonly property bool current: ListView.isCurrentItem
 
         width: list.width
-        height: Theme.launcherRowHeight
+        height: win.heightOf(slot.rowKind)
 
-        LauncherRow {
+        function activate(modifiers) {
+          list.currentIndex = slot.index;
+          win.activate(modifiers);
+        }
+
+        // A computed answer is a card; everything else is a row.
+        Loader {
           anchors.fill: parent
-          name: slot.rowName
-          description: slot.rowDesc
-          iconSource: slot.rowIcon
-          glyph: slot.rowGlyph
-          swatch: slot.rowSwatch
-          emoji: slot.rowEmoji
-          current: slot.ListView.isCurrentItem
+          sourceComponent: slot.rowKind === "answer" ? answerRow : plainRow
+        }
 
-          onActivated: function (modifiers) {
-            list.currentIndex = slot.index;
-            win.activate(modifiers);
+        Component {
+          id: plainRow
+
+          LauncherRow {
+            name: slot.rowName
+            description: slot.rowDesc
+            iconSource: slot.rowIcon
+            glyph: slot.rowGlyph
+            swatch: slot.rowSwatch
+            emoji: slot.rowEmoji
+            current: slot.current
+
+            onActivated: function (modifiers) {
+              slot.activate(modifiers);
+            }
+          }
+        }
+
+        Component {
+          id: answerRow
+
+          AnswerRow {
+            answer: slot.rowName
+            reading: slot.rowDesc
+            current: slot.current
+
+            onActivated: function (modifiers) {
+              slot.activate(modifiers);
+            }
           }
         }
       }

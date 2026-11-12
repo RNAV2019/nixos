@@ -126,6 +126,14 @@
       # NixOS VM: tty1 autologin into Hyprland --locked-cmd, real Hyprland on virtio-gpu DRM.
       locked-login = import ./tests/locked-login.nix {inherit pkgs;};
 
+      # The launcher calculator's phrasings, through CalcPhrase.js and a real qalc.
+      calc-phrases =
+        pkgs.runCommand "calc-phrases" {
+          nativeBuildInputs = [pkgs.nodejs pkgs.libqalculate];
+        } ''
+          node ${./tools/calc-phrase-test.mjs} ${./home/quickshell/Commons/CalcPhrase.js} && touch "$out"
+        '';
+
       # qmlformat reads home/quickshell/.qmlformat.ini; any file it would change fails.
       quickshell-qmlformat =
         pkgs.runCommand "quickshell-qmlformat" {
