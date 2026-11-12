@@ -147,6 +147,27 @@ need_magick() {
   PATH=$p/bin:$PATH
 }
 
+# ---- what is playing: a mock MPRIS player on the private session bus (mock-mpris.py) ----
+
+MP_NAME=org.mpris.MediaPlayer2.qsv
+# One of the player's own methods: PlayPause, Play, Pause, Stop, Next, Previous.
+mp() { busctl --user call "$MP_NAME" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player "$@" >/dev/null; }
+media_up() { # a player, playing the first of its two tracks, each with a cover
+  busctl --user list 2>/dev/null | grep -q "$MP_NAME" && return 0
+  setsid "$(mock_python)/bin/python" "$QSV_DIR/mock-mpris.py" "file://$QSV_WORK/art/one.png" "file://$QSV_WORK/art/two.png" \
+    >"$QSV_WORK/mock-mpris.log" 2>&1 &
+  echo $! >"$QSV_WORK/mock-mpris.pid"
+  until busctl --user list 2>/dev/null | grep -q "$MP_NAME"; do sleep 0.2; done
+  sleep 1.0
+}
+media_down() { # the player gone, and the island back to its idle pill
+  [[ -f $QSV_WORK/mock-mpris.pid ]] || return 0
+  kill "$(<"$QSV_WORK/mock-mpris.pid")" 2>/dev/null
+  rm -f "$QSV_WORK/mock-mpris.pid"
+  while busctl --user list 2>/dev/null | grep -q "$MP_NAME"; do sleep 0.2; done
+  sleep 1.0
+}
+
 # ---- the phone: a mock kdeconnectd on the private session bus, read by the real phone-bridge ----
 # (PH_CALLS, PH_STORAGE and NB_SEND are set by the script that sources this, after load_env.)
 

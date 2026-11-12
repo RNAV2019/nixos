@@ -157,6 +157,15 @@ STUB
 chmod +x "$QSV_WORK/bin/cliphist"
 printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1\tssh ryan@192.168.1.20\n' >"$QSV_WORK/cliphist.list"
 
+# `curl`, which the weather service asks Open-Meteo with: a fixed reading (11 degrees, part cloud,
+# night), so the harness never reaches the network. Nothing runs it until a place is stored
+# (`qs ipc call weather set`), which the scratch state dir starts without.
+cat >"$QSV_WORK/bin/curl" <<'STUB'
+#!/bin/sh
+echo '{"latitude":51.48,"longitude":0.0,"current":{"time":"2026-01-01T22:00","interval":900,"temperature_2m":11.3,"weather_code":2,"is_day":0}}'
+STUB
+chmod +x "$QSV_WORK/bin/curl"
+
 # Fixture wallpapers (the pickers list ~/Pictures/backgrounds/<theme>/), and the compositor's
 # own background: a gradient with shapes in it, so a panel's translucency and blur show.
 MAGICK=$(tool magick)
@@ -171,6 +180,14 @@ done
 "$MAGICK" -size 1920x1080 gradient:'#3d3556-#1f4f55' \
   -fill '#d8a657' -draw 'circle 420,520 420,720' -fill '#7daea3' -draw 'rectangle 1100,380 1500,980' \
   -fill '#ea6962' -draw 'circle 1650,200 1650,300' "$QSV_WORK/bg.png"
+
+# Two covers for the mock player (mock-mpris.py, started by the states that want one playing).
+mkdir -p "$QSV_WORK/art"
+"$MAGICK" -size 640x640 gradient:'#b8452f-#2f9c84' -fill none -stroke '#efe6d6' -strokewidth 7 \
+  -draw 'circle 320,320 320,150' -stroke none -fill '#0c0c0c' -draw 'circle 320,320 320,262' \
+  -fill '#efe6d6' -draw 'circle 350,290 350,278' "$QSV_WORK/art/one.png"
+"$MAGICK" -size 640x640 gradient:'#27306b-#d9a441' -fill '#f2efe8' \
+  -draw 'rectangle 150,380 490,400' -draw 'rectangle 150,430 380,446' "$QSV_WORK/art/two.png"
 
 # Fake sysfs / procfs, bind-mounted over the real ones for the shell only.
 mkdir -p "$QSV_WORK/fake/backlight/panel" "$QSV_WORK/fake/leds/test::kbd_backlight" "$QSV_WORK/fake/proc"

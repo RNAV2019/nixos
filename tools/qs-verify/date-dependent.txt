@@ -1,3 +1,6 @@
 # Captures that draw today's date, so they differ between runs made on different days.
 panel-calendar
 phone-satellite-card  # the hover card's calendar strip
+card-playing          # the hover card's date
+card-paused
+card-idle             # and its calendar strip

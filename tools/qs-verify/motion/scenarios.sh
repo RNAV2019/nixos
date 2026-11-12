@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal media-open-close card-media"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -16,7 +16,7 @@ toggle() {
 # Close everything and park the pointer, as shoot.sh does between states.
 reset_ui() {
   local k
-  for k in launcher control wallpaper profiles calendar nearby recorder theme phone; do
+  for k in launcher control wallpaper profiles calendar nearby recorder theme phone media; do
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
@@ -536,4 +536,34 @@ sc_satellite_hover_panel() {
   sleep 1.4
   cursor 200 900
   sleep 0.8
+}
+
+# The Now playing panel out of the shut pill and back, with a mock player up for it (lib.sh
+# media_up), which goes again so the scenarios after this one see the idle pill.
+sc_media_open_close() {
+  media_up
+  sleep 0.5
+  toggle media
+  sleep 1.2
+  toggle media
+  sleep 1.0
+  media_down
+}
+
+# The hover card, then a click on what is playing: the panel grows out of the open card with the
+# cover, title and artist carried on (label surface.media.morph.q, and "morph pairs" in the
+# shell's log), and closes to the pill.
+sc_card_media() {
+  media_up
+  sleep 0.3
+  cursor 960 26
+  sleep 0.6
+  cursor 790 52
+  sleep 0.9
+  click
+  sleep 1.2
+  cursor 200 900
+  qsipc media close >/dev/null 2>&1
+  sleep 1.0
+  media_down
 }

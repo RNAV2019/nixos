@@ -66,6 +66,12 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
   (not screenshots) confirm Browse starts `nautilus` on the mount and that choosing a wallpaper
   leaves exactly one copy in the state dir.
 
+- What is playing (last of all, with the phone gone again, so no state above is taken in another
+  order than before): the hover card with a player and the weather (playing, paused) and with
+  nothing playing, the Now playing panel (playing, paused), and the control centre with its media
+  card (paused; its notification list is masked). The playing panel's equaliser and scrub bar
+  are masked.
+
 ## How states are driven (no QML hooks)
 
 | State | Driver |
@@ -83,6 +89,8 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | calendar agenda | off by default (the stub `ical-agenda` fails as on a fresh machine); put ical-agenda's own tab-separated output in `$QS_VERIFY_WORK/cal-events.tsv` after `run.sh` and press `r` in the panel |
 | auth prompt | the shell's own `authpreview` ipc |
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |
+| what is playing | `mock-mpris.py`, an MPRIS player on the private session bus with four tracks (two with generated covers, one with long names, one with no cover), driven through its own methods (`mp PlayPause`, lib.sh); up only for the states that want it |
+| weather | a stub `curl` on PATH that answers every request with one fixed Open-Meteo reading, so nothing reaches the network; a place is stored with the shell's own `weather set` ipc for the card states and cleared after |
 | phone satellite, phone panel, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
 | pointer | `vpointer.c`, a persistent `zwlr_virtual_pointer` (headless sway has no pointer; without one there is no hover or click) |
 
@@ -106,7 +114,7 @@ OLED orbit would move the pill one pixel every three minutes).
 - **Motion.** One settled frame per state; transitions, springs and handoffs are covered by the
   separate 120 Hz recorder and checker in `motion/` (`motion/README.md`: `record.sh`, `check.mjs`,
   `video.py`, `shader-smoke.sh`).
-- **Mpris media card with a player, clipboard history, emoji and file launcher modes, the file
+- **The media card while it plays (its hills and thumb move), clipboard history, emoji and file launcher modes, the file
   picker, hover previews, the Send-with-files and Apple (AirDrop) nearby flows, Recorder busy
   states, Night Light (the tile reads "Unavailable"), Displays with a second output.**
 - **Hyprland-specific behaviour** (workspaces content, per-monitor focus): sway stands in.

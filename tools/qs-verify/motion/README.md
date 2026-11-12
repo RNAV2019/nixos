@@ -138,6 +138,14 @@ nothing below), a fifth `lockpatch.frag` (blue wallpaper inside the island, red 
 
 ## Other scenarios
 
+`media-open-close` (the Now playing panel out of the pill and back) and `card-media` (the hover
+card, then a click on what is playing, so the panel grows out of the card with the cover, title
+and artist carried on) bring the mock player up (`lib.sh media_up`, `mock-mpris.py`) and take it
+down again. A player coming and going widens the pill, and the lock view's own pill spring
+(`lock.pill.w`) follows that with its designed overshoot even when nothing is locked, so check
+these two with `--overshoot-tol 'lock.pill.w:2'`. For the frames, `transitions.sh OUT
+card:card-click rest:media media:close-media` and `sheet.py OUT`.
+
 The `launcher-scroll` scenario adds twelve fixture apps matching one query and arrows through the list
 (label `launcher.scroll`).
 

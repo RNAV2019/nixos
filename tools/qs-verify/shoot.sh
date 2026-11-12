@@ -38,7 +38,7 @@ wpctl() { command wpctl "$@" 2>/dev/null; }
 
 reset_ui() {
   local k
-  for k in launcher control wallpaper profiles calendar nearby recorder theme phone; do
+  for k in launcher control wallpaper profiles calendar nearby recorder theme phone media; do
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
@@ -397,6 +397,17 @@ teardown_nearby() { nb_reset; }
 setup_moment_plugged() { qsipc activities plug 78 80 >/dev/null; }
 setup_moment_wifi() { qsipc activities wifi portal "Campus WiFi" >/dev/null; }
 teardown_wifi() { qsipc activities wifi full "" >/dev/null; }
+
+# ---- what is playing: the mock player (lib.sh media_up), and weather from the stub curl ----
+
+setup_card() { cursor 960 26; }
+setup_media() { open_panel media; }
+# Paused at a place of its own choosing, so the scrub bar reads the same every run.
+media_pause() {
+  mp Pause
+  mp SetPosition ox /org/qsv/track/0 96000000
+  sleep 0.8
+}
 
 # ---- notifications ----
 
@@ -764,6 +775,32 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   check nearby-android-kept android_pick_kept
   shot panel-nearby-android-kept 1.5 0.3 setup_nearby_android_kept
   shot panel-nearby-kde-after-restart 1.5 0.3 setup_nearby_kde_after_restart
+fi
+
+# Last of all, so every state above is taken exactly as it was before these existed (a state
+# added in the middle shifts which windows the shell still holds for the ones after it): a
+# player with a cover, and a place for the weather, which the stub curl answers for. The phone
+# goes first, so no satellite stands beside the pill. The control centre's own state comes after
+# the shell's restart above and before the control centre has been shown again: shown once with
+# no cover, its media card does not pick up one that arrives later.
+if [[ -z $ONLY || $ONLY == card-* || $ONLY == *media* ]]; then
+  if busctl --user list 2>/dev/null | grep -q org.mock.Control; then
+    ph '{"op":"remove","id":"s24"}'
+    sleep 2.5
+  fi
+  media_up
+  qsipc weather set 51.48 0.00 >/dev/null
+  sleep 1.5
+  shot card-playing 1.4 0.3 setup_card
+  shot panel-media 1.5 0.3 setup_media
+  media_pause
+  shot card-paused 1.4 0.3 setup_card
+  shot panel-media-paused 1.5 0.3 setup_media
+  shot panel-control-media-paused 1.5 0.3 setup_control
+  media_down
+  shot card-idle 1.4 0.3 setup_card
+  qsipc weather clear >/dev/null
+  sleep 0.5
 fi
 
 reset_ui

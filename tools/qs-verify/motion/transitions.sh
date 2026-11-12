@@ -6,6 +6,10 @@
 # capture, opens B over it, and stops the capture once B has settled: OUT_DIR/A-B.mkv. With no
 # pairs, every ordered pair of PANELS. A side may be a transient as well as a panel:
 #   osd-volume osd-brightness toast rebuild moment-plugged
+# or the island itself: `rest` (the shut pill), `card` (the hover card, the pointer over what is
+# playing) and `card-click` (a click there), so card:card-click is the Now playing panel growing
+# out of the open card and rest:media out of the pill. A pair that names `media` or `card` gets a
+# mock player first (lib.sh media_up).
 # sheet.py then cuts each capture into a contact sheet.
 set -euo pipefail
 
@@ -44,10 +48,11 @@ PHONE_UP=0
 
 # Closes what the last pair raised (every panel with no argument), and clears the transients.
 reset_all() {
-  local k keys=${1:-launcher control wallpaper profiles calendar nearby recorder theme phone session}
+  local k keys=${1:-launcher control wallpaper profiles calendar nearby recorder theme phone session media}
   for k in $keys; do
     case $k in
-      osd-* | toast | close-* | dictation* | sharing | rebuild | moment-next) ;;
+      osd-* | toast | close-* | dictation* | sharing | rebuild | moment-next | rest | card) ;;
+      card-click) qsipc media close >/dev/null 2>&1 || true ;;
       moment-*) qsipc activities dismissMoments >/dev/null 2>&1 || true ;;
       *) qsipc "$k" close >/dev/null 2>&1 || true ;;
     esac
@@ -88,6 +93,14 @@ raise() {
     moment-wifi) qsipc activities wifi portal "Campus WiFi" >/dev/null ;;
     moment-next) qsipc activities next >/dev/null ;;
     close-*) qsipc "${1#close-}" close >/dev/null ;;
+    rest) ;;
+    card)
+      # Onto the pill, which opens the card under the pointer, then along it to what is playing.
+      cursor 960 26
+      sleep 0.5
+      cursor 790 52
+      ;;
+    card-click) click ;;
     osd-volume)
       wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
       # One change: two would show the first level and then the second.
@@ -112,6 +125,13 @@ raise() {
     *) qsipc "$1" toggle >/dev/null ;;
   esac
 }
+
+case " ${PAIRS[*]} " in
+  *media* | *card*)
+    media_up
+    PANELS="$PANELS media"
+    ;;
+esac
 
 # Every panel opened once first, so no capture pays a cold window (Ui/IslandSurfaceBase.qml parks
 # windows; a first open builds one and waits out its first frame).
