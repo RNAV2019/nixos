@@ -99,6 +99,7 @@
         keys = [
           (key "Control Center" (bind "ALT + A" (exec "qs ipc call control toggle")))
           (key "Calendar" (bind "ALT + C" (exec "qs ipc call calendar toggle")))
+          (key "Now playing" (bind "ALT + M" (exec "qs ipc call media toggle")))
           (key "Nearby sharing" (bind "ALT + N" (exec "qs ipc call nearby toggle")))
           (key "Power profiles" (bind "ALT + P" (exec "qs ipc call profiles toggle")))
           (key "Theme" (bind "ALT + T" (exec "qs ipc call theme toggle")))
