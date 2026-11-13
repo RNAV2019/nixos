@@ -22,7 +22,10 @@ Singleton {
 
   // Today at midnight: the same value all day, and the next one from midnight on, so what
   // reads it (the grid's ring, "Today" over the agenda) moves on without the panel reopening.
-  readonly property date todayDate: new Date(clock.date.getFullYear(), clock.date.getMonth(), clock.date.getDate())
+  readonly property date todayDate: new Date(Math.floor(dayStamp / 10000), Math.floor(dayStamp / 100) % 100, dayStamp % 100)
+
+  // The clock ticks each minute; a number that is the same all day keeps that from the readers.
+  readonly property int dayStamp: clock.date.getFullYear() * 10000 + clock.date.getMonth() * 100 + clock.date.getDate()
 
   SystemClock {
     id: clock
