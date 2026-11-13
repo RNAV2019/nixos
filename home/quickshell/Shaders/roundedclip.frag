@@ -46,6 +46,12 @@ void main() {
     vec2 p = px - boxOrigin - boxSize * 0.5;
     float d = sdRoundBox(p, boxSize * 0.5, radius);
     float a = smoothstep(aa, -aa, d);
+    // Outside the box nothing shows, so skip the taps. The sources are not mipmapped, so no
+    // texture() here needs derivatives that a return in the middle of a quad would leave undefined.
+    if (a <= 0.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
 
     vec2 uv = (pivot + (px - pivot) / max(scale, 0.01)) / itemSize;
     vec4 c;

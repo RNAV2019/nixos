@@ -67,8 +67,14 @@ void main() {
     vec2 halfSize = boxSize * 0.5;
     float r = min(radius, min(halfSize.x, halfSize.y));
     vec2 p = qt_TexCoord0 * itemSize - boxOrigin - halfSize;
-    float shadow = roundedBoxShadow(p - offset, halfSize, max(sigma, 0.5), r);
     float inside = smoothstep(aa, -aa, sdRoundBox(p, halfSize, r));
+    // Under the shape the cut-out is total, so the pixel is transparent whatever the Gaussian says:
+    // the same 0 the line below would make of it, without the 12 samples.
+    if (inside >= 1.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
+    float shadow = roundedBoxShadow(p - offset, halfSize, max(sigma, 0.5), r);
     float a = clamp(shadow, 0.0, 1.0) * (1.0 - inside) * strength * qt_Opacity;
     fragColor = vec4(0.0, 0.0, 0.0, a);
 }
