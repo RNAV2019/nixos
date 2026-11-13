@@ -29,6 +29,10 @@ ShellRoot {
   // put a remembered monitor back where it was.
   Component.onCompleted: Displays.restoreAll()
 
+  // Singletons start on first use, and nothing else reads this one: the burn-in orbit runs only
+  // while it exists.
+  readonly property var oledCare: OledCare
+
   Bar {}
   Moments {}
   RebuildPill {}
