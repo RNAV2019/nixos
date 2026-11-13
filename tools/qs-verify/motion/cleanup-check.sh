@@ -34,8 +34,9 @@ for part in nl lock; do
     --expect-continuity 'surface.*.w,surface.*.h' \
     --overshoot-tol 'lock.pill.w:2,dict.bar*:0.25' >"$split/$part.out" 2>&1
   status=$?
-  # check.mjs exits 0 when clean and 1 when a rule failed; anything else did not check.
-  if ((status > 1)); then
+  # check.mjs ends with a "check: N logs" line whenever it ran to the end; without it
+  # (a crash, a missing module) nothing was checked, whatever the exit status.
+  if ((status > 1)) || ! grep -q '^check: [0-9]* logs' "$split/$part.out"; then
     echo "cleanup-check: check.mjs exited $status on the $part logs" >&2
     cat "$split/$part.out" >&2
     exit 2
