@@ -90,10 +90,12 @@ Singleton {
       fetch.run();
   }
 
-  // A reading for another place is not this one's.
+  // A reading for another place is not this one's. The fetch waits a turn: its command is bound
+  // to the url and may not have followed it yet when this runs, and curl would be handed the
+  // old one (none at all, the first time a place is given).
   onUrlChanged: {
     root.reading = null;
-    root.refresh();
+    Qt.callLater(root.refresh);
   }
 
   function take(text) {

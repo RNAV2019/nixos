@@ -160,8 +160,15 @@ printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1
 # `curl`, which the weather service asks Open-Meteo with: a fixed reading (11 degrees, part cloud,
 # night), so the harness never reaches the network. Nothing runs it until a place is stored
 # (`qs ipc call weather set`), which the scratch state dir starts without.
+# Like curl it refuses a blank URL, its last argument, and it notes each one it was asked for.
 cat >"$QSV_WORK/bin/curl" <<'STUB'
 #!/bin/sh
+for last; do :; done
+if [ -z "$last" ]; then
+  echo "curl: option : blank argument where content is expected" >&2
+  exit 2
+fi
+echo "$last" >>"$(dirname "$0")/../curl.urls"
 echo '{"latitude":51.48,"longitude":0.0,"current":{"time":"2026-01-01T22:00","interval":900,"temperature_2m":11.3,"weather_code":2,"is_day":0}}'
 STUB
 chmod +x "$QSV_WORK/bin/curl"
