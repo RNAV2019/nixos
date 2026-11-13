@@ -351,9 +351,9 @@ FrostedSurface {
       ContentFade {}
     }
 
-    // What is playing: the cover bled in from the card's left edge, with the title and artist on
-    // its last faint reach. It and the week below share this room and cross-fade when a player
-    // comes or goes, both laid out throughout.
+    // What is playing: the cover bled in from the card's left edge, with the title and artist
+    // on the ground past its far end. It and the week below share this room and cross-fade when
+    // a player comes or goes, both laid out throughout.
     Item {
       id: playing
 
@@ -429,7 +429,7 @@ FrostedSurface {
             width: track.openWidth
             elide: Text.ElideRight
             text: Media.artist
-            // Over the cover's reach, where subtle would sink into the tint.
+            // Beside the cover, where subtle would sink.
             color: Theme.withAlpha(Theme.text, Theme.mediaSecondaryAlpha)
             font.family: Theme.uiFont
             font.pixelSize: Theme.islandCaptionSize

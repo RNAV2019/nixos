@@ -381,8 +381,9 @@ Singleton {
   readonly property int islandTitleSize: 13
   readonly property int islandCaptionSize: 11
   // The playing track's cover, bled in from the card's start edge at the card's full height
-  // (Ui/CoverBleed.qml); the title and artist start this far in, on the cover's last faint reach.
-  readonly property int islandBleedWidth: 118
+  // (Ui/CoverBleed.qml), and where the title and artist start: past the cover's far end, on
+  // clean ground, so no word stands on the picture or its fade.
+  readonly property int islandBleedWidth: 96
   readonly property int islandTrackLeft: 100
   // The weather beside the gauges: a glyph with the temperature under it, this far left of them.
   readonly property int islandWeatherGlyph: 26
@@ -1516,15 +1517,16 @@ Singleton {
   readonly property int coverSourceSize: 512
   // A paused track's cover goes under this much black.
   readonly property real coverPausedDim: 0.5
-  // The second line over a cover's faint reach: the text colour let down, where subtle would sink.
+  // The second line beside a cover: the text colour let down, where subtle would sink next to it.
   readonly property real mediaSecondaryAlpha: 0.62
 
   // The Now playing panel: the cover bled in from the left, and a column of output, title,
-  // artist, scrub bar and transport from mediaColumnLeft to mediaColumnRight. Rows by their middles.
+  // artist, scrub bar and transport from mediaColumnLeft to mediaColumnRight, which starts past
+  // the cover's far end as the card's lines do. Rows by their middles.
   readonly property int mediaWidth: panelColumnWidth
   readonly property int mediaHeight: 196
   readonly property int mediaRadius: panelRadius
-  readonly property int mediaBleedWidth: 256
+  readonly property int mediaBleedWidth: 214
   readonly property int mediaColumnLeft: 222
   readonly property int mediaColumnRight: 502
   readonly property real mediaOutputMid: 30
