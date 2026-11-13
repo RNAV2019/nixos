@@ -37,7 +37,7 @@ FrostedSurface {
     return null;
   }
 
-  function focus(id) {
+  function focusSlot(id) {
     Hyprland.dispatch("hl.dsp.focus({ workspace = " + id + " })");
   }
 
@@ -72,7 +72,7 @@ FrostedSurface {
         Accessible.name: "Workspace " + slot.modelData
         Accessible.focusable: true
         Accessible.focused: slot.activeFocus
-        Accessible.onPressAction: root.focus(slot.modelData)
+        Accessible.onPressAction: root.focusSlot(slot.modelData)
         MorphSpring {
           id: slotSpring
 
@@ -119,7 +119,7 @@ FrostedSurface {
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
           onPressed: slot.forceActiveFocus()
-          onClicked: root.focus(slot.modelData)
+          onClicked: root.focusSlot(slot.modelData)
         }
       }
     }

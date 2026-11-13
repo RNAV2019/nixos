@@ -53,7 +53,7 @@ Variants {
           height: panel.carousel.tileHeight(index)
           kind: Tile.Carousel
           noun: "wallpaper"
-          accessibleName: image
+          accessibleName: modelData.name
           image: "file://" + modelData.real
           glide: panel.carousel.glide
           current: index === panel.selected

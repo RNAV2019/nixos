@@ -52,6 +52,9 @@ Variants {
     property var ignoreIds: []
     // Transfer id -> when its tile lets it go (ms since epoch).
     property var settleAt: ({})
+    // A send of this staging delivered. It outlives the tick that saw it, since the sends of a
+    // round end and settle at different times.
+    property bool roundDelivered: false
 
     // Keyed models for the device tiles and the arrivals: the daemon re-sends a peer on every
     // sighting and a transfer on every progress tick, and rebuilding the delegates each time
@@ -107,8 +110,10 @@ Variants {
     function stage(paths) {
       if (!paths || paths.length === 0)
         return;
-      if (!hasFiles)
+      if (!hasFiles) {
         ignoreIds = Nearby.outboundIds();
+        roundDelivered = false;
+      }
       // Folders become their files; sizes come back with the list.
       stager.expand(paths);
     }
@@ -122,6 +127,7 @@ Variants {
     function clearFiles() {
       files = [];
       fileBytes = {};
+      roundDelivered = false;
     }
 
     function chooseFiles() {
@@ -175,22 +181,26 @@ Variants {
         var now = Date.now();
         var next = Object.assign({}, win.settleAt);
         var ignore = win.ignoreIds.slice();
-        var delivered = false;
+        var expired = false;
         var left = 0;
         for (var id in next) {
           if (now < next[id]) {
             left++;
             continue;
           }
+          expired = true;
           ignore.push(id);
           var t = Nearby.transferById(id);
           if (t && t.state === "finished")
-            delivered = true;
+            win.roundDelivered = true;
           delete next[id];
         }
-        win.settleAt = next;
-        win.ignoreIds = ignore;
-        if (delivered && left === 0 && !Nearby.outboundInFlight(ignore))
+        // Every tile binds to ignoreIds, so it is only assigned when a send was let go.
+        if (expired) {
+          win.settleAt = next;
+          win.ignoreIds = ignore;
+        }
+        if (win.roundDelivered && left === 0 && !Nearby.outboundInFlight(ignore))
           win.clearFiles();
         if (left === 0)
           stop();

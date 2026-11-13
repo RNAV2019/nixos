@@ -19,15 +19,7 @@ Scope {
   property string savedName: ""
   property string savedPath: ""
 
-  Timer {
-    id: savedTimer
-
-    interval: Theme.sharingConfirmDwell
-    onTriggered: root.clearSaved()
-  }
-
   function clearSaved() {
-    savedTimer.stop();
     savedId = "";
     savedName = "";
     savedPath = "";
@@ -80,7 +72,6 @@ Scope {
       savedId = done.id;
       savedName = Nearby.transferName(done);
       savedPath = paths.length > 0 ? String(paths[0]) : "";
-      savedTimer.restart();
     }
   }
 
@@ -132,6 +123,15 @@ Scope {
           if (root.mode !== "")
             win.shownMode = root.mode;
         }
+      }
+
+      // Counted down on screen only, and held while the pointer is on the pill so Open is not
+      // pulled out from under it. A dwell that ran while the panel or a higher turn had the
+      // island would expire unseen.
+      Timer {
+        running: win.open && root.mode === "saved" && !savedArea.containsMouse
+        interval: Theme.sharingConfirmDwell
+        onTriggered: root.clearSaved()
       }
 
       // ---- 16i connecting ----
@@ -277,16 +277,11 @@ Scope {
         }
 
         MouseArea {
+          id: savedArea
+
           anchors.fill: parent
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
-          // Hovering holds the pill so Open is not pulled out from under the pointer.
-          onContainsMouseChanged: {
-            if (containsMouse)
-              savedTimer.stop();
-            else if (root.savedId !== "")
-              savedTimer.restart();
-          }
           onClicked: {
             if (root.savedPath !== "")
               Nearby.openFile(root.savedPath);

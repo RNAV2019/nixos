@@ -23,7 +23,7 @@ Tile {
 
   // Once the staged files are cleared the tile drops back to its device glyph: a finished
   // check belongs to the send that is still staged, not to the device forever.
-  readonly property string state: filesReady && transfer && transfer.state ? transfer.state : ""
+  readonly property string phase: filesReady && transfer && transfer.state ? transfer.state : ""
 
   // The sub line belongs to a tile that is actually talking to its device.
   readonly property bool talking: filesReady && transfer !== null
@@ -31,19 +31,19 @@ Tile {
   readonly property string subLabel: {
     if (sent)
       return "Sent";
-    if (state === "failed")
+    if (phase === "failed")
       return "Failed";
-    if (state === "rejected")
+    if (phase === "rejected")
       return "Declined";
-    if (state === "cancelled")
+    if (phase === "cancelled")
       return "Cancelled";
     // Quick Share shows the same PIN on both screens while the phone decides.
-    if ((state === "connecting" || state === "waiting_consent") && transfer && transfer.pin)
+    if ((phase === "connecting" || phase === "waiting_consent") && transfer && transfer.pin)
       return "PIN " + transfer.pin;
     // AirDrop: the other person is looking at Accept / Decline.
-    if (state === "waiting_consent")
+    if (phase === "waiting_consent")
       return "Waiting…";
-    if (state === "connecting")
+    if (phase === "connecting")
       return "Connecting…";
     if (indeterminate)
       return "Sending…";
@@ -54,9 +54,9 @@ Tile {
   property real appear: 0
 
   kind: Tile.Device
-  sending: state === "connecting" || state === "waiting_consent" || state === "in_progress"
-  sent: state === "finished"
-  failed: state === "failed" || state === "rejected" || state === "cancelled"
+  sending: phase === "connecting" || phase === "waiting_consent" || phase === "in_progress"
+  sent: phase === "finished"
+  failed: phase === "failed" || phase === "rejected" || phase === "cancelled"
   // KDE Connect says nothing until its job reports: the ring turns instead of filling.
   indeterminate: sending && Nearby.isIndeterminate(transfer)
   progress: sent ? 1 : Nearby.progressOf(transfer)
