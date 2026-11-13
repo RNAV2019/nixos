@@ -118,17 +118,19 @@
 
       # DevTools pipe on fds 3/4, NUL-terminated JSON. FIFOs opened read-write so the browser
       # never sees EOF if the launcher dies; setup failure falls back to plain Helium.
-      fifos="$(mktemp -d "''${XDG_RUNTIME_DIR:-/tmp}/helium-theme.XXXXXX")" || exec "$browser" "$@"
+      fifos="$(mktemp -d "''${XDG_RUNTIME_DIR:-/tmp}/helium-theme.XXXXXX")" || exec "$browser" --password-store=basic "$@"
       if ! mkfifo "$fifos/in" "$fifos/out"; then
         rm -rf "$fifos"
-        exec "$browser" "$@"
+        exec "$browser" --password-store=basic "$@"
       fi
       exec 5<>"$fifos/in" 6<>"$fifos/out"
       rm -rf "$fifos"
 
+      # --password-store=basic keeps the profile portable now that gnome-keyring runs
+      # (modules/system/default.nix); the borg backup relies on that.
       # If Helium is already running, this hands off its arguments and both exit. The pipe
       # makes navigator.webdriver true, which Akamai (hm.com, next.co.uk) blocks on; turn it off.
-      "$browser" --remote-debugging-pipe --enable-unsafe-extension-debugging \
+      "$browser" --password-store=basic --remote-debugging-pipe --enable-unsafe-extension-debugging \
         --disable-blink-features=AutomationControlled "$@" 3<&5 4<&6 5<&- 6<&- &
       pid=$!
       trap 'kill -TERM "$pid" 2>/dev/null || true' TERM INT HUP

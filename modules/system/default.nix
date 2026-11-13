@@ -143,11 +143,17 @@
     ventoy-full
   ];
 
-  # Dedicated stack so the lock screen skips the failure delay
+  # Dedicated stack so the lock screen skips the failure delay. It also unlocks the login
+  # keyring, since greetd logs in without a password and the lock screen is the real login.
   security.pam.services.quickshell-password = {
     unixAuth = true;
     nodelay = true;
+    enableGnomeKeyring = true;
   };
+
+  # Secret Service for Electron safeStorage: T3 Code forces --password-store=gnome-libsecret
+  # on Hyprland and cannot save its connection catalog without one.
+  services.gnome.gnome-keyring.enable = true;
 
   # Compressed swap in RAM, used ahead of the disk swap partition (higher priority).
   zramSwap.enable = true;

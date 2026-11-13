@@ -172,8 +172,8 @@ in {
       "${home}/.claude/shell-snapshots"
       "${home}/.claude/telemetry"
 
-      # Helium caches. Profile data is kept and portable because no keyring is
-      # running; enabling one would tie it to this machine.
+      # Helium caches. Profile data is kept and portable because Helium runs with
+      # --password-store=basic (home/themes/helium.nix); a keyring would tie it to this machine.
       "sh:${home}/.config/net.imput.helium/*/Cache"
       "sh:${home}/.config/net.imput.helium/*/Code Cache"
       "sh:${home}/.config/net.imput.helium/*/GPUCache"
