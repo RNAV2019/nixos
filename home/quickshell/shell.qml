@@ -25,6 +25,8 @@ import qs.Theme
 import qs.Wallpaper
 
 ShellRoot {
+  id: shell
+
   // Singletons start on first use; this one has to be running before the panel opens, to
   // put a remembered monitor back where it was.
   Component.onCompleted: Displays.restoreAll()
@@ -32,6 +34,8 @@ ShellRoot {
   // Singletons start on first use, and nothing else reads this one: the burn-in orbit runs only
   // while it exists.
   readonly property var oledCare: OledCare
+
+  readonly property bool preview: Quickshell.env("QS_PREVIEW") === "1"
 
   Bar {}
   Moments {}
@@ -41,7 +45,6 @@ ShellRoot {
     id: activitySources
   }
   AuthPrompt {}
-  AuthPreview {}
   CalendarPanel {}
   DictationPill {}
   ControlCenter {}
@@ -63,7 +66,20 @@ ShellRoot {
   Lock {
     id: lockScreen
   }
-  LockPreview {}
+
+  // The rehearsal stages (qs ipc call authpreview / lockpreview) are tools for tests and the
+  // showcase, so they exist only when the shell is started with QS_PREVIEW=1.
+  LazyLoader {
+    active: shell.preview
+
+    AuthPreview {}
+  }
+
+  LazyLoader {
+    active: shell.preview
+
+    LockPreview {}
+  }
 
   // The island surfaces with the same toggle/close pair; the recorder, theme, session and
   // nearby targets stay handwritten below, since they differ, and the auth prompt takes no

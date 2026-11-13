@@ -26,6 +26,8 @@
   # Lock.qml locks a fresh shell unless the compositor has marked the session secured.
   startShell = pkgs.writeShellScript "start-shell" ''
     : > "$XDG_RUNTIME_DIR/quickshell-secured-$HYPRLAND_INSTANCE_SIGNATURE"
+    # The test drives the prompt through the authpreview stage, which loads only under this.
+    export QS_PREVIEW=1
     exec ${pkgs.quickshell}/bin/quickshell -p ${shell} > /tmp/quickshell.log 2>&1
   '';
 in

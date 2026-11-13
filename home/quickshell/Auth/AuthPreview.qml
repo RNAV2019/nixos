@@ -8,6 +8,7 @@ import qs.Services
 // every state can be seen without a privileged action to ask for one. Driven over IPC
 // (`qs ipc call authpreview ask pkexec|plain|long|identities`, then `checking`, `fail`,
 // `hide`); typing and Escape are the real ones. `status` reports the live agent as JSON.
+// Only loaded when the shell runs with QS_PREVIEW=1.
 Scope {
   id: root
 

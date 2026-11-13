@@ -361,6 +361,9 @@ read -r EXT_W EXT_H < <(awk -v s="$SCALE" 'BEGIN { printf "%f %f\n", 1920 / s, 1
 # The shell's own, kept in env.sh so restart.sh starts it the same way.
 export QS_EMOJI_DATA=$REAL_EMOJI
 export QS_KEYS_DATA=$REAL_KEYS
+# The rehearsal stages shoot.sh drives (authpreview, lockpreview) load only under this, and the
+# scrub above removed whatever the caller had.
+export QS_PREVIEW=1
 export QUICKSHELL_CHARGE_TYPES=$QSV_WORK/fake/power/charge_types
 # The recorder switches reach the shell itself (env.sh keeps them for restart.sh).
 [[ -z $MOTION_LOG ]] || export QS_MOTION_LOG=$MOTION_LOG
@@ -372,7 +375,7 @@ QSV_CFG=$CFG
   echo "# written by run.sh; sourced by shoot.sh"
   for v in HOME XDG_RUNTIME_DIR XDG_CACHE_HOME XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_DATA_DIRS \
     TZ LANG PATH DBUS_SESSION_BUS_ADDRESS DBUS_SYSTEM_BUS_ADDRESS WAYLAND_DISPLAY SWAYSOCK \
-    QS_EMOJI_DATA QS_KEYS_DATA QUICKSHELL_CHARGE_TYPES; do
+    QS_EMOJI_DATA QS_KEYS_DATA QS_PREVIEW QUICKSHELL_CHARGE_TYPES; do
     printf 'export %s=%q\n' "$v" "${!v}"
   done
   printf 'export QSV_CFG=%q QSV_SCALE=%q QSV_THEME=%q QSV_SRC=%q\n' "$CFG" "$SCALE" "$THEME" "$SRC"

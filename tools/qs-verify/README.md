@@ -26,7 +26,8 @@ directory (`/tmp/qs-verify-$USER`) to run two harnesses side by side. `QS_SHOOT_
 one state (into an existing OUT_DIR). `shoot.sh` refuses a harness that has already been shot:
 notification history, backlight and other state carry over, so every capture run is
 `stop.sh; run.sh; shoot.sh`. `run.sh` exits 2, leaving the harness up, if quickshell logs a warning at load that
-is not in `allowed-log.txt`.
+is not in `allowed-log.txt`. The shell runs with `QS_PREVIEW=1` (`run.sh` sets it and keeps it in `env.sh`), which loads
+the `authpreview` and `lockpreview` ipc stages that `shoot.sh` drives; without it they do not exist.
 
 The burn-in orbit (`Services/OledCare.qml`) never moves in a normal run: its interval is patched
 huge. `QS_OLED_INTERVAL_MS=300 run.sh ...` steps it that often, each step crossed in as long, and

@@ -946,7 +946,8 @@ socat "UNIX-LISTEN:\$XDG_RUNTIME_DIR/handy/overlay.sock,fork" "EXEC:tail -n0 -F 
 : >"\$XDG_RUNTIME_DIR/quickshell-secured-\$HYPRLAND_INSTANCE_SIGNATURE"
 export SHOWCASE_NEARBY="$stage/nearby.events" SHOWCASE_PROFILE="$stage/profile"
 export SHOWCASE_DAY="${clock%% *}"
-export QUICKSHELL_CHARGE_TYPES="$stage/fake/charge_types" QS_EMOJI_DATA="$emoji" QS_KEYS_DATA="$keys"
+# The tour drives the rehearsal stages (authpreview, lockpreview), which load only under QS_PREVIEW.
+export QUICKSHELL_CHARGE_TYPES="$stage/fake/charge_types" QS_EMOJI_DATA="$emoji" QS_KEYS_DATA="$keys" QS_PREVIEW=1
 PATH="$stage/bin:\$PATH" datefudge --static "$clock" qs -p "\$HOME/.config/quickshell" >"$stage/qs.log" 2>&1 &
 bash "$self" --inner $pass "$stage" >"$stage/tour.log" 2>&1 || touch "$stage/failed"
 EOF

@@ -7,6 +7,7 @@ import qs.Services
 
 // The lock screen on a rehearsal stage: same LockView and LockReveal, no session lock, driven
 // over IPC (`qs ipc call lockpreview preview|password|busy|refuse|fault|unlock|background|time`).
+// Only loaded when the shell runs with QS_PREVIEW=1.
 Scope {
   id: root
 
