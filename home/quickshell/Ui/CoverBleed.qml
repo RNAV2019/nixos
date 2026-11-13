@@ -14,7 +14,6 @@ Item {
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across surfaces.
   property string morphRole: "cover"
   property string morphKey: "media.cover"
-  property var morphSlot: undefined
   // Leaving with no partner, it fades as the one picture it is, not a cover and a ground apart.
   readonly property bool morphGroup: true
 

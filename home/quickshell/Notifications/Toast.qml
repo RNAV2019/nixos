@@ -12,7 +12,6 @@ Item {
   // centre, which it turns into.
   property string morphRole: "notification"
   property string morphKey: toast.n ? "notification." + toast.n.appName + "|" + toast.n.summary : ""
-  property var morphSlot: undefined
 
   // The window, and the minute clock: this file cannot see Notifications.qml's ids.
   property var host: null

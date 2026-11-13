@@ -18,7 +18,6 @@ Item {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "segmented"
-  property var morphSlot: undefined
 
   // One per segment: { label?, icon?, filled?, name?, enabled? }. `name` is what a screen
   // reader says when there is no label.

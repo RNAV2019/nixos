@@ -9,7 +9,6 @@ Item {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "field"
-  property var morphSlot: undefined
 
   enum Kind {
     Panel,

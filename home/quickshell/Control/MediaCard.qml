@@ -11,7 +11,6 @@ Item {
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "media"
   property string morphKey: "media"
-  property var morphSlot: undefined
 
   readonly property var sink: Pipewire.defaultAudioSink
 

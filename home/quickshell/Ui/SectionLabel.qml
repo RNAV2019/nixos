@@ -10,7 +10,6 @@ Item {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "section"
-  property var morphSlot: undefined
 
   property string title: ""
   property string detail: ""

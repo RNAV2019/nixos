@@ -9,7 +9,6 @@ Rectangle {
   // A content-morph anchor (Ui/MorphScan.js): the same notification as its toast, which turns into it.
   property string morphRole: "notification"
   property string morphKey: "notification." + root.appName + "|" + root.summary
-  property var morphSlot: undefined
 
   property string appName: ""
   property string summary: ""

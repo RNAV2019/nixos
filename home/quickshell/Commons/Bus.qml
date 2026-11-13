@@ -268,6 +268,9 @@ Singleton {
     return lookup(owners, key, "");
   }
 
+  // A transient arrives unasked (the OSD, a toast, the sharing, dictation, moment, rebuild and
+  // failed-recording pills), as against a surface that is up until dismissed. It never claims
+  // the island through owners, only through a transient screen, so a real panel covers it.
   function isTransient(key) {
     return lookup(transientCounts, key, 0) > 0;
   }

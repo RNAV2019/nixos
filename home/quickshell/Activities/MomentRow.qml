@@ -27,7 +27,6 @@ Item {
   // another, either kind, rolls its title and swaps its glyph in place.
   property string morphRole: "pill"
   property string morphKey: "pill"
-  property var morphSlot: undefined
 
   // Where the buttons begin, counted from the right edge.
   readonly property real buttonsLeft: buttonRow.x
