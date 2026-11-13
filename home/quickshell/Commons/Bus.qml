@@ -505,6 +505,20 @@ Singleton {
     return lookup(islandCards, screen, null);
   }
 
+  // The bar's island on each output, whatever it is wearing: a surface that grew out of its open
+  // card and gives the island back to it asks the island itself (Ui/IslandSurfaceBase.qml).
+  property var islands: ({})
+
+  function setIsland(screen, island) {
+    if (screen === "")
+      return;
+    islands = writeMap(islands, screen, island);
+  }
+
+  function islandFor(screen) {
+    return lookup(islands, screen, null);
+  }
+
   // Where the resting pill sits against its nominal spot, in logical px. The one source: the
   // bar's island and every surface that grows out of it (Ui/IslandOrigin.qml) are placed by
   // these, so a handoff starts from and returns to the pill wherever it is. The shift is the

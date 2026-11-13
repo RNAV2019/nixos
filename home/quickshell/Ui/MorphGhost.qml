@@ -15,7 +15,17 @@ Item {
   // The pair's progress; a leaver stays where it was.
   // A little ahead of the shape, so a long flight lands with the reveal rather than after it.
   // A carousel's tile quicker still: its neighbours are at their places from the start.
-  readonly property real q: entry.out || !host ? 0 : 1 - Math.pow(1 - Math.max(0, Math.min(1, host.progress)), entry.a.role === "carousel" ? 5 : 1.5)
+  // Backwards (MorphLayer.back) it is the same curve run the other way, a little behind the
+  // shape: at every size of the card the pair is where it was at that size on the way out, so
+  // a cover that grew ahead of the card shrinks behind it and never bares the ground under it.
+  readonly property real q: {
+    if (entry.out || !host)
+      return 0;
+    var p = Math.max(0, Math.min(1, host.progress));
+    if (host.back)
+      return Math.pow(p, 1.5);
+    return 1 - Math.pow(1 - p, entry.a.role === "carousel" ? 5 : 1.5);
+  }
 
   readonly property var rectA: entry.a.rect
   // Where the pair lands; MorphLayer.refresh() moves it when this panel's layout settles late.

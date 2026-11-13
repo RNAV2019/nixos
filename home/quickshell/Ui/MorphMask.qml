@@ -59,7 +59,7 @@ Item {
       onCoveredChanged: if (!covered && !started)
         clearedAt = root.host.clock + root.host.leadStagger(modelData.rowTop)
 
-      readonly property real shown: modelData.paired ? (root.host.landed ? 1 : 0) : !root.host.inPlace ? 1 : firstSeen < 0 || covered ? 0 : root.host.arrivalFrom(modelData.rank, Math.max(firstSeen, clearedAt))
+      readonly property real shown: modelData.paired ? (root.host.landed && !root.host.back ? 1 : 0) : !root.host.inPlace ? 1 : firstSeen < 0 || covered ? 0 : root.host.arrivalFrom(modelData.rank, Math.max(firstSeen, clearedAt))
 
       onShownChanged: if (shown > 0 && !modelData.paired)
         started = true

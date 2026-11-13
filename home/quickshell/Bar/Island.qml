@@ -11,7 +11,8 @@ import "../Ui/MorphScan.js" as MorphScan
 // flies in on its own stretch of the open (saneAspect's shared-element card), while the growing
 // shape uncovers it and the track block clips, revealing the title letter by letter. While
 // something plays, the card's left is its cover, title and artist, and a click there opens the
-// Now playing panel, which carries those three on (handContents).
+// Now playing panel, which carries those three on (handContents) and, closed with the pointer
+// still on the card, gives the island back to it (returnContents, returned).
 FrostedSurface {
   id: root
 
@@ -64,13 +65,14 @@ FrostedSurface {
       openDelay.stop();
       closeGrace.stop();
       hoverOpen = false;
+      awaitingPointer = false;
       if (replaced)
         pinned = false;
     }
   }
 
   property bool hoverOpen: false
-  readonly property bool expanded: !suppressed && !dropArmed && (pinned || hoverOpen)
+  readonly property bool expanded: !dropArmed && (returning || (!suppressed && (pinned || hoverOpen)))
 
   // Opening is quick; closing has hysteresis so a pointer crossing the pill's edge does not
   // flicker the card shut.
@@ -86,7 +88,7 @@ FrostedSurface {
     id: closeGrace
 
     interval: Theme.islandHoverCloseDelay
-    onTriggered: if (!root.suppressed && !root.claimed && !hover.containsMouse && !root.pinned)
+    onTriggered: if (!root.suppressed && !root.claimed && !hover.containsMouse && !root.pinned && !root.awaitingPointer)
       root.hoverOpen = false
   }
 
@@ -123,6 +125,88 @@ FrostedSurface {
     });
     return MorphScan.shift(read, -at.x, -at.y);
   }
+
+  // ---- taking the island back ----
+  //
+  // A surface that grew out of this card and carried it on (Now playing) closes back into it
+  // when the pointer is still on the card (Ui/IslandSurfaceBase.qml startReturn): its shape
+  // comes down to the card's, what it took travels back, and this card is what it uncovers.
+
+  // Whether the pointer is on the island, for a surface that takes the card and will want to
+  // know where the pointer was if nothing tells it otherwise.
+  readonly property bool pointerInside: hover.containsMouse
+
+  // From a surface starting back to this card until it has let go: the card stands open at its
+  // full size under that surface, unseen, so the surface can read where its contents land and
+  // the card is there, whole, on the frame the surface uncovers it.
+  property bool returning: false
+
+  // After a return: the pointer is where the surface last saw it, on the card, but nothing has
+  // told this window so. A compositor sends no enter to a surface that turns up under a pointer
+  // at rest, and the surface's window held the pointer until now, so `hover` reports nothing
+  // until the pointer next moves. The card stays open meanwhile, and the surface that returned
+  // watches the rest of the screen: `hover` saying the pointer is here ends the wait, and so
+  // does the surface seeing it anywhere else (pointerLeft), which shuts the card as a leave does.
+  property bool awaitingPointer: false
+
+  // Whether there is something to give the island back to.
+  function canTakeBack() {
+    return Media.active && !dropArmed && !Bus.locking && !Bus.lockClosing && screenName !== "";
+  }
+
+  // The start of a return: stands the card open where it will be, at once and unseen, and
+  // gives the reading a returning surface lands its contents on (as handContents). Null when
+  // there is nothing to return to; the card is then left as it was.
+  function returnContents() {
+    if (!canTakeBack())
+      return null;
+    returning = true;
+    widthSpring.finish();
+    heightSpring.finish();
+    var read = handContents();
+    if (!read || read.length === 0) {
+      returning = false;
+      return null;
+    }
+    return read;
+  }
+
+  // The surface has let go and this card is what is on screen: the ordinary hover card from
+  // here on. `left` says the surface saw the pointer leave the card on the way.
+  function returned(left) {
+    if (!returning)
+      return;
+    openDelay.stop();
+    closeGrace.stop();
+    hoverOpen = !suppressed;
+    awaitingPointer = !suppressed && !left && !hover.containsMouse;
+    returning = false;
+    if (Theme.motionLog)
+      console.info("island ev returned left=" + left + " hover=" + hover.containsMouse + " awaiting=" + awaitingPointer + " " + Date.now());
+    if (!suppressed && !awaitingPointer && !hover.containsMouse && !pinned)
+      closeGrace.restart();
+  }
+
+  // The return was called off (the surface opened again, or another took the island from it).
+  function cancelReturn() {
+    returning = false;
+  }
+
+  // The surface that returned saw the pointer somewhere off the card.
+  function pointerLeft() {
+    if (!awaitingPointer)
+      return;
+    awaitingPointer = false;
+    if (Theme.motionLog)
+      console.info("island ev pointerLeft " + Date.now());
+    if (!hover.containsMouse && !pinned)
+      closeGrace.restart();
+  }
+
+  onScreenNameChanged: Bus.setIsland(screenName, root)
+  Component.onCompleted: Bus.setIsland(screenName, root)
+  Component.onDestruction: if (Bus.islandFor(screenName) === root)
+    Bus.setIsland(screenName, null)
 
   onOnOfferChanged: {
     if (onOffer)
@@ -241,10 +325,10 @@ FrostedSurface {
 
   // The date is wider than the clock, so while the card is small the track block stops short
   // of the date.
-  readonly property real centreLeft: Math.min(clockLeft, date.x)
+  readonly property real centreLeft: Math.min(clockLeft, extras.dateX)
   // The same once the card is fully open, known before it is: what is laid out at the open size
   // (the track's lines, which are cut to their room there) is measured against this.
-  readonly property real openCentreLeft: (Theme.islandExpandedWidth - Math.max(clockLabel.width, date.width)) / 2
+  readonly property real openCentreLeft: (Theme.islandExpandedWidth - Math.max(clockLabel.width, extras.dateWidth)) / 2
 
   // A block's own stretch of the open, eased: 0 until `openness` reaches `from`, 1 once it reaches
   // `to`. Staggered stretches make the blocks arrive one after another and, the spring running
@@ -257,12 +341,11 @@ FrostedSurface {
   // How far a block travels as it arrives, from towards the clock.
   readonly property real flight: 14
 
-  // The week and the gauges sit beside the clock, so they wait until the card is wide enough to
-  // hold them whole (about 0.7 of the open; earlier, half of each is cut off at the clock) and
-  // then fade in with a short drift. Closing, they are the first to go.
-  readonly property real sideFrom: 0.7
-  readonly property real sideTo: 0.97
-  readonly property real sideFlight: 6
+  // The week sits beside the clock as the gauges do, and arrives on their stretch of the open
+  // with their short drift (Theme.islandSideReveal).
+  readonly property real sideFrom: Theme.islandSideReveal[0]
+  readonly property real sideTo: Theme.islandSideReveal[1]
+  readonly property real sideFlight: Theme.islandSideFlight
 
   // Do not infer completion from clamped openness; a spring may cross the target before resting.
   readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
@@ -296,6 +379,10 @@ FrostedSurface {
     cursorShape: Qt.PointingHandCursor
     onContainsMouseChanged: {
       if (containsMouse) {
+        // The pointer is known to be here: the ordinary rules from now on.
+        if (root.awaitingPointer && Theme.motionLog)
+          console.info("island ev pointerHere " + Date.now());
+        root.awaitingPointer = false;
         closeGrace.stop();
         if (!root.pinned)
           openDelay.restart();
@@ -488,72 +575,15 @@ FrostedSurface {
       }
     }
 
-    // Board 02's gauges: the battery 16 px in from the right, system load
-    // beside it, fading in once the card can hold them (sideFrom). Clipped short of the clock on
-    // that side too, so nothing crosses it.
-    Item {
-      id: gauges
+    // The date under the clock and the weather and gauges at the right, each on its own stretch
+    // of the open.
+    CardExtras {
+      id: extras
 
-      x: root.width - root.centreLeft + 12
-      width: Math.max(0, root.width - x)
-      height: parent.height
-      clip: true
-
-      // The weather, built like a gauge without its ring: the sky's glyph where the ring's would
-      // be and the temperature in the gap, on the gauges' own line. With no reading there is
-      // nothing here, and the gauges stay where they are.
-      Item {
-        id: weather
-
-        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
-        property real presence: Weather.available ? 1 : 0
-
-        x: system.x - Theme.islandWeatherGap - width
-        y: root.midline - height / 2
-        width: Theme.islandWeatherWidth
-        height: Theme.islandGaugeSize
-        opacity: shown * presence
-        visible: opacity > 0
-
-        Behavior on presence {
-          Morph {
-            duration: Theme.stateSwap
-          }
-        }
-
-        StrokeIcon {
-          x: (parent.width - width) / 2
-          y: parent.height / 2 - Theme.islandWeatherGlyphLift - height / 2
-          size: Theme.islandWeatherGlyph
-          path: Weather.glyph
-          color: Theme.text
-        }
-
-        GaugeLabel {
-          anchors.horizontalCenter: parent.horizontalCenter
-          y: Theme.islandGaugeLabelY
-          // A true minus below zero, as wide as a digit.
-          text: (Weather.temperature < 0 ? "\u2212" : "") + Math.abs(Weather.temperature) + "\u00b0"
-        }
-      }
-
-      SystemGauge {
-        id: system
-
-        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
-
-        x: gauges.width - 16 - 12 - 2 * width + root.sideFlight * (1 - shown)
-        y: root.midline - height / 2
-        opacity: shown
-      }
-
-      StatusGauge {
-        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
-
-        x: gauges.width - 16 - width + root.sideFlight * (1 - shown)
-        y: root.midline - height / 2
-        opacity: shown
-      }
+      anchors.fill: parent
+      centreLeft: root.centreLeft
+      today: clock.date
+      openness: root.openness
     }
 
     // A click on what is playing opens the Now playing panel, which grows out of this card with
@@ -574,21 +604,6 @@ FrostedSurface {
         else
           Bus.toggleSurface("media");
       }
-    }
-
-    // The date arrives last, rising into place under the clock as it settles.
-    Text {
-      id: date
-
-      readonly property real shown: root.reveal(0.5, 0.95)
-
-      x: (root.width - width) / 2
-      y: root.midline + 13.5 - height / 2 + 6 * (1 - shown)
-      opacity: shown
-      text: Qt.formatDateTime(clock.date, "ddd, d MMM")
-      color: Theme.subtle
-      font.family: Theme.uiFont
-      font.pixelSize: Theme.islandCaptionSize
     }
   }
 

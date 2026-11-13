@@ -60,7 +60,9 @@ take the pill's clock and marks off their timed fade while closing.
   `focusTarget` names the item that takes the keyboard on open (a text field); `passThrough`
   narrows the input region to the card; `wanted` lets an owner (the polkit prompt) open it;
   `openable` says whether a toggle may open it just now (Now playing, only while something
-  plays); `takesCard` says it carries on what the hover card shows (below).
+  plays); `takesCard` says it carries on what the hover card shows, and goes back into that
+  card when closed with the pointer still on it (below). `hide(true)` closes to the pill
+  whatever it grew out of (a click off the card).
 - **`TransientSurface`**: a pill that opens by itself. Bind `wanted`; it grows out of the
   island, takes its turn by `rank` and melts back when `wanted` drops. `cardInput: false` makes
   the window click-through. It never takes the keyboard. Ranks in use: OSD 4, dictation 3,
@@ -159,7 +161,10 @@ and pairs them with its own (`MorphScan.match`):
 
 **The hover card hands on what is playing.** The bar's island is not a surface, and a panel that
 grows out of the open card takes only its shape (`IslandOrigin.adopt`, `Bus.islandCardFor`) and
-its clock; the rest of the card is cut. A surface that sets `takesCard` (Now playing) also takes
+its clock; the rest of the card is cut. A surface that sets `takesCard` (Now playing) draws the
+card's date, weather and gauges itself where the card stood (`Bar/Widgets/CardExtras.qml`, the
+same item the island draws, as `cardFace` in the surface's fill), so they go on its first frames
+as the clock does, not on a cut, and also takes
 the card's reading of what is playing (`Bar/Island.qml` `handContents`: the cover, the title and
 the artist as `MorphScan.scan` reads them, in the card's own coordinates, moved by
 `MorphScan.shift` to where the taker stands on that shape) as its `IslandOrigin.fromMorph`, and
@@ -172,9 +177,38 @@ backing. Out of the shut pill, or with nothing playing, the panel grows as any p
 give another surface something of the card's, key the two alike and set `takesCard`; what the
 card reads is everything under its `playing` item.
 
+**And it takes the island back.** A `takesCard` surface that grew out of the open card
+(`outOfCard`) and is closed with the pointer on the card's place, by Escape, its key or its ipc,
+does not shrink to the pill: `IslandSurfaceBase.startReturn` runs the opening backwards. The
+bar's island stands open at once under the surface, unseen (`Bar/Island.qml` `returnContents`,
+found through `Bus.islandFor`), and gives the reading of where the cover, title and artist sit
+in it; the surface rests on the card's shape instead of the pill's (`IslandOrigin.returnTo`,
+`returning`) and comes down to it on the close's spring; a content morph run backwards
+(`MorphLayer.back`) flies the three back as ghosts that stay where they land, each on the
+opening's curve mirrored (`MorphGhost.q`: behind the shape, so the cover is never shorter than
+the card), while the mask hides the surface's own copies and the rest of its contents dissolve
+(`backFrom`); the card's clock, date and gauges come up as the shape settles
+(`Theme.fadeCardIn`). Landed, the window shows what the card shows, so the island is uncovered
+under it with the usual cross-fade of the two shadows and the window parks
+(`endReturn`, `Island.returned`). A surface turned round in the middle of its opening starts from
+where its pairs are (`MorphLayer.snapshot(own, true)`). Reduce motion lands it in one frame.
+Closed with the pointer anywhere else, by a click off the card, out of the shut pill, reached
+from another surface, or with nothing playing, it closes to the pill as before.
+
+The pointer needs telling both ways, because a compositor sends no enter to a surface that
+comes up under a pointer at rest. Until the surface's window hears of the pointer it takes the
+card's word for where it was (`IslandOrigin.fromPointer`, `IslandSurface.pointerOnCard`). And
+the card that comes back does not shut on `hover` reporting nothing: it waits
+(`Island.awaitingPointer`) until its own `hover` says the pointer is there, or the surface
+that returned says it has left. That surface keeps its window whole and transparent for the
+wait, taking the pointer everywhere but the card's place (`pointerWatch`: `idleMask`,
+`keepsWindow`), so the pointer is seen leaving however far it jumps; the watch starts with the
+return, so a pointer that goes while the panel is still on its way back shuts the card too.
+
 Recording and reviewing these: `tools/qs-verify/motion/transitions.sh OUTDIR A:B ...` records each
 handover in the headless harness, and `sheet.py OUTDIR` turns each into a 12-frame contact sheet
-(+0..+500 ms). wf-recorder must not be given `-r`: a forced rate rewrites timestamps, so a dropped
+(+0..+500 ms). The way back to the card is `card,card-click:escape`, then
+`card,card-click,escape:card-leave` for the card shutting once the pointer goes. wf-recorder must not be given `-r`: a forced rate rewrites timestamps, so a dropped
 frame squeezes the timeline into a fake lurch. Sheets sample with rounding, not floor.
 
 The taker re-reads its own contents while the ghosts fly (a list that loads, a carousel that
@@ -249,6 +283,8 @@ The key rules, all in `Panel.take`:
   into its ground (the hover card's left, the Now playing panel's): size it, and it does the rest,
   dim when paused and nothing at all with no cover (`presence`). Its picture is decoded at
   `Theme.coverSourceSize` wherever it is drawn, so a morph's ghost of it is the cached one.
+- **`CardExtras`** (`Bar/Widgets`): the open hover card's date, weather and gauges, for a card
+  the size of the item: the island's own, and a `takesCard` surface's copy of them.
 - **`MediaScrub`**: the scrub bar of what is playing, with its hills: the control centre's media
   card and the Now playing panel. Its width is the track's; `trackY` and `timeY` place the track
   and the times, `countsDown` and `padded` say how the times read, `nudge(seconds)` is the

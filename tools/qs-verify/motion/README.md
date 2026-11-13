@@ -146,6 +146,19 @@ down again. A player coming and going widens the pill, and the lock view's own p
 these two with `--overshoot-tol 'lock.pill.w:2'`. For the frames, `transitions.sh OUT
 card:card-click rest:media media:close-media` and `sheet.py OUT`.
 
+`card-media-return` (the panel out of the card, then Escape with the pointer left where it
+clicked: the panel goes back into the open card, which stays up under the pointer at rest and
+shuts when the pointer then leaves), `card-media-away` (the pointer moved under the panel
+first: to the pill) and `media-escape` (out of the pill by its key, Escape: to the pill) cover
+the way back; the same allowance applies. The shell's log has `morph ev media return` when a
+return starts and `island ev returned left=... hover=... awaiting=...` when the card has the
+island again: headless sway sends no pointer-enter to the bar there either, so `awaiting=true`
+is the card holding itself open, and `island ev pointerLeft` or `pointerHere` what ends it. For
+the frames: `transitions.sh OUT card,card-click:escape card,card-click,escape:card-leave
+card,card-click,pointer-below:escape media:escape`, and `card:click-escape` (`CLICK_ESCAPE`
+seconds apart, default 0.12) for the panel turned round mid-open. The pointer steps are in
+logical px for a 1920x1080 output, so these run at scale 1.
+
 The `launcher-scroll` scenario adds twelve fixture apps matching one query and arrows through the list
 (label `launcher.scroll`).
 

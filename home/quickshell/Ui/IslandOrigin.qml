@@ -36,6 +36,10 @@ QtObject {
   // card (`fromCard` and not `handedOver`), what the card hands a surface that carries it on
   // (Bar/Island.qml handContents), in the card's own coordinates.
   property var fromMorph: null
+  // Whether the pointer was on the card grown out of, as the card saw it. The surface's own
+  // window may never be told where the pointer is (it comes up under a pointer at rest), and
+  // a surface that goes back to the card asks where the pointer was last known to be.
+  property bool fromPointer: false
   // The corner radius of the shape handed over.
   property real fromRadius: 0
   // How soft that surface was showing them, taken in the middle of a morph of its own (px of blur).
@@ -308,6 +312,7 @@ QtObject {
     fromHeight = h;
     fromClock = card.clockShown !== false;
     fromMorph = contents && contents.length > 0 ? contents : null;
+    fromPointer = card.pointerInside === true;
     snapping = false;
   }
 
@@ -344,6 +349,26 @@ QtObject {
     fromMorph = null;
     fromBlur = 0;
     fromClock = true;
+    fromPointer = false;
+    Bus.clearIslandHolder(screenName, origin);
+    Bus.islandDropped(screenName);
+  }
+
+  // Lets the island go as release() does, but back to the open hover card, not the pill: the
+  // card's shape is the one the surface now rests at, and it travels there. For a surface that
+  // grew out of the card and gives the island back to it (Ui/IslandSurfaceBase.qml).
+  function returnTo(width, height) {
+    held = false;
+    takerWait.stop();
+    holdTimer.stop();
+    handedOver = false;
+    fromVW = 0;
+    fromVH = 0;
+    fromMorph = null;
+    fromBlur = 0;
+    fromClock = true;
+    fromWidth = width;
+    fromHeight = height;
     Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
   }
@@ -358,6 +383,7 @@ QtObject {
     fromMorph = null;
     fromBlur = 0;
     fromClock = true;
+    fromPointer = false;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
     // After the claim, in which whoever held the island let it go.

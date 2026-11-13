@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal media-open-close card-media"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal media-open-close card-media card-media-return card-media-away media-escape"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -564,6 +564,55 @@ sc_card_media() {
   sleep 1.2
   cursor 200 900
   qsipc media close >/dev/null 2>&1
+  sleep 1.0
+  media_down
+}
+
+# The Now playing panel grown out of the hover card and closed by Escape with the pointer left
+# where it clicked: it goes back into the open card (the shell's log: "morph ev media return",
+# then "island ev returned"), which stays up under the pointer at rest and shuts, with its usual
+# grace, when the pointer then leaves.
+sc_card_media_return() {
+  media_up
+  sleep 0.3
+  cursor 960 26
+  sleep 0.6
+  cursor 790 52
+  sleep 0.9
+  click
+  sleep 1.2
+  keys -k Escape
+  sleep 1.6
+  cursor 200 900
+  sleep 1.0
+  media_down
+}
+
+# The same, but the pointer is moved under the panel before Escape: the panel closes to the pill.
+sc_card_media_away() {
+  media_up
+  sleep 0.3
+  cursor 960 26
+  sleep 0.6
+  cursor 790 52
+  sleep 0.9
+  click
+  sleep 1.2
+  cursor 960 420
+  sleep 0.4
+  keys -k Escape
+  sleep 1.0
+  cursor 200 900
+  media_down
+}
+
+# The panel out of the shut pill by its key and closed by Escape: to the pill, wherever the pointer is.
+sc_media_escape() {
+  media_up
+  sleep 0.5
+  toggle media
+  sleep 1.2
+  keys -k Escape
   sleep 1.0
   media_down
 }

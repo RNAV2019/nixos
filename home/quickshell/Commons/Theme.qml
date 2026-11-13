@@ -393,6 +393,14 @@ Singleton {
   readonly property int islandWeatherWidth: 48
   readonly property int islandWeatherGap: 12
   readonly property real islandWeatherGlyphLift: 4
+  // The open card's date and its side blocks (the week, the weather, the gauges) each arrive on
+  // a stretch of the open of their own, as [from, to] of how far open the card is, and the side
+  // blocks drift this far as they do (Bar/Island.qml, Bar/Widgets/CardExtras.qml). The side
+  // blocks wait until the card is wide enough to hold them whole (about 0.7 of the open;
+  // earlier, half of each is cut off at the clock). Closing, they are the first to go.
+  readonly property var islandDateReveal: [0.5, 0.95]
+  readonly property var islandSideReveal: [0.7, 0.97]
+  readonly property real islandSideFlight: 6
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
@@ -1421,6 +1429,9 @@ Singleton {
   readonly property var fadeCloseOut: [0.05, 0.68]
   // Closing: the collapsed pill's clock and marks arrive as the card nears the pill.
   readonly property var fadePillIn: [0.7, 1.0]
+  // Back into the open hover card (IslandSurfaceBase.startReturn): the card's clock, date and
+  // gauges arrive as the shape settles, once the title flying back has cleared the middle.
+  readonly property var fadeCardIn: [0.85, 1.0]
   // A pill going back has next to no shape to travel, so its clock starts as its contents go:
   // waiting for 0.7 left the pill bare for a few frames in between.
   readonly property var fadePillInSmall: [0.4, 1.0]

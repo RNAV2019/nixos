@@ -9,7 +9,13 @@
 # or the island itself: `rest` (the shut pill), `card` (the hover card, the pointer over what is
 # playing) and `card-click` (a click there), so card:card-click is the Now playing panel growing
 # out of the open card and rest:media out of the pill. A pair that names `media` or `card` gets a
-# mock player first (lib.sh media_up).
+# mock player first (lib.sh media_up). Three more steps drive the way back: `escape` (the key, to
+# the focused panel), `pointer-below` (the pointer moved under the panel) and `card-leave` (the
+# pointer moved off the island). So card,card-click:escape is the panel going back into the hover
+# card under a pointer left where it clicked, card,card-click,escape:card-leave the card shutting
+# when the pointer then goes, and card,card-click,pointer-below:escape the panel closing to the pill.
+# `click-escape` is the click and the key 120 ms apart: the panel turned round mid-open, and
+# `escape-leave` the key and then the pointer gone 100 ms later, while the panel is on its way back.
 # sheet.py then cuts each capture into a contact sheet.
 set -euo pipefail
 
@@ -51,7 +57,8 @@ reset_all() {
   local k keys=${1:-launcher control wallpaper profiles calendar nearby recorder theme phone session media}
   for k in $keys; do
     case $k in
-      osd-* | toast | close-* | dictation* | sharing | rebuild | moment-next | rest | card) ;;
+      osd-* | toast | close-* | dictation* | sharing | rebuild | moment-next | rest | card | escape | pointer-below | card-leave) ;;
+      click-escape | escape-leave) qsipc media close >/dev/null 2>&1 || true ;;
       card-click) qsipc media close >/dev/null 2>&1 || true ;;
       moment-*) qsipc activities dismissMoments >/dev/null 2>&1 || true ;;
       *) qsipc "$k" close >/dev/null 2>&1 || true ;;
@@ -101,6 +108,19 @@ raise() {
       cursor 790 52
       ;;
     card-click) click ;;
+    escape) keys -k Escape ;;
+    click-escape)
+      click
+      sleep ${CLICK_ESCAPE:-0.12}
+      keys -k Escape
+      ;;
+    escape-leave)
+      keys -k Escape
+      sleep 0.1
+      cursor 200 900
+      ;;
+    pointer-below) cursor 960 420 ;;
+    card-leave) cursor 200 900 ;;
     osd-volume)
       wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
       # One change: two would show the first level and then the second.

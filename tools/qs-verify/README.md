@@ -70,7 +70,10 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
   order than before): the hover card with a player and the weather (playing, paused) and with
   nothing playing, the Now playing panel (playing, paused), and the control centre with its media
   card (paused; its notification list is masked). The playing panel's equaliser and scrub bar
-  are masked.
+  are masked. Last, `card-returned`: the hover card after the panel grew out of it and was
+  closed by Escape with the pointer left in place. Within one player's life it is the hover
+  card pixel for pixel; against `card-playing` its cover sits a pixel off in the lower half,
+  because the player was taken down and brought up again in between.
 
 ## How states are driven (no QML hooks)
 

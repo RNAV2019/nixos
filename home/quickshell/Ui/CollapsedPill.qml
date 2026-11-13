@@ -20,6 +20,11 @@ Item {
   property real clockShift: 0
   property var origin: null
 
+  // The clock's width as drawn and the time it shows, for what is laid out against it (the
+  // open card's date and gauges, Ui/IslandSurfaceBase.qml).
+  readonly property real clockWidth: clock.clockWidth
+  readonly property date clockDate: clock.date
+
   Accessible.ignored: true
 
   // Cut rather than faded, as the clock is: a shape from another surface had no pill showing,

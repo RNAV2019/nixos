@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 
@@ -42,6 +43,80 @@ IslandSurfaceBase {
   // live.
   openMask: win.passThrough ? win.cardMask : null
 
+  // ---- where the pointer is, for a surface that goes back to the hover card ----
+  //
+  // A surface that grew out of the open hover card closes back into it only while the pointer
+  // is on the card's place (Ui/IslandSurfaceBase.qml startReturn), and the card it uncovers
+  // must then know whether the pointer is still on it. Neither window can simply ask: a
+  // compositor sends no enter to a surface that turns up under a pointer at rest, so this
+  // window hears nothing until the pointer moves after it opens, and the bar's hears nothing
+  // until it moves after the card is back.
+
+  // The hover card's place in this window.
+  readonly property rect cardPlace: Qt.rect(surface.snap((win.width - Theme.islandExpandedWidth) / 2 + origin.offsetX), surface.snap(win.cardTop(Theme.islandExpandedHeight)), Theme.islandExpandedWidth, Theme.islandExpandedHeight)
+
+  function onCardPlace(p) {
+    return p.x >= cardPlace.x && p.x < cardPlace.x + cardPlace.width && p.y >= cardPlace.y && p.y < cardPlace.y + cardPlace.height;
+  }
+
+  // Whether this window has been told where the pointer is since it opened. Until then the
+  // pointer is where the card last saw it (IslandOrigin.fromPointer).
+  property bool pointerSeen: false
+
+  pointerOnCard: win.pointerSeen ? pointer.hovered && win.onCardPlace(pointer.point.position) : origin.fromPointer
+
+  // From the start of a return until the card knows where the pointer is, this window watches
+  // everywhere but the card's place (`idleMask`; whole and drawing nothing once it has
+  // parked, `keepsWindow`): the pointer seen there has left the card, however far it went in
+  // one move, and the card is told. Seen on the card by the bar's own window, the card ends
+  // the wait itself.
+  property var watchedCard: null
+  readonly property bool pointerWatch: !win.open && !win.pointerLeftCard && (win.returning || (win.watchedCard !== null && win.watchedCard.awaitingPointer === true))
+
+  keepsWindow: win.pointerWatch
+  idleMask: win.pointerWatch ? watchMask : null
+
+  onReturningChanged: if (win.returning)
+    win.watchedCard = win.returnCard
+
+  // Everything but the card's place.
+  Region {
+    id: watchMask
+
+    x: win.cardPlace.x
+    y: win.cardPlace.y
+    width: win.cardPlace.width
+    height: win.cardPlace.height
+    intersection: Intersection.Xor
+  }
+
+  // On the window's own root item, the parent of everything in it, never on an item laid over
+  // the rest: hover is delivered to an item and its ancestors only, so a handler on an item on
+  // top takes it from every control under it, while one on the root hears it after them all.
+  HoverHandler {
+    id: pointer
+
+    parent: win.contentItem
+    onPointChanged: win.pointerMoved()
+    onHoveredChanged: win.pointerMoved()
+  }
+
+  function pointerMoved() {
+    if (win.open) {
+      win.pointerSeen = true;
+      return;
+    }
+    if (!win.pointerWatch || !pointer.hovered || win.onCardPlace(pointer.point.position))
+      return;
+    // Off the card: the watch is over, and the card hears of it now if it is already back.
+    var card = win.watchedCard;
+    win.pointerLeftCard = true;
+    if (Theme.motionLog)
+      console.info("morph ev " + win.key + " pointerLeftCard returning=" + win.returning + " " + Date.now());
+    if (card && !win.returning)
+      card.pointerLeft();
+  }
+
   // Hyprland focuses an OnDemand surface when it first maps but not on None -> OnDemand, and
   // this one stays mapped through its close. Exclusive covers it, but would eat all pointers.
   property bool focusPrimed: false
@@ -60,6 +135,7 @@ IslandSurfaceBase {
 
   onOpenChanged: {
     if (open) {
+      pointerSeen = false;
       focusPrimed = false;
       focusPrime.restart();
       // Layer-shell hands the surface focus, but Qt still needs an active-focus target inside it.
@@ -142,7 +218,8 @@ IslandSurfaceBase {
       anchors.fill: parent
       enabled: win.open
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-      onClicked: win.hide()
+      // To the pill, whatever the surface grew out of: the click was off the card.
+      onClicked: win.hide(true)
     },
     // The surface draws no input of its own, so a click inside it that misses every control
     // would fall through to the dismiss area above. This takes those clicks and does nothing.

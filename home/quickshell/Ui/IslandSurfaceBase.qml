@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 import "Motion.js" as Motion
@@ -98,7 +99,18 @@ PanelWindow {
   // returns, and the bar's own pill must not appear in the middle of that.
   readonly property bool morphRunning: widthSpring.running || heightSpring.running
   // Read off the spring, never the snapped size: snapping depends on the window it would flip.
-  readonly property bool showing: open || origin.held || morphRunning || Math.abs(widthSpring.value - origin.collapsedWidth) > 0.5 || Math.abs(heightSpring.value - Theme.barHeight) > 0.5
+  // The shape a closed surface rests on is the pill, or the open hover card it is giving the
+  // island back to (see "back to the hover card" below). Read here off the pill's own width and
+  // not through a property in between: one that lags the spring by an evaluation has a parked
+  // surface showing for that instant whenever the pill changes width, which unparks it, sets
+  // its shape travelling and covers the bar's pill with a window that has nothing drawn yet.
+  readonly property bool showing: open || origin.held || (!win.reseating && (morphRunning || Math.abs(widthSpring.value - (win.returning ? origin.originWidth : origin.collapsedWidth)) > 0.5 || Math.abs(heightSpring.value - (win.returning ? origin.originHeight : Theme.barHeight)) > 0.5))
+
+  // Raised while a parked surface that rested on the card is put back on the pill: the shape
+  // and the rest it is measured against change one property at a time, and read in between
+  // they differ, which would have the surface showing again for that instant and cover the
+  // card it has just given the island to.
+  property bool reseating: false
 
   // A lock is waiting on this surface's way down (Bus.lockClosing). Once the shape is within
   // Theme.lockCloseSlack of the pill it is landed there: the rest of the settle is a pixel or
@@ -158,10 +170,11 @@ PanelWindow {
   // that come up around them, not over them.
   readonly property bool morphFromCard: origin.fromCard && !origin.handedOver && !morphLayer.inPlace
 
-  // This surface's contents as the eye sees them, for a taker's morph.
-  function readContents() {
+  // This surface's contents as the eye sees them, for a taker's morph (`exact`: see
+  // MorphLayer.snapshot).
+  function readContents(exact) {
     var own = MorphScan.scan(bodyHolder, surface.contentBox, win.morphing ? 1 : bodyHolder.opacity);
-    return win.morphing ? morphLayer.snapshot(own) : own;
+    return win.morphing ? morphLayer.snapshot(own, exact) : own;
   }
 
   function beginMorph() {
@@ -181,6 +194,7 @@ PanelWindow {
     var t0 = Date.now();
     morphLayer.useShape = true;
     morphLayer.inPlace = false;
+    morphLayer.back = false;
     morphLayer.begin(from, morphLayer.rescan());
     morphLayer.carriedBlur = origin.fromBlur;
     if (Theme.motionLog)
@@ -217,6 +231,7 @@ PanelWindow {
     win.swapSize = Qt.size(win.openWidth, win.openHeight);
     surface.ghostBox = win.morphBox(surface.width, surface.height);
     // Every part of the contents as a still leaver at full strength until swapEnd() pairs them.
+    morphLayer.back = false;
     morphLayer.inPlace = true;
     morphLayer.rescan = null;
     morphLayer.begin(from, []);
@@ -264,6 +279,7 @@ PanelWindow {
     if (!win.morphing && !win.morphPending)
       return;
     morphLayer.stop();
+    morphLayer.back = false;
     win.morphing = false;
     win.morphPending = false;
     win.updateBody();
@@ -294,6 +310,9 @@ PanelWindow {
         snapRelease.restart();
       if (origin.presented && win.openShadow < 1)
         openShadowIn.restart();
+      // Out of the open card, its date and gauges go as its clock does, from this frame.
+      if (origin.presented && win.open && win.faceOpacity > 0)
+        faceOut.restart();
       if (Theme.motionLog)
         console.info("morph ev " + win.key + " presented=" + origin.presented + " morphing=" + win.morphing + " " + Date.now());
       if (origin.presented && win.morphing)
@@ -320,6 +339,11 @@ PanelWindow {
     snapRelease.restart();
     widthSpring.settle();
     heightSpring.settle();
+    // Opened again on its way back to the hover card: it turns round where it is, and is still
+    // the surface that grew out of that card.
+    var wasReturning = win.returning;
+    if (wasReturning)
+      win.cancelReturn();
     win.opening();
     // Taken back while it stands as a still (or was one, and has not parked): nothing of it is
     // drawn, so the frame it was last seen on does not count. It waits for a new one like any taker.
@@ -334,6 +358,17 @@ PanelWindow {
     // Ui/IslandOrigin.qml; the arguments are the morph the holder rides with this surface.
     claiming = true;
     origin.claim(win.openWidth, win.openHeight, win.openRadius, Theme.morphSurface);
+    // Out of the open card with what it shows: the surface that may give the island back to it.
+    win.outOfCard = win.takesCard && (wasReturning || (origin.fromCard && !origin.handedOver && origin.fromMorph !== null));
+    // The card's date and gauges are up on the first frame, as the card had them, and go from
+    // the frame that counts; turned round, from wherever they had got to.
+    faceOut.stop();
+    if (!win.outOfCard)
+      win.faceOpacity = 0;
+    else if (origin.presented)
+      faceOut.restart();
+    else
+      win.faceOpacity = 1;
     // Read after the claim, which is what fills in the shape this surface grows out of.
     enterTravel = origin.handedOver ? (win.openHeight >= origin.fromHeight ? -Theme.morphEnterTravel : Theme.morphEnterTravel) : 0;
     // Out of a surface that gave its contents, or the hover card that did, they turn into this
@@ -360,19 +395,138 @@ PanelWindow {
     }
   }
 
-  function hide() {
+  // Closes the surface: back to the pill, or to the open hover card it grew out of when that
+  // is where it belongs (startReturn). `toPill` rules the card out: a click off the surface.
+  function hide(toPill) {
+    if (toPill !== true && win.startReturn())
+      return;
     widthSpring.settle();
     heightSpring.settle();
+    // Closed again on its way back to the card (a lock): to the pill after all.
+    if (win.returning)
+      win.cancelReturn();
     origin.release();
     // The travel belongs to the arrival: a close is a close whichever shape it grew out of.
     enterTravel = 0;
     open = false;
   }
 
+  // ---- back to the hover card ----
+  //
+  // A surface that carries the hover card on (`takesCard`) and grew out of it gives the island
+  // back to it when it is closed with the pointer still on the card: the opening run backwards.
+  // The shape comes down to the card's, on the close's spring; what the surface took from the
+  // card flies back to where the card has it (a content morph run backwards, MorphLayer.back)
+  // while the rest of the surface's contents dissolve; and the card's clock, date and gauges
+  // come up as the shape lands (CollapsedPill, cardFace below). Landed, this window shows what
+  // the bar's open card shows, the bar's island is uncovered under it (it has stood open there,
+  // unseen, since the return began: Bar/Island.qml returnContents) and the window parks. Closed
+  // any other way, with the pointer anywhere else, or with nothing left to return to, the
+  // surface closes to the pill.
+
+  // This open grew out of the open hover card and took what it shows.
+  property bool outOfCard: false
+  // Closed, and on its way back to that card.
+  property bool returning: false
+  // The bar's island that takes the island back (Bus.islandFor).
+  property var returnCard: null
+  // Set by the policy: whether the pointer is on the hover card's place just now, as far as it
+  // can tell, and whether it has been seen to leave it since the return began.
+  property bool pointerOnCard: false
+  property bool pointerLeftCard: false
+  // The card's date, weather and gauges, drawn here where the card stood (cardFace): up on the
+  // first frame out of the card and faded from there, back with the shape on a return.
+  property real faceOpacity: 0
+
+  ContentFade {
+    id: faceOut
+
+    target: win
+    property: "faceOpacity"
+    to: 0
+  }
+
+  function startReturn() {
+    if (!win.takesCard || !win.outOfCard || !win.open || !origin.presented || !win.tall || !win.pointerOnCard || Bus.locking || Bus.lockClosing)
+      return false;
+    var card = Bus.islandFor(win.screenName);
+    if (!card || !card.returnContents)
+      return false;
+    // Stands the card open under this surface, unseen, and reads where its contents are.
+    var to = card.returnContents();
+    if (!to)
+      return false;
+    var cw = card.width;
+    var ch = card.height;
+    // The card's reading is in the card's own coordinates; it stands on this surface's spot.
+    MorphScan.shift(to, surface.snap((win.width - cw) / 2 + origin.offsetX), surface.snap(win.cardTop(ch)));
+    widthSpring.settle();
+    heightSpring.settle();
+    // What is on screen now: turned round in the middle of its opening, each pair where it is
+    // and the contents as far up as they had come.
+    var from = win.readContents(true);
+    var strength = win.morphing ? morphLayer.dissolve : bodyHolder.opacity;
+    // The morph it was in, if any, is over before the shape turns: nothing may read the new
+    // target against the old morph.
+    morphLayer.stop();
+    win.morphing = false;
+    faceOut.stop();
+    win.pointerLeftCard = false;
+    win.returnCard = card;
+    win.returning = true;
+    origin.returnTo(cw, ch);
+    enterTravel = 0;
+    open = false;
+    surface.ghostBox = win.morphBox(cw, ch);
+    win.morphPending = false;
+    win.morphing = true;
+    morphLayer.rescan = null;
+    morphLayer.useShape = true;
+    morphLayer.inPlace = false;
+    morphLayer.back = true;
+    morphLayer.backFrom = strength;
+    morphLayer.begin(from, to);
+    morphLayer.startClock();
+    win.updateBody();
+    if (Theme.motionLog)
+      console.info("morph ev " + win.key + " return " + Date.now());
+    return true;
+  }
+
+  // The return called off: opened again, closed for a lock, or taken by another surface.
+  function cancelReturn() {
+    var card = win.returnCard;
+    win.returning = false;
+    win.returnCard = null;
+    if (card)
+      card.cancelReturn();
+    if (win.faceOpacity > 0)
+      faceOut.restart();
+  }
+
+  // Landed on the card and parked: the card is the bar's own again, told whether the pointer
+  // was seen to leave it meanwhile.
+  function endReturn() {
+    var card = win.returnCard;
+    win.reseating = true;
+    origin.release();
+    // Told before `returning` drops: the policy's watch on the pointer runs on from the one
+    // into the card's own wait.
+    if (card)
+      card.returned(win.pointerLeftCard);
+    win.returning = false;
+    win.reseating = false;
+    win.returnCard = null;
+    win.outOfCard = false;
+    win.faceOpacity = 0;
+  }
+
   // Giving the island up to the surface that claimed it, open or still on its way down. The
   // still is what the eye sees until the taker's first frame lands. Still wanted, this one
   // comes back once the island is free again; see evaluate().
   function dismiss() {
+    if (win.returning)
+      win.cancelReturn();
     var w = surface.implicitWidth;
     var h = surface.implicitHeight;
     var vw = widthSpring.running ? widthSpring.velocity : 0;
@@ -678,6 +832,18 @@ PanelWindow {
   property bool bodyPending: false
 
   function updateBody() {
+    // On its way back to the hover card the morph's own dissolve takes the contents away; what
+    // is read off the shape here is the card's clock, date and gauges coming up as it lands.
+    if (win.returning && win.morphing) {
+      // Off the shape alone: for the turn in which the target has moved and the start it is
+      // measured from has not, there is none, and the spring that stands in is not this one's.
+      if (isNaN(win.shapeProgress) && !Theme.reduceMotion)
+        return;
+      var back = Motion.ramp(win.morphProgress, Theme.fadeCardIn[0], Theme.fadeCardIn[1]);
+      pillAmount = Math.max(pillAmount, back);
+      faceOpacity = Math.max(faceOpacity, back);
+      return;
+    }
     // A morph shows the contents through its mask; what is not up yet is held there, not faded.
     if (win.morphing && win.wantedNow()) {
       bodyOpacity = 1;
@@ -813,6 +979,8 @@ PanelWindow {
       win.parked = true;
       if (Theme.motionLog)
         console.info("morph ev " + win.key + " parked " + Date.now());
+      if (win.returning)
+        win.endReturn();
       win.stopMorph();
       win.morphHanded = false;
       // The close is off screen; the shape Behaviors are live again for the next open. A held
@@ -833,7 +1001,7 @@ PanelWindow {
     id: retainTimer
 
     interval: Theme.surfaceRetain
-    onTriggered: if (win.parked)
+    onTriggered: if (win.parked && !win.keepsWindow)
       win.retained = false
   }
 
@@ -852,7 +1020,14 @@ PanelWindow {
     right: true
   }
 
-  implicitHeight: win.parked ? 1 : win.fullHeight
+  // A policy may keep the parked window whole a while longer, drawing nothing, to go on seeing
+  // the pointer (Ui/IslandSurface.qml pointerWatch).
+  property bool keepsWindow: false
+
+  onKeepsWindowChanged: if (!keepsWindow && win.parked)
+    retainTimer.restart()
+
+  implicitHeight: win.parked && !win.keepsWindow ? 1 : win.fullHeight
 
   exclusionMode: ExclusionMode.Ignore
 
@@ -864,7 +1039,10 @@ PanelWindow {
   property alias emptyMask: emptyMask
   property alias cardMask: cardMask
 
-  mask: win.open ? win.openMask : emptyMask
+  // Not open, a policy may still name a region of its own (`idleMask`), or none.
+  property Region idleMask: null
+
+  mask: win.open ? win.openMask : win.idleMask ? win.idleMask : emptyMask
 
   Region {
     id: emptyMask
@@ -962,7 +1140,7 @@ PanelWindow {
       if (here && win.showing && !win.parked)
         win.dismiss();
       else if (win.closesElsewhere && win.open)
-        win.hide();
+        win.hide(true);
     }
   }
 
@@ -980,7 +1158,7 @@ PanelWindow {
     backdropOpacity: win.farewell && origin.takerPresented ? 0 : 1
     maskActive: win.morphing
     ghostActive: win.morphing
-    ghostsBelow: win.morphing && win.morphFromCard
+    ghostsBelow: win.morphing && (win.morphFromCard || win.returning)
     // A still's shadow goes from the moment its taker is on screen, not with its ground: the
     // taker starts from this very shape and casts its own, and two would stack while the ground
     // fades. The taker's comes in from that same frame (openShadow) as this one goes (stillShadow).
@@ -1042,12 +1220,13 @@ PanelWindow {
 
       label: "surface." + win.key + ".morph"
       soft: !win.small
-      below: win.morphFromCard
+      below: win.morphFromCard || win.returning
       visible: win.morphing
       opacity: bodyHolder.opacity
       shapeProgress: win.shapeProgress
       cardRect: Qt.rect(surface.x, surface.y, surface.width, surface.height)
-      cardEnd: Qt.rect((win.width - win.openWidth) / 2 + origin.offsetX, win.cardTop(win.openHeight), win.openWidth, win.openHeight)
+      // Where the card is going: the open shape, or the hover card's on the way back to it.
+      cardEnd: win.returning ? Qt.rect((win.width - origin.originWidth) / 2 + origin.offsetX, win.cardTop(origin.originHeight), origin.originWidth, origin.originHeight) : Qt.rect((win.width - win.openWidth) / 2 + origin.offsetX, win.cardTop(win.openHeight), win.openWidth, win.openHeight)
       onFinished: win.stopMorph()
     }
 
@@ -1055,14 +1234,30 @@ PanelWindow {
       host: morphLayer
     }
 
-    fillData: CollapsedPill {
-      anchors.fill: parent
-      origin: origin
-      shown: !origin.held && !(win.open && (origin.presented || origin.handedOver || !origin.fromClock))
-      // Closing, the clock and marks arrive with the shape rather than on a timer of their own.
-      progressDriven: !win.open && !origin.held
-      amount: win.pillAmount
-    }
+    fillData: [
+      CollapsedPill {
+        id: collapsed
+
+        anchors.fill: parent
+        origin: origin
+        shown: !origin.held && !(win.open && (origin.presented || origin.handedOver || !origin.fromClock))
+        // Closing, the clock and marks arrive with the shape rather than on a timer of their own.
+        progressDriven: !win.open && !origin.held
+        amount: win.pillAmount
+      },
+      // The open hover card's date, weather and gauges, where the card stands: the card's own
+      // are covered from this surface's first frame, so they go from here as its clock does,
+      // and on the way back to the card they are up before the bar's are uncovered.
+      Loader {
+        active: win.takesCard
+        x: (parent.width - width) / 2
+        width: origin.originWidth
+        height: origin.originHeight
+        opacity: win.faceOpacity
+        visible: opacity > 0 && origin.fromCard && !origin.held
+        sourceComponent: cardFace
+      }
+    ]
 
     // Everything the surface draws, cross-faded against that clock; nothing inside fades on
     // its own. Its opacity is read off the shape's progress (updateBody), so out of another panel,
@@ -1078,7 +1273,7 @@ PanelWindow {
       // the pill sat fattened and dim for three or four before the card jumped on. Drawn from the
       // first frame, the one the surface waits for with the bar's pill still up, the cost is paid
       // before anything moves.
-      opacity: (win.morphing || win.morphPending) && win.open ? 1 : win.open ? Math.max(win.bodyOpacity, Theme.bodyPrime) : win.bodyOpacity
+      opacity: (win.morphing || win.morphPending) && (win.open || win.returning) ? 1 : win.open ? Math.max(win.bodyOpacity, Theme.bodyPrime) : win.bodyOpacity
       visible: opacity > 0
       Keys.forwardTo: win.contentKeyTargets
 
@@ -1087,6 +1282,16 @@ PanelWindow {
       transform: Translate {
         y: (1 - bodyHolder.opacity) * win.enterTravel
       }
+    }
+  }
+
+  Component {
+    id: cardFace
+
+    CardExtras {
+      centreLeft: Math.min((width - collapsed.clockWidth) / 2, dateX)
+      today: collapsed.clockDate
+      openness: origin.fromOpenness
     }
   }
 

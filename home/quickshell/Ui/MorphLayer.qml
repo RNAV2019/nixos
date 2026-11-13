@@ -24,7 +24,15 @@ Item {
   property bool useShape: true
   // A swap inside one surface: pairs by role and slot whatever their keys (MorphScan.match).
   property bool inPlace: false
-  readonly property real progress: frozen ? frozenAt : !clockRunning ? 0 : useShape && !isNaN(shapeProgress) ? shapeProgress : fallback.value
+  // The morph run backwards: this surface's own contents are the ones leaving, back into what
+  // they grew out of (the hover card, IslandSurfaceBase.startReturn). `to` is then a reading of
+  // where the pairs land, not of this surface: the pairs fly out as ghosts and stay where they
+  // land (nothing of this surface's takes over from them), the mask hides this surface's own
+  // copy of each from the start, and the rest of its contents dissolve away as they came,
+  // from `backFrom` of full strength (less than 1 for a surface turned round mid-open).
+  property bool back: false
+  property real backFrom: 1
+  readonly property real progress: frozen ? frozenAt : back && Theme.reduceMotion ? 1 : !clockRunning ? 0 : useShape && !isNaN(shapeProgress) ? shapeProgress : fallback.value
 
   // A surface let go in the middle of this morph stands as a still: its shape is re-based for the
   // surface taking over, and the pairs must not jump with it. They stay where they had got to.
@@ -80,7 +88,7 @@ Item {
   // Out of another surface this one's contents come up as one, through a blur, while what that one
   // had with no partner softens away (MorphGhost.fade): a dissolve, with only the pairs in flight.
   // (A swap inside one surface keeps its contents sharp and brings them in on the cascade.)
-  readonly property real dissolveT: !running || inPlace ? 1 : !clockRunning ? 0 : Motion.ramp(clock, Theme.morphDissolveDelay, Theme.morphDissolveDelay + Theme.morphDissolve)
+  readonly property real dissolveT: !running || inPlace ? 1 : back ? (Theme.reduceMotion ? 0 : backFrom * (clockRunning ? 1 - Motion.ramp(clock, 0, Theme.morphDissolveOut) : 1)) : !clockRunning ? 0 : Motion.ramp(clock, Theme.morphDissolveDelay, Theme.morphDissolveDelay + Theme.morphDissolve)
   readonly property real dissolve: dissolveT
   readonly property real dissolveScale: 1 + (Theme.morphDissolveScale - 1) * (1 - dissolveT)
   readonly property real dissolveBlur: dissolveT >= 1 ? 0 : Theme.morphDissolveBlur * (1 - Motion.ramp(dissolveT, 0.1, 0.9))
@@ -443,12 +451,27 @@ Item {
       return p.b;
     });
     lastLayout = layoutOf(to);
-    for (var bi = 0; bi < to.length; bi++)
-      if (to[bi].box && to[bi].rect && !to[bi].rest) {
-        boxOffset = Qt.point(to[bi].box.x - to[bi].rect.x, to[bi].box.y - to[bi].rect.y);
+    // The content box is this surface's: read off its own side of the pairs, whichever that is.
+    var ownSide = morph.back ? from : to;
+    for (var bi = 0; bi < ownSide.length; bi++)
+      if (ownSide[bi].box && ownSide[bi].rect && !ownSide[bi].rest) {
+        boxOffset = Qt.point(ownSide[bi].box.x - ownSide[bi].rect.x, ownSide[bi].box.y - ownSide[bi].rect.y);
         break;
       }
-    maskEntries = morph.maskFor(to, pairedB);
+    // Backwards, the mask holds only this surface's own copies of the pairs, which their
+    // ghosts have taken over for good.
+    maskEntries = morph.back ? m.pairs.filter(function (p) {
+      return !!p.a.box;
+    }).map(function (p) {
+      return {
+        x: p.a.box.x,
+        y: p.a.box.y,
+        w: p.a.box.w,
+        h: p.a.box.h,
+        rank: 0,
+        paired: true
+      };
+    }) : morph.maskFor(to, pairedB);
     var list = m.pairs.map(function (p) {
       var mb = morph.merged(p.b, to, pairedB);
       return {
@@ -468,7 +491,8 @@ Item {
       };
     });
     // A leaver inside a pair rides it (folded into the pair above); the rest are cut where they are.
-    m.outs.filter(function (a) {
+    // (Backwards they are this surface's own contents, still drawn, and go with its dissolve.)
+    (morph.back ? [] : m.outs).filter(function (a) {
       return !morph.pairedAncestor(a, pairedA);
     }).forEach(function (a) {
       list.push({
@@ -657,7 +681,8 @@ Item {
     }
   }
 
-  onLandedChanged: if (landed)
+  // (Backwards the ghosts are all there is of the pairs: they stay until the surface is gone.)
+  onLandedChanged: if (landed && !back)
     ghostsDone = true
 
   // With QS_MOTION_LOG=1: the morph's progress and clock, once a frame while it runs.
@@ -696,13 +721,16 @@ Item {
 
   // What is on screen just now, read as a scan, for a panel taking over in the middle of this one's
   // morph: each pair where its ghost is, faded leavers, and this panel's own anchors as far as the
-  // cascade has let them in. `own` is a fresh scan of this panel.
-  function snapshot(own) {
+  // cascade has let them in. `own` is a fresh scan of this panel. `exact` puts each pair where
+  // its ghost is on its own curve, not on the shape's plain progress: for a surface that turns
+  // round where it is (IslandSurfaceBase.startReturn), whose pairs must not step as they do.
+  function snapshot(own, exact) {
     var q = Math.max(0, Math.min(1, progress));
     var result = [];
     if (!ghostsDone) {
-      pairs.forEach(function (p) {
-        result.push(lerpAnchor(p.a, p.b, q));
+      pairs.forEach(function (p, i) {
+        var g = exact === true ? ghostRepeater.itemAt(i) : null;
+        result.push(lerpAnchor(p.a, p.b, g ? g.q : q, exact === true));
       });
       var cut = !clockRunning ? 1 : 1 - Motion.ramp(clock, 0, outTime);
       if (cut > 0.05)
@@ -751,7 +779,9 @@ Item {
     return c;
   }
 
-  function lerpAnchor(a, b, q) {
+  // A pair as it stands `q` of the way from `a` to `b`. `exact`: also as its ghost draws it, the
+  // words at the size they are showing and cut by no more than the ghost is (MorphPart).
+  function lerpAnchor(a, b, q, exact) {
     var c = Object.assign({}, b);
     c.parent = null;
     c.depth = 0;
@@ -769,6 +799,23 @@ Item {
         d.y = r.y;
         d.w = r.w;
         d.h = r.h;
+        if (exact) {
+          d.clip = pa.clip && pb.clip ? Motion.lerpRect(pa.clip, pb.clip, q) : null;
+          var sa = pa.font ? pa.font.pixelSize : 0, sb = pb.font ? pb.font.pixelSize : 0;
+          if (d.type === "text" && sa > 0 && sb > 0 && sa !== sb) {
+            d = Object.assign({}, pb, {
+              x: r.x,
+              y: r.y,
+              w: r.w,
+              h: r.h,
+              clip: d.clip,
+              opacity: Motion.lerp(pa.opacity, pb.opacity, q)
+            });
+            d.font = Object.assign({}, pb.font, {
+              pixelSize: Motion.lerp(sa, sb, q)
+            });
+          }
+        }
       }
       parts.push(d);
     });

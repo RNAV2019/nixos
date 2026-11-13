@@ -402,6 +402,17 @@ teardown_wifi() { qsipc activities wifi full "" >/dev/null; }
 
 setup_card() { cursor 960 26; }
 setup_media() { open_panel media; }
+# The panel grown out of the open card by a click on what is playing and closed by Escape with
+# the pointer left there: back in the hover card, which it leaves standing open.
+setup_card_returned() {
+  cursor 960 26
+  sleep 0.6
+  cursor 790 52
+  sleep 0.6
+  click
+  sleep 1.2
+  keys -k Escape
+}
 # Paused at a place of its own choosing, so the scrub bar reads the same every run.
 media_pause() {
   mp Pause
@@ -799,6 +810,11 @@ if [[ -z $ONLY || $ONLY == card-* || $ONLY == *media* ]]; then
   shot panel-control-media-paused 1.5 0.3 setup_control
   media_down
   shot card-idle 1.4 0.3 setup_card
+  # After every state that was here before it: the card the Now playing panel went back into.
+  media_up
+  sleep 0.5
+  shot card-returned 1.6 0.3 setup_card_returned
+  media_down
   qsipc weather clear >/dev/null
   sleep 0.5
 fi
