@@ -34,8 +34,7 @@ Variants {
 
     // How far off the chosen day is, for the eyebrow over its name.
     readonly property string distance: {
-      var now = new Date();
-      var d = win.dayIndex - Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+      var d = win.dayIndex - Math.floor(Calendar.todayDate.getTime() / 86400000);
       if (d === 0)
         return "Today";
       if (d === 1)
@@ -197,7 +196,7 @@ Variants {
 
             readonly property date day: win.cellDate(index)
             readonly property bool inMonth: day.getMonth() === Calendar.anchor.getMonth()
-            readonly property bool isToday: Calendar.sameDay(day, new Date())
+            readonly property bool isToday: Calendar.sameDay(day, Calendar.todayDate)
             readonly property bool isSelected: Calendar.sameDay(day, Calendar.selected)
 
             x: Theme.calColumnFirst + (index % 7) * Theme.calColumnPitch - width / 2

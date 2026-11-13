@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "../Commons/CalendarDays.js" as CalendarDays
 
 // Google Calendar via ical-agenda (see home/ical-agenda.nix): the secret iCal address
 // is decrypted by sops-nix, so nothing here sees it. Events are cached by month.
@@ -18,6 +19,16 @@ Singleton {
 
   // Which day the agenda below the grid is for.
   property date selected: new Date()
+
+  // Today at midnight: the same value all day, and the next one from midnight on, so what
+  // reads it (the grid's ring, "Today" over the agenda) moves on without the panel reopening.
+  readonly property date todayDate: new Date(clock.date.getFullYear(), clock.date.getMonth(), clock.date.getDate())
+
+  SystemClock {
+    id: clock
+
+    precision: SystemClock.Minutes
+  }
 
   property bool loading: false
 
@@ -42,27 +53,16 @@ Singleton {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
+  // The month's events by the day they start on, built once per fetch.
+  readonly property var dayMap: CalendarDays.build(root.events)
+
   // The events on one day, in start order, all-day first.
   function eventsOn(day) {
-    var out = [];
-    for (var i = 0; i < root.events.length; i++) {
-      if (root.sameDay(root.events[i].start, day))
-        out.push(root.events[i]);
-    }
-    out.sort(function (a, b) {
-      if (a.allDay !== b.allDay)
-        return a.allDay ? -1 : 1;
-      return a.start - b.start;
-    });
-    return out;
+    return CalendarDays.on(root.dayMap, day);
   }
 
   function hasEvents(day) {
-    for (var i = 0; i < root.events.length; i++) {
-      if (root.sameDay(root.events[i].start, day))
-        return true;
-    }
-    return false;
+    return CalendarDays.on(root.dayMap, day).length > 0;
   }
 
   // A stable colour per calendar, independent of which event arrived first.

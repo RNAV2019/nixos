@@ -82,6 +82,32 @@ ControlSubView {
   onAdapterChanged: if (adapter)
     adapter.discovering = active && adapter.enabled
 
+  // Discovery is already on while the view is open, and BlueZ ignores a second start, so a
+  // rescan stops it and starts it again once the adapter has said it stopped.
+  property bool rescanning: false
+
+  function rescan() {
+    if (!adapter || !adapter.enabled)
+      return;
+    if (adapter.discovering) {
+      rescanning = true;
+      adapter.discovering = false;
+    } else {
+      adapter.discovering = true;
+    }
+  }
+
+  Connections {
+    target: root.adapter
+
+    function onDiscoveringChanged() {
+      if (!root.rescanning || root.adapter.discovering)
+        return;
+      root.rescanning = false;
+      root.adapter.discovering = root.active && root.adapter.enabled;
+    }
+  }
+
   function glyphFor(device) {
     var icon = (device.icon || "").toLowerCase();
     if (icon.indexOf("headset") !== -1 || icon.indexOf("headphone") !== -1 || icon.indexOf("audio") !== -1)
@@ -116,8 +142,7 @@ ControlSubView {
       enabled: root.active
       accessibleName: "Rescan"
 
-      onClicked: if (root.adapter && root.adapter.enabled)
-        root.adapter.discovering = true
+      onClicked: root.rescan()
     },
     Switch {
       checked: root.adapter !== null && root.adapter.enabled

@@ -69,9 +69,23 @@ Singleton {
       nmcli.exec(["nmcli", "connection", "delete", "id", network.name]);
   }
 
+  // The scanner already runs while the Wi-Fi view is open, and switching it off and on would
+  // drop every unknown network from the list for a moment, so a rescan is asked of NetworkManager
+  // directly. It refuses one that follows another too closely, and that is no failure.
+  function rescan() {
+    rescanner.exec(["nmcli", "device", "wifi", "rescan"]);
+  }
+
   Command {
     id: nmcli
 
     label: "nmcli"
+  }
+
+  Command {
+    id: rescanner
+
+    label: "Wi-Fi rescan"
+    logFailures: false
   }
 }

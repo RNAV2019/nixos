@@ -50,7 +50,15 @@ ControlSubView {
     };
   }
 
-  onSnapshotChanged: networks.sync(snapshot.entries, snapshot.byKey)
+  // A password field whose network has left the scan is gone with its row; the pending name
+  // goes with it, or Back would spend its first press clearing something nobody can see.
+  onSnapshotChanged: {
+    networks.sync(snapshot.entries, snapshot.byKey);
+    if (pendingSsid !== "" && !snapshot.entries.some(function (e) {
+      return e.name === pendingSsid;
+    }))
+      pendingSsid = "";
+  }
   Component.onCompleted: networks.sync(snapshot.entries, snapshot.byKey)
 
   // Scanning costs radio, so it runs only while this view is on screen.
@@ -89,8 +97,7 @@ ControlSubView {
       enabled: root.active
       accessibleName: "Rescan"
 
-      onClicked: if (NetworkInfo.wifiDevice)
-        NetworkInfo.wifiDevice.scannerEnabled = true
+      onClicked: NetworkInfo.rescan()
     },
     Switch {
       checked: Networking.wifiEnabled
