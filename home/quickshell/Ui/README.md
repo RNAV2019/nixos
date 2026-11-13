@@ -286,7 +286,15 @@ All pressable controls are on **`ButtonBase`**: hover and press tracking, the pr
 - **`StrokeIcon`**: draws one icon. `path` is a Material Symbols Rounded name (drawn from
   `Theme.iconFont`) or 24-grid SVG path data. `Commons/Icons.qml` holds the names the shell
   uses, `Commons/IconPaths.qml` what `StrokeIcon` is given (names, plus the few marks Material
-  lacks as paths). A name the font lacks shows as its letters, so check a new one.
+  lacks, or the shell draws its own way, as paths). A name the font lacks shows as its letters,
+  so check a new one. Path data with a `|` in it is a mark in two tones, both filled: before
+  the bar in the colour, after it at `Theme.iconDimAlpha` of that. It is still one string, so
+  it goes through `Tile`, `ListRow`, `Button` and a morph's ghosts as any icon does. `inkLeft`
+  and `inkWidth` say where the drawing sits in its box.
+  **Wi-Fi is the shell's own mark**, not Material's (`IconPaths.wifiWedge/wifiInner/wifiOuter`:
+  a wedge under two arcs, three parts with even gaps, every end round): `Icons.wifiGlyph(strength,
+  connected)` lights it in three levels with the rest dim, and strikes it through, all dim,
+  with no link; `IconPaths.wifi` is all of it lit.
 
 **The recipe, on `ButtonBase`:** inner fills are white lifts over the ground (`Theme.lift(a)`):
 neutral controls step `liftControl` to `liftControlHover`, tiles and grouped rows `liftTile` to

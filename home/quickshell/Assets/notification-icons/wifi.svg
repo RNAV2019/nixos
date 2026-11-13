@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 -960 960 960">
-  <!-- Material Symbols Rounded wifi, filled. A glyph: only alpha is used, inked in the notification's theme accent. -->
-  <path fill="#fff" d="M409-149q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29Zm213.5-387Q690-512 745-470q20 15 20.5 39.5T748-388q-17 17-42 17.5T661-384q-38-26-84-41t-97-15q-51 0-97 15t-84 41q-20 14-45 13t-42-18q-17-18-17-42.5t20-39.5q55-42 122.5-65.5T480-560q75 0 142.5 24Zm93-223Q826-718 914-643q20 17 21 42t-17 43q-17 17-42 17.5T831-556q-72-59-161.5-91.5T480-680q-100 0-189.5 32.5T129-556q-20 16-45 15.5T42-558q-18-18-17-43t21-42q88-75 198.5-116T480-800q125 0 235.5 41Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">
+  <!-- The shell's Wi-Fi mark (Commons/IconPaths.qml), all of it lit. A glyph: only alpha is used, inked in the notification's theme accent. -->
+  <path fill="#fff" d="M11.53 19.83 L9.43 17.94 A1 1 0 0 1 9.57 16.34 A4.6 4.6 0 0 1 14.43 16.34 A1 1 0 0 1 14.57 17.94 L12.47 19.83 A0.7 0.7 0 0 1 11.53 19.83Z M5.6 12.31 A10.2 10.2 0 0 1 18.4 12.31 A1.4 1.4 0 0 1 16.64 14.49 A7.4 7.4 0 0 0 7.36 14.49 A1.4 1.4 0 0 1 5.6 12.31Z M1.34 8.59 A15.8 15.8 0 0 1 22.66 8.59 A1.4 1.4 0 0 1 20.77 10.65 A13 13 0 0 0 3.23 10.65 A1.4 1.4 0 0 1 1.34 8.59Z"/>
 </svg>

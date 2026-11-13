@@ -7,6 +7,11 @@ import qs.Commons
 // Material has no counterpart for (brand logos, board-specific glyphs, the drawn battery
 // outline) stay 24-grid SVG path data, stroked with round caps or `filled`. Stroke weight is a
 // screen-pixel value and only applies to those.
+//
+// Path data with a `|` in it is a mark in two tones, both filled: what stands before the bar is
+// drawn in `color` and what stands after it at Theme.iconDimAlpha of that (the Wi-Fi mark's
+// arcs beyond the signal it has). Either side may be empty. It is still one string, so such a
+// mark goes through Tile, ListRow and a content morph's ghosts like any other icon.
 Item {
   id: root
 
@@ -29,6 +34,17 @@ Item {
 
   // Path data always starts with a moveto; a ligature name never does.
   readonly property bool isGlyph: /^[a-z0-9_]+$/.test(path)
+
+  // A mark in two tones (see above): where its bar is, and the two sides of it.
+  readonly property int toneBar: isGlyph ? -1 : path.indexOf("|")
+  readonly property bool twoTone: toneBar >= 0
+  readonly property string litPath: isGlyph ? "" : twoTone ? path.substring(0, toneBar) : path
+  readonly property string dimPath: twoTone ? path.substring(toneBar + 1) : ""
+
+  // Where the drawing starts inside the box and how wide it is, for whoever lines something up
+  // with the ink rather than the box (the phone panel's readings).
+  readonly property real inkLeft: isGlyph ? (size - ink.advanceWidth) / 2 + ink.tightBoundingRect.x : drawn.boundingRect.x * size / 24
+  readonly property real inkWidth: isGlyph ? ink.tightBoundingRect.width : drawn.boundingRect.width * size / 24
 
   implicitWidth: size
   implicitHeight: size
@@ -67,6 +83,8 @@ Item {
   }
 
   Shape {
+    id: drawn
+
     width: 24
     height: 24
     visible: !root.isGlyph
@@ -80,14 +98,24 @@ Item {
 
     ShapePath {
       // The item's scale carries the geometry; the path is drawn at 24 units.
-      fillColor: root.filled ? root.color : "transparent"
-      strokeColor: root.filled ? "transparent" : root.color
+      fillColor: root.filled || root.twoTone ? root.color : "transparent"
+      strokeColor: root.filled || root.twoTone ? "transparent" : root.color
       strokeWidth: root.strokeWidth * 24 / root.size
       capStyle: ShapePath.RoundCap
       joinStyle: ShapePath.RoundJoin
 
       PathSvg {
-        path: root.isGlyph ? "" : root.path
+        path: root.litPath
+      }
+    }
+
+    // The quiet side of a mark in two tones; nothing otherwise.
+    ShapePath {
+      fillColor: root.twoTone ? Theme.withAlpha(root.color, root.color.a * Theme.iconDimAlpha) : "transparent"
+      strokeColor: "transparent"
+
+      PathSvg {
+        path: root.dimPath
       }
     }
   }

@@ -171,6 +171,9 @@ Singleton {
   // instance filled at weight 400 (pkgs/material-symbols-filled), so an icon Text keeps its
   // regular weight.
   readonly property string iconFont: "Material Symbols Rounded Filled"
+  // The quiet side of a mark drawn in two tones (Ui/StrokeIcon.qml): this much of its colour's
+  // alpha, as the Wi-Fi mark's arcs beyond the signal it has.
+  readonly property real iconDimAlpha: 0.3
   // SF Compact (pkgs/sf-compact), as static cuts: Text for UI sizes, Display for type big
   // enough that the Text cut looks loose.
   readonly property string uiFont: "SF Compact Text"

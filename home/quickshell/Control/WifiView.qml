@@ -204,7 +204,7 @@ ControlSubView {
         id: row
 
         width: parent.width
-        // Any network in range lights the dot and inner bar, as the island does for a link.
+        // Lit to the network's own strength, as the active row above and the island are.
         glyphGrid: 24
         glyph: Icons.wifiGlyph(entry.strength, true)
         label: entry.name

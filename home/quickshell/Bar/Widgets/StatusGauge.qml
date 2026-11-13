@@ -5,7 +5,7 @@ import qs.Commons
 import qs.Services
 
 // Board 02's battery gauge: a ring that is the battery, open at the bottom, with the Wi-Fi
-// glyph inside and the charge in the gap. On the charger the ring turns foam and gains a bolt.
+// mark inside and the charge in the gap. On the charger the ring turns foam and gains a bolt.
 Gauge {
   id: root
 
@@ -30,8 +30,8 @@ Gauge {
     return NetworkInfo.activeNetwork.signalStrength;
   }
 
-  // The signal wedge, filled to its strength; its point sits at (24, 31) in the ring, 12 and 20
-  // into the glyph's box.
+  // The Wi-Fi mark, lit to the link's strength and struck through with none; its point sits
+  // at (24, 31.25) in the ring, 12 and 20.25 into the glyph's box.
   StrokeIcon {
     x: 24 - 12
     y: 31 - 20

@@ -12,7 +12,7 @@ Item {
 
   property string label: ""
   property string value: ""
-  // A Material Symbols name (StrokeIcon).
+  // A Material Symbols name or a drawn mark (StrokeIcon).
   property string glyph: ""
   property color glyphColor: Theme.accent
   property color valueColor: Theme.withAlpha(Theme.inkPrimary, Theme.phoneReadingValueAlpha)
@@ -23,22 +23,14 @@ Item {
   readonly property real pad: Theme.controlTileStackedPad
   readonly property real glyphSize: Theme.controlTileGlyphSize
   // The glyph's ink within its box, and where it ends.
-  readonly property real inkLeft: (glyphSize - ink.advanceWidth) / 2 + ink.tightBoundingRect.x
-  readonly property real inkWidth: ink.tightBoundingRect.width
+  readonly property real inkLeft: icon.inkLeft
+  readonly property real inkWidth: icon.inkWidth
 
   implicitHeight: Theme.phoneReadingHeight
 
   Accessible.role: Accessible.StaticText
   Accessible.name: root.label
   Accessible.description: root.value
-
-  TextMetrics {
-    id: ink
-
-    font.family: Theme.iconFont
-    font.pixelSize: root.glyphSize
-    text: root.glyph
-  }
 
   Rectangle {
     anchors.fill: parent

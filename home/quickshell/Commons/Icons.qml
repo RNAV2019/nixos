@@ -22,9 +22,15 @@ Singleton {
   readonly property string chevronLeft: "chevron_left"
   readonly property string chevronRight: "chevron_right"
 
-  readonly property var wifi: ["signal_wifi_0_bar", "network_wifi_1_bar", "network_wifi_2_bar", "network_wifi_3_bar", "signal_wifi_4_bar"]
+  // Wi-Fi is not Material's: the shell draws its own mark (Commons/IconPaths.qml), which
+  // wifiGlyph below lights to a signal strength.
+  readonly property string wifiOn: IconPaths.wifi
+  readonly property string networkOff: IconPaths.wifiOff
+  // The strength (0..1) from which the inner arc is lit, and the outer one. NetworkManager's
+  // scale: about 0.3 is the weakest link that still carries anything, 0.6 a good one.
+  readonly property real wifiFair: 0.3
+  readonly property real wifiGood: 0.6
   readonly property string ethernet: "settings_ethernet"
-  readonly property string networkOff: "signal_wifi_off"
   readonly property string lock: "lock"
   readonly property string reboot: "restart_alt"
   readonly property string shutdown: "power_settings_new"
@@ -50,7 +56,6 @@ Singleton {
   readonly property string folderOpen: "folder_open"
   readonly property var cellular: ["signal_cellular_0_bar", "signal_cellular_1_bar", "signal_cellular_2_bar", "signal_cellular_3_bar", "signal_cellular_4_bar"]
   readonly property string cellularOff: "signal_cellular_off"
-  readonly property string wifiOn: "wifi"
   readonly property string link: "link"
   readonly property string notes: "notes"
   readonly property string copy: "content_copy"
@@ -121,9 +126,13 @@ Singleton {
   readonly property var batteryCharging: ["battery_android_bolt"]
   readonly property var batteryDefault: ["battery_android_0", "battery_android_1", "battery_android_2", "battery_android_3", "battery_android_4", "battery_android_5", "battery_android_6", "battery_android_full"]
 
-  // The Wi-Fi wedge filled to a signal strength (0..1), or struck through with no link.
+  // The Wi-Fi mark lit to a signal strength (0..1) in three levels, the rest of it dim: the
+  // wedge alone, the inner arc from wifiFair, the outer from wifiGood. Struck through with no
+  // link.
   function wifiGlyph(strength, connected) {
-    return connected ? step(wifi, strength * 100) : networkOff;
+    if (!connected)
+      return networkOff;
+    return IconPaths.wifiLevels[strength >= wifiGood ? 2 : strength >= wifiFair ? 1 : 0];
   }
 
   function bluetoothGlyph(off, connected) {
