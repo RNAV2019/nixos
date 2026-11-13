@@ -20,7 +20,6 @@ Shape {
 
   property color trackColor: Theme.withAlpha(Theme.inkTertiary, 0.35)
   property color fillColor: Theme.accentFill
-  property bool roundCap: true
 
   // What the arc is drawn at: `value` itself, or while `animated` the eased reading.
   property real shown: Theme.clamp01(value)
@@ -57,7 +56,7 @@ Shape {
     fillColor: "transparent"
     strokeColor: root.fillColor
     strokeWidth: root.stroke
-    capStyle: root.roundCap ? ShapePath.RoundCap : ShapePath.FlatCap
+    capStyle: ShapePath.RoundCap
 
     PathAngleArc {
       centerX: root.width / 2

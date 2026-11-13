@@ -19,7 +19,7 @@ import qs.Commons
 //   attention   true for one that wants the user (rank 1); false for information (rank 0)
 //   icon, iconColor   an IconPaths icon and its role colour, drawn 20 px at the left
 //   title, subtitle   the two lines; elide on the right inside the padding
-//   buttons     [{ text, kind: "primary" | "secondary" | "ghost" | "danger", width?, keep?,
+//   buttons     [{ text, kind: "primary" | "secondary" | "ghost", width?, keep?,
 //               action? }], listed left to right so the last is at the right edge; acting
 //               runs `action` and dismisses the moment unless `keep: true`
 //   dwell       ms before it melts back by itself, held while the pointer is on it; 0 stays

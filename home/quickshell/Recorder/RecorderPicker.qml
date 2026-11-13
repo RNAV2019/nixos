@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -164,8 +163,6 @@ Variants {
     }
 
     Panel {
-      id: panel
-
       surface: win
       // Back is the control centre this was opened from; opened any other way there is none,
       // and Escape closes.

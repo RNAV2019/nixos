@@ -17,10 +17,6 @@ Item {
   // The file has been read, or turned out to be absent.
   readonly property bool loaded: _loaded
 
-  // Something has been saved since startup, so a file that is still loading must not
-  // overwrite it.
-  readonly property bool touched: _touched
-
   // The file's text, once, when it is read and nothing has been saved before then.
   signal restored(string text)
 

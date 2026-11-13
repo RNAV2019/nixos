@@ -86,7 +86,7 @@ Provider {
     var add = function (item) {
       if (item && !taken[item.char]) {
         taken[item.char] = true;
-        out.push(root.rowFor(item, 0, []));
+        out.push(root.rowFor(item, 0));
       }
     };
     for (var j = 0; j < favourites.length; j++)
@@ -105,7 +105,7 @@ Provider {
 
     var ranked = rank(q, true);
     return ranked.slice(0, scopedLimit).map(function (r) {
-      return root.rowFor(r.item, r.band, r.positions);
+      return root.rowFor(r.item, r.band);
     });
   }
 
@@ -145,8 +145,7 @@ Provider {
     var name = item.lower;
     if (name === q)
       return {
-        band: 100,
-        positions: run(0, q.length)
+        band: 100
       };
     var prefixAt = -1;
     for (var i = 0; i < item.starts.length; i++) {
@@ -156,37 +155,30 @@ Provider {
       var after = name.charAt(s + q.length);
       if (after === "" || Fuzzy.SEPARATORS.indexOf(after) >= 0)
         return {
-          band: 85,
-          positions: run(s, q.length)
+          band: 85
         };
       if (prefixAt < 0)
         prefixAt = s;
     }
     if (prefixAt >= 0)
       return {
-        band: prefixAt === 0 ? 80 : 70,
-        positions: run(prefixAt, q.length)
+        band: prefixAt === 0 ? 80 : 70
       };
     if (item.keywords.indexOf(q) >= 0)
       return {
-        band: 68,
-        positions: []
+        band: 68
       };
     for (var k = 0; k < item.keywords.length; k++) {
       if (item.keywords[k].startsWith(q))
         return {
-          band: 55,
-          positions: []
+          band: 55
         };
     }
     if (tokens.length > 1) {
-      var positions = [];
       var all = tokens.every(function (t) {
         for (var w = 0; w < item.starts.length; w++) {
-          if (name.substr(item.starts[w], t.length) === t) {
-            positions = positions.concat(root.run(item.starts[w], t.length));
+          if (name.substr(item.starts[w], t.length) === t)
             return true;
-          }
         }
         return item.keywords.some(function (kw) {
           return kw.startsWith(t);
@@ -194,22 +186,19 @@ Provider {
       });
       if (all)
         return {
-          band: 50,
-          positions: positions
+          band: 50
         };
     }
     var sub = name.indexOf(q);
     if (sub >= 0)
       return {
-        band: 45,
-        positions: run(sub, q.length)
+        band: 45
       };
     if (fuzzy && q.length >= 2) {
       var fz = Fuzzy.match(q, item.name);
       if (fz && fz.score >= 0.3)
         return {
-          band: 20 + Math.round(fz.score * 10),
-          positions: fz.positions
+          band: 20 + Math.round(fz.score * 10)
         };
     }
     return null;
@@ -230,7 +219,6 @@ Provider {
         ranked.push({
           item: item,
           band: hit.band,
-          positions: hit.positions,
           order: i
         });
     }
@@ -249,7 +237,7 @@ Provider {
       for (var i = 0; i < ranked.length && out.length < unscopedLimit; i++) {
         var r = ranked[i];
         if (r.band === 100 || (q.length >= 3 && r.band >= 68))
-          out.push(rowFor(r.item, r.band === 100 ? exactScore : nearScore, r.positions));
+          out.push(rowFor(r.item, r.band === 100 ? exactScore : nearScore));
       }
     }
     var open = entryRowFor(q);
@@ -266,17 +254,14 @@ Provider {
       var w = entryWords[i];
       if (!w.startsWith(q) && !q.startsWith(w))
         continue;
-      var at = w.startsWith("sym") ? 15 : 7;
-      var lit = w.startsWith("sym") ? Math.min(q.length, 7) : Math.min(q.length, w.startsWith("emoji") ? 5 : 3);
       return {
-        score: q.length >= 3 ? 75 + Math.round(10 * Math.min(q.length, w.length) / w.length) : 45,
-        positions: run(at, lit)
+        score: q.length >= 3 ? 75 + Math.round(10 * Math.min(q.length, w.length) / w.length) : 45
       };
     }
     return null;
   }
 
-  function rowFor(item, score, positions) {
+  function rowFor(item, score) {
     return makeRow({
       id: "emoji:" + item.char,
       name: item.name,
@@ -286,7 +271,6 @@ Provider {
       emoji: item.symbol ? "" : item.char,
       glyph: item.char,
       score: score,
-      matches: positions,
       copy: item.char
     });
   }

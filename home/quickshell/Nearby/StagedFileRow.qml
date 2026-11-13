@@ -44,8 +44,6 @@ ListRow {
   }
 
   Item {
-    id: thumb
-
     x: 8
     y: (root.height - height) / 2
     width: Theme.nearbyFileThumb

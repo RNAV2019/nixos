@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import Quickshell
 import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui

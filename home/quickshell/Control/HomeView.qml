@@ -70,7 +70,7 @@ Item {
   readonly property var connectedDevice: {
     if (!adapter)
       return null;
-    var out = Util.filterDevices(adapter.devices.values, function (d) {
+    var out = adapter.devices.values.filter(function (d) {
       return d.connected;
     });
     return out.length > 0 ? out[0] : null;
@@ -230,8 +230,6 @@ Item {
   }
 
   Tile {
-    id: recorder
-
     x: charge.x + charge.width + Theme.controlTileGap
     y: displays.y
     width: root.inset + root.span - x

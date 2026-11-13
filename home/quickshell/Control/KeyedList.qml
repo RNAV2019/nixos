@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import qs.Ui
 
 // A column of rows that keeps its delegates across updates. sync() takes the list as it now
 // stands - a plain object per row, a unique string `key` and the fields the delegate reads -

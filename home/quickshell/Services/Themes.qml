@@ -10,8 +10,6 @@ import qs.Commons
 Singleton {
   id: root
 
-  readonly property string home: Paths.home
-
   // { id, label, palette }, in the order the picker shows them.
   readonly property var entries: Theme.themeIds.map(function (id) {
     return {

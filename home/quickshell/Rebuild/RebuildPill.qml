@@ -42,8 +42,6 @@ Variants {
 
     // Laid out at its final size and centred, so the growing shape reveals it.
     Item {
-      id: stage
-
       x: win.surface.snap((parent.width - width) / 2)
       y: (parent.height - height) / 2
       width: Theme.islandPillWidth

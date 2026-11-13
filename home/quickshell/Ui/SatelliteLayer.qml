@@ -139,8 +139,6 @@ Item {
   readonly property color ink: Phone.low ? Theme.love : Theme.text
 
   Item {
-    id: face
-
     x: root.g ? root.g.disc.x - root.satRadius : 0
     y: root.g ? root.g.disc.y - root.satRadius : 0
     width: Theme.phoneSatelliteSize

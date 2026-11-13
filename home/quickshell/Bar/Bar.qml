@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Bar.Widgets
 import qs.Commons
-import qs.Services
 import qs.Ui
 
 Variants {
@@ -66,7 +65,6 @@ Variants {
       // Sits at Hyprland's gaps_out, so the pill's left edge lines up with the leftmost window.
       x: snap(10 + Bus.workspacesOffsetX)
       y: snap(Theme.barMarginTop + Bus.workspacesOffsetY)
-      screenOffsetY: Theme.barMarginTop
     }
 
     // The launcher and control centre cover the island; it stays mapped for handoff
@@ -77,7 +75,6 @@ Variants {
       // Centred by hand rather than anchored, so the card lands on the device-pixel grid.
       x: snap((parent.width - width) / 2 + Bus.pillOffsetX)
       y: snap(Theme.barMarginTop + Bus.pillOffsetY)
-      screenOffsetY: Theme.barMarginTop
       screenName: bar.screen ? bar.screen.name : ""
       // Off covers, not owners: a surface covers the pill from its first frame on screen, so
       // the pill is never taken away before something is drawn in its place.

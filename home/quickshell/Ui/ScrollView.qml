@@ -28,9 +28,7 @@ Item {
   // keeps it out.
   property string name: ""
 
-  readonly property alias contentHeight: body.implicitHeight
   readonly property alias contentY: view.contentY
-  readonly property alias scrolling: view.interactive
 
   // The furthest the content scrolls.
   readonly property real limit: Math.max(0, view.contentHeight - view.height)

@@ -11,8 +11,6 @@ Singleton {
 
   // The launcher's '=' mode: one per kind of answer.
   readonly property string calculator: "calculate"
-  readonly property string clock: "schedule"
-  readonly property string calendar: "calendar_today"
   readonly property string numberBase: "123"
   // Its clipboard history.
   readonly property string clipboard: "content_paste"
@@ -34,7 +32,6 @@ Singleton {
   readonly property string lock: "lock"
   readonly property string reboot: "restart_alt"
   readonly property string shutdown: "power_settings_new"
-  readonly property string person: "person"
 
   // An image clip in the clipboard history.
   readonly property string image: "image"
@@ -42,7 +39,6 @@ Singleton {
   readonly property string bluetoothOn: "bluetooth"
   readonly property string bluetoothOff: "bluetooth_disabled"
   readonly property string bluetoothConnected: "bluetooth_connected"
-  readonly property string bluetoothNoAdapter: "bluetooth_disabled"
 
   // Peripherals BlueZ reports; matched against the device's advertised icon.
   readonly property string phone: "smartphone"
@@ -56,9 +52,6 @@ Singleton {
   readonly property string folderOpen: "folder_open"
   readonly property var cellular: ["signal_cellular_0_bar", "signal_cellular_1_bar", "signal_cellular_2_bar", "signal_cellular_3_bar", "signal_cellular_4_bar"]
   readonly property string cellularOff: "signal_cellular_off"
-  readonly property string link: "link"
-  readonly property string notes: "notes"
-  readonly property string copy: "content_copy"
   readonly property string mail: "mail"
   readonly property string chat: "chat"
   readonly property string notifications: "notifications"

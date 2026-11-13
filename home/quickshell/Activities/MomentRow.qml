@@ -19,8 +19,7 @@ Item {
   readonly property var kinds: ({
       "primary": Button.Primary,
       "secondary": Button.Neutral,
-      "ghost": Button.Ghost,
-      "danger": Button.Danger
+      "ghost": Button.Ghost
     })
   readonly property real inset: 16
 

@@ -20,8 +20,6 @@ Tile {
 
   // The mini island, bottom centre. Fixed size, so it stays put against the bottom edge.
   Rectangle {
-    id: pill
-
     readonly property int count: Theme.themeSwatchRoles.length
 
     anchors.horizontalCenter: parent.horizontalCenter

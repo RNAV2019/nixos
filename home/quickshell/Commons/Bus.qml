@@ -115,7 +115,7 @@ Singleton {
   signal clockRefreshed
 
   // Opening and closing an island surface, by key: any of islandKeys, or a transient key
-  // (see transientKeys) for the surfaces that handle it.
+  // for the surfaces that handle it.
   signal surfaceToggled(string key)
   signal surfaceClosed(string key)
 
@@ -268,15 +268,6 @@ Singleton {
     return lookup(owners, key, "");
   }
 
-  // The two that arrive unasked, as against everything else, which is up until dismissed.
-  // "sharing" is the Quick Share consent pill: like osd/notify it never claims the
-  // island through owners, only through a transient screen, so a real panel covers it.
-  // "dictation" is Handy's recording overlay, up for as long as a dictation runs.
-  // "moment" is a charger plugged in or a network asking for a sign-in (Activities/Moments.qml);
-  // "rebuild" is the system rebuild's progress (Rebuild/RebuildPill.qml); "recording" is a
-  // recording that failed (Recorder/RecordingFailedPill.qml).
-  readonly property var transientKeys: Object.keys(transientCounts)
-
   function isTransient(key) {
     return lookup(transientCounts, key, 0) > 0;
   }
@@ -371,38 +362,8 @@ Singleton {
     return false;
   }
 
-  // True while a user-dismissed surface holds the island. The unasked two wait on this
-  // rather than shoving an opened panel off the screen.
-  readonly property bool islandHeld: {
-    for (var k in owners) {
-      if (!root.isTransient(k))
-        return true;
-    }
-    return false;
-  }
-
-  function islandHeldFor(name) {
-    if (name === "")
-      return false;
-    for (var k in owners) {
-      if (owners[k] === name && !root.isTransient(k))
-        return true;
-    }
-    return false;
-  }
-
-  // True while any surface at all is standing in for the island on this output.
-  function islandTaken(name) {
-    if (name === "")
-      return false;
-    for (var k in owners) {
-      if (owners[k] === name)
-        return true;
-    }
-    return false;
-  }
-
-  // Of those, the ones that stay until dismissed. The island drops a pin for these only.
+  // True while a surface that stays until dismissed is standing in for the island on this
+  // output. The island drops a pin for these only.
   function islandReplaced(name) {
     if (name === "")
       return false;
@@ -522,12 +483,10 @@ Singleton {
   // Where the resting pill sits against its nominal spot, in logical px. The one source: the
   // bar's island and every surface that grows out of it (Ui/IslandOrigin.qml) are placed by
   // these, so a handoff starts from and returns to the pill wherever it is. The shift is the
-  // OLED orbit (Services/OledCare.qml); the slide is for anything else that moves the pill
-  // sideways, and adds to it.
+  // OLED orbit (Services/OledCare.qml).
   property real pillShiftX: 0
   property real pillShiftY: 0
-  property real pillSlideX: 0
-  readonly property real pillOffsetX: pillShiftX + pillSlideX
+  readonly property real pillOffsetX: pillShiftX
   readonly property real pillOffsetY: pillShiftY
 
   // The workspaces pill takes its own point on the orbit; nothing grows out of it.

@@ -29,7 +29,6 @@ Item {
   property string detail: ""
   property string reading: ""
   property color labelColor: captioned ? Theme.inkSecondary : Theme.inkPrimary
-  property color detailColor: wide ? Theme.accentFill : Theme.inkPrimary
   property color readingColor: wide ? Theme.inkSecondary : Theme.inkPrimary
   property int labelElide: Text.ElideRight
 
@@ -185,7 +184,7 @@ Item {
     visible: root.hasDetail
     elide: Text.ElideRight
     text: root.detail
-    color: root.detailColor
+    color: root.wide ? Theme.accentFill : Theme.inkPrimary
     font.family: Theme.uiFont
     font.pixelSize: root.at.detailSize
     font.weight: root.at.detailWeight

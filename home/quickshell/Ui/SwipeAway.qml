@@ -26,9 +26,6 @@ Item {
   property real extent: width
   // Names its spring in the motion log (`swipe.<name>`); empty keeps it out.
   property string name: ""
-  // Two fingers across a touchpad throw it too. A list that scrolls keeps its vertical scroll:
-  // only a gesture that sets out sideways is taken.
-  property bool wheel: true
   // The item presses are read on; see above.
   property Item grip: swipe
   // Down for a card that is not the one on show: a grip can be shared.
@@ -193,7 +190,7 @@ Item {
     property real across: 0
     property bool taken: false
 
-    enabled: swipe.wheel && swipe.armed && !swipe.thrown && !drag.active
+    enabled: swipe.armed && !swipe.thrown && !drag.active
     orientation: Qt.Horizontal
     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
     // Until it is taken the event goes on to the list underneath, which may be scrolling.

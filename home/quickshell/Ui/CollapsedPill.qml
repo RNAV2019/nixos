@@ -1,5 +1,4 @@
 import QtQuick
-import qs.Commons
 import qs.Services
 
 // The one collapsed renderer used by transient surfaces and handoff stills, so a surface
@@ -17,7 +16,6 @@ Item {
   // shape progress; while `progressDriven`, this replaces the timed fade of `shown`.
   property bool progressDriven: false
   property real amount: 1
-  property real clockShift: 0
   property var origin: null
 
   // The clock's width as drawn and the time it shows, for what is laid out against it (the
@@ -42,13 +40,12 @@ Item {
     shown: root.shown
     progressDriven: root.progressDriven
     amount: root.amount
-    clockShift: root.clockShift
   }
 
   PillMarks {
     anchors.fill: parent
-    clockLeft: parent.width / 2 + root.clockShift - clock.clockWidth / 2
-    clockRight: parent.width / 2 + root.clockShift + clock.clockWidth / 2
+    clockLeft: parent.width / 2 - clock.clockWidth / 2
+    clockRight: parent.width / 2 + clock.clockWidth / 2
     mediaActive: root.mediaActive
     playing: root.playing
     recording: root.recording

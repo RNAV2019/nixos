@@ -10,7 +10,6 @@ Item {
   id: root
 
   property string source: ""
-  property int fillMode: Image.PreserveAspectCrop
   // The size the picture is decoded at; left empty, its own.
   property size sourceSize: Qt.size(0, 0)
 
@@ -73,7 +72,7 @@ Item {
     readonly property bool morphIgnore: true
 
     anchors.fill: parent
-    fillMode: root.fillMode
+    fillMode: Image.PreserveAspectCrop
     cache: true
     visible: source.toString() !== ""
   }
@@ -82,7 +81,7 @@ Item {
     id: art
 
     anchors.fill: parent
-    fillMode: root.fillMode
+    fillMode: Image.PreserveAspectCrop
     asynchronous: true
     cache: true
     opacity: root.carrying ? root.mix : 1

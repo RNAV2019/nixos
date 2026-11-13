@@ -232,8 +232,6 @@ IslandSurfaceBase {
     // Gated on visibility, not `enabled`: Qt Quick's cursor lookup skips hidden items but not
     // disabled ones, so a merely disabled guard blanked the pointer on every surface.
     MouseArea {
-      id: cursorGuard
-
       anchors.fill: parent
       z: 1000
       visible: win.open && win.hideCursor

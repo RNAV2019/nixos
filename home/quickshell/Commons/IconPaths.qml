@@ -15,7 +15,6 @@ Singleton {
   readonly property string arrowRight: "M4.67 12h14.67M13.33 6l6 6-6 6"
   // The locked island's padlock: an outline with its keyhole, where the shell's set is filled.
   readonly property string lockOutline: "M7.6 10.2h8.8a2.4 2.4 0 0 1 2.4 2.4v5.8a2.4 2.4 0 0 1-2.4 2.4H7.6a2.4 2.4 0 0 1-2.4-2.4v-5.8a2.4 2.4 0 0 1 2.4-2.4zM8.5 10.2V7.4a3.5 3.5 0 0 1 7 0v2.8M12 15.2v0.6"
-  readonly property string upload: "upload"
   readonly property string download: "download"
   readonly property string plus: "add"
   readonly property string x: "close"
@@ -57,10 +56,6 @@ Singleton {
 
   readonly property string folderOff: "folder_off"
   readonly property string phoneOff: "phonelink_off"
-
-  // Drawn from the boards: the Android dome glyph and the filled Apple logo mark.
-  readonly property string robotHead: "M4.5 17C4.5 12.86 7.86 9.5 12 9.5C16.14 9.5 19.5 12.86 19.5 17L4.5 17M7.5 8.6L6 6.2M16.5 8.6L18 6.2M9 13.2L9.01 13.2M15 13.2L15.01 13.2"
-  readonly property string apple: "M16.4 12.7C16.4 10.4 18.3 9.3 18.4 9.2C17.3 7.6 15.6 7.4 15 7.4C13.6 7.2 12.2 8.3 11.5 8.3C10.8 8.3 9.7 7.5 8.5 7.5C7 7.5 5.5 8.4 4.7 9.8C3.1 12.6 4.3 16.9 5.9 19.2C6.7 20.3 7.6 21.6 8.8 21.5C10 21.5 10.4 20.8 11.8 20.8C13.2 20.8 13.6 21.5 14.8 21.5C16.1 21.5 16.9 20.4 17.6 19.2C18.5 17.9 18.9 16.6 18.9 16.6C18.9 16.6 16.4 15.6 16.4 15.6ZM14.2 5.9C14.8 5.1 15.3 4.1 15.2 3C14.3 3 13.1 3.6 12.5 4.4C11.9 5.1 11.4 6.1 11.5 7.1C12.5 7.2 13.6 6.6 14.2 5.9Z"
 
   // Nearby's device plates.
   readonly property string smartphone: "smartphone"

@@ -16,7 +16,6 @@ Item {
   // See CollapsedPill: closing, the amount replaces the timed fade of `shown`.
   property bool progressDriven: false
   property real amount: 1
-  property real clockShift: 0
   property alias date: clock.date
   readonly property real clockWidth: clockLabel.width
 
@@ -38,7 +37,7 @@ Item {
   RollingClock {
     id: clockLabel
 
-    x: (parent.width - width) / 2 + clockRoot.clockShift
+    x: (parent.width - width) / 2
     y: clockRoot.origin && clockRoot.origin.fromCard ? clockRoot.origin.fromHeight / 2 - 8 * clockRoot.origin.fromOpenness - height / 2 : (parent.height - height) / 2
     text: Qt.formatDateTime(clock.date, "HH:mm")
     color: Theme.text

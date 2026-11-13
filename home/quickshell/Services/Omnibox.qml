@@ -32,7 +32,7 @@ import Quickshell
 // field. The launcher leaves the scope on Escape or on Backspace in an empty field.
 //
 // A row is a plain object (Provider.makeRow fills in what a provider leaves out):
-//   { id, name, desc, icon, glyph, swatch, kind, score, matches, ...anything else }
+//   { id, name, desc, icon, glyph, swatch, kind, score, ...anything else }
 //   id       Unique across every provider ("app:firefox.desktop"), stable while the row
 //            means the same thing: it keys diffing and animation.
 //   name     The title. desc: the line under it ("" for one line).
@@ -42,8 +42,6 @@ import Quickshell
 //            quiet line (the question as it was read), `name` large under it, no icon.
 //   score    0-100. 60 and up is a strong match and may lift its section to the top: apps
 //            put a name prefix at 80, the calculator a sum at 90.
-//   matches  Indices into `name` the query matched, from Fuzzy.match; [] for none. The
-//            launcher no longer draws them, but they stay part of a row.
 // Rows come back to `activate` as they were given, plus `provider` and `rank`, so a
 // provider can carry its own fields (`desktopId`, `copy`) through.
 //

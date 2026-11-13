@@ -158,8 +158,6 @@ Variants {
     // No fade of its own: IslandSurfaceBase's bodyHolder carries every panel's open, close and
     // handover fade, and a second one inside it compounded into a faster, deeper dissolve.
     Item {
-      id: body
-
       anchors.fill: parent
       // Through its close too, or every tile dims a beat before a surface takes these contents on (the
       // window's mask already stops the pointer).

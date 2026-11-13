@@ -118,14 +118,10 @@ Item {
   }
 
   Item {
-    id: strip
-
     anchors.fill: parent
     clip: true
 
     Item {
-      id: rail
-
       x: root.stripX
       y: 0
       width: root.stripWidth

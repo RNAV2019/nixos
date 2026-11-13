@@ -303,7 +303,7 @@ The key rules, all in `Panel.take`:
 All pressable controls are on **`ButtonBase`**: hover and press tracking, the press scale,
 `enabled: false`, Space and Enter, an accessible name and the keyboard ring.
 
-- **`Button`**: `kind` (`Icon`, `Disc`, `DiscDanger`, `Neutral`, `Primary`, `Danger`, `Ghost`,
+- **`Button`**: `kind` (`Icon`, `Disc`, `DiscDanger`, `Neutral`, `Primary`, `Ghost`,
   `Plain`, `OnAccent`, `Tonal`, `Inverse`) and `size` (`Compact`, `Regular`, `Large`); `text`,
   `icon`.
 - **`Segmented`**: a track with a sliding plate; `segments` of `{ label, icon, enabled }`,

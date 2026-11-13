@@ -239,11 +239,6 @@ ShellRoot {
       activitySources.plugged.simulatePlug(percent, minutes);
     }
 
-    // The charger as a state change the watcher sees for itself: 1 in, 0 out, -1 the real battery.
-    function charger(state: int): void {
-      activitySources.plugged.fake = state;
-    }
-
     // NetworkManager's connectivity verdict as the sign-in watcher sees it: "portal", "limited",
     // "none" or "full"; "" goes back to the real one. `network` is the SSID the moment names.
     function wifi(state: string, network: string): void {

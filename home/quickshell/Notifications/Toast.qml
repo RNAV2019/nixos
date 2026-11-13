@@ -246,8 +246,6 @@ Item {
 
   // Laid out right to left: the sender's own buttons first, ours last.
   Row {
-    id: actions
-
     layoutDirection: Qt.RightToLeft
     spacing: Theme.notifActionGap
     x: Theme.notifWidth - Theme.notifInset - width

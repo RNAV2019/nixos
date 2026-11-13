@@ -12,8 +12,6 @@ Shape {
   property color strokeColor: Theme.separator
   property real strokeWidth: 1.5
   property real cornerRadius: 20
-  // Dash and gap, in px.
-  property var dashPattern: [7, 5]
 
   preferredRendererType: Shape.CurveRenderer
 
@@ -23,10 +21,8 @@ Shape {
     fillColor: "transparent"
     capStyle: ShapePath.FlatCap
     strokeStyle: ShapePath.DashLine
-    // ShapePath counts a dash in stroke widths.
-    dashPattern: root.dashPattern.map(function (d) {
-      return d / Math.max(0.1, root.strokeWidth);
-    })
+    // ShapePath counts a dash in stroke widths: a 7 px dash and a 5 px gap.
+    dashPattern: [7 / Math.max(0.1, root.strokeWidth), 5 / Math.max(0.1, root.strokeWidth)]
 
     PathRectangle {
       x: root.strokeWidth / 2

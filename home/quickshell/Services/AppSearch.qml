@@ -7,7 +7,7 @@ import "../Commons/Fuzzy.js" as Fuzzy
 // Ranked desktop-entry search, an Omnibox provider. The old ladder (name prefix, word
 // prefix, initials, substring) sets the band a match lands in; the fuzzy score orders
 // within it, so a prefix still beats any scattered match. Keywords and generic names
-// match below every name match and highlight nothing.
+// match below every name match.
 Provider {
   id: root
 
@@ -41,7 +41,7 @@ Provider {
   }
 
   emptyResults: entries.map(function (item) {
-    return root.rowFor(item, 0, []);
+    return root.rowFor(item, 0);
   })
 
   // Every match; Theme.launcherMaxRows caps the panel height, not the result count.
@@ -65,19 +65,18 @@ Provider {
     });
 
     return ranked.map(function (r) {
-      return root.rowFor(root.entries[r.order], r.hit.score, r.hit.positions);
+      return root.rowFor(root.entries[r.order], r.hit.score);
     });
   }
 
-  function rowFor(item, score, positions) {
+  function rowFor(item, score) {
     return makeRow({
       id: "app:" + item.id,
       desktopId: item.id,
       name: item.name,
       desc: item.desc,
       icon: item.icon,
-      score: score,
-      matches: positions
+      score: score
     });
   }
 
@@ -91,8 +90,7 @@ Provider {
 
     if (name.startsWith(q))
       return {
-        score: 80 + quality + exact,
-        positions: run(0, q.length)
+        score: 80 + quality + exact
       };
 
     // Word starts, as the matcher sees them.
@@ -104,50 +102,41 @@ Provider {
     for (var j = 0; j < starts.length; j++) {
       if (name.substr(starts[j]).startsWith(q))
         return {
-          score: 65 + quality,
-          positions: run(starts[j], q.length)
+          score: 65 + quality
         };
     }
 
     // "anc" should find Advanced Network Configuration.
     if (starts.length > 0 && q.length > 1) {
       var initials = name.charAt(0);
-      var at = [0];
-      for (var k = 0; k < starts.length; k++) {
+      for (var k = 0; k < starts.length; k++)
         initials += name.charAt(starts[k]);
-        at.push(starts[k]);
-      }
       if (initials.startsWith(q))
         return {
-          score: 55 + quality,
-          positions: at.slice(0, q.length)
+          score: 55 + quality
         };
     }
 
     var sub = name.indexOf(q);
     if (sub >= 0)
       return {
-        score: 45 + quality,
-        positions: run(sub, q.length)
+        score: 45 + quality
       };
 
     // A scattered match needs some shape to it: one or two letters, or letters strewn
     // mid-word, find nearly everything.
     if (fz && q.length >= 3 && fz.score >= 0.2)
       return {
-        score: 20 + quality,
-        positions: fz.positions
+        score: 20 + quality
       };
 
     if (item.aside.indexOf(q) >= 0)
       return {
-        score: 15,
-        positions: []
+        score: 15
       };
     if (item.comment.indexOf(q) >= 0)
       return {
-        score: 10,
-        positions: []
+        score: 10
       };
     return null;
   }

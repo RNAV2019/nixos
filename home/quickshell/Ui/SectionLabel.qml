@@ -10,7 +10,6 @@ Item {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "section"
-  property string morphKey: ""
   property var morphSlot: undefined
 
   property string title: ""
@@ -19,9 +18,8 @@ Item {
   // Padding at both ends; Control's views already sit inside their own inset.
   property real inset: 0
   // Where the text sits in the row: on its top, centred, or (the default) seated
-  // `bottomInset` off its foot as in Control's 22 px rows.
+  // 4 px off its foot as in Control's 22 px rows.
   property int verticalAlignment: Qt.AlignBottom
-  property real bottomInset: 4
   property string action: ""
   property string actionGlyph: ""
   property real actionGlyphSize: 12
@@ -35,7 +33,7 @@ Item {
     id: titleText
 
     x: root.inset
-    y: root.verticalAlignment === Qt.AlignTop ? 0 : root.verticalAlignment === Qt.AlignVCenter ? (root.height - height) / 2 : root.height - height - root.bottomInset
+    y: root.verticalAlignment === Qt.AlignTop ? 0 : root.verticalAlignment === Qt.AlignVCenter ? (root.height - height) / 2 : root.height - height - 4
     text: root.title
     color: Theme.inkTertiary
     font.family: Theme.uiFont

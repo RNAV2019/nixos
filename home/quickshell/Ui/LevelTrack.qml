@@ -9,7 +9,6 @@ Rectangle {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "track"
-  property string morphKey: ""
   property var morphSlot: undefined
 
   property real value: 0

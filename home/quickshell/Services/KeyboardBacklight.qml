@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.Commons
 
 // Firmware emits no Fn+Space event, so poll sysfs. LED writes need a udev rule.

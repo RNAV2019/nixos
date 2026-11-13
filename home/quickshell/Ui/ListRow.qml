@@ -35,13 +35,10 @@ ButtonBase {
   property bool edgeOver: fillProgress >= 0
   // Flat: the row's ground, whatever the feature says it is.
   property color flatColor: "transparent"
-  // Whether the ground steps to the hover colour. A row that reports can still be hovered.
-  property bool hoverTint: interactive
 
   property string glyph: ""
   property color glyphColor: selected ? Theme.inkOnAccent : kind === ListRow.Grouped ? Theme.inkSecondary : Theme.accent
   property real glyphSize: Theme.controlTileGlyphSize
-  property real glyphStroke: 1.75
   // As on Tile: the grid the glyph is drawn on before it is scaled to `glyphSize`.
   property real glyphGrid: glyphSize
   property real glyphLeft: kind === ListRow.Grouped ? Theme.controlRowInset : 15
@@ -54,21 +51,13 @@ ButtonBase {
   property real labelSize: kind === ListRow.Grouped ? Theme.controlTileLabelSize : Theme.rowLabelSize
   property int labelWeight: sublabel !== "" ? Theme.weightSemi : Theme.weightRegular
   property real valueSize: 12
-  property real sublabelSize: Theme.controlTileSubSize
   property color sublabelColor: selected ? Theme.withAlpha(Theme.inkOnAccent, 0.72) : Theme.inkTertiary
-  property int valueWeight: Theme.weightMedium
   property int elide: Text.ElideRight
   // Where the text starts, and the room it leaves at the far end: the reading's or the slot's
-  // edge less `textGap`, unless `textRight` says how much to leave. -1 and the label's top
-  // centre it (or lay it over its second line).
+  // edge less `textGap`.
   property real textLeft: glyph !== "" ? glyphLeft + 30 : glyphLeft + 6
   property real textGap: 12
-  property real textRight: -1
-  property real subRight: textRight
-  property real labelTop: -1
-  property real valueTop: -1
   property real valueInset: 14
-  property bool valueCentred: false
   // Space between the reading and a trailing slot.
   property real valueGap: 8
   property real trailInset: kind === ListRow.Grouped ? 8 : 14
@@ -80,7 +69,7 @@ ButtonBase {
   readonly property real groupRadius: Theme.controlRowGroupRadius
   readonly property real cornerRadius: kind === ListRow.Grouped ? Theme.controlRowRadius : kind === ListRow.Hairline ? Theme.rowRadius : Theme.pickerRowRadius
   readonly property color edgeColor: accented ? Theme.withAlpha(Theme.accentFill, 0.45) : Theme.lift(Theme.liftEdge)
-  readonly property bool tinted: hovered && hoverTint
+  readonly property bool tinted: hovered && interactive
   readonly property real farEdge: Math.min(valueText.visible ? valueText.x : Infinity, slot.x)
   readonly property real textRoom: Math.max(0, farEdge - textLeft - textGap)
 
@@ -156,18 +145,17 @@ ButtonBase {
     visible: root.glyph !== ""
     size: root.glyphGrid
     scale: root.glyphSize / root.glyphGrid
-    strokeWidth: root.glyphStroke
+    strokeWidth: 1.75
     path: root.glyph
     color: root.glyphColor
   }
 
   Text {
-    id: labelText
     objectName: "label"
 
     x: root.textLeft
-    y: root.labelTop >= 0 ? root.labelTop : root.sublabel !== "" ? root.height / 2 - 17 : (root.height - height) / 2
-    width: Math.min(implicitWidth, root.textRight >= 0 ? Math.max(0, root.width - x - root.textRight) : root.textRoom)
+    y: root.sublabel !== "" ? root.height / 2 - 17 : (root.height - height) / 2
+    width: Math.min(implicitWidth, root.textRoom)
     text: root.label
     color: root.labelColor
     font.family: Theme.uiFont
@@ -180,12 +168,12 @@ ButtonBase {
     objectName: "sublabel"
     x: root.textLeft
     y: root.height / 2 + 1
-    width: Math.min(implicitWidth, root.subRight >= 0 ? Math.max(0, root.width - x - root.subRight) : root.textRoom)
+    width: Math.min(implicitWidth, root.textRoom)
     visible: root.sublabel !== ""
     text: root.sublabel
     color: root.sublabelColor
     font.family: Theme.uiFont
-    font.pixelSize: root.sublabelSize
+    font.pixelSize: Theme.controlTileSubSize
     elide: Text.ElideRight
   }
 
@@ -193,14 +181,14 @@ ButtonBase {
     id: valueText
     objectName: "value"
 
-    x: root.valueCentred ? (root.width - width) / 2 : (slot.width > 0 ? slot.x - root.valueGap : root.width - root.valueInset) - width
-    y: root.valueTop >= 0 ? root.valueTop : (root.height - height) / 2
+    x: (slot.width > 0 ? slot.x - root.valueGap : root.width - root.valueInset) - width
+    y: (root.height - height) / 2
     visible: text !== ""
     text: root.value
     color: root.valueColor
     font.family: Theme.uiFont
     font.pixelSize: root.valueSize
-    font.weight: root.valueWeight
+    font.weight: Theme.weightMedium
   }
 
   Item {

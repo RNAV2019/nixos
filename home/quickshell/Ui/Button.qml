@@ -15,7 +15,6 @@ ButtonBase {
     DiscDanger,
     Neutral,
     Primary,
-    Danger,
     Ghost,
     // The accent word on a wash: Connect, Pair, Join, Cancel.
     Plain,
@@ -42,11 +41,8 @@ ButtonBase {
   property string icon: ""
   property real iconSize: defaultIconSize
   property real iconStroke: 1.75
-  property bool iconFilled: false
   // The label's and the icon's ink, when the kind's own is not the one wanted (a muted ghost).
   property color ink: kindInk
-  // Replaces the icon's ink alone, for a glyph that shows a state of its own.
-  property color iconColor: ink
 
   // The Icon kind's ink.
   property color baseColor: Theme.subtle
@@ -86,8 +82,6 @@ ButtonBase {
       return Theme.withAlpha(Theme.urgent, lit ? Theme.groundHoverAlpha : Theme.dangerRestAlpha);
     case Button.Primary:
       return Qt.lighter(Theme.accentFill, lit ? Theme.fillLift : 1);
-    case Button.Danger:
-      return Qt.lighter(Theme.dangerFill, lit ? Theme.fillLift : 1);
     case Button.Inverse:
       return Qt.lighter(Theme.inkOnAccent, lit ? Theme.fillLift : 1);
     case Button.Ghost:
@@ -109,7 +103,6 @@ ButtonBase {
     case Button.Primary:
       return Theme.inkOnAccent;
     case Button.DiscDanger:
-    case Button.Danger:
       return Theme.inkOnDanger;
     case Button.Disc:
     case Button.Neutral:
@@ -177,8 +170,7 @@ ButtonBase {
       size: root.iconSize
       strokeWidth: root.iconStroke
       path: root.icon
-      filled: root.iconFilled
-      color: root.iconColor
+      color: root.ink
 
       Behavior on color {
         Tint {}
@@ -199,8 +191,7 @@ ButtonBase {
       size: root.iconSize
       strokeWidth: root.iconStroke
       path: root.icon
-      filled: root.iconFilled
-      color: root.iconColor
+      color: root.ink
     }
 
     Text {

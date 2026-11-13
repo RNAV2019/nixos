@@ -117,8 +117,6 @@ Variants {
         id: pill
 
         anchors.fill: parent
-        // The island is the ground and the outline.
-        framed: false
 
         title: Polkit.requester + Theme.authLabelSuffix
         initial: win.identity !== null && win.identity.displayName !== "" ? win.identity.displayName : Account.displayName

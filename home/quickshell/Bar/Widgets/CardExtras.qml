@@ -47,8 +47,6 @@ Item {
     // be and the temperature in the gap, on the gauges' own line. With no reading there is
     // nothing here, and the gauges stay where they are.
     Item {
-      id: weather
-
       property real presence: Weather.available ? 1 : 0
 
       x: system.x - Theme.islandWeatherGap - width

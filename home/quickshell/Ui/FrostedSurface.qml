@@ -9,8 +9,6 @@ Item {
   // Defaults to the stadium. Callers pass min(height / 2, r) rather than animating it;
   // see Bar/Island.qml.
   property real surfaceRadius: height / 2
-  property real screenOffsetX: 0
-  property real screenOffsetY: 0
 
   // Where contents are laid out at final size and revealed as the pill grows; a shader crops
   // them to the card (Shaders/roundedclip.frag).
@@ -101,8 +99,6 @@ Item {
   }
 
   Item {
-    id: frost
-
     anchors.fill: parent
     clip: true
     visible: opacity > 0

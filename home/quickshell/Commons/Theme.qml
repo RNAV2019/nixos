@@ -92,7 +92,6 @@ Singleton {
   readonly property color pine: palette.pine
   readonly property color foam: palette.foam
   readonly property color iris: palette.iris
-  readonly property color highlightLow: palette.highlightLow
   readonly property color highlightMed: palette.highlightMed
   readonly property color highlightHigh: palette.highlightHigh
 
@@ -100,7 +99,6 @@ Singleton {
   // is the canvas while `inkOnAccent` is the ink on a selected control.
   readonly property color canvas: base
   readonly property color surfaceRaised: overlay
-  readonly property color surfaceSubtle: highlightLow
   readonly property color separator: highlightMed
   readonly property color inkPrimary: text
   readonly property color inkSecondary: subtle
@@ -123,7 +121,6 @@ Singleton {
   // the same lift over any theme's ground.
   readonly property real liftTile: 0.05
   readonly property real liftHover: 0.08
-  readonly property real liftSelected: 0.11
   readonly property real liftControl: 0.075
   readonly property real liftControlHover: 0.11
   readonly property real liftOff: 0.15
@@ -284,7 +281,6 @@ Singleton {
   // Panel surfaces are solid, so shell UI does not depend on the desktop for contrast. Lower
   // surfaces hide during handoff; MultiEffect blur is a fraction of blurMax, not a pixel radius.
   readonly property int surfaceBlurMax: 64
-  readonly property real surfaceBlur: 0.53
 
   // Surfaces float on a drop shadow rather than an outline (Ui/FrostedSurface.qml), measured off
   // saneAspect's 2026-11 recordings: the shape blurred by a Gaussian, neutral black, sigma about
@@ -821,7 +817,6 @@ Singleton {
   readonly property int recorderRowsTop: 108
   readonly property int recorderRowHeight: 32
   readonly property int recorderRowGap: 4
-  readonly property int recorderRowRadius: 16
   readonly property int recorderRowTextLeft: 12
   readonly property int recorderRowLabelSize: 12
 
@@ -1137,7 +1132,6 @@ Singleton {
   readonly property int nearbyTrackRadius: 18
   readonly property int nearbyChosenInset: 3
   readonly property int nearbyChosenHeight: 30
-  readonly property int nearbyChosenRadius: 15
   readonly property int nearbySegmentGlyph: 16
   readonly property int nearbySegmentGap: 8
   // Label-only cells (the platform control) are their label and this much either side.
@@ -1558,7 +1552,6 @@ Singleton {
   // its middle, and shuffle and repeat as bare glyphs at the column's ends.
   readonly property int mediaPlaySize: 44
   readonly property int mediaPlayGlyph: 26
-  readonly property int mediaSkipSize: 36
   readonly property int mediaSkipGlyph: 22
   readonly property int mediaSkipOffset: 54
   readonly property int mediaModeGlyph: 18

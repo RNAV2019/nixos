@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 
 // CPU and memory load, read from procfs every couple of seconds for the island's gauge.
 Singleton {

@@ -1,6 +1,5 @@
 import QtQuick
 import qs.Commons
-import qs.Services
 import qs.Ui
 
 // The receive body's head (boards 16g, 16h): rings rippling out of a filled laptop core, the
@@ -69,8 +68,6 @@ Item {
   }
 
   component Ring: Rectangle {
-    id: ring
-
     // The board's own diameter for this ring, held while not receiving.
     property real rest: Theme.nearbyRadarOuter
     property real offset: 0
@@ -91,8 +88,6 @@ Item {
   }
 
   Item {
-    id: rings
-
     x: (root.width - Theme.nearbyRadarOuter) / 2
     y: 0
     width: Theme.nearbyRadarOuter

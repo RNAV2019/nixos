@@ -13,8 +13,6 @@ Gauge {
 
   // A CPU chip whose core fills from the bottom with load, like the Wi-Fi bars light with signal.
   Item {
-    id: chip
-
     x: 24 - width / 2
     y: 26 - height / 2
     width: 20
@@ -51,8 +49,6 @@ Gauge {
 
     // The core: dim when idle, lit from the bottom as load rises.
     Rectangle {
-      id: core
-
       x: 6.5
       y: 6.5
       width: 7

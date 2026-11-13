@@ -1,5 +1,4 @@
 import QtQuick
-import qs.Commons
 
 // The slide between a panel's home view and one sub-view, as the control centre does it:
 // drilling in pushes the home view out to the left and the sub-view in from the right, backing

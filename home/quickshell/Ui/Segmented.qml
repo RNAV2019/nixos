@@ -18,7 +18,6 @@ Item {
 
   // A content-morph anchor (Ui/MorphScan.js): what it is, and what pairs it across panels.
   property string morphRole: "segmented"
-  property string morphKey: ""
   property var morphSlot: undefined
 
   // One per segment: { label?, icon?, filled?, name?, enabled? }. `name` is what a screen
@@ -181,7 +180,6 @@ Item {
         chosen: index === root.currentIndex
         label: modelData.label !== undefined ? modelData.label : ""
         icon: modelData.icon !== undefined ? modelData.icon : ""
-        iconFilled: modelData.filled === true
         enabled: modelData.enabled !== false
         accessibleName: modelData.name !== undefined ? modelData.name : label
         onClicked: root.chosen(index)

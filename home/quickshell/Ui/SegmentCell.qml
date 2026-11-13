@@ -11,7 +11,6 @@ ButtonBase {
 
   property string label: ""
   property string icon: ""
-  property bool iconFilled: false
   property bool chosen: false
   // The cell's own measurements; the Segmented sets its size.
   property real fitPad: Theme.nearbyFitPad
@@ -48,7 +47,6 @@ ButtonBase {
       size: Theme.nearbySegmentGlyph
       strokeWidth: 1.75
       path: root.icon
-      filled: root.iconFilled
       color: root.ink
 
       Behavior on color {

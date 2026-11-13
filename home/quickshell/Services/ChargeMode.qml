@@ -2,7 +2,6 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 
 // The battery's charge mode, from the kernel's power-supply `charge_types`: it reads
 // `[Fast] Standard Long_Life`, the bracketed word being the active one, and writing a word

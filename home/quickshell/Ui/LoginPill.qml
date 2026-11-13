@@ -13,8 +13,6 @@ Rectangle {
 
   // Board units to pixels.
   property real ui: 1
-  // Off on the lock screen; see StrokeIcon.curve.
-  property bool curveIcons: true
 
   // Line one: the account's name, or who is asking.
   property string title: ""
@@ -32,22 +30,14 @@ Rectangle {
   property string status: ""
   // An answer is out and nothing has come back: the disc spins and the field takes no more.
   property bool busy: false
-  // Whether the pill paints its own ground and outline. A host that is itself the shape (the
-  // island) has both already, and only the refusal's outline is drawn over it.
-  property bool framed: true
 
   readonly property bool hasText: input.text.length > 0
   readonly property bool showError: root.failed && !root.hasText && !root.busy
-  // How far the shake has carried the pill; a host may carry what hangs under it along.
-  readonly property real shakeX: shake.x
   // The field, for a host that gives the keyboard to it as a surface opens.
   readonly property Item inputItem: input
 
   signal passwordEdited(string text)
   signal accepted
-  // Every key press and release before the field takes it, for a host that watches modifiers.
-  signal keyPressed
-  signal keyReleased
 
   function u(v) {
     return Math.round(v * root.ui);
@@ -67,26 +57,11 @@ Rectangle {
   implicitHeight: u(Theme.lockPillHeight)
   radius: height / 2
 
-  color: root.framed ? Theme.surface : "transparent"
+  // A host that is itself the shape (the island) has the ground; only the refusal's outline is
+  // drawn over it.
+  color: "transparent"
   border.width: Math.max(1, Math.round(root.ui))
   border.color: root.showError ? Qt.rgba(Theme.love.r, Theme.love.g, Theme.love.b, Theme.lockErrorOutline) : "transparent"
-
-  // Framed, it floats on the shell's drop shadow, like the island's surfaces, not an outline.
-  DropShadow {
-    radius: root.radius
-    sigma: root.u(Theme.surfaceShadowSigma)
-    offsetY: root.u(Theme.surfaceShadowOffsetY)
-    room: root.u(Theme.surfaceShadowRoom)
-    opacity: root.framed ? 1 : 0
-    visible: opacity > 0
-
-    Behavior on opacity {
-      NumberAnimation {
-        duration: Theme.duration(Theme.tintFade)
-        easing.type: Easing.OutQuad
-      }
-    }
-  }
 
   Behavior on border.color {
     Tint {}
@@ -155,21 +130,9 @@ Rectangle {
     text: root.password
     onTextChanged: root.passwordEdited(text)
     onAccepted: root.accepted()
-
-    Keys.onPressed: function (event) {
-      root.keyPressed();
-      event.accepted = false;
-    }
-    Keys.onReleased: function (event) {
-      // Caps Lock's own state lands after its press, so a host asks again on the release.
-      root.keyReleased();
-      event.accepted = false;
-    }
   }
 
   Rectangle {
-    id: avatar
-
     x: root.u(Theme.lockPillInset)
     anchors.verticalCenter: parent.verticalCenter
     width: root.u(Theme.lockAvatarSize)
@@ -230,8 +193,6 @@ Rectangle {
 
   // Line two: the dots and caret while typing, otherwise the placeholder or the state.
   Item {
-    id: lineTwo
-
     x: root.u(Theme.lockTextLeft)
     y: root.u(Theme.lockLineTwoTop)
     width: titleLabel.width
@@ -319,8 +280,6 @@ Rectangle {
       }
 
       Rectangle {
-        id: caret
-
         width: Math.max(1, root.u(Theme.lockCaretWidth))
         height: root.u(Theme.lockCaretHeight)
         radius: width / 2
@@ -382,7 +341,6 @@ Rectangle {
       size: root.u(Theme.lockArrowSize)
       strokeWidth: 2 * root.ui
       color: submit.live ? Theme.inkOnAccent : Theme.inkTertiary
-      curve: root.curveIcons
       path: IconPaths.arrowRight
     }
 

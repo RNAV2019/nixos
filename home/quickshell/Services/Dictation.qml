@@ -31,7 +31,6 @@ Singleton {
   property var levels: zeroLevels()
 
   readonly property bool active: phase !== ""
-  readonly property bool hasText: committed !== "" || tentative !== ""
 
   function zeroLevels() {
     var out = [];

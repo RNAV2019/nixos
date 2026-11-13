@@ -27,7 +27,6 @@ ListRow {
     return paths.length > 0 ? String(paths[0]) : "";
   }
   readonly property string fileKind: Nearby.fileKind(name)
-  readonly property bool isImage: Nearby.isPreviewableImage(name)
 
   readonly property string sizeLabel: {
     if (!transfer || !transfer.total_bytes)

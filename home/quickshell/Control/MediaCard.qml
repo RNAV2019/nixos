@@ -31,8 +31,6 @@ Item {
 
   // Masked together so the blur cannot bleed past the card's corners.
   RoundedClip {
-    id: ground
-
     anchors.fill: parent
     radius: Theme.controlMediaRadius
 
@@ -83,8 +81,6 @@ Item {
   }
 
   Text {
-    id: outputGlyph
-
     x: 16
     y: 13
     text: Volume.glyphFor(root.sink)

@@ -21,12 +21,10 @@ Shape {
   preferredRendererType: Shape.CurveRenderer
 
   GaugeArc {
-    radius: Theme.islandGaugeRadius
     strokeColor: Theme.highlightMed
   }
 
   GaugeArc {
-    radius: Theme.islandGaugeRadius
     value: gauge.value
     strokeColor: gauge.strokeColor
   }

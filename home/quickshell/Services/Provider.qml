@@ -29,14 +29,6 @@ Singleton {
     return root.enters(row);
   }
 
-  // The positions start .. start + length - 1, for the highlight on a contiguous match.
-  function run(start, length) {
-    var out = [];
-    for (var i = 0; i < length; i++)
-      out.push(start + i);
-    return out;
-  }
-
   // A row with every field the launcher reads; `fields` says what differs from the blank one.
   function makeRow(fields) {
     return Object.assign({
@@ -47,8 +39,7 @@ Singleton {
       glyph: "",
       swatch: "",
       kind: "",
-      score: 0,
-      matches: []
+      score: 0
     }, fields);
   }
 
@@ -60,8 +51,8 @@ Singleton {
     return true;
   }
 
-  // How `q` calls up the entry row: { score, positions }, or null. The words a provider
-  // answers to are its own.
+  // How `q` calls up the entry row: { score }, or null. The words a provider answers to
+  // are its own.
   function entryMatch(q) {
     return null;
   }
@@ -70,8 +61,7 @@ Singleton {
   function entryRowFor(q) {
     var hit = root.entryMatch(q);
     return hit ? Object.assign({}, root.entryRow, {
-      score: hit.score,
-      matches: hit.positions
+      score: hit.score
     }) : null;
   }
 }

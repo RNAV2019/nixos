@@ -188,8 +188,6 @@ ButtonBase {
   }
 
   Rectangle {
-    id: badge
-
     x: root.stacked ? Theme.controlTileStackedPad : Theme.controlTileBadgeLeft
     y: root.stacked ? Theme.controlTileStackedPad : (parent.height - height) / 2
     visible: root.isControl

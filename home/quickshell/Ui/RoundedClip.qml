@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import qs.Commons
 
 // Content cropped to a rounded box: children land in a layer masked by a rounded rectangle, so
 // a picture or a progress fill takes the corner instead of spilling square past it. The layer

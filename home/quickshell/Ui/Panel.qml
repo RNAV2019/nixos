@@ -26,7 +26,6 @@ Item {
   property real headerTop: 0
 
   property bool footerShown: false
-  property real footerTop: Theme.panelFooterTop
 
   property bool takesMove: false
   property bool takesTab: false
@@ -139,7 +138,7 @@ Item {
   PanelFooter {
     id: panelFooter
 
-    y: root.footerTop
+    y: Theme.panelFooterTop
     width: parent.width
     visible: root.footerShown
   }

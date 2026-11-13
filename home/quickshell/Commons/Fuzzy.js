@@ -2,8 +2,8 @@
 
 // Subsequence matching after fzy: every query character must appear in order, and the
 // alignment that lands on word starts and consecutive runs wins. `match` returns
-// { score, positions } with score in 0-1 (about 1 for a prefix or a run of word starts),
-// or null when the query is not a subsequence at all.
+// { score } with score in 0-1 (about 1 for a prefix or a run of word starts), or null when
+// the query is not a subsequence at all.
 
 var SEPARATORS = " -_.:/()[]+";
 var MAX_TEXT = 64;
@@ -35,8 +35,7 @@ function match(query, text) {
   var m = Math.min(full.length, MAX_TEXT);
   if (n === 0)
     return {
-      score: 0,
-      positions: []
+      score: 0
     };
   if (n > m || n > MAX_QUERY)
     return null;
@@ -81,22 +80,7 @@ function match(query, text) {
     }
   }
 
-  // Walk back along the winning alignment; once inside a run, stay in it.
-  var positions = new Array(n);
-  var inRun = false;
-  j = m - 1;
-  for (i = n - 1; i >= 0; i--) {
-    for (; j >= 0; j--) {
-      if (D[i][j] !== -Infinity && (inRun || D[i][j] === M[i][j])) {
-        inRun = i > 0 && j > 0 && M[i][j] === D[i - 1][j - 1] + CONSECUTIVE;
-        positions[i] = j--;
-        break;
-      }
-    }
-  }
-
   return {
-    score: Math.max(0, Math.min(1, M[n - 1][m - 1] / n)),
-    positions: positions
+    score: Math.max(0, Math.min(1, M[n - 1][m - 1] / n))
   };
 }

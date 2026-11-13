@@ -11,7 +11,6 @@ Panel {
 
   // Entries of { glyph, label, confirms }.
   property var model: []
-  property int inset: Theme.powerInset
 
   // The tile filled while nothing is armed, if any: the profile in use.
   property int marked: -1
@@ -125,7 +124,7 @@ Panel {
     ChoiceTiles {
       id: tiles
 
-      inset: root.inset
+      inset: Theme.powerInset
       model: root.model
       currentIndex: root.current
       activeIndex: root.armed >= 0 ? root.armed : root.marked

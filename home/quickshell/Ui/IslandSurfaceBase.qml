@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Bar.Widgets
 import qs.Commons
-import qs.Services
 import "Motion.js" as Motion
 import "MorphScan.js" as MorphScan
 

@@ -18,7 +18,7 @@ ControlSubView {
   readonly property var sinks: {
     if (!active)
       return [];
-    return Util.filterDevices(Pipewire.nodes.values, function (n) {
+    return Pipewire.nodes.values.filter(function (n) {
       return !n.isStream && n.isSink && n.audio;
     });
   }
@@ -26,7 +26,7 @@ ControlSubView {
   readonly property var sources: {
     if (!active)
       return [];
-    return Util.filterDevices(Pipewire.nodes.values, function (n) {
+    return Pipewire.nodes.values.filter(function (n) {
       return !n.isStream && !n.isSink && n.audio;
     });
   }
@@ -34,7 +34,7 @@ ControlSubView {
   readonly property var streams: {
     if (!active)
       return [];
-    return Util.filterDevices(Pipewire.nodes.values, function (n) {
+    return Pipewire.nodes.values.filter(function (n) {
       return n.isStream && n.isSink && n.audio;
     });
   }

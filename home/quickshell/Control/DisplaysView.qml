@@ -351,8 +351,6 @@ ControlSubView {
     }
 
     DisplayTile {
-      id: screenTile
-
       visible: canvas.screenAt !== null
       label: root.external ? Displays.modelOf(root.external) : ""
       rect: canvas.screenAt
@@ -427,8 +425,6 @@ ControlSubView {
       ]
 
       Segmented {
-        id: group
-
         required property var modelData
         required property int index
 

@@ -248,8 +248,6 @@ Scope {
 
   // Lock until this compositor instance completes its first secure lock.
   Process {
-    id: markerCheck
-
     running: true
     command: ["sh", "-c", "test -e \"$XDG_RUNTIME_DIR/quickshell-secured-$HYPRLAND_INSTANCE_SIGNATURE\""]
 
@@ -357,8 +355,6 @@ Scope {
       }
 
       LockView {
-        id: view
-
         anchors.fill: parent
         outputScreen: surface.screen
         captured: root.snapshotPath.length > 0 && surface.screen !== null

@@ -125,11 +125,9 @@ Variants {
     }
 
     function chooseFiles() {
-      picker.open(win.lastDir);
+      picker.open();
       picking = true;
     }
-
-    property string lastDir: ""
 
     PathExpander {
       id: stager
@@ -316,8 +314,6 @@ Variants {
     ]
 
     Panel {
-      id: panel
-
       surface: win
 
       onKeyPressed: function (event) {
@@ -413,8 +409,6 @@ Variants {
 
             // Board 16a: one full-width accent button while nothing is staged.
             Button {
-              id: chooseButton
-
               x: Theme.nearbyInset
               y: Theme.nearbyPadTop + Theme.nearbyHeaderHeight + Theme.nearbyBodyGap
               width: sendView.width - Theme.nearbyInset * 2
@@ -856,7 +850,6 @@ Variants {
         height: Theme.pickerHeight
         enabled: win.picking
 
-        onDirChanged: win.lastDir = dir
         onAccepted: function (paths) {
           win.picking = false;
           win.stage(paths);

@@ -111,8 +111,6 @@ Item {
 
   // The password field: it holds the keyboard and draws nothing; the dots are the pill's.
   TextInput {
-    id: input
-
     // A point, under everything: a field's own I-beam must not show over the lock.
     width: 1
     height: 1
@@ -258,8 +256,6 @@ Item {
       // Drawn through its own layer's effect rather than hidden behind a separate one: what is
       // inside a hidden item is never redrawn, and the patch below comes and goes.
       Item {
-        id: blurSource
-
         anchors.fill: parent
         visible: shot.status === Image.Ready
         layer.enabled: true
@@ -416,8 +412,6 @@ Item {
       // own pixels. The clock gives way to the big one as the flight leaves; the marks go with
       // the ground.
       Item {
-        id: face
-
         width: pill.width / canvas.outputScale
         height: Theme.barHeight
         transformOrigin: Item.TopLeft
@@ -445,11 +439,6 @@ Item {
           anchors.fill: parent
           clockLeft: parent.width / 2 - islandClock.width * islandClock.scale / 2
           clockRight: parent.width / 2 + islandClock.width * islandClock.scale / 2
-          mediaActive: Media.active
-          playing: Media.playing
-          recording: Recorder.recording
-          camera: Privacy.camera
-          microphone: Privacy.microphone
           opacity: 1 - canvas.ramp(view.ground, 0, 0.6)
           visible: leftExtent + rightExtent > 0 && opacity > 0
         }
@@ -457,8 +446,6 @@ Item {
 
       // Locked: the glyph, in love for a moment after a refusal.
       StrokeIcon {
-        id: glyph
-
         readonly property bool wanted: !view.leaving && !view.busy && canvas.shownDots === 0
         property real shown: wanted ? 1 : 0
 

@@ -237,8 +237,6 @@ FrostedSurface {
   }
 
   DropArea {
-    id: fileDrop
-
     z: 100
     anchors.fill: parent
     enabled: !root.suppressed && !root.expanded
@@ -346,9 +344,6 @@ FrostedSurface {
   readonly property real sideFrom: Theme.islandSideReveal[0]
   readonly property real sideTo: Theme.islandSideReveal[1]
   readonly property real sideFlight: Theme.islandSideFlight
-
-  // Do not infer completion from clamped openness; a spring may cross the target before resting.
-  readonly property bool settled: !morphRunning && Math.abs(height - targetHeight) < 0.5
 
   // Where the shut pill puts the clock's shown left edge, measured as clockLeft measures it:
   // always centred, the marks being balanced either side; see Theme.islandCollapsedWidth.

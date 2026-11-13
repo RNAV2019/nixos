@@ -67,10 +67,6 @@ Singleton {
     return (m.lastIpcObject || {}).model || m.name;
   }
 
-  function hasSaved(m) {
-    return m !== null && saved[m.description] !== undefined;
-  }
-
   // The rule names the monitor by description, so it follows this monitor to any port and
   // replaces the Nix rule of the same name. Mode and scale are restated from the live
   // monitor, since a rule that is new at runtime would otherwise fall back to auto.

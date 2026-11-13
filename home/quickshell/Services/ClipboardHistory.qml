@@ -74,19 +74,17 @@ Provider {
     var fz = Fuzzy.match(q, root.entryRow.name);
     if (all && q.length >= 3)
       return {
-        score: root.entryScore + (fz ? fz.score * 10 : 0),
-        positions: fz ? fz.positions : []
+        score: root.entryScore + (fz ? fz.score * 10 : 0)
       };
     if (fz && q.length >= 3 && fz.score >= 0.3)
       return {
-        score: 20 + fz.score * 10,
-        positions: fz.positions
+        score: 20 + fz.score * 10
       };
     return null;
   }
 
   // Whitespace collapsed the way cliphist previews it, so the first line is a prefix of
-  // the preview and a preview match can highlight inside the name.
+  // the preview.
   function collapse(s) {
     return String(s).replace(/\s+/g, " ").trim();
   }
@@ -125,7 +123,7 @@ Provider {
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
-  function rowFor(e, score, positions) {
+  function rowFor(e, score) {
     var name, desc, icon = "", glyph = "";
     if (e.size) {
       name = root.binaryName(e);
@@ -145,10 +143,7 @@ Provider {
       desc: desc,
       icon: icon,
       glyph: glyph,
-      score: score,
-      matches: (positions || []).filter(function (p) {
-        return p < name.length;
-      })
+      score: score
     });
   }
 
@@ -162,14 +157,12 @@ Provider {
     var at = e.lower.indexOf(q);
     if (at >= 0)
       return {
-        score: 70 + (at === 0 ? 15 : root.wordStart(e.lower, at) ? 8 : 0),
-        positions: e.size ? [] : run(at, q.length)
+        score: 70 + (at === 0 ? 15 : root.wordStart(e.lower, at) ? 8 : 0)
       };
     var fz = Fuzzy.match(q, e.size ? root.binaryName(e) : e.preview);
     if (fz && fz.score >= 0.1)
       return {
-        score: 20 + fz.score * 40,
-        positions: e.size ? [] : fz.positions
+        score: 20 + fz.score * 40
       };
     return null;
   }
@@ -178,7 +171,7 @@ Provider {
     if (!root.scoped)
       return [];
     return root.entries.map(function (e) {
-      return root.rowFor(e, 0, []);
+      return root.rowFor(e, 0);
     });
   }
 
@@ -193,7 +186,7 @@ Provider {
       for (i = 0; i < root.entries.length; i++) {
         hit = root.scopedMatch(root.entries[i], q);
         if (hit)
-          out.push(root.rowFor(root.entries[i], hit.score, hit.positions));
+          out.push(root.rowFor(root.entries[i], hit.score));
       }
       return out;
     }
@@ -213,7 +206,7 @@ Provider {
       if (at < 0)
         continue;
       var start = root.wordStart(e.lower, at);
-      clips.push(root.rowFor(e, root.clipScore + (at === 0 ? 8 : start ? 4 : 0), e.size ? [] : run(at, q.length)));
+      clips.push(root.rowFor(e, root.clipScore + (at === 0 ? 8 : start ? 4 : 0)));
     }
     return out.concat(clips);
   }

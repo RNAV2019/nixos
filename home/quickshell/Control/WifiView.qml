@@ -130,8 +130,6 @@ ControlSubView {
   }
 
   ListRow {
-    id: activeRow
-
     width: parent.width
     visible: root.activeNetwork !== null
     glyphGrid: 24
@@ -201,8 +199,6 @@ ControlSubView {
       spacing: Theme.controlRowGap
 
       ListRow {
-        id: row
-
         width: parent.width
         // Lit to the network's own strength, as the active row above and the island are.
         glyphGrid: 24

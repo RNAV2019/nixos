@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import Quickshell
 import qs.Commons
 import qs.Nearby
@@ -27,7 +26,6 @@ Variants {
     property bool picking: false
     // "files" for Send files, "wallpaper" for the phone preview's picture.
     property string pickKind: "files"
-    property string lastDir: ""
 
     // The home view keeps this column while the card grows around the picker.
     readonly property real columnWidth: Theme.panelWidth(modelData, Theme.phoneWidth)
@@ -67,7 +65,7 @@ Variants {
 
     function chooseFiles() {
       pickKind = "files";
-      picker.open(win.lastDir);
+      picker.open();
       picking = true;
     }
 
@@ -118,8 +116,6 @@ Variants {
     }
 
     Panel {
-      id: panel
-
       surface: win
       // The picker has its own keys; the home view moves across the action tiles.
       takesMove: !win.picking
@@ -165,7 +161,6 @@ Variants {
           // One thing to the content morph (Ui/MorphScan.js): the picture of the phone arrives whole, not
           // its screen's pieces before its body.
           property string morphRole: "phone"
-          property string morphKey: ""
           property var morphSlot: undefined
 
           x: Theme.phoneInset
@@ -457,8 +452,6 @@ Variants {
         // ---- who it is ----
 
         Text {
-          id: deviceName
-
           x: Theme.phoneStatusLeft
           y: Theme.phoneNameTop
           width: home.width - x - Theme.phoneInset
@@ -622,8 +615,6 @@ Variants {
         }
 
         Rectangle {
-          id: browseNote
-
           x: Theme.phoneInset
           y: tiles.y + tiles.height + Theme.phoneNoteBarGap
           width: home.inner
@@ -684,7 +675,6 @@ Variants {
           visible: win.pickKind === "files"
           enabled: win.picking && win.pickKind === "files"
 
-          onDirChanged: win.lastDir = dir
           onAccepted: function (paths) {
             Phone.share(paths);
             win.hide();
