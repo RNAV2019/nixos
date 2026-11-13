@@ -22,6 +22,14 @@ trap 'rm -rf "$TMP"' EXIT
 RT=$XDG_RUNTIME_DIR
 FAILED=()
 ONLY=${QS_SHOOT_ONLY:-}
+# A harness whose orbit is on the move (run.sh QS_OLED_INTERVAL_MS) shoots the orbit check and nothing
+# else; a default one has no orbit to check.
+if [[ -n ${QSV_OLED_INTERVAL:-} ]]; then
+  [[ -z $ONLY || $ONLY == check:oled-orbit ]] || die "this harness has a moving orbit; it only shoots check:oled-orbit"
+  ONLY=check:oled-orbit
+elif [[ $ONLY == check:oled-orbit ]]; then
+  die "check:oled-orbit needs a harness started with QS_OLED_INTERVAL_MS"
+fi
 
 if [[ -z $ONLY ]]; then
   [[ -e $QSV_WORK/shot.done ]] && die "this harness has already been shot (notification history, backlight and other state carry over); stop.sh, then run.sh again"
@@ -452,6 +460,43 @@ check() { # NAME COMMAND...
   fi
 }
 
+# ---- the burn-in orbit ----
+#
+# Only meaningful on a harness started with QS_OLED_INTERVAL_MS (run.sh): the orbit steps every
+# few hundred ms there, so no state could be compared, and that is all such a harness shoots.
+
+# Where a pill is in a capture, "X Y W H": the part of a strip of the top edge (columns X0 to X1)
+# that differs from the compositor's own background, which is the same size as the output.
+strip_box() { # CAPTURE X0 X1
+  local w=$(($3 - $2)) box
+  box=$(magick "$1" -crop "${w}x80+$2+0" +repage \
+    \( "$QSV_WORK/bg.png" -crop "${w}x80+$2+0" +repage \) \
+    -compose difference -composite -colorspace gray -threshold 10% -format '%@' info:)
+  [[ $box =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]] || {
+    echo "none"
+    return
+  }
+  echo "$((BASH_REMATCH[3] + $2)) ${BASH_REMATCH[4]} ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+}
+island_box() { strip_box "$1" 560 1360; }
+workspaces_box() { strip_box "$1" 0 400; }
+
+# The pill is on the move: two captures a second apart find it in two places.
+oled_orbit_moves() {
+  local a=$TMP/orbit-a.png b=$TMP/orbit-b.png ia ib wa wb
+  sleep 2
+  grim "$a"
+  sleep 1
+  grim "$b"
+  ia=$(island_box "$a")
+  ib=$(island_box "$b")
+  wa=$(workspaces_box "$a")
+  wb=$(workspaces_box "$b")
+  log "      island     $ia -> $ib"
+  log "      workspaces $wa -> $wb"
+  [[ $ia != none && $wa != none && $ia != "$ib" && $wa != "$wb" ]]
+}
+
 setup_phone_satellite() { :; }
 setup_phone_satellite_card() { cursor 960 26; }
 setup_phone_satellite_hover() { cursor 1045 26; }
@@ -780,6 +825,8 @@ teardown_lock() {
   echo "source=$QSV_SRC"
   echo "commit=$(git -C "$QSV_SRC" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 } >"$OUT/meta.txt"
+
+[[ -z ${QSV_OLED_INTERVAL:-} ]] || check oled-orbit oled_orbit_moves
 
 shot rest 1.0 0.3 setup_none
 shot hover-island 1.2 0.3 setup_hover_island

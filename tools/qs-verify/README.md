@@ -28,6 +28,16 @@ notification history, backlight and other state carry over, so every capture run
 `stop.sh; run.sh; shoot.sh`. `run.sh` exits 2, leaving the harness up, if quickshell logs a warning at load that
 is not in `allowed-log.txt`.
 
+The burn-in orbit (`Services/OledCare.qml`) never moves in a normal run: its interval is patched
+huge. `QS_OLED_INTERVAL_MS=300 run.sh ...` steps it that often, each step crossed in as long, and
+such a harness shoots one thing, `check oled-orbit`: two captures of the top edge a second apart
+must find the island and the workspaces pill in different places (and fails when nothing starts
+the singleton). `QS_OLED_POS=3 run.sh ...` parks the orbit at that ring position instead (here
+the island two px right and one down, the workspaces pill the opposite), so any state can be shot
+with every surface shifted and set beside the unshifted baseline. A run with neither pins both pills to
+the nominal spot (the orbit itself starts on a corner of its ring, two px off it), which is where every
+baseline has them.
+
 A baseline for the commit the work started from lives at `~/.cache/qs-verify/baseline-<sha>/`.
 A phase of work shoots its own worktree and compares:
 

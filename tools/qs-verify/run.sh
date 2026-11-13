@@ -10,6 +10,9 @@
 #
 #   QS_SCALE=1.25 run.sh CONFIG_DIR     the fractional-scale scenario
 #   QS_REFRESH=120 run.sh CONFIG_DIR    the headless output refresh rate in Hz (default 60)
+#   QS_OLED_INTERVAL_MS=300 run.sh CONFIG_DIR   the burn-in orbit steps every 300 ms (and crosses each step in
+#                                       as long), for shoot.sh's oled-orbit check; by default it never moves
+#   QS_OLED_POS=3 run.sh CONFIG_DIR     the orbit parked at that ring position, so every surface is shot shifted
 #   QS_MOTION_LOG=1 run.sh CONFIG_DIR   the shell logs its motion springs (read by motion/record.sh)
 #   QS_THEME=dark run.sh CONFIG_DIR     a theme other than the live one
 #   QS_VERIFY_WORK=/tmp/x run.sh ...    a second harness side by side
@@ -75,6 +78,12 @@ printf '%s' "$THEME" >"$SCRATCH_HOME/.local/state/theme/name"
 # Opt-in switches for the shell itself (motion recorder), kept across the scrub.
 MOTION_LOG=${QS_MOTION_LOG:-}
 REFRESH=${QS_REFRESH:-60}
+# The burn-in orbit: unset, it never moves (patched below); a number of ms makes it step that
+# often, and QS_OLED_POS parks it at a ring position instead of the start.
+OLED_INTERVAL=${QS_OLED_INTERVAL_MS:-}
+OLED_POS=${QS_OLED_POS:-}
+[[ -z $OLED_INTERVAL || $OLED_INTERVAL =~ ^[0-9]+$ ]] || die "QS_OLED_INTERVAL_MS must be a number of ms"
+[[ -z $OLED_POS || $OLED_POS =~ ^[1-9][0-9]*$ ]] || die "QS_OLED_POS must be a whole ring position above 0"
 # The compositor's renderer: pixman (default, the same pixels everywhere) or gles2 (the GPU, for
 # motion: pixman paints a full 1080p frame too slowly to keep 120 Hz).
 RENDERER=${QS_RENDERER:-pixman}
@@ -228,9 +237,26 @@ patch_file "$CFG/Commons/Monitors.qml" \
   's/^(\s*)return screen !== null && Hyprland\.focusedMonitor !== null.*$/\1return screen !== null;/' \
   "Monitors.isFocused"
 # The OLED orbit moves the pill one pixel every three minutes; a run takes longer than that.
+# QS_OLED_INTERVAL_MS puts a short step in its place, crossed in the same time (a travel of
+# twelve seconds would leave the pill still for the check's two crops).
 oled=$(grep -rlE 'readonly property int oledShiftInterval: ' "$CFG" --include='*.qml' | head -1 || true)
 [[ -n $oled ]] || die "patch 'OLED orbit': oledShiftInterval not found"
-patch_file "$oled" 's/(readonly property int oledShiftInterval: )[0-9]+/\12000000000/' "OLED orbit"
+patch_file "$oled" "s/(readonly property int oledShiftInterval: )[0-9]+/\\1${OLED_INTERVAL:-2000000000}/" "OLED orbit"
+if [[ -n $OLED_INTERVAL ]]; then
+  patch_file "$oled" "s/(readonly property int oledShiftTravel: )[0-9]+/\\1$OLED_INTERVAL/" "OLED orbit travel"
+fi
+if [[ -n $OLED_POS ]]; then
+  oledcare=$CFG/Services/OledCare.qml
+  patch_file "$oledcare" "s/^(\\s*property real orbitPos: )[0-9.]+/\\1$OLED_POS/" "OLED orbit position"
+fi
+# The orbit starts on a corner of its ring (the island two px right and up), never on the nominal
+# spot, so a default run, whose orbit never steps, pins both pills to the nominal spot: they sit
+# where every baseline has them.
+if [[ -z $OLED_INTERVAL && -z $OLED_POS ]]; then
+  patch_file "$CFG/Services/OledCare.qml" \
+    's/^(\s*readonly property var (islandPoint|workspacesPoint): ).*$/\1({ x: 0, y: 0 })/' \
+    "OLED orbit origin"
+fi
 
 # ---- private buses ----
 
@@ -351,6 +377,7 @@ QSV_CFG=$CFG
   printf 'export QSV_BWRAP=%q\n' "$QSV_BWRAP"
   [[ -z $MOTION_LOG ]] || printf 'export QS_MOTION_LOG=%q\n' "$MOTION_LOG"
   [[ -z $REDUCE_MOTION ]] || printf 'export QUICKSHELL_REDUCE_MOTION=%q\n' "$REDUCE_MOTION"
+  [[ -z $OLED_INTERVAL ]] || printf 'export QSV_OLED_INTERVAL=%q\n' "$OLED_INTERVAL"
   printf 'unset LD_LIBRARY_PATH\n'
 } >"$QSV_ENV"
 
