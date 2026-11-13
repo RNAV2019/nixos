@@ -253,9 +253,11 @@ fi
 # spot, so a default run, whose orbit never steps, pins both pills to the nominal spot: they sit
 # where every baseline has them.
 if [[ -z $OLED_INTERVAL && -z $OLED_POS ]]; then
-  patch_file "$CFG/Services/OledCare.qml" \
-    's/^(\s*readonly property var (islandPoint|workspacesPoint): ).*$/\1({ x: 0, y: 0 })/' \
-    "OLED orbit origin"
+  for point in islandPoint workspacesPoint; do
+    patch_file "$CFG/Services/OledCare.qml" \
+      "s/^(\\s*readonly property var $point: ).*$/\\1({ x: 0, y: 0 })/" \
+      "OLED orbit origin ($point)"
+  done
 fi
 
 # ---- private buses ----
