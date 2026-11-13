@@ -226,3 +226,44 @@ nb_kde_stage() {
   qsipc nearby send "$NB_SEND/photos-oct.zip" >/dev/null
   sleep 1.2
 }
+
+# ---- files for the pickers and the staged send: ~/Downloads, which Nearby's picker opens on ----
+# Three text files, two pictures and a folder with one file in it; the pictures' bytes come from
+# fixed ImageMagick arguments, so the previews and sizes read the same every run. Made after the
+# states that list ~/Downloads empty, since the phone pickers show their parent folders.
+fixture_files() {
+  local dir=$HOME/Downloads
+  mkdir -p "$dir/Trip"
+  printf 'Packing list\n\n- passport\n- charger\n- the blue notebook\n- sunglasses\n' >"$dir/notes.txt"
+  printf 'milk\neggs\nrye bread\ncoffee beans\nlemons\n' >"$dir/shopping.txt"
+  printf 'build: nix build .#checks\nreview the island handoff\nreply to Maya about Friday\n' >"$dir/todo.txt"
+  printf 'Flight 0741, gate 22\nBoarding 09:15\n' >"$dir/Trip/itinerary.txt"
+  magick -size 1280x720 gradient:'#355c7d-#c06c84' -fill '#d8a657' -draw 'circle 400,360 400,520' "$dir/sunset.png"
+  magick -size 960x1280 gradient:'#134e5e-#71b280' -fill '#efe6d6' -draw 'rectangle 200,300 760,900' "$dir/harbour.jpg"
+}
+
+# ---- Hyprland's IPC, answered by mock-hyprland.sh: the Displays view reads its monitors from it ----
+# Brought up for the Displays state only: with it the workspaces pill and the focused monitor
+# would change under every other state. The shell is restarted into it and out again.
+hypr_up() {
+  local sock=$XDG_RUNTIME_DIR/hypr/qsv data=$QSV_WORK/hypr
+  mkdir -p "$sock" "$data"
+  cp "$QSV_DIR/fixtures/hypr-monitors.json" "$data/monitors.json"
+  : >"$data/events"
+  : >"$data/requests.log"
+  setsid socat "UNIX-LISTEN:$sock/.socket.sock,fork" "EXEC:$QSV_DIR/mock-hyprland.sh $data" >/dev/null 2>&1 &
+  echo $! >"$data/pids"
+  setsid socat "UNIX-LISTEN:$sock/.socket2.sock,fork" "EXEC:tail -n0 -F $data/events" >/dev/null 2>&1 &
+  echo $! >>"$data/pids"
+  until [[ -S $sock/.socket.sock && -S $sock/.socket2.sock ]]; do sleep 0.1; done
+  : >"$XDG_RUNTIME_DIR/quickshell-secured-qsv" # the boot lock reads this marker, per instance
+  grep -q '^export HYPRLAND_INSTANCE_SIGNATURE=' "$QSV_ENV" || echo 'export HYPRLAND_INSTANCE_SIGNATURE=qsv' >>"$QSV_ENV"
+  QS_VERIFY_WORK=$QSV_WORK "$QSV_DIR/restart.sh" >/dev/null
+}
+hypr_down() {
+  local data=$QSV_WORK/hypr pid
+  for pid in $(cat "$data/pids" 2>/dev/null); do kill "$pid" 2>/dev/null; done
+  rm -rf "$XDG_RUNTIME_DIR/hypr"
+  sed -i '/^export HYPRLAND_INSTANCE_SIGNATURE=/d' "$QSV_ENV"
+  QS_VERIFY_WORK=$QSV_WORK "$QSV_DIR/restart.sh" >/dev/null
+}

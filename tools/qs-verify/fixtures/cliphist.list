@@ -1,0 +1,5 @@
+9	git rebase --onto main feature~3 feature
+8	https://nixos.org/manual/nixos/stable/
+7	meeting notes for friday
+6	ssh ryan@192.168.1.20
+5	42.195

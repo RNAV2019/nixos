@@ -75,6 +75,16 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
   card pixel for pixel; against `card-playing` its cover sits a pixel off in the lower half,
   because the player was taken down and brought up again in between.
 
+- The widened states (after those, so none of the older ones sees what they leave behind):
+  `launcher-clipboard` and `launcher-emoji` (the scope entered by typing its word and Return, with
+  five fixed clips from the stub `cliphist`), `picker-files` (Nearby's "Choose files" over
+  `~/Downloads`: a folder, three text files and two pictures, one marked), `nearby-send-staged`
+  (two files staged with three devices in view), `picker-images` (the phone wallpaper chooser on
+  the laptop side of the same folder: folders and pictures only), `displays-two` (the Displays
+  view with a laptop panel and an external monitor), and last the lock stage over a fixed capture
+  at 09:41: `lock-preview`, `lock-preview-password` (seven dots) and `lock-preview-refuse` (the
+  red padlock, shot inside the 1.1 s it holds).
+
 ## How states are driven (no QML hooks)
 
 | State | Driver |
@@ -95,6 +105,10 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | what is playing | `mock-mpris.py`, an MPRIS player on the private session bus with four tracks (two with generated covers, one with long names, one with no cover), driven through its own methods (`mp PlayPause`, lib.sh); up only for the states that want it |
 | weather | a stub `curl` on PATH that answers every request with one fixed Open-Meteo reading, so nothing reaches the network; a place is stored with the shell's own `weather set` ipc for the card states and cleared after |
 | phone satellite, phone panel, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
+| launcher scopes | typing the scope's word and Return in the launcher; `cliphist` reads `$QS_VERIFY_WORK/cliphist.list`, which `fixtures/cliphist.list` replaces for `launcher-clipboard` only |
+| file pickers, staged send | `fixture_files` (lib.sh) fills `~/Downloads`; Return on "Choose files" and the picker's own keys (`j`, space, `h`, `k`, `l`) through `wtype`; `qs ipc call nearby send PATH`; the phone is brought up again for `picker-images` and removed |
+| Displays with two monitors | `mock-hyprland.sh` answers Hyprland's IPC sockets (`j/monitors` from `fixtures/hypr-monitors.json`) through `socat`, and the shell is restarted with `HYPRLAND_INSTANCE_SIGNATURE=qsv` (and the boot-lock marker `quickshell-secured-qsv`, or the shell locks itself); both are removed afterwards. Sway's own outputs play no part: `Displays` reads `Quickshell.Hyprland` |
+| lock | the `lockpreview` ipc (`background`, `time`, `preview`, `password`, `busy`, `refuse`, `unlock`) over `$QS_VERIFY_WORK/lockbg-HEADLESS-1.png` (a copy of the compositor's background) and the scratch `wallpaper/current`; each state ends with `unlock`, then `preview false` |
 | pointer | `vpointer.c`, a persistent `zwlr_virtual_pointer` (headless sway has no pointer; without one there is no hover or click) |
 
 The shell runs from a copy of the config with two patches, both checked by `run.sh` (it fails
@@ -109,17 +123,18 @@ OLED orbit would move the pill one pixel every three minutes).
   The views are captured in their empty ("Wi-Fi is off", "No Bluetooth controller") state.
 - **A real polkit request.** The prompt is covered through `authpreview`; the polkit listener
   itself fails to register (allowed in `allowed-log.txt`).
-- **Lock screen.** Time and wallpaper dependent. Its picture can be rehearsed on the `lockpreview`
-  stage (`preview`, `password`, `busy`, `refuse`, `fault`, `unlock`, `background PREFIX` to stand
-  it on a `grim -o OUT PREFIX-OUT.png` capture as the real lock stands on one, and `time HH:mm`
-  to show a fixed time, then another to play a change of minute; `time ""` follows the clock
-  again); PAM and the session lock are only seen through the real lock.
+- **The real lock screen.** PAM and the session lock are only seen through the real lock. Its picture
+  is covered on the `lockpreview` stage (see above); `busy`, `fault`, a change of minute (`time`
+  twice) and the way in and out are not shot, only the three settled states.
 - **Motion.** One settled frame per state; transitions, springs and handoffs are covered by the
   separate 120 Hz recorder and checker in `motion/` (`motion/README.md`: `record.sh`, `check.mjs`,
   `video.py`, `shader-smoke.sh`).
-- **The media card while it plays (its hills and thumb move), clipboard history, emoji and file launcher modes, the file
-  picker, hover previews, the Send-with-files and Apple (AirDrop) nearby flows, Recorder busy
-  states, Night Light (the tile reads "Unavailable"), Displays with a second output.**
+- **The media card while it plays (its hills and thumb move), the file launcher mode, hover previews,
+  the Apple (AirDrop) nearby flow, an image clip in the clipboard list (the stub `cliphist` decodes
+  nothing, so there are no thumbnails and no line counts), the phone wallpaper picker on the phone
+  side with the fixture folder, sending a staged file, Recorder busy states, Night Light (the tile
+  reads "Unavailable"), Displays dragged or on a second headless output (the view reads Hyprland's
+  monitors, which sway does not provide; see the table).**
 - **Hyprland-specific behaviour** (workspaces content, per-monitor focus): sway stands in.
 - **Dictation clock** is not masked: it is captured one second after the mic comes up and the
   stability check retries across a second boundary.

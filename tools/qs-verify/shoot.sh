@@ -672,6 +672,105 @@ setup_sharing_kde_saved() {
 }
 teardown_kde_down() { ph '{"op":"job_end","job":"down"}' 2>/dev/null; sleep 5; }
 
+# ---- launcher scopes, the file pickers, a staged send, Displays with two monitors, the lock ----
+
+# The launcher's "Clipboard History" and "Emoji & Symbols" rows, entered by their chips: the entry
+# row is the best match for its own word, so Return on it opens the scope. The stub cliphist reads
+# its list from a file, which holds five clips for the clipboard state only.
+launcher_scope() { # WORD
+  open_panel launcher
+  sleep 1.2
+  type_text "$1"
+  sleep 0.6
+  keys -k Return
+}
+setup_launcher_clipboard() {
+  cp "$QSV_DIR/fixtures/cliphist.list" "$QSV_WORK/cliphist.list"
+  launcher_scope clip
+}
+teardown_launcher_clipboard() {
+  printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1\tssh ryan@192.168.1.20\n' >"$QSV_WORK/cliphist.list"
+}
+setup_launcher_emoji() { launcher_scope emoji; }
+
+# Nearby's picker (Return on "Choose files" in Send) opens on ~/Downloads: the folder first, then
+# the files. j moves to the first text file, space marks it and moves on.
+setup_picker_files() {
+  nb_status false true
+  nb_peers
+  open_panel nearby
+  sleep 1.5
+  keys -k Return
+  sleep 1.3
+  keys -k j -k space
+}
+# The phone panel's wallpaper chooser, on the laptop side: only folders and pictures are listed,
+# so the three text files stay out. It opens in ~/Pictures; h goes up to the home folder with
+# Pictures focused, two up is Downloads, and l enters it. (Typing "~" drops now and then.)
+setup_picker_images() {
+  phone_wallpaper_picker
+  cursor "$PK_LAPTOP_X" "$PK_SWITCH_Y"
+  sleep 0.3
+  click
+  sleep 1.5
+  cursor 200 900
+  keys -k h
+  sleep 0.8
+  keys -k k -k k
+  sleep 0.3
+  keys -k l
+  sleep 0.8
+  keys -k j
+}
+# Two files sent in with `nearby send`, with a device to send them to.
+setup_nearby_send_staged() {
+  nb_status false true
+  nb_peers
+  qsipc nearby send "$HOME/Downloads/sunset.png" >/dev/null
+  sleep 0.8
+  qsipc nearby send "$HOME/Downloads/notes.txt" >/dev/null
+}
+
+# Displays with a laptop panel and an external monitor (mock-hyprland.sh; the shell restarts into
+# it, so it comes after every state that must not see Hyprland).
+setup_control_displays_two() { control_view 5; }
+
+# The lock on the rehearsal stage, standing on a fixed capture (the compositor's own background)
+# with the clock held at 09:41; the way in plays out in the settle time.
+LOCK_BG=$QSV_WORK/lockbg
+lock_stage() {
+  cp "$QSV_WORK/bg.png" "$LOCK_BG-HEADLESS-1.png"
+  mkdir -p "$HOME/.local/share/wallpaper"
+  ln -sf "$QSV_WORK/bg.png" "$HOME/.local/share/wallpaper/current"
+  qsipc lockpreview background "$LOCK_BG" >/dev/null
+  qsipc lockpreview time 09:41 >/dev/null
+}
+setup_lock_preview() {
+  lock_stage
+  qsipc lockpreview preview true >/dev/null
+}
+setup_lock_preview_password() {
+  setup_lock_preview
+  sleep 2.5
+  qsipc lockpreview password hunter2 >/dev/null
+}
+setup_lock_preview_refuse() {
+  setup_lock_preview
+  sleep 2.5
+  qsipc lockpreview password hunter2 >/dev/null
+  sleep 0.5
+  qsipc lockpreview busy true >/dev/null
+  sleep 0.5
+  qsipc lockpreview refuse >/dev/null
+}
+# The way out as the real unlock plays it; the stage comes down when it ends.
+teardown_lock() {
+  qsipc lockpreview unlock >/dev/null
+  sleep 2.5
+  qsipc lockpreview preview false >/dev/null
+  sleep 0.5
+}
+
 # ---- the run ----
 
 {
@@ -817,6 +916,36 @@ if [[ -z $ONLY || $ONLY == card-* || $ONLY == *media* ]]; then
   media_down
   qsipc weather clear >/dev/null
   sleep 0.5
+fi
+
+# After the states above, which see the shell as it was before these existed: the launcher
+# scopes, the pickers and a staged send (the phone comes back for the wallpaper chooser and goes
+# again), Displays with two monitors, and the lock last, since a lock scenario leaks into any
+# state after it.
+if [[ -z $ONLY || $ONLY == launcher-* || $ONLY == picker-* || $ONLY == nearby-send-staged || $ONLY == displays-two || $ONLY == lock-* ]]; then
+  fixture_files
+  shot launcher-clipboard 1.2 0.3 setup_launcher_clipboard teardown_launcher_clipboard
+  shot launcher-emoji 1.2 0.3 setup_launcher_emoji
+  shot picker-files 1.2 0.3 setup_picker_files teardown_nearby
+  shot nearby-send-staged 1.5 0.3 setup_nearby_send_staged teardown_nearby
+  if [[ -z $ONLY || $ONLY == picker-images ]]; then
+    ph_up
+    shot picker-images 1.0 0.3 setup_picker_images
+    ph '{"op":"remove","id":"s24"}'
+    sleep 2.5
+  fi
+  if [[ -z $ONLY || $ONLY == displays-two ]]; then
+    hypr_up
+    shot displays-two 1.8 0.3 setup_control_displays_two
+    hypr_down
+  fi
+  if [[ -z $ONLY || $ONLY == lock-* ]]; then
+    shot lock-preview 1.5 0.3 setup_lock_preview teardown_lock
+    shot lock-preview-password 1.5 0.3 setup_lock_preview_password teardown_lock
+    shot lock-preview-refuse 0.5 0.1 setup_lock_preview_refuse teardown_lock
+    qsipc lockpreview background "" >/dev/null
+    qsipc lockpreview time "" >/dev/null
+  fi
 fi
 
 reset_ui

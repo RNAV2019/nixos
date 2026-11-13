@@ -1,0 +1,18 @@
+[
+  {
+    "id": 0, "name": "eDP-1", "description": "BOE 0x0C50", "make": "BOE", "model": "0x0C50", "serial": "",
+    "width": 2880, "height": 1800, "physicalWidth": 300, "physicalHeight": 190, "refreshRate": 120.00000,
+    "x": 0, "y": 0, "activeWorkspace": {"id": 1, "name": "1"}, "specialWorkspace": {"id": 0, "name": ""},
+    "reserved": [0, 0, 0, 0], "scale": 1.33, "transform": 0, "focused": true, "dpmsStatus": true,
+    "vrr": false, "solitary": "0", "activelyTearing": false, "directScanoutTo": "0", "disabled": false,
+    "currentFormat": "XRGB8888", "mirrorOf": "none", "availableModes": ["2880x1800@120.00Hz"]
+  },
+  {
+    "id": 1, "name": "DP-1", "description": "ASUSTek COMPUTER INC XG27AQWMG R7LMQS005434", "make": "ASUSTek COMPUTER INC", "model": "XG27AQWMG", "serial": "R7LMQS005434",
+    "width": 2560, "height": 1440, "physicalWidth": 600, "physicalHeight": 340, "refreshRate": 59.95100,
+    "x": 2165, "y": 0, "activeWorkspace": {"id": 5, "name": "5"}, "specialWorkspace": {"id": 0, "name": ""},
+    "reserved": [0, 0, 0, 0], "scale": 1.0, "transform": 0, "focused": false, "dpmsStatus": true,
+    "vrr": false, "solitary": "0", "activelyTearing": false, "directScanoutTo": "0", "disabled": false,
+    "currentFormat": "XRGB8888", "mirrorOf": "none", "availableModes": ["2560x1440@59.95Hz"]
+  }
+]
