@@ -81,7 +81,10 @@ LevelSource {
     _lastTarget = target;
     _hasLastTarget = true;
     _lastWriteAt = Date.now();
-    setter.exec(["brightnessctl", "--min-value=4", "set", Math.round(target * 100) + "%"]);
+    // A refused write leaves the screen where it was, so the target is not what a later request or step starts from.
+    setter.exec(["brightnessctl", "--min-value=4", "set", Math.round(target * 100) + "%"], function () {
+      root._hasLastTarget = false;
+    });
   }
 
   function step(up) {

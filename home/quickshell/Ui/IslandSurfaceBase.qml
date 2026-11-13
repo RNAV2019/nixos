@@ -288,10 +288,15 @@ PanelWindow {
   Timer {
     id: snapRelease
 
+    readonly property string who: win.key + "@" + win.screenName
+
     // Past the morph: every Tint in the shell reads this, and all of them re-evaluating is a dropped
     // frame if it lands in the motion.
     interval: Theme.surfaceFocusPrime
-    onTriggered: Bus.snapTints = false
+    onTriggered: Bus.holdSnap(who, false)
+
+    // A surface destroyed while its timer is pending must not leave the snap held.
+    Component.onDestruction: Bus.holdSnap(who, false)
   }
 
   onTallChanged: {
@@ -334,7 +339,7 @@ PanelWindow {
   function show() {
     if (Theme.motionLog)
       console.info("morph ev " + win.key + " show " + Date.now());
-    Bus.snapTints = true;
+    Bus.holdSnap(snapRelease.who, true);
     snapRelease.restart();
     widthSpring.settle();
     heightSpring.settle();

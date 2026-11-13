@@ -381,7 +381,23 @@ Singleton {
   // output. The holder cuts away rather than shrinks, avoiding two headers/clocks at once.
   // Raised while a surface opens, until its first frame is on screen: colour state set then is
   // taken at once (Ui/Tint.qml) rather than tweened past the open.
-  property bool snapTints: false
+  readonly property bool snapTints: Object.keys(snapHolders).length > 0
+
+  // The surfaces (key@screen) that are opening and have not yet let go of the snap, so one
+  // surface's release cannot un-snap the tints of another that is still opening.
+  property var snapHolders: ({})
+
+  function holdSnap(who, held) {
+    if ((who in snapHolders) === held)
+      return;
+    var next = {};
+    for (var k in snapHolders)
+      if (k !== who)
+        next[k] = true;
+    if (held)
+      next[who] = true;
+    snapHolders = next;
+  }
 
   signal islandClaimed(string screen)
 

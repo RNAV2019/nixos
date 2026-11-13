@@ -28,12 +28,17 @@ Singleton {
 
   readonly property bool enabled: available && active
 
-  function set(on) {
+  // Set while a refused restore puts `active` back, so that is not saved over the choice it failed to apply.
+  property bool _keepSaved: false
+
+  function set(on, restoring) {
     var args = on ? ["hyprctl", "hyprsunset", "temperature", String(root.warmTemperature)] : ["hyprctl", "hyprsunset", "identity"];
     var was = active;
     // A refused command moves nothing on the daemon, so the tile goes back to what it was.
     if (!apply.exec(args, function () {
+      root._keepSaved = restoring === true;
       root.active = was;
+      root._keepSaved = false;
     }))
       return;
     active = on;
@@ -50,8 +55,11 @@ Singleton {
 
   // Off and on round-trip a reboot: every change to `active` - a toggle, a refused write
   // reverting, or the probe catching a restarted daemon - is saved, and the saved one is
-  // applied once at startup.
-  onActiveChanged: savedState.save(root.active ? "1" : "0")
+  // applied once at startup. A refused startup apply is the exception: it leaves the saved one.
+  onActiveChanged: {
+    if (!_keepSaved)
+      savedState.save(root.active ? "1" : "0");
+  }
 
   PersistedValue {
     id: savedState
@@ -60,7 +68,7 @@ Singleton {
 
     onRestored: text => {
       if (text === "1")
-        root.set(true);
+        root.set(true, true);
     }
   }
 
