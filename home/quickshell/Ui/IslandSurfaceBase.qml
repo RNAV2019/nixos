@@ -288,15 +288,32 @@ PanelWindow {
   Timer {
     id: snapRelease
 
-    readonly property string who: win.key + "@" + win.screenName
+    // The name the hold was taken under: the screen can change or go before the release, and a
+    // release under another name would leave the tints snapped for good.
+    property string held: ""
+
+    function hold() {
+      var who = win.key + "@" + win.screenName;
+      if (held !== who)
+        release();
+      held = who;
+      Bus.holdSnap(who, true);
+      restart();
+    }
+
+    function release() {
+      if (held !== "")
+        Bus.holdSnap(held, false);
+      held = "";
+    }
 
     // Past the morph: every Tint in the shell reads this, and all of them re-evaluating is a dropped
     // frame if it lands in the motion.
     interval: Theme.surfaceFocusPrime
-    onTriggered: Bus.holdSnap(who, false)
+    onTriggered: release()
 
     // A surface destroyed while its timer is pending must not leave the snap held.
-    Component.onDestruction: Bus.holdSnap(who, false)
+    Component.onDestruction: release()
   }
 
   onTallChanged: {
@@ -339,8 +356,7 @@ PanelWindow {
   function show() {
     if (Theme.motionLog)
       console.info("morph ev " + win.key + " show " + Date.now());
-    Bus.holdSnap(snapRelease.who, true);
-    snapRelease.restart();
+    snapRelease.hold();
     widthSpring.settle();
     heightSpring.settle();
     // Opened again on its way back to the hover card: it turns round where it is, and is still
