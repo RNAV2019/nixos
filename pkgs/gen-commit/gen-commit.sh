@@ -16,7 +16,7 @@ RP_FOAM="${THEME_FOAM:-#9ccfd8}"
 RP_PINE="${THEME_PINE:-#3e8fb0}"
 RP_IRIS="${THEME_IRIS:-#c4a7e7}"
 
-MODEL="deepseek/deepseek-v4-flash-0731"
+MODEL="deepseek/deepseek-v4.1-flash-1017"
 MAX_AI_EDITS=5
 MAX_DIFF=12000
 MAX_BODY_POINTS=4
