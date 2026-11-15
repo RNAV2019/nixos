@@ -17,7 +17,7 @@ const load = (file, names) => new Function(readFileSync(join(dir, file), "utf8")
 const Parse = load("Parse.js", "cleanTitle, cleanArtist, splitTitle, syllables, spreadWords, tierOf, fromLyricsPlus, fromLrclib, cacheKey, lineAt");
 const Director = load("Director.js", "hashText, rng, plan, segmentAt");
 const Emoji = load("Emoji.js", "lookup, annotate");
-const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth, rows, flick, scatter");
+const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth, span, rows, flick, scatter");
 
 let failed = 0;
 function check(name, ok, detail) {
@@ -139,6 +139,7 @@ check("flick: about as often as asked", (() => {
 eq("flick: never, when told never", Kinetic.flick(9, 2, 3, 10, 0), 1);
 eq("rows: a word or two is one row", Kinetic.rows([{text: "Hold"}, {text: "on"}]), [[0, 1]]);
 check("rows: every word once, in order", JSON.stringify(Kinetic.rows(model.lines[1].words).flat()) === JSON.stringify(model.lines[1].words.map((_, i) => i)));
+eq("span: a stretch that never comes is 0, not NaN", [Kinetic.span(Infinity, Infinity, 5), Kinetic.smooth(Infinity, Infinity, 5), Kinetic.span(2, 2, 1), Kinetic.span(2, 2, 3)], [0, 0, 0, 1]);
 eq("bare", ["night,", "(oh)", "don't", "go!"].map(Kinetic.bare), ["night", "oh", "don't", "go"]);
 
 if (failed > 0) {

@@ -1731,6 +1731,8 @@ Singleton {
   // The ground is drawn at one part in this of the stage and stretched, the bloom at one in that.
   readonly property int lyricGroundShrink: 8
   readonly property int lyricBloomShrink: 6
+  // The soft plate (what a style puts out of focus) is drawn at one part in this.
+  readonly property int lyricSoftShrink: 4
   // The bloom: how far apart its taps sit (in its own texels), and the luma under which nothing
   // glows.
   readonly property real lyricBloomSpread: 1.7
@@ -1759,10 +1761,10 @@ Singleton {
   readonly property string lyricSerifFont: "Instrument Serif"
   readonly property string lyricFatSerifFont: "DM Serif Display"
   // The old print's three (Lyrics/FilmStyle.qml): a fat didone for its title lines, a monoline
-  // script written over them, and a soft slab for its cards. The tall serif is Instrument
+  // script written over them, and a wide bold serif for its cards. The tall serif is Instrument
   // Serif upright, which the Ring style draws narrowed.
   readonly property string lyricDidoneFont: "Abril Fatface"
   readonly property string lyricScriptFont: "Allura"
-  readonly property string lyricCardFont: "Caprasimo"
+  readonly property string lyricCardFont: "Chonburi"
   readonly property string lyricTallSerifFont: "Instrument Serif"
 }

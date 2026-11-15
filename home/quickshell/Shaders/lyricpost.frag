@@ -13,6 +13,11 @@
 //   dust      specks and hairline scratches that come and go with the frames
 //   flicker   the lamp's unsteadiness and the gate's weave, both small
 //   spot      the lamp itself: a soft disc of light at `spotAt`, `spotSize` across
+//   veil      black lifted to grey, as a print's never quite is
+//   softness  the whole picture a little out of true, as a projector's lens leaves it (given
+//             as which smaller copy of the picture to read: 1 is the half-size one)
+// `softSource` is the soft plate: whatever a style has put out of focus, already blurred
+// (Lyrics/LyricScene.qml), and added to the picture as light while `softOn` is 1.
 // Output is opaque.
 //
 // What it costs is counted in reads of the picture: one a pixel at rest, six while a punch is
@@ -40,10 +45,14 @@ layout(std140, binding = 0) uniform buf {
     float spot;
     float spotSize;   // the disc's radius, in stage heights
     vec2 spotAt;      // its middle, in texture coordinates
+    float veil;
+    float softness;
+    float softOn;
 };
 
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D glowSource;
+layout(binding = 3) uniform sampler2D softSource;
 
 float hash(vec2 p) {
     vec3 q = fract(vec3(p.xyx) * 0.1031);
@@ -56,7 +65,7 @@ float hash(vec2 p) {
 // are about the disc's size.
 vec3 seen(vec2 uv) {
     if (depth <= 0.0005)
-        return texture(source, uv).rgb;
+        return softness > 0.01 ? textureLod(source, uv, softness).rgb : texture(source, uv).rgb;
     float off = max(0.0, abs(uv.y - depthAt) - depthBand);
     // Soft by a fifth of the stage's height from the band, and no softer beyond.
     float radius = depth * min(1.0, off / 0.2) * 0.011 * pixels.y;
@@ -109,16 +118,23 @@ void main() {
         col = seen(uv);
     }
 
+    if (softOn > 0.5)
+        col += texture(softSource, uv).rgb;
+
     col += texture(glowSource, uv).rgb * bloom;
 
     if (spot > 0.0005) {
         vec2 d = (uv - spotAt) * vec2(pixels.x / pixels.y, 1.0) / spotSize;
-        col += spot * exp(-dot(d, d)) * (0.94 + 0.06 * hash(vec2(frame, 11.0)));
+        // A disc more than a glow: level across its middle, falling away at its edge, as a
+        // lamp thrown out of focus on a wall is.
+        col += spot * exp(-pow(dot(d, d), 1.7)) * (0.94 + 0.06 * hash(vec2(frame, 11.0)));
     }
 
     col += flash;
     if (mono > 0.0005)
         col = mix(col, vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), mono);
+    if (veil > 0.0005)
+        col += veil * (1.0 - col);
     if (flicker > 0.0005)
         col *= 1.0 + flicker * 0.09 * (hash(vec2(floor(time * 24.0), 1.0)) - 0.5);
 

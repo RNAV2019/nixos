@@ -1,16 +1,20 @@
 import QtQuick
 
 // A LyricStyle seen as an old print run through a projector: black and white, soft and
-// glowing, with dust, scratches, grain and the lamp's flicker (the lens's `mono`, `dust`,
-// `flicker`, and a heavy bloom for the halo round white type). The styles built on it (Reel,
+// glowing, its blacks lifted to a grainy grey, with dust, scratches and the lamp's flicker (the
+// lens's `mono`, `veil`, `softness`, `dust`, `flicker`, and a heavy bloom for the halo round
+// white type). This is the one look on the stage whose ground is not black: the print it copies
+// has none. The styles built on it (Reel,
 // Ring, Titlecard) are the set pieces of one hand-made lyric film; they share this look so a
 // song can pass through all three and still seem one reel.
 LyricStyle {
-  bloom: 1.0
+  bloom: 1.1
   bloomKick: 0.12
-  grain: 0.2
-  vignette: 0.62
-  ground: 0.7
+  grain: 0.34
+  vignette: 0.74
+  ground: 0.75
+  veil: 0.13
+  softness: 1.7
   mono: 1
   dust: 1
   flicker: 1

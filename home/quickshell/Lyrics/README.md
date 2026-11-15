@@ -65,9 +65,14 @@ The rules that keep every style honest:
   the word out again. Fit a word or a row with `scale: room / implicitWidth`.
 - **Any line, any song.** One word or fourteen, a word of twenty letters, a line of half a
   second: fit to the stage's width, never run off it, never overlap what is still being read.
+- **Out of focus** is the stage's soft plate: parent an item to `stage.softPlate`, set `softens`
+  and a `softRadius` (in `u`), and it is drawn blurred by that much and added to the picture as
+  light, under whatever of yours is sharp (`Reel`'s title behind its script). There is one
+  plate and one blur for the whole stage, and they last as long as it does.
 - **Black is the ground.** The panel is an OLED and the picture is light on black: no filled
   backdrops, nothing that sits still for the length of a segment, small plates behind words at
-  most.
+  most. The film styles are the exception, and on purpose: their blacks are lifted to a grainy
+  grey (`veil`), because the print they copy has none.
 - **Keep it cheap.** It runs at 2880 x 1800 and 120 Hz on integrated graphics. Hide what is out
   of its life (`visible: false`), keep under a hundred or so texts alive, no `layer.enabled`
   or `MultiEffect` per word (one or two per style at most, always on, never toggled), no
@@ -97,7 +102,8 @@ The rules that keep every style honest:
   layer of its own is made and thrown away with its line, and that is where the one crash the
   stage has had came from.
 - **An old print.** Root a style in `FilmStyle` instead of `LyricStyle` and it is seen black and
-  white, soft, dusty and flickering (the lens's `mono`, `dust` and `flicker`), as `Reel`, `Ring`
+  white, soft, grey-black, dusty and flickering (the lens's `mono`, `veil`, `softness`, `dust`
+  and `flicker`), as `Reel`, `Ring`
   and `Titlecard` are; `spot`, `spotAt` and `spotSize` put the projector's lamp behind the words.
 - **Letters** that come and go one by one are `LyricLetters`: a word drawn a letter at a time
   where the whole word would put them, in order or scattered (`scattered`), blinking out now and

@@ -14,6 +14,9 @@ function lerp(a, b, t) {
 
 // How far `x` is from `a` to `b`, 0..1.
 function span(a, b, x) {
+  // A stretch with no length (or none yet: both ends at infinity) is a step at its end.
+  if (!(b - a > 0))
+    return x >= b ? 1 : 0;
   return clamp01((x - a) / (b - a));
 }
 

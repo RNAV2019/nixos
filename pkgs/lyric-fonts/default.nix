@@ -19,7 +19,7 @@
     (googleFont "ofl" "dmserifdisplay" "DMSerifDisplay-Italic.ttf" "sha256-33TArDh7rq6w/k8jJOFmjmo+2MCc2Xlv4WLHF1PhnkU=")
     (googleFont "ofl" "instrumentserif" "InstrumentSerif-Regular.ttf" "sha256-SY79Rh9t38t6ERv5pWVwnSCF1IIB1QHq2WDZPoT/u4g=")
     (googleFont "ofl" "allura" "Allura-Regular.ttf" "sha256-nBQrLlFYMsDfxP+LjqGPQDFJQ7+Te3LisjxGYbrBTMY=")
-    (googleFont "ofl" "caprasimo" "Caprasimo-Regular.ttf" "sha256-eGq4TueH1A31W+eMtDYeSFocZocZXLzM81OMteRs7ZA=")
+    (googleFont "ofl" "chonburi" "Chonburi-Regular.ttf" "sha256-qg2sTfCK8QeFuh3BASFJIif45CiPCiPRHdHR9af26/o=")
     (googleFont "ofl" "instrumentserif" "InstrumentSerif-Italic.ttf" "sha256-CJObi99TSv7CSuDvXgP5SJQM2aj+COf+y60EDmIyc4U=")
     (googleFont "ofl" "abrilfatface" "AbrilFatface-Regular.ttf" "sha256-WXHUo3WKkiqf7cf2+4JaljQaLnGMRaSyyaa0F8jE2+k=")
   ];

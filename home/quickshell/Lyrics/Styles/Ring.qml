@@ -79,7 +79,8 @@ FilmStyle {
           // It is on its way a moment before the next word is due, so the middle is clear.
           readonly property real thrown: Kinetic.spring(sty.now - (nextAt - 0.14), 14, 1)
           readonly property var corner: sty.corners[(index + slot.firstCorner) % 4]
-          readonly property real tilt: Kinetic.jitter(sty.seed, slot.lineIndex, index) * 9
+          // The circled word stands straight; the others each lean their own way a little.
+          readonly property real tilt: last ? 0 : Kinetic.jitter(sty.seed, slot.lineIndex, index) * 6
           // A corner holds one word: this one goes when the fourth after it lands there.
           readonly property real kept: slot.line && index + 5 < slot.line.words.length ? 1 - Kinetic.span(0, 0.3, sty.now - slot.line.words[index + 5].t) : 1
           readonly property real held: Kinetic.span(modelData.t, Math.min(nextAt, slot.line ? slot.line.out : nextAt), sty.now)
@@ -87,16 +88,16 @@ FilmStyle {
           x: Kinetic.lerp(slot.width / 2, corner.x * slot.width, thrown)
           y: Kinetic.lerp(slot.height * 0.48, corner.y * slot.height, thrown)
           rotation: Kinetic.lerp(tilt, corner.turn, thrown)
-          scale: (0.9 + 0.1 * Kinetic.outCubic(age / 0.22) + 0.07 * held) * Kinetic.lerp(1, 1.5, thrown)
-          opacity: Kinetic.span(0.03, 0.16, age) * Kinetic.lerp(1, 0.5, thrown) * kept
+          scale: (0.9 + 0.1 * Kinetic.outCubic(age / 0.22) + 0.07 * held) * Kinetic.lerp(1, 1.08, thrown)
+          opacity: Kinetic.span(0.03, 0.16, age) * Kinetic.lerp(1, 0.82, thrown) * kept
           visible: age > 0 && opacity > 0.001
           z: last ? 1 : 0
 
           LyricText {
             id: word
 
-            // Narrowed, it may be as wide as six tenths of the stage.
-            readonly property real fit: Math.min(1, sty.width * 0.6 / Math.max(1, implicitWidth * sty.narrow))
+            // Narrowed, it may be as wide as half the stage: the ring wants the rest.
+            readonly property real fit: Math.min(1, sty.width * 0.5 / Math.max(1, implicitWidth * sty.narrow))
 
             x: -width / 2
             y: -height / 2
@@ -104,7 +105,7 @@ FilmStyle {
             caps: true
             font.family: Theme.lyricTallSerifFont
             font.weight: Font.Normal
-            size: 27 * sty.u
+            size: 37 * sty.u
             color: sty.ink
             scale: fit
             transform: Scale {
@@ -113,15 +114,15 @@ FilmStyle {
             }
           }
 
-          // The pen: an ellipse a little larger than the word, begun at the top and drawn
+          // The pen: an ellipse with room to spare round the word, begun at the top and drawn
           // clockwise, widening as it goes so its end overshoots its start. The stroke is laid
           // down in Shaders/lyricring.frag; only how far the pen has got changes from here.
           ShaderEffect {
             id: ring
 
-            readonly property real rx: word.implicitWidth * sty.narrow * word.fit * 0.62 + 5 * sty.u
-            readonly property real ry: 27 * sty.u * word.fit * 0.4 + 3.5 * sty.u
-            readonly property real pen: 0.42 * sty.u
+            readonly property real rx: Math.min(sty.width * 0.43, word.implicitWidth * sty.narrow * word.fit * 0.5 + 26 * sty.u)
+            readonly property real ry: 37 * sty.u * word.fit * 0.36 + 14 * sty.u
+            readonly property real pen: 0.8 * sty.u
 
             property size itemSize: Qt.size(width, height)
             property size radii: Qt.size(rx, ry)
@@ -139,7 +140,7 @@ FilmStyle {
             x: -width / 2
             y: -height / 2
             visible: piece.last && drawn > 0
-            rotation: -4 - piece.tilt * 0.5
+            rotation: -3
 
             fragmentShader: Qt.resolvedUrl("../../Shaders/lyricring.frag.qsb")
           }

@@ -103,6 +103,8 @@ Item {
   property real lensFlicker: 0
   property real lensDepth: 0
   property real lensGround: 1
+  property real lensVeil: 0
+  property real lensSoftness: 0
   property bool _lensSet: false
   property real level: 0
   // 1 at a change of style, dying away.
@@ -258,6 +260,8 @@ Item {
     scene.lensFlicker += (scene.look("flicker", 0) - scene.lensFlicker) * k;
     scene.lensDepth += (scene.look("depth", 0) - scene.lensDepth) * k;
     scene.lensGround += (scene.look("ground", 1) - scene.lensGround) * k;
+    scene.lensVeil += (scene.look("veil", 0) - scene.lensVeil) * k;
+    scene.lensSoftness += (scene.look("softness", 0) - scene.lensSoftness) * k;
     scene.cut = Kinetic.pulse(scene.wall - scene._cutAt, Theme.lyricCutDecay);
 
     var heard = meter.enabled ? meter.peak : 0;
@@ -380,6 +384,82 @@ Item {
     }
   }
 
+  // ---- the soft plate: what a style wants out of focus ----
+
+  // A style parents items here (`stage.softPlate`) and they are drawn small, blurred across and
+  // down by the style's `softRadius`, and added to the picture by the lens. The plate and its
+  // textures are the stage's own and last as long as it does: a blur made per line, with the
+  // line, is where the one crash this stage has had came from.
+  readonly property Item softPlate: plate
+  readonly property bool softens: scene.look("softens", false) === true
+  // One tap's stride on the plate's texture: the blur's own spread is three taps.
+  readonly property real softStride: Math.max(0.02, scene.look("softRadius", 0) * scene.height / 100 / Theme.lyricSoftShrink / 3)
+
+  Item {
+    id: plate
+
+    anchors.fill: parent
+  }
+
+  ShaderEffectSource {
+    id: plateTexture
+
+    sourceItem: plate
+    hideSource: true
+    live: scene.live && scene.softens
+    textureSize: Qt.size(softAcross.width, softAcross.height)
+    visible: false
+  }
+
+  // The two passes are kept visible and hidden by the textures that read them (`hideSource`):
+  // an item that is not visible is never brought up to date, so a stride that changes, as this
+  // one does with every focus pull, would stay what it was when the stage came up.
+  ShaderEffect {
+    id: softAcross
+
+    width: Math.ceil(scene.width / Theme.lyricSoftShrink)
+    height: Math.ceil(scene.height / Theme.lyricSoftShrink)
+
+    property var source: plateTexture
+    property point stride: Qt.point(scene.softStride / Math.max(1, width), 0)
+    property real floorLuma: 0
+
+    fragmentShader: Qt.resolvedUrl("../Shaders/lyricblur.frag.qsb")
+  }
+
+  ShaderEffectSource {
+    id: softAcrossTexture
+
+    sourceItem: softAcross
+    hideSource: true
+    live: scene.live && scene.softens
+    textureSize: Qt.size(softAcross.width, softAcross.height)
+    visible: false
+  }
+
+  ShaderEffect {
+    id: softDown
+
+    width: softAcross.width
+    height: softAcross.height
+
+    property var source: softAcrossTexture
+    property point stride: Qt.point(0, scene.softStride / Math.max(1, height))
+    property real floorLuma: 0
+
+    fragmentShader: Qt.resolvedUrl("../Shaders/lyricblur.frag.qsb")
+  }
+
+  ShaderEffectSource {
+    id: softTexture
+
+    sourceItem: softDown
+    hideSource: true
+    live: scene.live && scene.softens
+    textureSize: Qt.size(softAcross.width, softAcross.height)
+    visible: false
+  }
+
   // ---- the lens ----
 
   // Mipmapped, because the bloom reads it at a sixth of its size.
@@ -403,7 +483,7 @@ Item {
     visible: false
 
     property var source: picture
-    property point step: Qt.point(Theme.lyricBloomSpread / Math.max(1, width), 0)
+    property point stride: Qt.point(Theme.lyricBloomSpread / Math.max(1, width), 0)
     property real floorLuma: Theme.lyricBloomFloor
 
     fragmentShader: Qt.resolvedUrl("../Shaders/lyricblur.frag.qsb")
@@ -426,7 +506,7 @@ Item {
     visible: false
 
     property var source: glowAcrossTexture
-    property point step: Qt.point(0, Theme.lyricBloomSpread / Math.max(1, height))
+    property point stride: Qt.point(0, Theme.lyricBloomSpread / Math.max(1, height))
     property real floorLuma: 0
 
     fragmentShader: Qt.resolvedUrl("../Shaders/lyricblur.frag.qsb")
@@ -446,6 +526,11 @@ Item {
 
     property var source: picture
     property var glowSource: glowTexture
+    property var softSource: softTexture
+    property real softOn: scene.softens ? 1 : 0
+    property real veil: scene.lensVeil
+    // Pixels of softness as the copy of the picture that is that much smaller.
+    property real softness: scene.lensSoftness * scene.pixelRatio > 1 ? Math.log2(scene.lensSoftness * scene.pixelRatio) : 0
     property size pixels: Qt.size(width * scene.pixelRatio, height * scene.pixelRatio)
     property real time: scene.wall
     property real bloom: scene.lensBloom + scene.look("bloomKick", 0.2) * scene.kick + 0.18 * scene.cut

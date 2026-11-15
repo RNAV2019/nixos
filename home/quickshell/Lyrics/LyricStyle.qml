@@ -62,6 +62,14 @@ Item {
   property real spot: 0
   property real spotSize: 0.32
   property point spotAt: Qt.point(0.5, 0.5)
+  // Black lifted to grey (0..1), and the whole picture softened by about this many pixels.
+  property real veil: 0
+  property real softness: 0
+  // The soft plate: whatever the style parents to `stage.softPlate` is drawn out of focus, by
+  // `softRadius` hundredths of the stage's height, and added to the picture as light. One
+  // blur for the whole stage, made once: set `softens` and it runs while this style is up.
+  property bool softens: false
+  property real softRadius: 0
   // How hard the cut into this style lifts the frame, against the usual.
   property real cutFlash: 1
   // The ground's light behind this style, as a share of the stage's own.
