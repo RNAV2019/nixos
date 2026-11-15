@@ -46,7 +46,7 @@ LyricStyle {
         width: 1.5 * sty.u
         height: width
         radius: width / 2
-        color: sty.ink
+        color: sty.accent
         opacity: 0.45 + 0.4 * (0.5 + 0.5 * Math.sin(sty.stage.wall * 5.2 - index * 0.9))
         scale: 0.9 + 0.1 * (0.5 + 0.5 * Math.sin(sty.stage.wall * 5.2 - index * 0.9))
       }
@@ -90,7 +90,7 @@ LyricStyle {
       font.weight: Font.Normal
       font.italic: true
       size: 5.4 * sty.u
-      color: Theme.withAlpha(sty.ink, 0.6)
+      color: sty.accent
       opacity: Kinetic.outCubic((sty.age - 0.25) / 0.9)
     }
 

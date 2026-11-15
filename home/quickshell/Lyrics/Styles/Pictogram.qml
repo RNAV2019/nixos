@@ -84,7 +84,7 @@ LyricStyle {
                   text: cell.word.text
                   size: 10 * sty.u
                   caps: false
-                  color: sty.ink
+                  color: cell.pictured ? sty.accent : sty.ink
                   font.weight: Font.DemiBold
                   visible: cell.age > -0.01
                   opacity: cell.pop

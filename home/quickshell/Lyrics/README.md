@@ -17,7 +17,10 @@ away.
   from the catalogue (`LyricScene.catalogue`), by tier and by a seed made from the song, so a
   song is always cast the same way and no style comes round again until three others have played.
   A stretch with nothing sung is a segment in the style `Interlude`.
-- **`LyricStage.qml`** is the window, the keys and the fade. **`LyricScene.qml`** is the picture:
+- **`LyricStage.qml`** is the window, the keys and the way in and out: the desktop, caught as a
+  picture, goes out of focus from the top down and dark, and the stage comes out of the same
+  blur (`Shaders/lyricfold.frag`; `qs ipc call lyrics fold 0.4` holds it part-way for a look).
+  **`LyricScene.qml`** is the picture:
   the clock, the ground (`Shaders/lyricground.frag`), the style in hand, and the lens
   (`Shaders/lyricpost.frag`, fed its bloom by `lyricblur.frag`).
 - **`Styles/*.qml`** are the styles, each a `LyricStyle`.
@@ -37,8 +40,10 @@ What `LyricStyle` gives you:
 | `lines`, `first`, `last` | the song's lines and this segment's range |
 | `cur`, `line` | the line in hand (`-1` / `null` before the segment's first), counted from `lead` seconds before its first word |
 | `u` | a hundredth of the stage's height: size everything in it |
-| `ink` | warm white: what words are set in |
-| `accent`, `accent2` | two colours from the cover, which the ground is lit with; not for words |
+| `ink` | what words are set in: near white, leaning the cover's way |
+| `accent` | the cover's liveliest colour, for the word in hand or the words the singer leans on |
+| `accent2`, `accent3` | two more the cover has (the ground is lit with all three) |
+| `dim` | a word not yet sung |
 | `seed` | this segment's own number, for `Kinetic.hash/jitter/pick` |
 | `slotLine(k, n)` | the line slot `k` of an `n`-slot pool draws (see Punch) |
 | `until(line, j)` | when word `j` gives way to the next |
@@ -88,13 +93,18 @@ The rules that keep every style honest:
   `repeater.count` in it too. A pooled slot changes line a frame before its inner delegates
   follow, so guard `line.words[j]` with `j < line.words.length`, or hand the delegates the word
   itself.
-- **Words are ink.** The cover's colours light the ground and stay out of the type, as in every
-  lyrics player worth copying; a sung word is told from an unsung one by how bright it is.
+- **Every colour is the cover's** (`Palette.js`), so each song looks like itself. Words are
+  `ink`; `accent` marks the word in hand or the words the singer leans on, never a whole line,
+  and never more than one colour of type at a time; a word not yet sung is `dim`. The film
+  styles stay black and white, toned the cover's way (the stage's `tone`).
 - **Two faces at most, each with a part to play** (capitals for the passing words and an italic
   for the ones the singer leans on, say). A face per word looks drawn from a hat.
 - **Nothing bounces, shakes or flashes.** Things settle (`Kinetic.spring(age, omega, 1)` or an
   ease out); a hit is told by the type and by the lens's `punchKick` in a chorus style, never by
   squash, wobble or confetti.
+- **A change of style is a pull of focus**, and the stage's to make: the lens goes soft over
+  the last of the style leaving and sharp over the first of the one arriving. A style need do
+  nothing for it but have its line gone by `out`.
 - **The lens is yours to set**: `bloom`, `grain`, `vignette`, `ground`, the `...Kick` ones
   (`bloomKick`, `punchKick`) that are added as each word lands, and `depth`, `depthAt` and
   `depthBand`, which put everything above and below one band of the stage out of focus (how

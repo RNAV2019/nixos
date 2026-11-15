@@ -183,7 +183,7 @@ LyricStyle {
             readonly property var w: modelData.w
             readonly property real age: sty.now - w.t
             readonly property real gather: Kinetic.outCubic(age / (w.d + 0.5))
-            readonly property color tint: sty.ink
+            readonly property color tint: sty.mix(sty.accent, sty.ink, (age - w.d) / 1.1)
 
             x: modelData.x
             y: modelData.y

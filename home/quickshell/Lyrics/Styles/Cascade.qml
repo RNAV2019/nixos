@@ -112,7 +112,7 @@ LyricStyle {
               text: Kinetic.bare(brick.modelData.text)
               face: brick.caps ? sty.capitals : sty.italic
               size: 12 * sty.u
-              color: brick.caps ? sty.ink : Theme.withAlpha(sty.ink, 0.72)
+              color: brick.caps ? sty.ink : sty.accent
               visible: brick.age > 0 && brick.tau < 0.4
               opacity: Kinetic.outCubic(brick.fall) * (1 - Kinetic.span(0, 0.35, brick.tau))
               scale: brick.k

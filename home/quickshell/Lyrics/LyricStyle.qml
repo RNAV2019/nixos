@@ -10,8 +10,7 @@ import "Parse.js" as Parse
 //
 // A style also says how the lens should treat it: the numbers below are read by LyricScene and
 // handed to Shaders/lyricpost.frag. The `...Kick` ones are added in proportion to the stage's
-// `kick`, which jumps as each word lands and dies away. Words are set in `ink`: the cover's
-// colours belong to the ground, which is where every lyrics player worth copying keeps them.
+// `kick`, which jumps as each word lands and dies away.
 Item {
   id: sty
 
@@ -28,9 +27,13 @@ Item {
   // One hundredth of the stage's height: the unit styles size themselves in.
   readonly property real u: height / 100
 
+  // The song's colours, off its cover (Palette.js): what words are set in, the word in hand,
+  // two more the cover has, and a word not yet sung.
   readonly property color ink: stage.ink
   readonly property color accent: stage.accent
   readonly property color accent2: stage.accent2
+  readonly property color accent3: stage.accent3
+  readonly property color dim: stage.dim
 
   // How early a line counts as the one in hand.
   property real lead: Theme.lyricLead
@@ -70,8 +73,6 @@ Item {
   // blur for the whole stage, made once: set `softens` and it runs while this style is up.
   property bool softens: false
   property real softRadius: 0
-  // How hard the cut into this style lifts the frame, against the usual.
-  property real cutFlash: 1
   // The ground's light behind this style, as a share of the stage's own.
   property real ground: 1
 

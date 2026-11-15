@@ -29,7 +29,7 @@ LyricStyle {
   readonly property real size: 8 * u
   readonly property real gap: 3 * u
   // What a letter shows before it is sung, and a line that is not the one in hand.
-  readonly property real waiting: 0.42
+  readonly property real waiting: 0.6
   readonly property real passed: 0.3
   readonly property real ahead: 0.55
   readonly property real small: 0.965
@@ -106,7 +106,8 @@ LyricStyle {
           family: Theme.lyricDisplayFont
           weight: Font.Bold
           size: sty.size
-          color: sty.ink
+          // Waiting, a word is the cover's own dim; sung, it is ink.
+          color: sty.mix(sty.dim, sty.ink, (sty.now - modelData.t) / Math.max(0.15, modelData.d * 0.6))
           now: sty.now
           born: modelData.t
           span: modelData.d * 0.7

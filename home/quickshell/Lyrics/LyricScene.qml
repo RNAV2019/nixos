@@ -1,10 +1,12 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Services
 import "Director.js" as Director
 import "Kinetic.js" as Kinetic
+import "Palette.js" as Palette
 import "Parse.js" as Parse
 
 // The lyric stage's picture on one screen: the ground, the style playing now (and the one it
@@ -107,13 +109,13 @@ Item {
   property real lensSoftness: 0
   property bool _lensSet: false
   property real level: 0
-  // 1 at a change of style, dying away.
-  property real cut: 0
+  // How far out of focus the whole picture is: 0 but round a change of style, where the lens
+  // goes soft on the style leaving and comes sharp on the one arriving.
+  property real refocus: 0
   // The kicks so far, summed: the ground's field is pushed along by it.
   property real stir: 0
 
   property real _estimate: 0
-  property real _cutAt: -100
 
   readonly property var model: Lyrics.state === "ready" ? Lyrics.model : null
   readonly property var lines: model ? model.lines : []
@@ -148,60 +150,135 @@ Item {
   readonly property var seg: plan[Math.min(segIndex, plan.length - 1)]
   readonly property real tierGain: seg.tier === "high" ? 1.15 : seg.tier === "calm" ? 0.6 : 0.85
 
-  // ---- colour: the cover's, where the cover is a file; the theme's otherwise ----
+  // ---- colour: every colour on the stage is the cover's ----
 
+  // The cover as a file the quantiser can read. A player that names one on the web (a
+  // streaming client does) has it fetched once to the cache; with no cover the theme stands in.
+  readonly property string artUrl: scene.live ? Media.artUrl : ""
+  readonly property bool artRemote: artUrl.indexOf("http://") === 0 || artUrl.indexOf("https://") === 0
+  readonly property string artCopy: Paths.lyricsDir + "/cover"
+  // The web cover the copy on disk is of, and the one that could not be had.
+  property string _fetched: ""
+  property string _failed: ""
+  // A web cover is on its way: the last song's colours stand until it lands.
+  readonly property bool artWaiting: artRemote && _fetched !== artUrl && _failed !== artUrl
   readonly property string artFile: {
-    var url = Media.artUrl;
-    return url.indexOf("file://") === 0 || url.indexOf("/") === 0 ? url : "";
+    if (scene.artRemote)
+      return scene._fetched === scene.artUrl ? "file://" + scene.artCopy : "";
+    return scene.artUrl.indexOf("file://") === 0 || scene.artUrl.indexOf("/") === 0 ? scene.artUrl : "";
+  }
+
+  // Asked for a moment after the cover changes: inside the change itself the bindings that
+  // hang off it (the command among them) have not all followed.
+  onArtUrlChanged: Qt.callLater(scene.fetchArt)
+  onArtFileChanged: Qt.callLater(scene.readArt)
+  onArtWaitingChanged: Qt.callLater(scene.readArt)
+
+  function fetchArt() {
+    if (scene.artWaiting)
+      artFetch.run();
+  }
+
+  QueuedProcess {
+    id: artFetch
+
+    stamp: scene.artUrl
+    command: ["curl", "--silent", "--fail", "--location", "--max-time", "10", "--output", scene.artCopy, scene.artUrl]
+
+    onExited: function (code) {
+      if (artFetch.stale)
+        return;
+      // A fetch that failed may have left half a file: the copy is then no cover's.
+      scene._fetched = code === 0 ? scene.artUrl : "";
+      scene._failed = code === 0 ? "" : scene.artUrl;
+    }
   }
 
   ColorQuantizer {
     id: swatch
 
-    source: scene.live && scene.artFile !== "" ? scene.artFile : ""
+    source: scene.artFile
     depth: 3
     rescaleSize: 64
+    onColorsChanged: {
+      scene._readKey = scene.artKey;
+      scene.readArt();
+    }
   }
 
-  // The cover's liveliest colour and the one furthest from it round the wheel, both lifted
-  // until they read on black.
-  readonly property var tones: {
-    var best = null, bestScore = 0;
-    var colors = swatch.colors;
-    for (var i = 0; i < colors.length; i++) {
-      var c = colors[i];
-      var score = c.hsvSaturation * (0.35 + c.hsvValue);
-      if (c.hsvSaturation > 0.22 && c.hsvValue > 0.2 && score > bestScore) {
-        best = c;
-        bestScore = score;
-      }
+  // The parts the cover's colours play (Palette.js), or null with no cover to read. Kept by
+  // hand, not bound: the quantiser goes on holding the last cover's colours when it is given
+  // none or a new one, and they must not be taken for this song's. `_readKey` is the cover
+  // its colours are of (a web cover by its address too, since every one is copied to one file).
+  property var roles: null
+  readonly property string artKey: artFile === "" ? "" : artFile + " " + (artRemote ? artUrl : "")
+  property string _readKey: ""
+
+  function readArt() {
+    if (scene.artFile === "") {
+      if (!scene.artWaiting)
+        scene.roles = null;
+      return;
     }
-    if (best === null)
-      return {
-        accent: Theme.accent,
-        second: Qt.color(Theme.palette.gold)
-      };
-    var other = null, otherScore = 0;
-    for (var j = 0; j < colors.length; j++) {
-      var d = Math.abs(colors[j].hslHue - best.hslHue);
-      var turn = Math.min(d, 1 - d) * (0.3 + colors[j].hsvSaturation);
-      if (colors[j].hsvSaturation > 0.15 && turn > otherScore) {
-        other = colors[j];
-        otherScore = turn;
-      }
+    if (scene._readKey !== scene.artKey)
+      return;
+    var list = [];
+    for (var i = 0; i < swatch.colors.length; i++) {
+      var c = swatch.colors[i];
+      list.push({
+        h: Math.max(0, c.hslHue),
+        s: c.hslSaturation,
+        l: c.hslLightness
+      });
     }
-    var lift = function (c, turned) {
-      var h = (c.hslHue + turned + 1) % 1;
-      return Qt.hsla(h, Math.max(0.6, Math.min(0.95, c.hslSaturation)), Math.max(0.64, Math.min(0.76, c.hslLightness)), 1);
-    };
-    return {
-      accent: lift(best, 0),
-      second: other !== null && otherScore > 0.06 ? lift(other, 0) : lift(best, 0.11)
-    };
+    if (list.length > 0)
+      scene.roles = Palette.roles(list);
   }
-  readonly property color ink: Theme.lyricInk
-  readonly property color accent: tones.accent
-  readonly property color accent2: tones.second
+
+  function paint(part, fallback) {
+    return scene.roles ? Qt.hsla(scene.roles[part].h, scene.roles[part].s, scene.roles[part].l, 1) : fallback;
+  }
+
+  // What the styles are handed. They follow the cover over the best part of a second, so a
+  // new song's colours come up and are not switched to.
+  property color ink: paint("ink", Theme.lyricInk)
+  property color accent: paint("accent", Theme.accent)
+  property color accent2: paint("second", Qt.color(Theme.palette.gold))
+  property color accent3: paint("third", Qt.tint(Theme.accent, Theme.withAlpha(Qt.color(Theme.palette.gold), 0.5)))
+  property color dim: paint("dim", Qt.hsla(0, 0, 0.55, 1))
+  // What a black-and-white style is toned with: grey, leaning the cover's way.
+  property color tone: paint("tone", Qt.hsla(0, 0, 0.5, 1))
+
+  Behavior on ink {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on accent {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on accent2 {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on accent3 {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on dim {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on tone {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
 
   // ---- the clock ----
 
@@ -262,7 +339,14 @@ Item {
     scene.lensGround += (scene.look("ground", 1) - scene.lensGround) * k;
     scene.lensVeil += (scene.look("veil", 0) - scene.lensVeil) * k;
     scene.lensSoftness += (scene.look("softness", 0) - scene.lensSoftness) * k;
-    scene.cut = Kinetic.pulse(scene.wall - scene._cutAt, Theme.lyricCutDecay);
+    // The song's own time says where the changes fall, so the lens is already going soft as
+    // one comes. A stretch that carries on in the same style has no change to mark.
+    var at = Math.min(scene.segIndex, scene.plan.length - 1);
+    var before = at > 0 && scene.plan[at - 1].style !== scene.seg.style;
+    var after = at + 1 < scene.plan.length && scene.plan[at + 1].style !== scene.seg.style;
+    var coming = after ? 1 - Kinetic.smooth(0, Theme.lyricRefocusIn, scene.seg.t1 - scene.now) : 0;
+    var going = before ? 1 - Kinetic.smooth(0, Theme.lyricRefocusOut, scene.now - scene.seg.t0) : 0;
+    scene.refocus = Theme.reduceMotion ? 0 : Math.max(coming, going);
 
     var heard = meter.enabled ? meter.peak : 0;
     scene.level += (heard - scene.level) * Math.min(1, dt * (heard > scene.level ? 30 : 4));
@@ -306,9 +390,6 @@ Item {
         lines: lines
       });
     }
-    // The first style comes up with the stage, not on a cut.
-    if (scene._shown !== null)
-      scene._cutAt = scene.wall;
     scene._shown = scene.seg;
     scene.front = 1 - scene.front;
   }
@@ -348,7 +429,7 @@ Item {
       property real stir: scene.stir
       property color tintA: scene.accent
       property color tintB: scene.accent2
-      property color tintC: Qt.tint(scene.accent, Theme.withAlpha(scene.accent2, 0.5))
+      property color tintC: scene.accent3
 
       fragmentShader: Qt.resolvedUrl("../Shaders/lyricground.frag.qsb")
     }
@@ -533,14 +614,19 @@ Item {
     property real softness: scene.lensSoftness * scene.pixelRatio > 1 ? Math.log2(scene.lensSoftness * scene.pixelRatio) : 0
     property size pixels: Qt.size(width * scene.pixelRatio, height * scene.pixelRatio)
     property real time: scene.wall
-    property real bloom: scene.lensBloom + scene.look("bloomKick", 0.2) * scene.kick + 0.18 * scene.cut
-    property real punch: scene.look("punchKick", 0) * scene.kick + Theme.lyricCutPunch * scene.cut
+    property real bloom: scene.lensBloom + scene.look("bloomKick", 0.2) * scene.kick
+    property real punch: scene.look("punchKick", 0) * scene.kick
+    // The pull of focus at a change of style: a blur over everything (in device pixels), the
+    // picture a little larger and a little darker while it lasts.
+    property real haze: scene.refocus * Theme.lyricRefocusBlur * scene.height / 100 * scene.pixelRatio
+    property real swell: scene.refocus * Theme.lyricRefocusSwell
+    property real dip: scene.refocus * Theme.lyricRefocusDip
+    property color tone: scene.tone
     property real depth: scene.lensDepth
     property real depthAt: scene.look("depthAt", 0.5)
     property real depthBand: scene.look("depthBand", 0.08)
     property real grain: scene.lensGrain
     property real vignette: scene.lensVignette
-    property real flash: Theme.lyricCutFlash * scene.look("cutFlash", 1) * scene.cut
     property real mono: scene.lensMono
     property real dust: scene.lensDust
     property real flicker: scene.lensFlicker

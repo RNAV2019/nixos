@@ -4,7 +4,8 @@ import QtQuick
 // glowing, its blacks lifted to a grainy grey, with dust, scratches and the lamp's flicker (the
 // lens's `mono`, `veil`, `softness`, `dust`, `flicker`, and a heavy bloom for the halo round
 // white type). This is the one look on the stage whose ground is not black: the print it copies
-// has none. The styles built on it (Reel,
+// has none. Its greys are toned the cover's way (the stage's `tone`), as a print is with sepia,
+// so even without colour it is this song's. The styles built on it (Reel,
 // Ring, Titlecard) are the set pieces of one hand-made lyric film; they share this look so a
 // song can pass through all three and still seem one reel.
 LyricStyle {
@@ -18,7 +19,6 @@ LyricStyle {
   mono: 1
   dust: 1
   flicker: 1
-  cutFlash: 2.4
 
   // How often a letter that is up blinks out, and the grey a word arrives in before it is lit.
   readonly property real blink: 0.012

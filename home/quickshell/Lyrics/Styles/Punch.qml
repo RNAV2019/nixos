@@ -73,7 +73,8 @@ LyricStyle {
             font.weight: Font.Normal
             font.italic: hit.loud
             size: 20 * sty.u
-            color: sty.ink
+            // The words the singer leans on are the cover's colour.
+            color: hit.loud ? sty.accent : sty.ink
             scale: fit * (hit.loud ? 1.3 - 0.3 * hit.land : 1) * (1 + 0.05 * hit.held)
           }
         }

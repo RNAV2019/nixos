@@ -212,8 +212,8 @@ ShellRoot {
   }
 
   // The lyric stage is a show on the whole screen, not an island surface, so it has its own
-  // target. `pin` and `style` are for tests: a time to hold the song at, and one style to play
-  // everything in.
+  // target. `pin`, `style` and `fold` are for tests: a time to hold the song at, one style to
+  // play everything in, and a point to hold the way in at.
   IpcHandler {
     target: "lyrics"
 
@@ -239,6 +239,10 @@ ShellRoot {
 
     function style(name: string): void {
       lyricStage.forcedStyle = name;
+    }
+
+    function fold(amount: string): void {
+      lyricStage.pinnedFold = Number(amount);
     }
   }
 

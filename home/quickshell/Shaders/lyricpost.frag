@@ -7,9 +7,11 @@
 //             0..1), softer the further above or below it, `depthBand` being half the band
 //   grain     film grain
 //   vignette  the corners fall off
-//   flash     a lift of the whole frame, at a cut
+//   haze      everything out of focus by so many pixels, `swell` a little larger and `dip` a
+//             little darker: the pull of focus as one style gives way to the next
 // and the four that make a style an old print run through a projector:
-//   mono      colour drained to black and white
+//   mono      colour drained to black and white, and the white toned with `tone`, as a
+//             print is with sepia: the cover's own leaning
 //   dust      specks and hairline scratches that come and go with the frames
 //   flicker   the lamp's unsteadiness and the gate's weave, both small
 //   spot      the lamp itself: a soft disc of light at `spotAt`, `spotSize` across
@@ -38,7 +40,9 @@ layout(std140, binding = 0) uniform buf {
     float depthBand;
     float grain;
     float vignette;
-    float flash;
+    float haze;
+    float swell;
+    float dip;
     float mono;
     float dust;
     float flicker;
@@ -48,6 +52,7 @@ layout(std140, binding = 0) uniform buf {
     float veil;
     float softness;
     float softOn;
+    vec4 tone;
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -64,13 +69,14 @@ float hash(vec2 p) {
 // it a disc of eight reads and the middle one, taken from the copy of the picture whose texels
 // are about the disc's size.
 vec3 seen(vec2 uv) {
-    if (depth <= 0.0005)
-        return softness > 0.01 ? textureLod(source, uv, softness).rgb : texture(source, uv).rgb;
-    float off = max(0.0, abs(uv.y - depthAt) - depthBand);
-    // Soft by a fifth of the stage's height from the band, and no softer beyond.
-    float radius = depth * min(1.0, off / 0.2) * 0.011 * pixels.y;
+    float radius = haze;
+    if (depth > 0.0005) {
+        float off = max(0.0, abs(uv.y - depthAt) - depthBand);
+        // Soft by a fifth of the stage's height from the band, and no softer beyond.
+        radius = max(radius, depth * min(1.0, off / 0.2) * 0.011 * pixels.y);
+    }
     if (radius < 0.75)
-        return texture(source, uv).rgb;
+        return softness > 0.01 ? textureLod(source, uv, softness).rgb : texture(source, uv).rgb;
     float lod = max(0.0, log2(radius) - 1.0);
     // Most of what is out of focus is black, or the ground's slow light: where the picture is
     // the same up close as from far off there is nothing a blur would change, and two reads
@@ -106,6 +112,9 @@ void main() {
     if (flicker > 0.0005)
         uv += flicker * 0.0014 * (vec2(hash(vec2(frame, 2.0)), hash(vec2(frame, 5.0))) - 0.5);
 
+    if (swell > 0.0005)
+        uv = 0.5 + (uv - 0.5) * (1.0 - swell);
+
     vec2 centred = uv - 0.5;
     vec3 col;
     if (punch > 0.004) {
@@ -130,9 +139,13 @@ void main() {
         col += spot * exp(-pow(dot(d, d), 1.7)) * (0.94 + 0.06 * hash(vec2(frame, 11.0)));
     }
 
-    col += flash;
-    if (mono > 0.0005)
-        col = mix(col, vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), mono);
+    col *= 1.0 - dip;
+    if (mono > 0.0005) {
+        const vec3 weights = vec3(0.2126, 0.7152, 0.0722);
+        // The tone as a colour of the same weight as white, so toning shifts hue and not light.
+        vec3 toned = tone.rgb / max(dot(tone.rgb, weights), 0.001);
+        col = mix(col, dot(col, weights) * toned, mono);
+    }
     if (veil > 0.0005)
         col += veil * (1.0 - col);
     if (flicker > 0.0005)

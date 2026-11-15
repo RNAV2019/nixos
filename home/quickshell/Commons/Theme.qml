@@ -1715,12 +1715,13 @@ Singleton {
 
   // The lyric stage (Lyrics/): the screen given over to the words of what is playing. Its ground
   // is true black whatever the theme, since it is a show and not a surface, and its ink is a warm
-  // white the cover's colours are set against. It comes up slowly and leaves at once; a change
-  // of style is a cut with a short cross-fade under it.
+  // white leaning the cover's way. It comes and goes through a blur from the top down
+  // (Shaders/lyricfold.frag), and a change of style is a pull of focus with a short cross-fade
+  // under it.
   readonly property color lyricGround: "#000000"
   readonly property color lyricInk: "#f5f0e8"
-  readonly property int lyricFadeIn: reduceMotion ? 1 : 900
-  readonly property int lyricFadeOut: reduceMotion ? 1 : 320
+  readonly property int lyricFadeIn: reduceMotion ? 1 : 950
+  readonly property int lyricFadeOut: reduceMotion ? 1 : 700
   readonly property int lyricCut: reduceMotion ? 1 : 220
   // A line counts as up this long before its first word, so it is in place when the voice is.
   readonly property real lyricLead: 0.3
@@ -1740,12 +1741,19 @@ Singleton {
   // How fast the lens takes on a new style's settings (1/s): black and white, grain and the
   // rest come up over most of a second and are not cut to.
   readonly property real lyricLookRate: 3.5
-  // What a cut adds to the lens for its moment: a zoom smear and a lift.
-  readonly property real lyricCutPunch: 0.45
-  readonly property real lyricCutFlash: 0.025
-  // How fast a landing word's kick dies away (1/s), and a cut's.
+  // A change of style is a pull of focus: the lens goes soft over the last of the style
+  // leaving and comes sharp over the first of the one arriving (seconds of the song), by this
+  // many hundredths of the stage's height at its softest, the picture this much larger and
+  // this much darker.
+  readonly property real lyricRefocusIn: 0.3
+  readonly property real lyricRefocusOut: 0.5
+  readonly property real lyricRefocusBlur: 1.7
+  readonly property real lyricRefocusSwell: 0.035
+  readonly property real lyricRefocusDip: 0.32
+  // How long the stage takes to take on a new cover's colours.
+  readonly property int lyricColourFade: reduceMotion ? 1 : 900
+  // How fast a landing word's kick dies away (1/s).
   readonly property real lyricKickDecay: 6.5
-  readonly property real lyricCutDecay: 5
   // The readout (a nudged offset, a pinned style) and how long it stays.
   readonly property int lyricReadoutSize: 15
   readonly property int lyricReadoutHold: 1400

@@ -17,6 +17,7 @@ const load = (file, names) => new Function(readFileSync(join(dir, file), "utf8")
 const Parse = load("Parse.js", "cleanTitle, cleanArtist, splitTitle, syllables, spreadWords, tierOf, fromLyricsPlus, fromLrclib, cacheKey, lineAt");
 const Director = load("Director.js", "hashText, rng, plan, segmentAt");
 const Emoji = load("Emoji.js", "lookup, annotate");
+const Palette = load("Palette.js", "roles, hueGap");
 const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth, span, rows, flick, scatter");
 
 let failed = 0;
@@ -119,6 +120,22 @@ check("plan: looks come in runs", (() => {
   return same / pairs > 0.45;
 })());
 check("plan: another song casts differently", JSON.stringify(Director.plan(model, catalogue, seed + 1).map(s => s.style)) !== JSON.stringify(plan.map(s => s.style)));
+
+// ---- the cover's colours ----
+const sleeve = [{h: 0.02, s: 0.75, l: 0.45}, {h: 0.55, s: 0.6, l: 0.3}, {h: 0.12, s: 0.5, l: 0.8}, {h: 0, s: 0.02, l: 0.05}, {h: 0, s: 0, l: 0.97}];
+const parts = Palette.roles(sleeve);
+eq("palette: no cover, no parts", Palette.roles([]), null);
+check("palette: found colour", parts.found === true);
+check("palette: the accent is the liveliest, and reads on black", Palette.hueGap(parts.accent.h, 0.02) < 0.001 && parts.accent.l >= 0.66 && parts.accent.s >= 0.5, parts.accent);
+check("palette: the second is the furthest the cover has", Palette.hueGap(parts.second.h, 0.55) < 0.001, parts.second);
+check("palette: the third is apart from both", Palette.hueGap(parts.third.h, 0.12) < 0.001, parts.third);
+check("palette: ink is near white and leans the accent's way", parts.ink.l > 0.9 && parts.ink.s <= 0.4 && parts.ink.h === parts.accent.h, parts.ink);
+check("palette: dim is darker than ink", parts.dim.l < 0.65);
+check("palette: the tone is barely a colour", parts.tone.s <= 0.2 && parts.tone.s > 0);
+const one = Palette.roles([{h: 0.6, s: 0.7, l: 0.5}, {h: 0.6, s: 0.5, l: 0.3}]);
+check("palette: one hue still gives three apart", Palette.hueGap(one.second.h, one.accent.h) > 0.05 && Palette.hueGap(one.third.h, one.accent.h) > 0.05, one);
+const grey = Palette.roles([{h: 0, s: 0.03, l: 0.9}, {h: 0, s: 0, l: 0.1}, {h: 0.3, s: 0.1, l: 0.5}]);
+check("palette: a black-and-white sleeve is greys", grey.found === false && grey.accent.s <= 0.08 && grey.tone.s === 0, grey);
 
 // ---- curves ----
 check("spring: starts at rest", Kinetic.spring(0, 30, 0.6) === 0 && Kinetic.spring(-1, 30, 0.6) === 0);

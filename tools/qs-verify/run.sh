@@ -169,19 +169,26 @@ printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1
 # `curl`, which the weather service asks Open-Meteo with: a fixed reading (11 degrees, part cloud,
 # night), so the harness never reaches the network. The lyric stage asks two lyrics services
 # through it too: each is answered from `$QS_VERIFY_WORK/lyrics-plus.json` or `lyrics-lrclib.json`
-# when a state has put one there (lib.sh lyrics_fixture), and fails like a 404 otherwise. Nothing
+# when a state has put one there (lib.sh lyrics_fixture), and fails like a 404 otherwise. A cover
+# a player keeps on the web is fetched through it as well: `http://qsv.test/art/NAME` is answered
+# with `$QS_VERIFY_WORK/art/NAME` into the file `--output` names, or like a 404. Nothing
 # runs it for the weather until a place is stored (`qs ipc call weather set`), which the scratch
 # state dir starts without.
 # Like curl it refuses a blank URL, its last argument, and it notes each one it was asked for.
 cat >"$QSV_WORK/bin/curl" <<'STUB'
 #!/bin/sh
-for last; do :; done
+out=
+for last; do
+  [ "$prev" = --output ] && out=$last
+  prev=$last
+done
 if [ -z "$last" ]; then
   echo "curl: option : blank argument where content is expected" >&2
   exit 2
 fi
 echo "$last" >>"$(dirname "$0")/../curl.urls"
 case "$last" in
+  http://qsv.test/art/*) cp "$(dirname "$0")/../art/${last##*/}" "$out" 2>/dev/null || exit 22; exit 0 ;;
   *lyricsplus*) cat "$(dirname "$0")/../lyrics-plus.json" 2>/dev/null || exit 22; exit 0 ;;
   *lrclib*) cat "$(dirname "$0")/../lyrics-lrclib.json" 2>/dev/null || exit 22; exit 0 ;;
 esac
