@@ -88,5 +88,8 @@ void main() {
     float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col += (hash(qt_TexCoord0 * pixels + fract(time) * 71.0) - 0.5) * grain * (0.25 + 1.5 * luma);
 
+    // Half a step of dither, always: the dark gradients are where eight bits show.
+    col += (hash(qt_TexCoord0 * pixels * 1.37 + fract(time) * 13.0) - 0.5) / 255.0;
+
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0) * qt_Opacity;
 }

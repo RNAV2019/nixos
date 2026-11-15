@@ -12,8 +12,8 @@ var LEAD = 0.45;
 // Nothing sung for this long is an interlude.
 var GAP = 6.5;
 // A style is held about this long, and for this many lines at most.
-var HOLD_SECONDS = 11;
-var HOLD_LINES = 6;
+var HOLD_SECONDS = 8.5;
+var HOLD_LINES = 5;
 
 // The same 32-bit hash everywhere a seed is made from text.
 function hashText(text) {

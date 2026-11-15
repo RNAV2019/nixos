@@ -13,7 +13,7 @@ away.
   seconds, each line knowing when it ends (`end`) and when it should leave (`out`), and `parts`
   with a tier: `calm`, `mid` or `high`.
 - **`Emoji.js`** marks each word that has an obvious picture (`word.emoji`).
-- **`Director.js`** cuts the song into segments of ten seconds or so and casts a style for each
+- **`Director.js`** cuts the song into segments of about ten seconds and casts a style for each
   from the catalogue (`LyricScene.catalogue`), by tier and by a seed made from the song, so a
   song is always cast the same way and no style comes round again until three others have played.
   A stretch with nothing sung is a segment in the style `Interlude`.
@@ -45,6 +45,7 @@ What `LyricStyle` gives you:
 | `mix(a, b, t)` | a colour between two |
 | `stage.wall` | seconds that never stop, for drift that should not follow the song |
 | `stage.kick`, `stage.level` | the landing word's hit (0..1, dying away) and the player's loudness |
+| `stage.stir` | the kicks so far, summed: add it to `stage.wall` for drift that lurches on each word |
 
 A word is `{ t, d, text, emoji }`; a line is `{ t, end, out, text, words, part, index }`.
 
@@ -71,8 +72,17 @@ The rules that keep every style honest:
   of its life (`visible: false`), keep under a hundred or so texts alive, no `layer.enabled`
   or `MultiEffect` per word (one or two per style at most, always on, never toggled), no
   `Canvas`.
-- **One file, one type; no inline `component`.** A helper a style needs is its own file beside
-  it, named after the style (`CascadeBrick.qml`).
+- **A style is one file.** Styles are loaded by path, so a helper type in a file beside one is
+  never found (it "is not a type", and the stage falls back to `Interlude`): nest what a style
+  needs as delegates inside it. A type several styles share goes in `Lyrics/` itself, like
+  `LyricEmoji`. No inline `component`, as everywhere in the shell.
+- **The traps others have fallen in.** `left`, `right`, `top`, `bottom` and `baseline` cannot be
+  property names (they are an item's anchor lines; the file fails to load). `Row` and `Column`
+  close up over a child with `visible: false`: hide a word that must keep its room with
+  `opacity: 0`. A binding on `repeater.itemAt(i)` runs once and never again: read
+  `repeater.count` in it too. A pooled slot changes line a frame before its inner delegates
+  follow, so guard `line.words[j]` with `j < line.words.length`, or hand the delegates the word
+  itself.
 - **The lens is yours to set**: `bloom`, `aberration`, `warp`, `scan`, `grain`, `vignette`,
   `ground`, and the `...Kick` ones (`bloomKick`, `aberrationKick`, `punchKick`, `glitchKick`,
   `shakeKick`, `flashKick`) that are added as each word lands. They are what makes a style feel
@@ -94,6 +104,9 @@ tools/qs-verify/lyrics.sh log                                 # what the shell w
 tools/qs-verify/lyrics.sh down
 ```
 
-`QS_VERIFY_WORK=/tmp/qsv-mine` gives a second harness beside another. The fixture song is in
+`QS_VERIFY_WORK=/tmp/qsv-mine` gives a second harness beside another. `QS_SETTLE=1.6` gives a
+busy machine longer between a pin and its capture (the first frame after a change of style is
+the one that comes out stale). `down` removes the harness's whole folder, so keep the pictures
+somewhere else. The fixture song is in
 `tools/qs-verify/fixtures/lyrics-plus.json`; `tools/lyrics-test.mjs` checks the parsing, the
 plan and the curves under node, and `nix flake check` runs it.

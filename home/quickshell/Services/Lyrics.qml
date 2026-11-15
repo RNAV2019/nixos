@@ -90,10 +90,15 @@ Singleton {
     }));
   }
 
-  function none() {
-    var missing = root._missing;
-    missing[root._key] = true;
-    root._missing = missing;
+  // `known` when a service answered that it has no such song (curl's 22, or an answer with no
+  // timed lines): only then is the song not asked for again. A fetch that never got through
+  // (offline, a timeout) is tried again the next time the stage comes up.
+  function none(known) {
+    if (known) {
+      var missing = root._missing;
+      missing[root._key] = true;
+      root._missing = missing;
+    }
     root.state = "none";
   }
 
@@ -132,6 +137,8 @@ Singleton {
   QueuedProcess {
     id: plus
 
+    property int lastCode: 0
+
     stamp: root._key
     command: ["curl", "--silent", "--show-error", "--fail", "--max-time", "12", root.plusUrl + "?" + root.query({
         title: "title",
@@ -143,6 +150,7 @@ Singleton {
     }
 
     onExited: function (code) {
+      plus.lastCode = code;
       if (plus.stale || root.state !== "loading")
         return;
       var model = code === 0 ? Parse.fromLyricsPlus(plusOut.text) : null;
@@ -173,7 +181,7 @@ Singleton {
       if (model !== null)
         root.take(model, true);
       else
-        root.none();
+        root.none((code === 0 || code === 22) && (plus.lastCode === 0 || plus.lastCode === 22));
     }
   }
 }

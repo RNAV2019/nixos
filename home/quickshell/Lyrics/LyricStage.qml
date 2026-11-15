@@ -101,7 +101,7 @@ Scope {
 
       WlrLayershell.layer: WlrLayer.Overlay
       WlrLayershell.namespace: "quickshell-lyrics"
-      WlrLayershell.keyboardFocus: win.here ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+      WlrLayershell.keyboardFocus: win.here && win.taking ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
       anchors {
         top: true
@@ -141,9 +141,12 @@ Scope {
         pixelRatio: win.devicePixelRatio
       }
 
-      // What a key just did, small and brief, under the picture.
+      // What a key just did, small and brief, under the picture, and gone with it.
       Text {
         id: readout
+
+        // How far up the line is, before the stage's own fade.
+        property real said: 0
 
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height - height - Theme.lyricReadoutSize * 3
@@ -152,7 +155,7 @@ Scope {
         font.family: Theme.uiFont
         font.pixelSize: Theme.lyricReadoutSize
         font.weight: Theme.weightMedium
-        opacity: 0
+        opacity: said * win.presence
 
         Connections {
           target: root
@@ -167,7 +170,7 @@ Scope {
 
           NumberAnimation {
             target: readout
-            property: "opacity"
+            property: "said"
             to: 0.8
             duration: Theme.focusFade
           }
@@ -178,7 +181,7 @@ Scope {
 
           NumberAnimation {
             target: readout
-            property: "opacity"
+            property: "said"
             to: 0
             duration: Theme.tintFade
           }
@@ -192,7 +195,31 @@ Scope {
         onPressed: root.close()
       }
 
+      // The keyboard is asked for a moment after the window maps, as a change on a surface that
+      // is already there: the way the island's panels get it, which is the way known to work on
+      // Hyprland. Qt then needs a target inside the window.
+      property bool taking: false
+
+      onHereChanged: {
+        win.taking = false;
+        if (win.here)
+          take.restart();
+      }
+
+      Timer {
+        id: take
+
+        interval: Theme.lyricTakeKeys
+        onTriggered: {
+          win.taking = win.here;
+          if (win.here)
+            keys.forceActiveFocus();
+        }
+      }
+
       Item {
+        id: keys
+
         focus: true
 
         Keys.onPressed: function (event) {

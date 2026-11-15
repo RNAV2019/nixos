@@ -30,14 +30,87 @@ Item {
 
   // The styles there are, and what kind of stretch each is cast for: "calm" (intros, bridges,
   // the quiet), "mid" (verses) and "high" (choruses). `wants: "emoji"` keeps a style for
-  // stretches with at least two words that have a picture.
+  // stretches with at least two words that have a picture. With motion reduced only the
+  // `gentle` ones are cast, and nothing kicks.
   readonly property var catalogue: [
+    {
+      name: "Whisper",
+      tiers: ["calm"],
+      weight: 1,
+      gentle: true
+    },
+    {
+      name: "Typewriter",
+      tiers: ["calm", "mid"],
+      weight: 0.7,
+      gentle: true
+    },
+    {
+      name: "Drift",
+      tiers: ["calm", "mid"],
+      weight: 0.7,
+      gentle: true
+    },
+    {
+      name: "Neon",
+      tiers: ["calm", "mid"],
+      weight: 0.7,
+      gentle: true
+    },
+    {
+      name: "Poster",
+      tiers: ["mid"],
+      weight: 1
+    },
+    {
+      name: "Ransom",
+      tiers: ["mid"],
+      weight: 1
+    },
+    {
+      name: "Cascade",
+      tiers: ["mid"],
+      weight: 1
+    },
+    {
+      name: "Orbit",
+      tiers: ["mid"],
+      weight: 1
+    },
+    {
+      name: "Pictogram",
+      tiers: ["mid", "high"],
+      weight: 1.3,
+      wants: "emoji"
+    },
+    {
+      name: "Echo",
+      tiers: ["mid", "high"],
+      weight: 0.8
+    },
     {
       name: "Punch",
       tiers: ["high"],
       weight: 1
+    },
+    {
+      name: "Marquee",
+      tiers: ["high"],
+      weight: 1
+    },
+    {
+      name: "Tunnel",
+      tiers: ["high"],
+      weight: 1
+    },
+    {
+      name: "Glitch",
+      tiers: ["high"],
+      weight: 0.8
     }
-  ]
+  ].filter(function (s) {
+    return !Theme.reduceMotion || s.gentle === true;
+  })
   readonly property var styleNames: catalogue.map(function (c) {
     return c.name;
   })
@@ -183,7 +256,7 @@ Item {
           k = Math.max(k, Kinetic.weight(words[w], w === words.length - 1) * Math.exp(-age * Theme.lyricKickDecay));
       }
     }
-    scene.kick = k * scene.tierGain;
+    scene.kick = Theme.reduceMotion ? 0 : k * scene.tierGain;
     scene.stir += scene.kick * dt;
     scene.cut = Kinetic.pulse(scene.wall - scene._cutAt, Theme.lyricCutDecay);
 
@@ -207,15 +280,19 @@ Item {
     if (scene._shown === scene.seg)
       return;
     var incoming = scene.front === 0 ? hostB : hostA;
+    // Read off the model the plan was made from, not a binding that may not have followed yet.
+    var lines = scene.model ? scene.model.lines : [];
     incoming.setSource(Qt.resolvedUrl("Styles/" + scene.seg.style + ".qml"), {
       stage: scene,
-      seg: scene.seg
+      seg: scene.seg,
+      lines: lines
     });
     if (incoming.status === Loader.Error) {
       console.warn("Lyrics: no style " + scene.seg.style);
       incoming.setSource(Qt.resolvedUrl("Styles/Interlude.qml"), {
         stage: scene,
-        seg: scene.seg
+        seg: scene.seg,
+        lines: lines
       });
     }
     // The first style comes up with the stage, not on a cut.
@@ -251,6 +328,8 @@ Item {
       transformOrigin: Item.TopLeft
       layer.enabled: true
       layer.smooth: true
+      // Half floats: at this size eight bits a channel would stretch into visible bands.
+      layer.format: ShaderEffectSource.RGBA16F
 
       property real time: scene.wall
       property real aspect: scene.width / Math.max(1, scene.height)
@@ -304,6 +383,8 @@ Item {
     hideSource: true
     live: scene.live
     mipmap: true
+    // Half floats, so the dark end of the ground reaches the lens unbanded and is dithered there.
+    format: ShaderEffectSource.RGBA16F
     visible: false
   }
 

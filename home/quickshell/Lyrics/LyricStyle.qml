@@ -18,7 +18,9 @@ Item {
   required property var seg
 
   readonly property real now: stage.now
-  readonly property var lines: stage.lines
+  // The song's lines as they were when this style was cast: a style on its way out at a change
+  // of song goes on reading its own song.
+  required property var lines
   readonly property int first: seg.firstLine
   readonly property int last: seg.lastLine
   readonly property int seed: seg.seed

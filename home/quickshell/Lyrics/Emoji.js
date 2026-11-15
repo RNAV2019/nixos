@@ -4,7 +4,8 @@
 // No QML imports: tools/lyrics-test.mjs evaluates this file under node.
 //
 // One line per picture, then every word that shows it. Words are matched whole and in lower
-// case, after their endings are tried off (see `lookup`), so "burning" finds "burn".
+// case, after their endings are tried off (see `lookup`), so "burning" finds "burn". Only things
+// are listed: a sign for "up", "never" or "two" reads as noise beside a sung line.
 var TABLE = [
   "❤️ love heart lover loving beloved",
   "💔 heartbreak heartbroken broken break hurt hurts ache",
@@ -44,7 +45,7 @@ var TABLE = [
   "👄 lips kiss kissing mouth",
   "🫀 heartbeat pulse",
   "🧠 mind brain think thinking thought thoughts",
-  "🤝 together hand hands hold holding",
+  "🤝 together hand hands",
   "🫂 hug embrace arms",
   "🩸 blood bleed bleeding",
   "💀 dead death die dying kill",
@@ -94,7 +95,6 @@ var TABLE = [
   "😱 scared afraid fear scream",
   "🥶 freezing",
   "🤫 secret secrets quiet silence hush",
-  "🗣️ say said talk talking speak word words",
   "👂 hear listen listening",
   "🤥 lie lies liar lying",
   "🤞 hope promise wish",
@@ -148,14 +148,7 @@ var TABLE = [
   "🥀 wilt",
   "🧵 thread",
   "🪙 coin",
-  "⬆️ up higher high rise rising",
-  "⬇️ down lower low",
-  "♾️ always infinity eternity",
-  "🚫 never",
-  "💯 hundred",
-  "1️⃣ one",
-  "2️⃣ two",
-  "3️⃣ three"
+  "🧶 tangle tangled"
 ];
 
 var MAP = null;
@@ -176,7 +169,7 @@ function lookup(word) {
   if (MAP === null)
     MAP = build();
   var w = String(word).toLowerCase().replace(/^[^a-z]+|[^a-z']+$/g, "");
-  if (w.length < 3 && w !== "up")
+  if (w.length < 3)
     return "";
   var tries = [w, w.replace(/'s$/, ""), w.replace(/in'$/, "ing")];
   var base = tries[2];

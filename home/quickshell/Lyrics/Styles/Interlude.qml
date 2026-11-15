@@ -79,8 +79,9 @@ LyricStyle {
       text: sty.stage.status
       font.family: Theme.uiFont
       font.weight: Theme.weightMedium
-      size: 2.1 * sty.u
-      color: Theme.withAlpha(sty.ink, 0.5)
+      // With no song to name, this line is all there is.
+      size: (Media.title === "" ? 4.2 : 2.6) * sty.u
+      color: Theme.withAlpha(sty.ink, 0.55)
       opacity: Kinetic.outCubic((sty.age - 0.6) / 0.9)
     }
   }

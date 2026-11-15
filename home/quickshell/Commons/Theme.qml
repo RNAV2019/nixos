@@ -1745,6 +1745,8 @@ Singleton {
   // The readout (a nudged offset, a pinned style) and how long it stays.
   readonly property int lyricReadoutSize: 15
   readonly property int lyricReadoutHold: 1400
+  // How long after the stage maps it asks for the keyboard (Lyrics/LyricStage.qml).
+  readonly property int lyricTakeKeys: 120
   // One nudge of the lyrics against the player's clock, in seconds.
   readonly property real lyricNudge: 0.05
 
