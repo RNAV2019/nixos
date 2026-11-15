@@ -17,7 +17,7 @@ const load = (file, names) => new Function(readFileSync(join(dir, file), "utf8")
 const Parse = load("Parse.js", "cleanTitle, cleanArtist, splitTitle, syllables, spreadWords, tierOf, fromLyricsPlus, fromLrclib, cacheKey, lineAt");
 const Director = load("Director.js", "hashText, rng, plan, segmentAt");
 const Emoji = load("Emoji.js", "lookup, annotate");
-const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth");
+const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth, rows, flick, scatter");
 
 let failed = 0;
 function check(name, ok, detail) {
@@ -115,6 +115,19 @@ check("spring: settles on 1", Math.abs(Kinetic.spring(2, 30, 0.6) - 1) < 1e-6);
 check("spring: rings past 1 when underdamped", Math.max(...Array.from({length: 60}, (_, i) => Kinetic.spring(i / 120, 30, 0.6))) > 1.05);
 check("spring: never past 1 when critical", Math.max(...Array.from({length: 240}, (_, i) => Kinetic.spring(i / 120, 30, 1))) <= 1);
 check("hash: in range and repeatable", Kinetic.hash(7, 3, 2) === Kinetic.hash(7, 3, 2) && Kinetic.hash(7, 3, 2) >= 0 && Kinetic.hash(7, 3, 2) < 1);
+eq("scatter: every place once", [0, 1, 2, 3, 4, 5, 6].map(k => Kinetic.scatter(5, 1, 7, k)).sort(), [0, 1, 2, 3, 4, 5, 6]);
+check("scatter: repeatable", Kinetic.scatter(5, 1, 7, 3) === Kinetic.scatter(5, 1, 7, 3));
+check("flick: the same answer within a twelfth of a second", Kinetic.flick(9, 2, 3, 10.01, 0.5) === Kinetic.flick(9, 2, 3, 10.07, 0.5));
+check("flick: about as often as asked", (() => {
+  let off = 0;
+  for (let step = 0; step < 4000; step++)
+    if (Kinetic.flick(9, step % 7, step % 11, step / 12 + 0.01, 0.05) === 0)
+      off++;
+  return off > 120 && off < 280;
+})());
+eq("flick: never, when told never", Kinetic.flick(9, 2, 3, 10, 0), 1);
+eq("rows: a word or two is one row", Kinetic.rows([{text: "Hold"}, {text: "on"}]), [[0, 1]]);
+check("rows: every word once, in order", JSON.stringify(Kinetic.rows(model.lines[1].words).flat()) === JSON.stringify(model.lines[1].words.map((_, i) => i)));
 eq("bare", ["night,", "(oh)", "don't", "go!"].map(Kinetic.bare), ["night", "oh", "don't", "go"]);
 
 if (failed > 0) {

@@ -139,3 +139,21 @@ function rows(words) {
     out.push(row);
   return out;
 }
+
+// A letter of an old print: there or not, for this twelfth of a second. `chance` is how often a
+// letter drops out (0.04 is one in twenty-five at any moment); the same letter at the same
+// moment of the song always gives the same answer.
+function flick(seed, i, j, now, chance) {
+  return hash(seed ^ Math.imul(Math.floor(now * 12) + 1, 40503), i, j) < chance ? 0 : 1;
+}
+
+// The order the letters of an `n`-letter word turn up in when they do not come left to right:
+// letter `k`'s place in the queue, 0..n-1, each place taken once.
+function scatter(seed, i, n, k) {
+  var mine = hash(seed, i, k);
+  var before = 0;
+  for (var j = 0; j < n; j++)
+    if (j !== k && (hash(seed, i, j) < mine || (hash(seed, i, j) === mine && j < k)))
+      before++;
+  return before;
+}

@@ -11,6 +11,11 @@
 //   grain       film grain
 //   vignette    the corners fall off
 //   flash       a lift of the whole frame
+// and the four that make a style an old print run through a projector:
+//   mono        colour drained to black and white
+//   dust        specks and hairline scratches that come and go with the frames
+//   flicker     the lamp's unsteadiness and the gate's weave, both small
+//   spot        the lamp itself: a soft disc of light at `spotAt`, `spotSize` across
 // `shake` moves the picture bodily. Output is opaque.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
@@ -30,6 +35,12 @@ layout(std140, binding = 0) uniform buf {
     float grain;
     float vignette;
     float flash;
+    float mono;
+    float dust;
+    float flicker;
+    float spot;
+    float spotSize;   // the disc's radius, in stage heights
+    vec2 spotAt;      // its middle, in texture coordinates
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -49,17 +60,32 @@ vec3 fringed(vec2 uv, vec2 dir) {
     return vec3(texture(source, uv + o).r, texture(source, uv).g, texture(source, uv - o).b);
 }
 
+// Dust on the print: a few bright specks, in new places every twelfth of a second.
+float specks(vec2 uv, float frame) {
+    vec2 g = uv * vec2(pixels.x / pixels.y, 1.0) * 7.0;
+    vec2 cell = floor(g);
+    if (hash(cell + frame * 17.0) < 0.9)
+        return 0.0;
+    vec2 at = vec2(hash(cell + 3.1 + frame), hash(cell + 7.7 + frame)) - 0.5;
+    float r = 0.008 + 0.022 * hash(cell + 1.3 + frame);
+    return smoothstep(r, r * 0.35, length(fract(g) - 0.5 - at * 0.8));
+}
+
 void main() {
     vec2 uv = qt_TexCoord0 + shake;
+    float frame = floor(time * 12.0);
+
+    if (flicker > 0.0005)
+        uv += flicker * 0.0014 * (vec2(hash(vec2(frame, 2.0)), hash(vec2(frame, 5.0))) - 0.5);
 
     if (warp > 0.0005)
         uv += warp * 0.006 * vec2(sin(uv.y * 17.0 + time * 1.9), cos(uv.x * 13.0 + time * 1.4));
 
     if (glitch > 0.0005) {
-        float frame = floor(time * 24.0);
-        float row = floor(uv.y * 28.0 + hash(vec2(frame, 3.0)) * 28.0);
-        float torn = step(1.0 - glitch * 0.55, hash(vec2(row, frame)));
-        uv.x += torn * (hash(vec2(frame, row)) - 0.5) * 0.16 * glitch;
+        float tear = floor(time * 24.0);
+        float row = floor(uv.y * 28.0 + hash(vec2(tear, 3.0)) * 28.0);
+        float torn = step(1.0 - glitch * 0.55, hash(vec2(row, tear)));
+        uv.x += torn * (hash(vec2(tear, row)) - 0.5) * 0.16 * glitch;
     }
 
     vec2 centred = uv - 0.5;
@@ -81,9 +107,24 @@ void main() {
     if (scan > 0.0005)
         col *= 1.0 - scan * 0.5 * (0.5 + 0.5 * sin(uv.y * pixels.y * 3.14159 / 1.5));
 
+    if (spot > 0.0005) {
+        vec2 d = (uv - spotAt) * vec2(pixels.x / pixels.y, 1.0) / spotSize;
+        col += spot * exp(-dot(d, d)) * (0.94 + 0.06 * hash(vec2(frame, 11.0)));
+    }
+
     col += flash;
+    if (mono > 0.0005)
+        col = mix(col, vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), mono);
+    if (flicker > 0.0005)
+        col *= 1.0 + flicker * 0.09 * (hash(vec2(floor(time * 24.0), 1.0)) - 0.5);
     float corner = smoothstep(0.35, 0.95, length(centred * vec2(1.0, 1.15)));
     col *= 1.0 - vignette * corner;
+    if (dust > 0.0005) {
+        float scratchAt = hash(vec2(floor(time * 3.0), 9.0));
+        float scratch = smoothstep(0.0011, 0.0, abs(uv.x - scratchAt)) * step(0.55, hash(vec2(floor(time * 3.0), 4.0)));
+        col += dust * (0.4 * specks(uv, frame) + 0.1 * scratch * (0.5 + 0.5 * hash(vec2(frame, uv.y * 40.0))));
+    }
+
     // Grain rides the light: black stays black, as film's does.
     float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col += (hash(qt_TexCoord0 * pixels + fract(time) * 71.0) - 0.5) * grain * (0.25 + 1.5 * luma);

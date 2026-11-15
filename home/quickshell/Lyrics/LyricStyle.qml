@@ -55,6 +55,16 @@ Item {
   property real scan: 0
   property real grain: 0.05
   property real vignette: 0.4
+  // An old print: colour drained, dust and scratches, the lamp's flicker, and the lamp itself
+  // as a soft disc at `spotAt` (0..1 across and down), `spotSize` stage heights in radius.
+  property real mono: 0
+  property real dust: 0
+  property real flicker: 0
+  property real spot: 0
+  property real spotSize: 0.32
+  property point spotAt: Qt.point(0.5, 0.5)
+  // How hard the cut into this style lifts the frame, against the usual.
+  property real cutFlash: 1
   // The ground's light behind this style, as a share of the stage's own.
   property real ground: 1
 

@@ -58,6 +58,12 @@ Item {
       gentle: true
     },
     {
+      name: "Reel",
+      tiers: ["calm", "mid"],
+      weight: 0.9,
+      gentle: true
+    },
+    {
       name: "Poster",
       tiers: ["mid"],
       weight: 1
@@ -85,6 +91,16 @@ Item {
     },
     {
       name: "Echo",
+      tiers: ["mid", "high"],
+      weight: 0.8
+    },
+    {
+      name: "Ring",
+      tiers: ["mid", "high"],
+      weight: 1
+    },
+    {
+      name: "Titlecard",
       tiers: ["mid", "high"],
       weight: 0.8
     },
@@ -453,7 +469,13 @@ Item {
     property real scan: scene.look("scan", 0)
     property real grain: scene.look("grain", 0.05)
     property real vignette: scene.look("vignette", 0.4)
-    property real flash: scene.look("flashKick", 0) * scene.kick + Theme.lyricCutFlash * scene.cut
+    property real flash: scene.look("flashKick", 0) * scene.kick + Theme.lyricCutFlash * scene.look("cutFlash", 1) * scene.cut
+    property real mono: scene.look("mono", 0)
+    property real dust: scene.look("dust", 0)
+    property real flicker: scene.look("flicker", 0)
+    property real spot: scene.look("spot", 0)
+    property real spotSize: scene.look("spotSize", 0.32)
+    property point spotAt: scene.look("spotAt", Qt.point(0.5, 0.5))
 
     fragmentShader: Qt.resolvedUrl("../Shaders/lyricpost.frag.qsb")
   }

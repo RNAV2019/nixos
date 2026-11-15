@@ -1877,4 +1877,11 @@ Singleton {
   readonly property string lyricPixelFont: "Press Start 2P"
   readonly property string lyricNeonFont: "Monoton"
   readonly property string lyricHandFont: "Caveat Brush"
+  // The old print's three (Lyrics/FilmStyle.qml): a fat didone for its title lines, a monoline
+  // script written over them, and a soft slab for its cards. The tall serif is Instrument
+  // Serif upright, which the Ring style draws narrowed.
+  readonly property string lyricDidoneFont: "Abril Fatface"
+  readonly property string lyricScriptFont: "Allura"
+  readonly property string lyricCardFont: "Caprasimo"
+  readonly property string lyricTallSerifFont: "Instrument Serif"
 }

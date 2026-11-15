@@ -23,6 +23,18 @@ source "$here/lib.sh"
 cmd=${1:-}
 shift || true
 
+# A shell that crashed is started again by Quickshell itself, with the files it had, outside the
+# pid file: put any such copy down, or it goes on answering in place of the one about to start.
+strays() {
+  local p
+  for p in $(pgrep -x .quickshell-wra 2>/dev/null); do
+    # (Another session's shell is not ours to read, and says so: that is not an error.)
+    if { tr '\0' '\n' <"/proc/$p/environ"; } 2>/dev/null | grep -qx "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"; then
+      kill "$p" 2>/dev/null || true
+    fi
+  done
+}
+
 open_stage() {
   media_up
   [[ $(qsipc lyrics shown) == true ]] && return 0
@@ -57,6 +69,7 @@ case $cmd in
     sed -E 's/(readonly property int oledShiftInterval: )[0-9]+/\12000000000/' \
       "$QSV_REPO/home/quickshell/Commons/Theme.qml" >"$QSV_CFG/Commons/Theme.qml"
     : >"$QSV_WORK/quickshell.log"
+    strays
     "$here/restart.sh" >/dev/null
     ;;
   frames)
@@ -97,6 +110,10 @@ case $cmd in
   log)
     load_env
     grep -E "WARN|ERROR" "$QSV_WORK/quickshell.log" | grep -E "Lyrics|lyric" | sort | uniq -c | sort -rn | head -30 || true
+    crashes=$(find "$XDG_CACHE_HOME/quickshell/crashes" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
+    if ((crashes > 0)); then
+      echo "$crashes crash report(s) in $XDG_CACHE_HOME/quickshell/crashes"
+    fi
     ;;
   down)
     "$here/stop.sh"

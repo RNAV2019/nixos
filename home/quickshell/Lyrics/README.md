@@ -87,6 +87,12 @@ The rules that keep every style honest:
   `ground`, and the `...Kick` ones (`bloomKick`, `aberrationKick`, `punchKick`, `glitchKick`,
   `shakeKick`, `flashKick`) that are added as each word lands. They are what makes a style feel
   like itself; a quiet style turns them down, a loud one up. No flashing the whole frame white.
+- **An old print.** Root a style in `FilmStyle` instead of `LyricStyle` and it is seen black and
+  white, soft, dusty and flickering (the lens's `mono`, `dust` and `flicker`), as `Reel`, `Ring`
+  and `Titlecard` are; `spot`, `spotAt` and `spotSize` put the projector's lamp behind the words.
+- **Letters** that come and go one by one are `LyricLetters`: a word drawn a letter at a time
+  where the whole word would put them, in order or scattered (`scattered`), blinking out now and
+  then (`flicker`), leaving one by one (`gone`).
 - **Pictures** are `LyricEmoji { glyph: word.emoji; size: ... }` where `word.emoji !== ""`.
 - **Faces** come from `Theme.lyricFaces` (through `face(i, j)` or by family: `Theme.lyric*Font`).
   A face that is missing falls back, so check a frame, not the name.
@@ -107,6 +113,8 @@ tools/qs-verify/lyrics.sh down
 `QS_VERIFY_WORK=/tmp/qsv-mine` gives a second harness beside another. `QS_SETTLE=1.6` gives a
 busy machine longer between a pin and its capture (the first frame after a change of style is
 the one that comes out stale). `down` removes the harness's whole folder, so keep the pictures
-somewhere else. The fixture song is in
+somewhere else. If the shell under test crashes, Quickshell starts it again by itself with the
+files it had, and that copy would go on answering in place of the one a `sync` starts: `log` says
+when there is a crash report, and `sync` puts any such copy down first. The fixture song is in
 `tools/qs-verify/fixtures/lyrics-plus.json`; `tools/lyrics-test.mjs` checks the parsing, the
 plan and the curves under node, and `nix flake check` runs it.
