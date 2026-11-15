@@ -179,6 +179,8 @@
     inter
     # Families the OpenPencil designs name; the Nerd Font variants have names of their own.
     design-fonts
+    # The lyric stage's display faces (home/quickshell/Lyrics).
+    lyric-fonts
     jetbrains-mono
     cascadia-code
     poppins

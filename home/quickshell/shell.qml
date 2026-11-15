@@ -11,6 +11,7 @@ import qs.Dictation
 import qs.Keys
 import qs.Launcher
 import qs.Lock
+import qs.Lyrics
 import qs.Media
 import qs.Nearby
 import qs.Notifications
@@ -63,6 +64,9 @@ ShellRoot {
   SessionMenu {}
   WallpaperPicker {}
   ThemePicker {}
+  LyricStage {
+    id: lyricStage
+  }
   Lock {
     id: lockScreen
   }
@@ -204,6 +208,33 @@ ShellRoot {
 
     function down(): void {
       Volume.step(false);
+    }
+  }
+
+  // The lyric stage is a show on the whole screen, not an island surface, so it has its own
+  // target. `pin` and `style` are for tests: a time to hold the song at, and one style to play
+  // everything in.
+  IpcHandler {
+    target: "lyrics"
+
+    function toggle(): void {
+      lyricStage.toggle();
+    }
+
+    function close(): void {
+      lyricStage.close();
+    }
+
+    function shown(): bool {
+      return lyricStage.wanted;
+    }
+
+    function pin(seconds: string): void {
+      lyricStage.pinned = Number(seconds);
+    }
+
+    function style(name: string): void {
+      lyricStage.forcedStyle = name;
     }
   }
 

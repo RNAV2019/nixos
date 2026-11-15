@@ -1712,4 +1712,167 @@ Singleton {
   readonly property real keysScrimAlpha: 0.45
   readonly property real keysGrowFrom: 0.97
   readonly property real keysOmega: pressOmega
+
+  // The lyric stage (Lyrics/): the screen given over to the words of what is playing. Its ground
+  // is true black whatever the theme, since it is a show and not a surface, and its ink is a warm
+  // white the cover's colours are set against. It comes up slowly and leaves at once; a change
+  // of style is a cut with a short cross-fade under it.
+  readonly property color lyricGround: "#000000"
+  readonly property color lyricInk: "#f5f0e8"
+  readonly property int lyricFadeIn: reduceMotion ? 1 : 900
+  readonly property int lyricFadeOut: reduceMotion ? 1 : 320
+  readonly property int lyricCut: reduceMotion ? 1 : 220
+  // A line counts as up this long before its first word, so it is in place when the voice is.
+  readonly property real lyricLead: 0.3
+  // The ground's light at rest, what a landing word adds, and what the player's loudness adds.
+  readonly property real lyricGlow: 0.42
+  readonly property real lyricGlowKick: 0.2
+  readonly property real lyricGlowLevel: 0.25
+  // The ground is drawn at one part in this of the stage and stretched, the bloom at one in that.
+  readonly property int lyricGroundShrink: 8
+  readonly property int lyricBloomShrink: 6
+  // The bloom: how far apart its taps sit (in its own texels), and the luma under which nothing
+  // glows.
+  readonly property real lyricBloomSpread: 1.7
+  readonly property real lyricBloomFloor: 0.22
+  // What a cut adds to the lens for its moment: fringe, a zoom smear and a lift.
+  readonly property real lyricCutFringe: 0.012
+  readonly property real lyricCutPunch: 0.55
+  readonly property real lyricCutFlash: 0.05
+  // How fast a landing word's kick dies away (1/s), and a cut's.
+  readonly property real lyricKickDecay: 6.5
+  readonly property real lyricCutDecay: 5
+  // The readout (a nudged offset, a pinned style) and how long it stays.
+  readonly property int lyricReadoutSize: 15
+  readonly property int lyricReadoutHold: 1400
+  // One nudge of the lyrics against the player's clock, in seconds.
+  readonly property real lyricNudge: 0.05
+
+  // The faces a style may set a word in (pkgs/lyric-fonts, and the shell's own). `size` evens
+  // out how large each draws at one pixel size, so a line of mixed faces sits level; `caps`
+  // says the face is at its best in capitals.
+  readonly property var lyricFaces: [
+    {
+      family: "SF Compact Rounded",
+      weight: Font.Black,
+      italic: false,
+      caps: true,
+      size: 1.0
+    },
+    {
+      family: "Anton",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 1.14
+    },
+    {
+      family: "DM Serif Display",
+      weight: Font.Normal,
+      italic: true,
+      caps: false,
+      size: 1.1
+    },
+    {
+      family: "Archivo Black",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 0.9
+    },
+    {
+      family: "Permanent Marker",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 0.96
+    },
+    {
+      family: "Instrument Serif",
+      weight: Font.Normal,
+      italic: true,
+      caps: false,
+      size: 1.22
+    },
+    {
+      family: "Rubik Mono One",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 0.76
+    },
+    {
+      family: "Abril Fatface",
+      weight: Font.Normal,
+      italic: false,
+      caps: false,
+      size: 1.02
+    },
+    {
+      family: "Bungee",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 0.84
+    },
+    {
+      family: "Pacifico",
+      weight: Font.Normal,
+      italic: false,
+      caps: false,
+      size: 0.94
+    },
+    {
+      family: "Space Mono",
+      weight: Font.Bold,
+      italic: false,
+      caps: false,
+      size: 0.88
+    },
+    {
+      family: "Shrikhand",
+      weight: Font.Normal,
+      italic: false,
+      caps: false,
+      size: 0.96
+    },
+    {
+      family: "Alfa Slab One",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 0.88
+    },
+    {
+      family: "Bebas Neue",
+      weight: Font.Normal,
+      italic: false,
+      caps: true,
+      size: 1.2
+    },
+    {
+      family: "Caveat Brush",
+      weight: Font.Normal,
+      italic: false,
+      caps: false,
+      size: 1.16
+    },
+    {
+      family: "Fraunces",
+      weight: Font.Light,
+      italic: true,
+      caps: false,
+      size: 1.04
+    }
+  ]
+  // The faces styles name outright.
+  readonly property string lyricDisplayFont: "SF Compact Rounded"
+  readonly property string lyricGroteskFont: "Archivo Black"
+  readonly property string lyricCondensedFont: "Anton"
+  readonly property string lyricSerifFont: "Instrument Serif"
+  readonly property string lyricFatSerifFont: "DM Serif Display"
+  readonly property string lyricMonoFont: "Space Mono"
+  readonly property string lyricPixelFont: "Press Start 2P"
+  readonly property string lyricNeonFont: "Monoton"
+  readonly property string lyricHandFont: "Caveat Brush"
 }

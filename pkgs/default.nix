@@ -12,6 +12,8 @@ final: prev: {
   quickshell-emoji = final.callPackage ./quickshell-emoji {};
   # Fonts the OpenPencil designs use.
   design-fonts = final.callPackage ./design-fonts {};
+  # The display faces the lyric stage sets words in.
+  lyric-fonts = final.callPackage ./lyric-fonts {};
   # The shell's icon font: Material Symbols Rounded, filled, as a static instance.
   material-symbols-filled = final.callPackage ./material-symbols-filled {};
   # Apple's SF Pro, which the OpenPencil designs still name.
