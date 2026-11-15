@@ -7,7 +7,7 @@ import qs.Commons
 Text {
   id: root
 
-  // One of Theme.lyricFaces, or null for the stage's display face.
+  // A face as { family, weight, italic, caps, size }, or null for the stage's display face.
   property var face: null
   // The pixel size before the face's own factor.
   property real size: 10

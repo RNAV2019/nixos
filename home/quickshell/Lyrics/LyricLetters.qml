@@ -23,6 +23,9 @@ Item {
   property real span: 0.2
   // Each letter's own fade up.
   property real rise: 0.09
+  // What a letter shows before it has arrived: 0 for not there, more for waiting dim (a line
+  // that is all on screen and fills in as it is sung).
+  property real floor: 0
   // In order, or each in a place drawn by lot.
   property bool scattered: false
   // When the letters start to go, and over how long, each at its own moment.
@@ -72,7 +75,7 @@ Item {
       textFormat: Text.PlainText
       color: root.color
       font: metrics.font
-      opacity: root.now >= leaveAt ? 0 : up * (root.flicker > 0 && up >= 1 ? Kinetic.flick(root.seed, root.salt, index, root.now, root.flicker) : 1)
+      opacity: root.now >= leaveAt ? 0 : (root.floor + (1 - root.floor) * up) * (root.flicker > 0 && up >= 1 ? Kinetic.flick(root.seed, root.salt, index, root.now, root.flicker) : 1)
       visible: opacity > 0
     }
   }

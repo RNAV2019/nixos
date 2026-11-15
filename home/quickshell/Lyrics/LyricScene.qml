@@ -30,9 +30,16 @@ Item {
 
   // The styles there are, and what kind of stretch each is cast for: "calm" (intros, bridges,
   // the quiet), "mid" (verses) and "high" (choruses). `wants: "emoji"` keeps a style for
-  // stretches with at least two words that have a picture. With motion reduced only the
+  // stretches with at least two words that have a picture, and `look: "film"` marks the
+  // black-and-white ones, which the plan casts in runs so a song is not for ever changing stock. With motion reduced only the
   // `gentle` ones are cast, and nothing kicks.
   readonly property var catalogue: [
+    {
+      name: "Stack",
+      tiers: ["calm", "mid"],
+      weight: 1.3,
+      gentle: true
+    },
     {
       name: "Whisper",
       tiers: ["calm"],
@@ -40,89 +47,39 @@ Item {
       gentle: true
     },
     {
-      name: "Typewriter",
-      tiers: ["calm", "mid"],
-      weight: 0.7,
-      gentle: true
-    },
-    {
-      name: "Drift",
-      tiers: ["calm", "mid"],
-      weight: 0.7,
-      gentle: true
-    },
-    {
-      name: "Neon",
-      tiers: ["calm", "mid"],
-      weight: 0.7,
-      gentle: true
-    },
-    {
       name: "Reel",
       tiers: ["calm", "mid"],
-      weight: 0.9,
+      weight: 1,
+      look: "film",
       gentle: true
-    },
-    {
-      name: "Poster",
-      tiers: ["mid"],
-      weight: 1
-    },
-    {
-      name: "Ransom",
-      tiers: ["mid"],
-      weight: 1
     },
     {
       name: "Cascade",
       tiers: ["mid"],
-      weight: 1
-    },
-    {
-      name: "Orbit",
-      tiers: ["mid"],
-      weight: 1
+      weight: 0.8
     },
     {
       name: "Pictogram",
       tiers: ["mid", "high"],
-      weight: 1.3,
+      weight: 1.2,
       wants: "emoji"
-    },
-    {
-      name: "Echo",
-      tiers: ["mid", "high"],
-      weight: 0.8
     },
     {
       name: "Ring",
       tiers: ["mid", "high"],
-      weight: 1
+      weight: 1,
+      look: "film"
     },
     {
       name: "Titlecard",
       tiers: ["mid", "high"],
-      weight: 0.8
+      weight: 0.9,
+      look: "film"
     },
     {
       name: "Punch",
       tiers: ["high"],
       weight: 1
-    },
-    {
-      name: "Marquee",
-      tiers: ["high"],
-      weight: 1
-    },
-    {
-      name: "Tunnel",
-      tiers: ["high"],
-      weight: 1
-    },
-    {
-      name: "Glitch",
-      tiers: ["high"],
-      weight: 0.8
     }
   ].filter(function (s) {
     return !Theme.reduceMotion || s.gentle === true;
@@ -135,6 +92,18 @@ Item {
   property real now: 0
   property real wall: 0
   property real kick: 0
+  // The lens as it is set now. The style in front says what it wants (LyricStyle's `bloom`,
+  // `mono`...), and these follow over most of a second, so black and white comes up like a
+  // print developing and is not cut to.
+  property real lensBloom: 0.45
+  property real lensGrain: 0.05
+  property real lensVignette: 0.4
+  property real lensMono: 0
+  property real lensDust: 0
+  property real lensFlicker: 0
+  property real lensDepth: 0
+  property real lensGround: 1
+  property bool _lensSet: false
   property real level: 0
   // 1 at a change of style, dying away.
   property real cut: 0
@@ -278,6 +247,17 @@ Item {
     }
     scene.kick = Theme.reduceMotion ? 0 : k * scene.tierGain;
     scene.stir += scene.kick * dt;
+
+    var k = scene._lensSet ? Math.min(1, dt * Theme.lyricLookRate) : 1;
+    scene._lensSet = scene.frontItem !== null;
+    scene.lensBloom += (scene.look("bloom", 0.45) - scene.lensBloom) * k;
+    scene.lensGrain += (scene.look("grain", 0.05) - scene.lensGrain) * k;
+    scene.lensVignette += (scene.look("vignette", 0.4) - scene.lensVignette) * k;
+    scene.lensMono += (scene.look("mono", 0) - scene.lensMono) * k;
+    scene.lensDust += (scene.look("dust", 0) - scene.lensDust) * k;
+    scene.lensFlicker += (scene.look("flicker", 0) - scene.lensFlicker) * k;
+    scene.lensDepth += (scene.look("depth", 0) - scene.lensDepth) * k;
+    scene.lensGround += (scene.look("ground", 1) - scene.lensGround) * k;
     scene.cut = Kinetic.pulse(scene.wall - scene._cutAt, Theme.lyricCutDecay);
 
     var heard = meter.enabled ? meter.peak : 0;
@@ -299,9 +279,16 @@ Item {
     }
     if (scene._shown === scene.seg)
       return;
-    var incoming = scene.front === 0 ? hostB : hostA;
     // Read off the model the plan was made from, not a binding that may not have followed yet.
     var lines = scene.model ? scene.model.lines : [];
+    // The same style again, on the same song: it carries on with the new stretch, uncut.
+    var playing = scene.frontItem;
+    if (scene._shown !== null && playing && scene._shown.style === scene.seg.style && playing.lines === lines) {
+      playing.seg = scene.seg;
+      scene._shown = scene.seg;
+      return;
+    }
+    var incoming = scene.front === 0 ? hostB : hostA;
     incoming.setSource(Qt.resolvedUrl("Styles/" + scene.seg.style + ".qml"), {
       stage: scene,
       seg: scene.seg,
@@ -353,7 +340,7 @@ Item {
 
       property real time: scene.wall
       property real aspect: scene.width / Math.max(1, scene.height)
-      property real glow: (Theme.lyricGlow + Theme.lyricGlowKick * scene.kick + Theme.lyricGlowLevel * scene.level) * scene.look("ground", 1)
+      property real glow: (Theme.lyricGlow + Theme.lyricGlowKick * scene.kick + Theme.lyricGlowLevel * scene.level) * scene.lensGround
       property real stir: scene.stir
       property color tintA: scene.accent
       property color tintB: scene.accent2
@@ -460,23 +447,18 @@ Item {
     property var source: picture
     property var glowSource: glowTexture
     property size pixels: Qt.size(width * scene.pixelRatio, height * scene.pixelRatio)
-    property point shake: {
-      var reach = scene.look("shakeKick", 0) * scene.kick / 100;
-      return Qt.point(reach * Math.sin(scene.wall * 91) * scene.height / Math.max(1, scene.width), reach * Math.cos(scene.wall * 73));
-    }
     property real time: scene.wall
-    property real bloom: scene.look("bloom", 0.45) + scene.look("bloomKick", 0.3) * scene.kick + 0.35 * scene.cut
-    property real aberration: scene.look("aberration", 0.0012) + scene.look("aberrationKick", 0.003) * scene.kick + Theme.lyricCutFringe * scene.cut
+    property real bloom: scene.lensBloom + scene.look("bloomKick", 0.2) * scene.kick + 0.18 * scene.cut
     property real punch: scene.look("punchKick", 0) * scene.kick + Theme.lyricCutPunch * scene.cut
-    property real glitch: scene.look("glitchKick", 0) * scene.kick
-    property real warp: scene.look("warp", 0)
-    property real scan: scene.look("scan", 0)
-    property real grain: scene.look("grain", 0.05)
-    property real vignette: scene.look("vignette", 0.4)
-    property real flash: scene.look("flashKick", 0) * scene.kick + Theme.lyricCutFlash * scene.look("cutFlash", 1) * scene.cut
-    property real mono: scene.look("mono", 0)
-    property real dust: scene.look("dust", 0)
-    property real flicker: scene.look("flicker", 0)
+    property real depth: scene.lensDepth
+    property real depthAt: scene.look("depthAt", 0.5)
+    property real depthBand: scene.look("depthBand", 0.08)
+    property real grain: scene.lensGrain
+    property real vignette: scene.lensVignette
+    property real flash: Theme.lyricCutFlash * scene.look("cutFlash", 1) * scene.cut
+    property real mono: scene.lensMono
+    property real dust: scene.lensDust
+    property real flicker: scene.lensFlicker
     property real spot: scene.look("spot", 0)
     property real spotSize: scene.look("spotSize", 0.32)
     property point spotAt: scene.look("spotAt", Qt.point(0.5, 0.5))

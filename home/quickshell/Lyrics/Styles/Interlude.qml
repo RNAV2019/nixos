@@ -4,15 +4,15 @@ import qs.Services
 import qs.Lyrics
 import "../Kinetic.js" as Kinetic
 
-// Between the words: the intro, a solo, the fade, and a song with no timed lyrics at all. The
-// song's name, set large, and who it is by, drifting a little so nothing sits still on the
-// panel; under them, where there is something to say, why there are no words.
+// Between the words. Before the first line, after the last, and for a song with no timed lyrics
+// at all, it is the song's name, set large, and who it is by, drifting a little so nothing sits
+// still on the panel, with a line under them where there is something to say. A pause inside the
+// song is three dots that breathe until the voice comes back, as every lyrics player draws one.
 LyricStyle {
   id: sty
 
   bloom: 0.5
   bloomKick: 0.1
-  aberration: 0.0016
   grain: 0.06
   vignette: 0.5
   ground: 1.25
@@ -26,8 +26,37 @@ LyricStyle {
   readonly property real swayX: Math.sin(stage.wall * 0.11) * 3 * u
   readonly property real swayY: Math.cos(stage.wall * 0.083) * 2 * u
 
+  // A pause with words either side of it.
+  readonly property bool pause: stage.model !== null && seg.t0 > -Infinity && seg.t1 < Infinity
+
+  Row {
+    visible: sty.pause
+    anchors.centerIn: parent
+    spacing: 1.5 * sty.u
+    // They swell and go in the last moments before the next line.
+    opacity: Kinetic.outCubic(sty.age / 0.6) * (1 - Kinetic.span(sty.seg.t1 - 0.5, sty.seg.t1 - 0.1, sty.now))
+    scale: 1 + 0.25 * Kinetic.span(sty.seg.t1 - 0.6, sty.seg.t1 - 0.1, sty.now)
+
+    Repeater {
+      model: 3
+
+      Rectangle {
+        required property int index
+
+        width: 1.5 * sty.u
+        height: width
+        radius: width / 2
+        color: sty.ink
+        opacity: 0.45 + 0.4 * (0.5 + 0.5 * Math.sin(sty.stage.wall * 5.2 - index * 0.9))
+        scale: 0.9 + 0.1 * (0.5 + 0.5 * Math.sin(sty.stage.wall * 5.2 - index * 0.9))
+      }
+    }
+  }
+
   Column {
     id: block
+
+    visible: !sty.pause
 
     x: (sty.width - width) / 2 + sty.swayX
     y: (sty.height - height) / 2 + sty.swayY
@@ -61,7 +90,7 @@ LyricStyle {
       font.weight: Font.Normal
       font.italic: true
       size: 5.4 * sty.u
-      color: sty.accent
+      color: Theme.withAlpha(sty.ink, 0.6)
       opacity: Kinetic.outCubic((sty.age - 0.25) / 0.9)
     }
 

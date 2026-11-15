@@ -8,8 +8,6 @@ import QtQuick
 LyricStyle {
   bloom: 1.0
   bloomKick: 0.12
-  aberration: 0
-  aberrationKick: 0
   grain: 0.2
   vignette: 0.62
   ground: 0.7

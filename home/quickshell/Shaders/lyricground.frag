@@ -61,6 +61,6 @@ void main() {
     // Deepened, so the light falls away to black well before the next lobe begins.
     col = pow(col * glow, vec3(1.5)) * 1.6;
     // Where lobes meet they add up; the ground is kept a ground, never a lamp.
-    col = 0.5 * (1.0 - exp(-col * 2.2));
+    col = 0.36 * (1.0 - exp(-col * 2.6));
     fragColor = vec4(col, 1.0) * qt_Opacity;
 }

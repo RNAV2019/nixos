@@ -3,9 +3,9 @@ import qs.Commons
 import qs.Lyrics
 import "../Kinetic.js" as Kinetic
 
-// The line as a silent film's title card: a centred stack of soft, heavy capitals. A word's
-// letters turn up out of order, grey at first and then lit, blink out now and then as a worn
-// print's do, and at the end go dark one by one.
+// The line as a silent film's title card: a centred stack of soft, heavy capitals. A word
+// comes up grey and is then lit, its letters blink out now and then as a worn print's do, and
+// at the end they go dark one by one, in no order.
 FilmStyle {
   id: sty
 
@@ -74,9 +74,8 @@ FilmStyle {
                   color: w ? sty.mix(sty.unlit, sty.ink, (sty.now - w.t - span) / 0.25) : sty.ink
                   now: sty.now
                   born: w ? w.t : 0
-                  span: w ? Math.min(w.d * 0.7, 0.3) : 0
+                  span: w ? Math.min(w.d * 0.4, 0.12) : 0
                   rise: 0.1
-                  scattered: true
                   flicker: sty.blink
                   gone: slot.line ? slot.line.out - 0.45 : Infinity
                   seed: sty.seed

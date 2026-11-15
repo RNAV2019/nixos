@@ -74,9 +74,10 @@ eq("lrc: nothing synced", Parse.fromLrclib('{"plainLyrics":"la la","syncedLyrics
 
 // ---- pictures ----
 eq("emoji: plain", ["fire", "heart", "the", "Moon,", "a"].map(Emoji.lookup), ["🔥", "❤️", "", "🌙", ""]);
-eq("emoji: endings", ["burning", "burnin'", "stars", "shining", "dreamed", "running"].map(Emoji.lookup), ["🔥", "🔥", "⭐", "✨", "💤", "🏃"]);
+eq("emoji: endings", ["burning", "burnin'", "stars", "waves", "dreamed", "running"].map(Emoji.lookup), ["🔥", "🔥", "⭐", "🌊", "💤", "🏃"]);
 Emoji.annotate(model);
-eq("emoji: marked", model.lines[7].words.map(w => w.emoji), ["", "", "🔥", "🔥", ""]);
+eq("emoji: marked, a picture once a line", model.lines[7].words.map(w => w.emoji), ["", "", "🔥", "", ""]);
+eq("emoji: no sparkles", ["afterglow", "shine", "magic"].map(Emoji.lookup), ["", "", ""]);
 
 // ---- the plan ----
 const catalogue = [
@@ -107,6 +108,16 @@ check("plan: pictures only where there are some", plan.filter(s => s.style === "
 check("plan: seeds differ", new Set(plan.map(s => s.seed)).size === plan.length);
 eq("plan: segment at", [Director.segmentAt(plan, 0), Director.segmentAt(plan, 8), Director.segmentAt(plan, 1e6)], [0, 1, plan.length - 1]);
 eq("plan: a song with no words", Director.plan({lines: [], parts: []}, catalogue, 1).map(s => s.style), ["Interlude"]);
+check("plan: looks come in runs", (() => {
+  const looks = [{name: "A", tiers: ["mid", "high", "calm"], look: "film"}, {name: "B", tiers: ["mid", "high", "calm"], look: "film"}, {name: "C", tiers: ["mid", "high", "calm"]}, {name: "D", tiers: ["mid", "high", "calm"]}];
+  let same = 0, pairs = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const cast = Director.plan(model, looks, seed).filter(s => s.firstLine >= 0).map(s => looks.find(c => c.name === s.style).look || "");
+    for (let i = 1; i < cast.length; i++) { pairs++; if (cast[i] === cast[i - 1]) same++; }
+  }
+  // With no leaning a style would follow its own look a third of the time (one of three others).
+  return same / pairs > 0.45;
+})());
 check("plan: another song casts differently", JSON.stringify(Director.plan(model, catalogue, seed + 1).map(s => s.style)) !== JSON.stringify(plan.map(s => s.style)));
 
 // ---- curves ----

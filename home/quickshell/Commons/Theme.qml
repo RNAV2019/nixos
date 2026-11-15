@@ -1735,10 +1735,12 @@ Singleton {
   // glows.
   readonly property real lyricBloomSpread: 1.7
   readonly property real lyricBloomFloor: 0.22
-  // What a cut adds to the lens for its moment: fringe, a zoom smear and a lift.
-  readonly property real lyricCutFringe: 0.012
-  readonly property real lyricCutPunch: 0.55
-  readonly property real lyricCutFlash: 0.05
+  // How fast the lens takes on a new style's settings (1/s): black and white, grain and the
+  // rest come up over most of a second and are not cut to.
+  readonly property real lyricLookRate: 3.5
+  // What a cut adds to the lens for its moment: a zoom smear and a lift.
+  readonly property real lyricCutPunch: 0.45
+  readonly property real lyricCutFlash: 0.025
   // How fast a landing word's kick dies away (1/s), and a cut's.
   readonly property real lyricKickDecay: 6.5
   readonly property real lyricCutDecay: 5
@@ -1750,133 +1752,12 @@ Singleton {
   // One nudge of the lyrics against the player's clock, in seconds.
   readonly property real lyricNudge: 0.05
 
-  // The faces a style may set a word in (pkgs/lyric-fonts, and the shell's own). `size` evens
-  // out how large each draws at one pixel size, so a line of mixed faces sits level; `caps`
-  // says the face is at its best in capitals.
-  readonly property var lyricFaces: [
-    {
-      family: "SF Compact Rounded",
-      weight: Font.Black,
-      italic: false,
-      caps: true,
-      size: 1.0
-    },
-    {
-      family: "Anton",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 1.14
-    },
-    {
-      family: "DM Serif Display",
-      weight: Font.Normal,
-      italic: true,
-      caps: false,
-      size: 1.1
-    },
-    {
-      family: "Archivo Black",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 0.9
-    },
-    {
-      family: "Permanent Marker",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 0.96
-    },
-    {
-      family: "Instrument Serif",
-      weight: Font.Normal,
-      italic: true,
-      caps: false,
-      size: 1.22
-    },
-    {
-      family: "Rubik Mono One",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 0.76
-    },
-    {
-      family: "Abril Fatface",
-      weight: Font.Normal,
-      italic: false,
-      caps: false,
-      size: 1.02
-    },
-    {
-      family: "Bungee",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 0.84
-    },
-    {
-      family: "Pacifico",
-      weight: Font.Normal,
-      italic: false,
-      caps: false,
-      size: 0.94
-    },
-    {
-      family: "Space Mono",
-      weight: Font.Bold,
-      italic: false,
-      caps: false,
-      size: 0.88
-    },
-    {
-      family: "Shrikhand",
-      weight: Font.Normal,
-      italic: false,
-      caps: false,
-      size: 0.96
-    },
-    {
-      family: "Alfa Slab One",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 0.88
-    },
-    {
-      family: "Bebas Neue",
-      weight: Font.Normal,
-      italic: false,
-      caps: true,
-      size: 1.2
-    },
-    {
-      family: "Caveat Brush",
-      weight: Font.Normal,
-      italic: false,
-      caps: false,
-      size: 1.16
-    },
-    {
-      family: "Fraunces",
-      weight: Font.Light,
-      italic: true,
-      caps: false,
-      size: 1.04
-    }
-  ]
-  // The faces styles name outright.
-  readonly property string lyricDisplayFont: "SF Compact Rounded"
+  // The faces the styles are set in: the shell's own display face, and pkgs/lyric-fonts.
+  readonly property string lyricDisplayFont: "SF Compact Display"
   readonly property string lyricGroteskFont: "Archivo Black"
   readonly property string lyricCondensedFont: "Anton"
   readonly property string lyricSerifFont: "Instrument Serif"
   readonly property string lyricFatSerifFont: "DM Serif Display"
-  readonly property string lyricMonoFont: "Space Mono"
-  readonly property string lyricPixelFont: "Press Start 2P"
-  readonly property string lyricNeonFont: "Monoton"
-  readonly property string lyricHandFont: "Caveat Brush"
   // The old print's three (Lyrics/FilmStyle.qml): a fat didone for its title lines, a monoline
   // script written over them, and a soft slab for its cards. The tall serif is Instrument
   // Serif upright, which the Ring style draws narrowed.

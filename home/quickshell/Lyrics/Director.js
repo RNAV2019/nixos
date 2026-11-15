@@ -7,8 +7,9 @@
 // style draws lines firstLine..lastLine and no others. A stretch with nothing sung (the intro,
 // a solo, the fade) is a segment too, in the style named `Interlude`, with firstLine -1.
 
-// A segment starts this long before its first word, so the cut lands ahead of the voice.
-var LEAD = 0.45;
+// A segment starts this long before its first word, so the cut lands just ahead of the voice
+// and the line before it is not left a dark moment short.
+var LEAD = 0.15;
 // Nothing sung for this long is an interlude.
 var GAP = 6.5;
 // A style is held about this long, and for this many lines at most.
@@ -94,12 +95,23 @@ function emojiCount(model, first, last) {
 
 // The whole plan. `catalogue` lists the styles: { name, tiers: [tier], weight, wants }, where
 // `wants: "emoji"` keeps a style for stretches that have pictures to show. A style is not cast
-// again until three others have played, where the tier has that many to choose from.
+// again until three others have played, where the tier has that many to choose from. A style
+// may name a `look` (the black-and-white film styles do); one that shares the last style's look
+// is twice as likely to follow it and one that does not half as likely, so looks come in runs.
 function plan(model, catalogue, seed) {
   var segments = [];
   var lines = model.lines;
   var next = rng(seed);
   var recent = [];
+  var lastLook = null;
+
+  // A style's chance: its weight, leant towards staying in the look the song is in.
+  function chance(s) {
+    var w = s.weight || 1;
+    if (lastLook === null)
+      return w;
+    return (s.look || "") === lastLook ? w * 2 : w * 0.5;
+  }
 
   function cast(tier, first, last) {
     var pictures = emojiCount(model, first, last);
@@ -123,18 +135,19 @@ function plan(model, catalogue, seed) {
     }
     var total = 0;
     fresh.forEach(function (s) {
-      total += s.weight || 1;
+      total += chance(s);
     });
     var roll = next() * total;
     var chosen = fresh[fresh.length - 1];
     for (var i = 0; i < fresh.length; i++) {
-      roll -= fresh[i].weight || 1;
+      roll -= chance(fresh[i]);
       if (roll <= 0) {
         chosen = fresh[i];
         break;
       }
     }
     recent.push(chosen.name);
+    lastLook = chosen.look || "";
     return chosen.name;
   }
 

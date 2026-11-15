@@ -26,8 +26,8 @@ away.
 
 A style is one file in `Styles/`, named for what it does, whose root is `LyricStyle`. It is
 handed `stage` and `seg` and draws lines `first..last` of `lines`. Read `Styles/Punch.qml` (a
-word at a time) and `Styles/Poster.qml` (a whole segment laid out, with a camera) before
-writing one.
+word at a time), `Styles/Cascade.qml` (a line built word by word in two faces) and
+`Styles/Stack.qml` (the column every lyrics player draws) before writing one.
 
 What `LyricStyle` gives you:
 
@@ -37,10 +37,10 @@ What `LyricStyle` gives you:
 | `lines`, `first`, `last` | the song's lines and this segment's range |
 | `cur`, `line` | the line in hand (`-1` / `null` before the segment's first), counted from `lead` seconds before its first word |
 | `u` | a hundredth of the stage's height: size everything in it |
-| `ink`, `accent`, `accent2` | warm white, and two colours from the cover |
+| `ink` | warm white: what words are set in |
+| `accent`, `accent2` | two colours from the cover, which the ground is lit with; not for words |
 | `seed` | this segment's own number, for `Kinetic.hash/jitter/pick` |
 | `slotLine(k, n)` | the line slot `k` of an `n`-slot pool draws (see Punch) |
-| `face(i, j)` | a face from `Theme.lyricFaces` for word `j` of line `i` |
 | `until(line, j)` | when word `j` gives way to the next |
 | `mix(a, b, t)` | a colour between two |
 | `stage.wall` | seconds that never stop, for drift that should not follow the song |
@@ -83,10 +83,19 @@ The rules that keep every style honest:
   `repeater.count` in it too. A pooled slot changes line a frame before its inner delegates
   follow, so guard `line.words[j]` with `j < line.words.length`, or hand the delegates the word
   itself.
-- **The lens is yours to set**: `bloom`, `aberration`, `warp`, `scan`, `grain`, `vignette`,
-  `ground`, and the `...Kick` ones (`bloomKick`, `aberrationKick`, `punchKick`, `glitchKick`,
-  `shakeKick`, `flashKick`) that are added as each word lands. They are what makes a style feel
-  like itself; a quiet style turns them down, a loud one up. No flashing the whole frame white.
+- **Words are ink.** The cover's colours light the ground and stay out of the type, as in every
+  lyrics player worth copying; a sung word is told from an unsung one by how bright it is.
+- **Two faces at most, each with a part to play** (capitals for the passing words and an italic
+  for the ones the singer leans on, say). A face per word looks drawn from a hat.
+- **Nothing bounces, shakes or flashes.** Things settle (`Kinetic.spring(age, omega, 1)` or an
+  ease out); a hit is told by the type and by the lens's `punchKick` in a chorus style, never by
+  squash, wobble or confetti.
+- **The lens is yours to set**: `bloom`, `grain`, `vignette`, `ground`, the `...Kick` ones
+  (`bloomKick`, `punchKick`) that are added as each word lands, and `depth`, `depthAt` and
+  `depthBand`, which put everything above and below one band of the stage out of focus (how
+  `Stack` softens the lines round the one in hand). Blur belongs there: an item blurred by a
+  layer of its own is made and thrown away with its line, and that is where the one crash the
+  stage has had came from.
 - **An old print.** Root a style in `FilmStyle` instead of `LyricStyle` and it is seen black and
   white, soft, dusty and flickering (the lens's `mono`, `dust` and `flicker`), as `Reel`, `Ring`
   and `Titlecard` are; `spot`, `spotAt` and `spotSize` put the projector's lamp behind the words.
@@ -94,7 +103,7 @@ The rules that keep every style honest:
   where the whole word would put them, in order or scattered (`scattered`), blinking out now and
   then (`flicker`), leaving one by one (`gone`).
 - **Pictures** are `LyricEmoji { glyph: word.emoji; size: ... }` where `word.emoji !== ""`.
-- **Faces** come from `Theme.lyricFaces` (through `face(i, j)` or by family: `Theme.lyric*Font`).
+- **Faces** are named by `Theme.lyric*Font` (the shell's display face and `pkgs/lyric-fonts`).
   A face that is missing falls back, so check a frame, not the name.
 
 To cast it, add it to `LyricScene.catalogue` with its tiers.
@@ -106,6 +115,7 @@ tools/qs-verify/lyrics.sh up                                  # once: harness, f
 tools/qs-verify/lyrics.sh sync                                # after every edit
 tools/qs-verify/lyrics.sh frames /tmp/out Punch 38.3 41.0     # frames at moments of the song
 tools/qs-verify/lyrics.sh strip /tmp/out Punch 38.0 39.4 12   # twelve frames as one sheet
+tools/qs-verify/lyrics.sh probe Punch 8.6                     # what a frame costs each thread
 tools/qs-verify/lyrics.sh log                                 # what the shell warned of
 tools/qs-verify/lyrics.sh down
 ```

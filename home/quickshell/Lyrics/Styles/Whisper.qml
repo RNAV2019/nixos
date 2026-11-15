@@ -13,12 +13,9 @@ LyricStyle {
 
   bloom: 0.7
   bloomKick: 0.12
-  aberration: 0.0006
-  aberrationKick: 0.0012
-  warp: 0.35
   grain: 0.04
   vignette: 0.55
-  ground: 0.8
+  ground: 0.55
 
   // The face's size, set once; a line is fitted with `scale`.
   readonly property real size: 9 * u
@@ -186,7 +183,7 @@ LyricStyle {
             readonly property var w: modelData.w
             readonly property real age: sty.now - w.t
             readonly property real gather: Kinetic.outCubic(age / (w.d + 0.5))
-            readonly property color tint: sty.mix(sty.accent, sty.ink, (age - w.d) / 1.1)
+            readonly property color tint: sty.ink
 
             x: modelData.x
             y: modelData.y

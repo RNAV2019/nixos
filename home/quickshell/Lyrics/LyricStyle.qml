@@ -10,7 +10,8 @@ import "Parse.js" as Parse
 //
 // A style also says how the lens should treat it: the numbers below are read by LyricScene and
 // handed to Shaders/lyricpost.frag. The `...Kick` ones are added in proportion to the stage's
-// `kick`, which jumps as each word lands and dies away.
+// `kick`, which jumps as each word lands and dies away. Words are set in `ink`: the cover's
+// colours belong to the ground, which is where every lyrics player worth copying keeps them.
 Item {
   id: sty
 
@@ -44,17 +45,15 @@ Item {
 
   // The lens.
   property real bloom: 0.45
-  property real bloomKick: 0.3
-  property real aberration: 0.0012
-  property real aberrationKick: 0.003
+  property real bloomKick: 0.2
   property real punchKick: 0
-  property real glitchKick: 0
-  property real shakeKick: 0
-  property real flashKick: 0
-  property real warp: 0
-  property real scan: 0
   property real grain: 0.05
   property real vignette: 0.4
+  // Depth of field for a column of lines: sharp in a band round the height `depthAt` (0..1),
+  // `depthBand` being half the band, and softer the further above or below it.
+  property real depth: 0
+  property real depthAt: 0.5
+  property real depthBand: 0.08
   // An old print: colour drained, dust and scratches, the lamp's flicker, and the lamp itself
   // as a soft disc at `spotAt` (0..1 across and down), `spotSize` stage heights in radius.
   property real mono: 0
@@ -79,11 +78,6 @@ Item {
       if (i >= first && i <= last && ((i % n) + n) % n === k)
         return i;
     return -1;
-  }
-
-  // A face for the `j`th word of line `i`, the same every time this segment plays.
-  function face(i, j) {
-    return Kinetic.pick(Theme.lyricFaces, seed, i, j);
   }
 
   // `a` on its way to `b`, `t` of the way there.

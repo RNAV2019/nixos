@@ -10,7 +10,6 @@ var TABLE = [
   "❤️ love heart lover loving beloved",
   "💔 heartbreak heartbroken broken break hurt hurts ache",
   "🔥 fire burn flame flames blaze hot heat lit",
-  "✨ shine sparkle glitter magic glow afterglow shimmer",
   "🌙 moon night midnight moonlight tonight",
   "☀️ sun sunshine sunlight sunny daylight",
   "🌅 sunrise sunset dawn dusk morning",
@@ -181,11 +180,16 @@ function lookup(word) {
   return "";
 }
 
-// Marks every word of a model (Parse.js) that has a picture with it, as `emoji`.
+// Marks every word of a model (Parse.js) that has a picture with it, as `emoji`. A line shows
+// a picture once: "let the fire burn slow" has one flame, on "fire".
 function annotate(model) {
   model.lines.forEach(function (line) {
+    var shown = {};
     line.words.forEach(function (w) {
-      w.emoji = lookup(w.text);
+      var picture = lookup(w.text);
+      w.emoji = shown[picture] === true ? "" : picture;
+      if (picture !== "")
+        shown[picture] = true;
     });
   });
   return model;

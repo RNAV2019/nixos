@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import qs.Commons
 import qs.Lyrics
 import "../Kinetic.js" as Kinetic
@@ -62,7 +61,7 @@ FilmStyle {
 
       anchors.fill: parent
       visible: line !== null && at >= 0 && sty.now < line.out
-      opacity: line ? 1 - Kinetic.span(line.out - 0.3, line.out - 0.02, sty.now) : 0
+      opacity: line ? 1 - Kinetic.span(line.out - 0.18, line.out - 0.02, sty.now) : 0
 
       Repeater {
         model: slot.line ? slot.line.words : []
@@ -77,7 +76,8 @@ FilmStyle {
           readonly property real age: sty.now - modelData.t
           readonly property real nextAt: !last && slot.line && index + 1 < slot.line.words.length ? slot.line.words[index + 1].t : Infinity
           // 0 in the middle, 1 at rest in its corner.
-          readonly property real thrown: Kinetic.spring(sty.now - nextAt, 11, 0.9)
+          // It is on its way a moment before the next word is due, so the middle is clear.
+          readonly property real thrown: Kinetic.spring(sty.now - (nextAt - 0.14), 14, 1)
           readonly property var corner: sty.corners[(index + slot.firstCorner) % 4]
           readonly property real tilt: Kinetic.jitter(sty.seed, slot.lineIndex, index) * 9
           // A corner holds one word: this one goes when the fourth after it lands there.
@@ -88,7 +88,7 @@ FilmStyle {
           y: Kinetic.lerp(slot.height * 0.48, corner.y * slot.height, thrown)
           rotation: Kinetic.lerp(tilt, corner.turn, thrown)
           scale: (0.9 + 0.1 * Kinetic.outCubic(age / 0.22) + 0.07 * held) * Kinetic.lerp(1, 1.5, thrown)
-          opacity: Kinetic.clamp01(age / 0.1) * Kinetic.lerp(1, 0.5, thrown) * kept
+          opacity: Kinetic.span(0.03, 0.16, age) * Kinetic.lerp(1, 0.5, thrown) * kept
           visible: age > 0 && opacity > 0.001
           z: last ? 1 : 0
 
@@ -114,42 +114,34 @@ FilmStyle {
           }
 
           // The pen: an ellipse a little larger than the word, begun at the top and drawn
-          // clockwise, widening as it goes so its end overshoots its start.
-          Shape {
+          // clockwise, widening as it goes so its end overshoots its start. The stroke is laid
+          // down in Shaders/lyricring.frag; only how far the pen has got changes from here.
+          ShaderEffect {
             id: ring
 
             readonly property real rx: word.implicitWidth * sty.narrow * word.fit * 0.62 + 5 * sty.u
             readonly property real ry: 27 * sty.u * word.fit * 0.4 + 3.5 * sty.u
-            readonly property real drawn: Kinetic.outCubic((piece.age - 0.12) / 0.55)
-            readonly property var stroke: {
-              var points = [];
-              var steps = Math.max(1, Math.round(72 * drawn));
-              for (var k = 0; k <= steps; k++) {
-                var along = k / 72;
-                var a = (-112 + 394 * along) * Math.PI / 180;
-                var grow = 1 + 0.07 * along;
-                points.push(Qt.point(rx * grow * Math.cos(a), ry * grow * Math.sin(a)));
-              }
-              return points;
-            }
+            readonly property real pen: 0.42 * sty.u
 
+            property size itemSize: Qt.size(width, height)
+            property size radii: Qt.size(rx, ry)
+            property real stroke: pen
+            property real drawn: Kinetic.outCubic((piece.age - 0.12) / 0.55)
+            property real start: -112 * Math.PI / 180
+            property real sweep: 394 * Math.PI / 180
+            property real grow: 0.07
+            property real aa: 1 / sty.stage.pixelRatio
+            property color ink: sty.ink
+
+            // Room for the widest turn and the pen's own width.
+            width: 2 * rx * 1.08 + 4 * pen
+            height: 2 * ry * 1.08 + 4 * pen
+            x: -width / 2
+            y: -height / 2
             visible: piece.last && drawn > 0
             rotation: -4 - piece.tilt * 0.5
-            preferredRendererType: Shape.CurveRenderer
 
-            ShapePath {
-              strokeColor: sty.ink
-              strokeWidth: 0.42 * sty.u
-              fillColor: "transparent"
-              capStyle: ShapePath.RoundCap
-              joinStyle: ShapePath.RoundJoin
-              startX: ring.stroke[0].x
-              startY: ring.stroke[0].y
-
-              PathPolyline {
-                path: ring.stroke
-              }
-            }
+            fragmentShader: Qt.resolvedUrl("../../Shaders/lyricring.frag.qsb")
           }
         }
       }
