@@ -229,6 +229,10 @@ ShellRoot {
       return lyricStage.wanted;
     }
 
+    function frames(): int {
+      return lyricStage.frames;
+    }
+
     function pin(seconds: string): void {
       lyricStage.pinned = Number(seconds);
     }

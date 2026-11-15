@@ -248,8 +248,12 @@ Item {
     onTriggered: scene.tick(Math.min(0.1, frameTime))
   }
 
+  // One per frame drawn, for whoever is counting them (tools/qs-verify/lyrics.sh probe).
+  signal ticked
+
   function tick(dt) {
     scene.wall += dt;
+    scene.ticked();
 
     // The player extrapolates its own position between reports; this glides after it rather
     // than copying it, so a report that lands a few milliseconds off does not jerk the words.

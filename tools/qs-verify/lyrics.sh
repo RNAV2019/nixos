@@ -8,6 +8,7 @@
 #   lyrics.sh sync                        copy the tree's lyric files over the harness's and restart the shell
 #   lyrics.sh frames OUT STYLE T...       OUT/STYLE-T.png for each time T (seconds); STYLE "" casts by section
 #   lyrics.sh strip OUT STYLE FROM TO N   N frames from FROM to TO as one sheet, OUT/STYLE-FROM-TO.png
+#   lyrics.sh probe STYLE AT [SECS]       play STYLE from AT for SECS (6) and say what a frame costs each thread
 #   lyrics.sh log                         what the shell has warned of since the last sync
 #   lyrics.sh down                        tear it all down
 #
@@ -107,10 +108,47 @@ case $cmd in
     rm -rf "$tmp"
     echo "$out/${style:-cast}-$from-$to.png"
     ;;
+  probe)
+    # The harness draws on the CPU (llvmpipe), so its threads tell the work apart: the main thread
+    # is the bindings and text layout, the render thread the scene graph, and the llvmpipe threads
+    # the pixels, which on a real machine are the GPU's. Milliseconds of CPU per frame, each.
+    load_env
+    style=$1 at=$2 secs=${3:-6}
+    qsipc lyrics style "$style"
+    open_stage
+    mp SetPosition ox /org/qsv/track/0 "$(awk -v t="$at" 'BEGIN { printf "%d", t * 1000000 }')"
+    qsipc lyrics pin -1
+    sleep 1.5
+    pid=$(pgrep -f "^quickshell --no-color -p $QSV_CFG" | head -n1)
+    snap() {
+      local t
+      for t in /proc/"$pid"/task/*; do
+        awk '{ n = $2; sub(/^\(/, "", n); sub(/\)$/, "", n); sub(/-[0-9]+$/, "", n); print n, $(NF - 38) + $(NF - 37) }' "$t/stat" 2>/dev/null
+      done
+    }
+    f0=$(qsipc lyrics frames) a=$(snap)
+    sleep "$secs"
+    f1=$(qsipc lyrics frames) b=$(snap)
+    qsipc lyrics pin "$at"
+    { echo "$a" | sed 's/^/a /'; echo "$b" | sed 's/^/b /'; } | awk -v frames=$((f1 - f0)) -v style="${style:-cast}" -v secs="$secs" '
+      $1 == "a" { before[$2] += $3 }
+      $1 == "b" { after[$2] += $3 }
+      END {
+        for (n in after) {
+          d = (after[n] - before[n]) * 10
+          if (n == "quickshell" || n == ".quickshell-wra") main += d
+          else if (n ~ /QSGRenderThread|QQuickPixmap/) render += d
+          else if (n ~ /llvmpipe/) pixels += d
+          else rest += d
+        }
+        if (frames < 1) frames = 1
+        printf "%-10s %5.1f fps  main %5.2f  render %5.2f  pixels %6.2f  other %5.2f  ms/frame\n", style, frames / secs, main / frames, render / frames, pixels / frames, rest / frames
+      }'
+    ;;
   log)
     load_env
     grep -E "WARN|ERROR" "$QSV_WORK/quickshell.log" | grep -E "Lyrics|lyric" | sort | uniq -c | sort -rn | head -30 || true
-    crashes=$(find "$XDG_CACHE_HOME/quickshell/crashes" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
+    crashes=$({ find "$XDG_CACHE_HOME/quickshell/crashes" -mindepth 1 -maxdepth 1 2>/dev/null || true; } | wc -l)
     if ((crashes > 0)); then
       echo "$crashes crash report(s) in $XDG_CACHE_HOME/quickshell/crashes"
     fi

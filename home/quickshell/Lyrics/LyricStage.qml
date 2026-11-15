@@ -27,6 +27,9 @@ Scope {
   // `lyrics style Punch` plays everything in one style ("" casts again).
   property real pinned: -1
   property string forcedStyle: ""
+  // Frames drawn since the shell started, which `lyrics frames` reports: a probe reads it twice
+  // and divides the CPU time between by the difference.
+  property int frames: 0
 
   readonly property real offset: Number(offsetStore.value) || 0
 
@@ -139,6 +142,7 @@ Scope {
         forcedStyle: root.forcedStyle
         offset: root.offset
         pixelRatio: win.devicePixelRatio
+        onTicked: root.frames++
       }
 
       // What a key just did, small and brief, under the picture, and gone with it.
