@@ -42,11 +42,18 @@ Item {
   readonly property var pens: {
     var out = [];
     for (var i = 0; i < root.count; i++)
-      out.push(metrics.advanceWidth(root.shown.slice(0, i)));
+      out.push(root.advance(metrics.font, root.shown.slice(0, i)));
     return out;
   }
 
-  implicitWidth: metrics.advanceWidth(shown)
+  // How wide `s` is set in `face`. The face is handed in, though the metrics already have it,
+  // so that a binding which measures reads it and measures again when it changes: a call is not
+  // watched, and a word measured before its size was known would keep that width for good.
+  function advance(face, s) {
+    return metrics.advanceWidth(s);
+  }
+
+  implicitWidth: advance(metrics.font, shown)
   implicitHeight: metrics.height
 
   FontMetrics {
