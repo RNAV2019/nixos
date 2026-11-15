@@ -1,4 +1,5 @@
-# Godot with Helix-style modal editing (normal / insert / select, multiple cursors) built
+# Godot with Helix-style modal editing (normal / insert / select, multiple cursors, gw jump
+# labels, and for GDScript the function / class / argument / comment text objects) built
 # into its code editors: nixpkgs' godot plus helix-mode.patch. Off until it is enabled
 # under Editor Settings > Text Editor > Helix Mode, or with "Toggle Helix Mode" in the
 # command palette. The patch leaves the scripting API and everything Godot writes into a

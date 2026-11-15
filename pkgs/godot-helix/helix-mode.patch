@@ -70,7 +70,7 @@ index f683e13..d57c129 100644
  	void _project_run_started();
  	void _project_run_stopped();
 diff --git a/editor/gui/code_editor.cpp b/editor/gui/code_editor.cpp
-index aceecca..cb1366a 100644
+index aceecca..51b3938 100644
 --- a/editor/gui/code_editor.cpp
 +++ b/editor/gui/code_editor.cpp
 @@ -37,18 +37,24 @@
@@ -225,7 +225,7 @@ index aceecca..cb1366a 100644
  	_update_font_ligatures();
  
  	update_editor_settings();
-@@ -1916,6 +1962,430 @@ void CodeTextEditor::_show_goto_popup_request() {
+@@ -1916,6 +1962,434 @@ void CodeTextEditor::_show_goto_popup_request() {
  	emit_signal("show_goto_popup");
  }
  
@@ -295,8 +295,12 @@ index aceecca..cb1366a 100644
 +		secondary_cursor.a = 1.0;
 +		text_editor->set_modal_draw_colors(selection, Color(selection, selection.a * 0.5), Color(caret, 1.0), secondary_cursor, text_editor->get_theme_color(SNAME("caret_background_color")));
 +		text_editor->set_modal_draw_provider(callable_mp(this, &CodeTextEditor::_helix_draw_spans));
++		// Jump labels (gw): filled cells in the accent color, like the keys of the key hints.
++		text_editor->set_modal_label_colors(get_theme_color(SNAME("accent_color"), EditorStringName(Editor)), Color(background, 1.0));
++		text_editor->set_modal_label_cells(helix->get_jump_label_cells());
 +	} else {
 +		text_editor->set_modal_draw_provider(Callable());
++		text_editor->set_modal_label_cells(PackedInt32Array());
 +	}
 +	text_editor->queue_redraw();
 +
@@ -656,7 +660,7 @@ index aceecca..cb1366a 100644
  void CodeTextEditor::_bind_methods() {
  	ADD_SIGNAL(MethodInfo("validate_script"));
  	ADD_SIGNAL(MethodInfo("load_theme_settings"));
-@@ -2079,4 +2549,95 @@ CodeTextEditor::CodeTextEditor() {
+@@ -2079,4 +2553,95 @@ CodeTextEditor::CodeTextEditor() {
  	idle->connect("timeout", callable_mp(this, &CodeTextEditor::_text_changed_idle_timeout));
  
  	code_complete_timer->connect("timeout", callable_mp(this, &CodeTextEditor::_code_complete_timer_timeout));
@@ -857,12 +861,1181 @@ index d624099..c2961d5 100644
  	CodeTextEditor();
 +	~CodeTextEditor();
  };
+diff --git a/editor/gui/helix_gdscript.cpp b/editor/gui/helix_gdscript.cpp
+new file mode 100644
+index 0000000..c24dede
+--- /dev/null
++++ b/editor/gui/helix_gdscript.cpp
+@@ -0,0 +1,998 @@
++/**************************************************************************/
++/*  helix_gdscript.cpp                                                    */
++/**************************************************************************/
++/*                         This file is part of:                          */
++/*                             GODOT ENGINE                               */
++/*                        https://godotengine.org                         */
++/**************************************************************************/
++/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
++/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
++/*                                                                        */
++/* Permission is hereby granted, free of charge, to any person obtaining  */
++/* a copy of this software and associated documentation files (the        */
++/* "Software"), to deal in the Software without restriction, including    */
++/* without limitation the rights to use, copy, modify, merge, publish,    */
++/* distribute, sublicense, and/or sell copies of the Software, and to     */
++/* permit persons to whom the Software is furnished to do so, subject to  */
++/* the following conditions:                                              */
++/*                                                                        */
++/* The above copyright notice and this permission notice shall be         */
++/* included in all copies or substantial portions of the Software.        */
++/*                                                                        */
++/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
++/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
++/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
++/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
++/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
++/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
++/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
++/**************************************************************************/
++
++#include "helix_gdscript.h"
++
++namespace {
++
++bool _is_ident(char32_t p_c) {
++	return HelixAlgo::is_word(p_c);
++}
++
++bool _is_space(char32_t p_c) {
++	return p_c == ' ' || p_c == '\t' || p_c == '\n' || p_c == '\r';
++}
++
++} // namespace
++
++/* Scan */
++
++HelixGDScript::HelixGDScript(const HelixDoc &p_doc, int p_tab_width) {
++	text = p_doc.slice(0, p_doc.len());
++	len = text.length();
++	tab_width = MAX(p_tab_width, 1);
++	_scan();
++	_scan_lines();
++	_scan_blocks();
++	_scan_scopes();
++}
++
++void HelixGDScript::_scan() {
++	kind.resize(len);
++	if (len > 0) {
++		memset(kind.ptr(), KIND_CODE, len);
++	}
++	const char32_t *t = text.ptr();
++	LocalVector<int> stack;
++	int64_t i = 0;
++	while (i < len) {
++		const char32_t c = t[i];
++		if (c == '#') {
++			Span s;
++			s.from = i;
++			while (i < len && t[i] != '\n') {
++				kind[i] = KIND_COMMENT;
++				i++;
++			}
++			s.to = i;
++			comments.push_back(s);
++			continue;
++		}
++		if (c == '"' || c == '\'') {
++			// r"raw" strings have no escapes.
++			const bool raw = i > 0 && t[i - 1] == 'r' && (i < 2 || !_is_ident(t[i - 2]));
++			const bool triple = i + 2 < len && t[i + 1] == c && t[i + 2] == c;
++			Span s;
++			s.from = i;
++			int64_t j = i + (triple ? 3 : 1);
++			while (j < len) {
++				if (!raw && t[j] == '\\') {
++					j += 2;
++					continue;
++				}
++				if (triple) {
++					if (t[j] == c && j + 2 < len && t[j + 1] == c && t[j + 2] == c) {
++						j += 3;
++						break;
++					}
++				} else if (t[j] == c) {
++					j++;
++					break;
++				} else if (t[j] == '\n') {
++					break; // Unterminated: the string ends with its line.
++				}
++				j++;
++			}
++			j = MIN(j, len);
++			s.to = j;
++			for (int64_t k = s.from; k < s.to; k++) {
++				kind[k] = KIND_STRING;
++			}
++			strings.push_back(s);
++			i = j;
++			continue;
++		}
++		if (c == '(' || c == '[' || c == '{') {
++			Bracket b;
++			b.open = i;
++			b.close = len;
++			b.parent = stack.is_empty() ? -1 : stack[stack.size() - 1];
++			stack.push_back(brackets.size());
++			brackets.push_back(b);
++		} else if (c == ')' || c == ']' || c == '}') {
++			// A closing bracket closes the innermost open one, whatever its shape: half-typed
++			// code must not throw everything after it off.
++			if (!stack.is_empty()) {
++				Bracket &b = brackets[stack[stack.size() - 1]];
++				b.close = i;
++				b.closed = true;
++				stack.resize(stack.size() - 1);
++			}
++		}
++		i++;
++	}
++}
++
++bool HelixGDScript::_is_blank_or_comment(int64_t p_pos) const {
++	return kind[p_pos] == KIND_COMMENT || (kind[p_pos] == KIND_CODE && _is_space(text[p_pos]));
++}
++
++int HelixGDScript::_bracket_opening_at(int64_t p_pos) const {
++	int lo = 0;
++	int hi = brackets.size();
++	while (lo < hi) {
++		const int mid = (lo + hi) / 2;
++		if (brackets[mid].open < p_pos) {
++			lo = mid + 1;
++		} else {
++			hi = mid;
++		}
++	}
++	return lo < (int)brackets.size() && brackets[lo].open == p_pos ? lo : -1;
++}
++
++int HelixGDScript::_innermost_bracket(int64_t p_pos) const {
++	// The last bracket opening at or before p_pos, then outwards until one reaches p_pos.
++	int lo = 0;
++	int hi = brackets.size();
++	while (lo < hi) {
++		const int mid = (lo + hi) / 2;
++		if (brackets[mid].open <= p_pos) {
++			lo = mid + 1;
++		} else {
++			hi = mid;
++		}
++	}
++	int b = lo - 1;
++	while (b >= 0 && brackets[b].close < p_pos) {
++		b = brackets[b].parent;
++	}
++	return b;
++}
++
++/* Arguments and parameters */
++
++bool HelixGDScript::_is_argument_list(const Bracket &p_bracket) const {
++	// `name(...)`: a call, an annotation, or the parameters of a `func`. A parenthesis after a
++	// keyword or an operator only groups.
++	if (text[p_bracket.open] != '(' || p_bracket.open == 0) {
++		return false;
++	}
++	int64_t e = p_bracket.open;
++	if (kind[e - 1] != KIND_CODE || !_is_ident(text[e - 1])) {
++		return false;
++	}
++	int64_t s = e;
++	while (s > 0 && kind[s - 1] == KIND_CODE && _is_ident(text[s - 1])) {
++		s--;
++	}
++	const String word = text.substr(s, e - s);
++	static const char *keywords[] = { "if", "elif", "else", "while", "for", "in", "and", "or", "not", "return", "await", "match", "when", "is", "as", "var", "const", nullptr };
++	for (int i = 0; keywords[i]; i++) {
++		if (word == keywords[i]) {
++			return false;
++		}
++	}
++	return true;
++}
++
++bool HelixGDScript::_item_at(const Bracket &p_bracket, int64_t p_pos, Span &r_item) const {
++	// The items between the commas directly inside the bracket, without the blanks and comments
++	// around them.
++	int64_t from = p_bracket.open + 1;
++	int64_t j = from;
++	while (true) {
++		const bool at_end = j >= p_bracket.close;
++		if (at_end || _is_code(j, ',')) {
++			int64_t s = from;
++			int64_t e = MIN(MIN(j, p_bracket.close), len);
++			while (s < e && _is_blank_or_comment(s)) {
++				s++;
++			}
++			while (e > s && _is_blank_or_comment(e - 1)) {
++				e--;
++			}
++			if (s < e && p_pos >= s && p_pos < e) {
++				// A lambda passed as an argument is not an argument object (the grammar's
++				// `arguments` query only captures expressions, and a lambda is not one).
++				if (e - s > 4 && text[s] == 'f' && text[s + 1] == 'u' && text[s + 2] == 'n' && text[s + 3] == 'c' && !_is_ident(text[s + 4])) {
++					return false;
++				}
++				r_item.from = s;
++				r_item.to = e;
++				return true;
++			}
++			if (at_end || j >= p_pos) {
++				return false;
++			}
++			from = j + 1;
++			j++;
++			continue;
++		}
++		if (kind[j] == KIND_CODE && (text[j] == '(' || text[j] == '[' || text[j] == '{')) {
++			const int inner = _bracket_opening_at(j);
++			if (inner >= 0) {
++				j = brackets[inner].close + 1; // Commas inside belong to the inner bracket.
++				continue;
++			}
++		}
++		j++;
++	}
++}
++
++bool HelixGDScript::_argument_object(int64_t p_pos, Span &r_span) const {
++	// From the innermost bracket around the cursor outwards: the cursor on a comma or on the
++	// parenthesis itself is in no argument of that list, but may be inside one of an outer call.
++	for (int b = _innermost_bracket(p_pos); b >= 0; b = brackets[b].parent) {
++		const Bracket &bracket = brackets[b];
++		if (p_pos > bracket.open && p_pos < bracket.close && _is_argument_list(bracket) && _item_at(bracket, p_pos, r_span)) {
++			return true;
++		}
++	}
++	return false;
++}
++
++/* Comments */
++
++// The scope a comment is a statement of: for a comment on a line of its own, the innermost
++// open block it is indented into (a comment never closes a block, but one indented less than
++// a block's body is not part of it).
++int HelixGDScript::_comment_owner(int p_comment) const {
++	const int line = _line_at(comments[p_comment].from);
++	int scope = line_scope[line];
++	if (lines[line].comment_only) {
++		while (scope >= 0 && scopes[scope].body_indent > lines[line].indent) {
++			scope = scopes[scope].parent;
++		}
++	}
++	return scope;
++}
++
++// Comment p_comment and the next one are siblings in a run: only blanks between them, and
++// statements of the same block.
++bool HelixGDScript::_comments_adjacent(int p_comment) const {
++	if (p_comment < 0 || p_comment + 1 >= (int)comments.size()) {
++		return false;
++	}
++	for (int64_t p = comments[p_comment].to; p < comments[p_comment + 1].from; p++) {
++		if (!_is_space(text[p])) {
++			return false;
++		}
++	}
++	return _comment_owner(p_comment) == _comment_owner(p_comment + 1);
++}
++
++bool HelixGDScript::_comment_object(int64_t p_pos, bool p_inside, Span &r_span) const {
++	// The first comment ending after the cursor.
++	int lo = 0;
++	int hi = comments.size();
++	while (lo < hi) {
++		const int mid = (lo + hi) / 2;
++		if (comments[mid].to <= p_pos) {
++			lo = mid + 1;
++		} else {
++			hi = mid;
++		}
++	}
++	if (lo >= (int)comments.size()) {
++		return false;
++	}
++	const Span &comment = comments[lo];
++	if (p_inside) {
++		if (p_pos < comment.from) {
++			return false;
++		}
++		r_span = comment;
++		return true;
++	}
++	// Around: Helix's query captures `(comment)+`, runs of sibling comments, and of the captured
++	// runs the smallest one containing the cursor wins: from the first comment of the run to
++	// the comment under (or after) the cursor.
++	int first = lo;
++	while (first > 0 && _comments_adjacent(first - 1)) {
++		first--;
++	}
++	if (p_pos < comments[first].from) {
++		return false;
++	}
++	r_span.from = comments[first].from;
++	r_span.to = comment.to;
++	return true;
++}
++
++/* Lines */
++
++void HelixGDScript::_scan_lines() {
++	int64_t p = 0;
++	while (true) {
++		Line l;
++		l.start = p;
++		int64_t e = p;
++		while (e < len && text[e] != '\n') {
++			e++;
++		}
++		l.end = e;
++		int64_t f = p;
++		while (f < e && (text[f] == ' ' || text[f] == '\t')) {
++			l.indent += text[f] == '\t' ? tab_width : 1;
++			f++;
++		}
++		l.first = f;
++		l.blank = f == e;
++		l.comment_only = !l.blank && kind[f] == KIND_COMMENT;
++		int64_t ce = e;
++		while (ce > f && kind[ce - 1] == KIND_COMMENT) {
++			ce--;
++		}
++		while (ce > f && kind[ce - 1] == KIND_CODE && (text[ce - 1] == ' ' || text[ce - 1] == '\t')) {
++			ce--;
++		}
++		l.code_end = ce;
++		if (p > 0) {
++			l.in_string = kind[p - 1] == KIND_STRING; // Its newline is inside a string.
++			l.bracket = _innermost_bracket(p - 1);
++			const Line &prev = lines[lines.size() - 1];
++			l.after_backslash = prev.code_end > prev.first && kind[prev.code_end - 1] == KIND_CODE && text[prev.code_end - 1] == '\\';
++		}
++		lines.push_back(l);
++		if (e >= len) {
++			break;
++		}
++		p = e + 1;
++	}
++}
++
++int HelixGDScript::_line_at(int64_t p_pos) const {
++	int lo = 0;
++	int hi = lines.size();
++	while (lo < hi) {
++		const int mid = (lo + hi) / 2;
++		if (lines[mid].start <= p_pos) {
++			lo = mid + 1;
++		} else {
++			hi = mid;
++		}
++	}
++	return MAX(lo - 1, 0);
++}
++
++bool HelixGDScript::_is_word_at(int64_t p_pos, const char *p_word) const {
++	if (p_pos < 0 || (p_pos > 0 && _is_ident(text[p_pos - 1]))) {
++		return false;
++	}
++	int64_t p = p_pos;
++	for (const char *w = p_word; *w; w++, p++) {
++		if (p >= len || kind[p] != KIND_CODE || text[p] != (char32_t)*w) {
++			return false;
++		}
++	}
++	return p >= len || !_is_ident(text[p]);
++}
++
++// The line carries on the statement of the line before it. p_base_bracket: the bracket the
++// statements at hand are in (-1 at the top level; the call a lambda is an argument of).
++bool HelixGDScript::_line_continues(const Line &p_line, int p_base_bracket) const {
++	return p_line.in_string || p_line.after_backslash || (p_line.bracket >= 0 && p_line.bracket != p_base_bracket);
++}
++
++/* Functions and classes */
++
++void HelixGDScript::_scan_blocks() {
++	for (int64_t i = 0; i < len; i++) {
++		if (kind[i] != KIND_CODE || (text[i] != 'f' && text[i] != 'c')) {
++			continue;
++		}
++		const bool is_func = _is_word_at(i, "func");
++		const bool is_class = !is_func && _is_word_at(i, "class");
++		if (!is_func && !is_class) {
++			continue;
++		}
++		const Line &line = lines[_line_at(i)];
++		const int base = _innermost_bracket(i);
++		Block b;
++		b.is_class = is_class;
++		b.from = i;
++		// A definition starts its statement, after `static` and annotations on the same line
++		// at most (those belong to it). Any other `func` is a lambda.
++		bool statement = false;
++		if (base < 0 && !_line_continues(line, -1)) {
++			int64_t p = line.first;
++			while (p < i && _is_code(p, '@')) {
++				p++;
++				while (p < i && _is_ident(text[p])) {
++					p++;
++				}
++				if (_is_code(p, '(')) {
++					const int args = _bracket_opening_at(p);
++					if (args < 0) {
++						break;
++					}
++					p = brackets[args].close + 1;
++				}
++				while (p < i && (text[p] == ' ' || text[p] == '\t')) {
++					p++;
++				}
++			}
++			if (is_func && p < i && _is_word_at(p, "static")) {
++				p += 6;
++				while (p < i && (text[p] == ' ' || text[p] == '\t')) {
++					p++;
++				}
++			}
++			statement = p == i;
++			if (statement) {
++				b.from = line.first;
++			}
++		}
++		if (is_class && !statement) {
++			continue;
++		}
++
++		// The header ends at the first `:` outside brackets, on its logical line.
++		int64_t colon = -1;
++		int64_t j = i + (is_func ? 4 : 5);
++		while (j < len) {
++			if (kind[j] != KIND_CODE) {
++				j++;
++				continue;
++			}
++			const char32_t c = text[j];
++			if (c == '(' || c == '[' || c == '{') {
++				const int inner = _bracket_opening_at(j);
++				j = inner >= 0 ? brackets[inner].close + 1 : j + 1;
++				continue;
++			}
++			if (c == ')' || c == ']' || c == '}') {
++				break;
++			}
++			if (c == ':') {
++				colon = j;
++				break;
++			}
++			if (c == '\n') {
++				const int next = _line_at(j) + 1;
++				if (next >= (int)lines.size() || !lines[next].after_backslash) {
++					break;
++				}
++			}
++			j++;
++		}
++		if (colon < 0) {
++			continue; // Half-typed header.
++		}
++
++		const int header_line = _line_at(colon);
++		const int64_t limit = base >= 0 ? brackets[base].close : len;
++		int64_t p = colon + 1;
++		while (p < lines[header_line].end && (text[p] == ' ' || text[p] == '\t')) {
++			p++;
++		}
++		int64_t e;
++		if (p < lines[header_line].code_end && p < limit) {
++			// The body follows on the same line: `func f(): return 1`.
++			b.body_from = p;
++			if (base >= 0) {
++				// A lambda in a call: up to the next argument or the end of the call.
++				e = limit;
++				int64_t k = p;
++				while (k < limit) {
++					if (kind[k] == KIND_CODE && (text[k] == '(' || text[k] == '[' || text[k] == '{')) {
++						const int inner = _bracket_opening_at(k);
++						k = inner >= 0 ? brackets[inner].close + 1 : k + 1;
++						continue;
++					}
++					if (_is_code(k, ',')) {
++						e = k;
++						break;
++					}
++					k++;
++				}
++			} else {
++				int last = header_line;
++				while (last + 1 < (int)lines.size() && _line_continues(lines[last + 1], -1)) {
++					last++;
++				}
++				e = lines[last].code_end;
++			}
++		} else {
++			// An indented body: the following lines indented deeper than the header's line, up
++			// to the first line of code that is not (blank lines and continued statements
++			// aside). Comments on lines of their own never end it (commented-out code sits at
++			// column 0); a last one belongs to the body only when indented like it.
++			const int header_indent = lines[_line_at(b.from)].indent;
++			int first = -1;
++			for (int k = header_line + 1; k < (int)lines.size() && lines[k].start <= limit; k++) {
++				if (!lines[k].blank && !lines[k].comment_only) {
++					first = k;
++					break;
++				}
++			}
++			if (first < 0 || lines[first].indent <= header_indent) {
++				// No body (yet), or one of comments only: the header alone is the definition,
++				// and it has no inside.
++				b.body_from = colon + 1;
++				b.to = colon + 1;
++				blocks.push_back(b);
++				continue;
++			}
++			const int body_indent = lines[first].indent;
++			b.body_from = lines[header_line].end;
++			int last = -1;
++			for (int k = header_line + 1; k < (int)lines.size() && lines[k].start <= limit; k++) {
++				const Line &l = lines[k];
++				if (l.blank) {
++					continue;
++				}
++				const bool continues = _line_continues(l, base);
++				if (l.comment_only && !continues) {
++					if (l.indent >= body_indent) {
++						last = k;
++					}
++					continue;
++				}
++				if (!continues && l.indent < body_indent) {
++					break;
++				}
++				last = k;
++			}
++			if (last < 0) {
++				continue;
++			}
++			e = lines[last].comment_only ? lines[last].end : lines[last].code_end;
++			if (base >= 0) {
++				// A lambda in a call: the next argument may follow on the last line of the
++				// body (`f(func():` / `print(1), 2)`). The lambda ends before that comma.
++				for (int64_t k = lines[last].first; k < e; k++) {
++					if (_is_code(k, ',') && _innermost_bracket(k) == base) {
++						e = k;
++						break;
++					}
++				}
++			}
++		}
++		e = MIN(e, limit);
++		if (base >= 0) {
++			// Cut at the enclosing bracket: drop the blanks before it.
++			while (e > b.body_from && kind[e - 1] == KIND_CODE && _is_space(text[e - 1])) {
++				e--;
++			}
++		}
++		b.to = e;
++		if (b.to > b.body_from) {
++			blocks.push_back(b);
++		}
++	}
++}
++
++bool HelixGDScript::_block_object(int64_t p_pos, bool p_inside, bool p_class, Span &r_span) const {
++	// The smallest one containing the cursor.
++	bool found = false;
++	for (const Block &b : blocks) {
++		if (b.is_class != p_class) {
++			continue;
++		}
++		const int64_t from = p_inside ? b.body_from : b.from;
++		if (from > p_pos) {
++			if (b.from > p_pos) {
++				break; // Sorted by `from`: no later block contains the cursor.
++			}
++			continue;
++		}
++		if (p_pos >= b.to) {
++			continue;
++		}
++		if (!found || b.to - from < r_span.to - r_span.from) {
++			r_span.from = from;
++			r_span.to = b.to;
++			found = true;
++		}
++	}
++	return found;
++}
++
++/* Text objects */
++
++HelixRange HelixGDScript::textobject(const HelixDoc &p_doc, const HelixRange &p_range, bool p_inside, Object p_object) const {
++	const int64_t pos = HelixAlgo::cursor(p_doc, p_range);
++	if (pos < 0 || pos >= len) {
++		return p_range;
++	}
++	Span span;
++	bool found = false;
++	switch (p_object) {
++		case OBJECT_COMMENT:
++			found = _comment_object(pos, p_inside, span);
++			break;
++		case OBJECT_ARGUMENT:
++			found = _argument_object(pos, span);
++			break;
++		case OBJECT_FUNCTION:
++			found = _block_object(pos, p_inside, false, span);
++			break;
++		case OBJECT_CLASS:
++			found = _block_object(pos, p_inside, true, span);
++			break;
++	}
++	if (!found || span.to <= span.from) {
++		return p_range;
++	}
++	return HelixRange(span.from, span.to);
++}
++
++/* Expand / shrink selection */
++
++int64_t HelixGDScript::_line_content_end(int p_line) const {
++	return lines[p_line].comment_only ? lines[p_line].end : lines[p_line].code_end;
++}
++
++void HelixGDScript::_scan_scopes() {
++	line_scope.resize(lines.size());
++	for (uint32_t i = 0; i < lines.size(); i++) {
++		line_scope[i] = -1;
++	}
++	LocalVector<int> stack;
++	int last_content = -1; // Last line of the last statement seen.
++	int pending_header = -1; // First line of a statement ending in `:`, waiting for its body.
++	int k = 0;
++	const int count = lines.size();
++	while (k < count) {
++		const Line &l = lines[k];
++		if (l.blank) {
++			k++;
++			continue;
++		}
++		const int top = stack.is_empty() ? -1 : stack[stack.size() - 1];
++		if (_line_continues(l, -1)) {
++			line_scope[k] = top;
++			last_content = k;
++			k++;
++			continue;
++		}
++		if (l.comment_only) {
++			// Comments never close a scope (commented-out code sits at column 0). One is part
++			// of the innermost open scope it is indented into, and may be its last line.
++			line_scope[k] = top;
++			int owner = top;
++			while (owner >= 0 && scopes[owner].body_indent > l.indent) {
++				owner = scopes[owner].parent;
++			}
++			if (owner >= 0) {
++				scopes[owner].last_comment = k;
++			}
++			k++;
++			continue;
++		}
++		while (!stack.is_empty() && l.indent < scopes[stack[stack.size() - 1]].body_indent) {
++			Scope &closing = scopes[stack[stack.size() - 1]];
++			closing.last_line = MAX(MAX(last_content, closing.last_comment), closing.first_line);
++			stack.resize(stack.size() - 1);
++		}
++		if (pending_header >= 0 && l.indent > lines[pending_header].indent) {
++			Scope s;
++			s.header_line = pending_header;
++			s.first_line = k;
++			s.last_line = k;
++			s.body_indent = l.indent;
++			s.parent = line_scope[pending_header];
++			const int index = scopes.size();
++			scopes.push_back(s);
++			stack.push_back(index);
++			// The header, and the comments between it and the body, are in the scope.
++			for (int h = pending_header; h < k; h++) {
++				line_scope[h] = index;
++			}
++		}
++		pending_header = -1;
++		// The statement, with the lines that continue it.
++		int end = k;
++		while (true) {
++			int next = end + 1;
++			while (next < count && lines[next].blank) {
++				next++;
++			}
++			if (next >= count || !_line_continues(lines[next], -1)) {
++				break;
++			}
++			end = next;
++		}
++		const int scope = stack.is_empty() ? -1 : stack[stack.size() - 1];
++		for (int j = k; j <= end; j++) {
++			line_scope[j] = scope;
++		}
++		const Line &le = lines[end];
++		if (le.code_end > le.first && _is_code(le.code_end - 1, ':')) {
++			pending_header = k;
++		}
++		last_content = end;
++		k = end + 1;
++	}
++	while (!stack.is_empty()) {
++		Scope &closing = scopes[stack[stack.size() - 1]];
++		closing.last_line = MAX(MAX(last_content, closing.last_comment), closing.first_line);
++		stack.resize(stack.size() - 1);
++	}
++
++	// if / elif / else chains: consecutive sibling scopes.
++	for (uint32_t i = 0; i < scopes.size(); i++) {
++		Scope &s = scopes[i];
++		s.chain_first = i;
++		s.chain_last = i;
++	}
++	int previous = -1; // The scope before, when this one may continue its chain.
++	for (uint32_t i = 0; i < scopes.size(); i++) {
++		Scope &s = scopes[i];
++		const Line &h = lines[s.header_line];
++		const bool continues_chain = _is_word_at(h.first, "elif") || _is_word_at(h.first, "else");
++		if (continues_chain) {
++			// The closest earlier scope with the same parent and indentation.
++			for (int j = (int)i - 1; j >= 0; j--) {
++				const Scope &o = scopes[j];
++				if (o.parent == s.parent && lines[o.header_line].indent == h.indent) {
++					previous = j;
++					break;
++				}
++				if (o.header_line < (s.parent >= 0 ? scopes[s.parent].header_line : 0)) {
++					break;
++				}
++			}
++			if (previous >= 0) {
++				s.chain_first = scopes[previous].chain_first;
++				for (int j = s.chain_first; j <= (int)i; j++) {
++					if (scopes[j].chain_first == s.chain_first) {
++						scopes[j].chain_last = i;
++					}
++				}
++			}
++		}
++		previous = -1;
++	}
++}
++
++// Adds [p_from, p_to) when it contains [p_inner_from, p_inner_to).
++void HelixGDScript::_add_region(LocalVector<Span> &r_regions, int64_t p_from, int64_t p_to, int64_t p_inner_from, int64_t p_inner_to) const {
++	if (p_from < p_to && p_from <= p_inner_from && p_to >= p_inner_to) {
++		Span s;
++		s.from = p_from;
++		s.to = p_to;
++		r_regions.push_back(s);
++	}
++}
++
++// Every region of the ladder containing [p_from, p_to), in no particular order.
++void HelixGDScript::_regions(int64_t p_from, int64_t p_to, LocalVector<Span> &r_regions) const {
++	p_from = CLAMP(p_from, (int64_t)0, len);
++	p_to = CLAMP(p_to, p_from, len);
++
++	// The word.
++	if (p_from < p_to) {
++		bool word = true;
++		for (int64_t p = p_from; p < p_to && word; p++) {
++			word = _is_ident(text[p]);
++		}
++		if (word) {
++			int64_t s = p_from;
++			int64_t e = p_to;
++			while (s > 0 && _is_ident(text[s - 1])) {
++				s--;
++			}
++			while (e < len && _is_ident(text[e])) {
++				e++;
++			}
++			_add_region(r_regions, s, e, p_from, p_to);
++		}
++	}
++	// The string literal.
++	{
++		int lo = 0;
++		int hi = strings.size();
++		while (lo < hi) {
++			const int mid = (lo + hi) / 2;
++			if (strings[mid].to <= p_from) {
++				lo = mid + 1;
++			} else {
++				hi = mid;
++			}
++		}
++		if (lo < (int)strings.size()) {
++			_add_region(r_regions, strings[lo].from, strings[lo].to, p_from, p_to);
++		}
++	}
++	// The comment, and the run of comments it is in.
++	{
++		int lo = 0;
++		int hi = comments.size();
++		while (lo < hi) {
++			const int mid = (lo + hi) / 2;
++			if (comments[mid].to <= p_from) {
++				lo = mid + 1;
++			} else {
++				hi = mid;
++			}
++		}
++		if (lo < (int)comments.size() && comments[lo].from <= p_from) {
++			_add_region(r_regions, comments[lo].from, comments[lo].to, p_from, p_to);
++			int first = lo;
++			int last = lo;
++			while (first > 0 && _comments_adjacent(first - 1)) {
++				first--;
++			}
++			while (_comments_adjacent(last)) {
++				last++;
++			}
++			_add_region(r_regions, comments[first].from, comments[last].to, p_from, p_to);
++		}
++	}
++	// Brackets: the element between commas, the contents, the pair.
++	for (int b = _innermost_bracket(p_from); b >= 0; b = brackets[b].parent) {
++		const Bracket &bracket = brackets[b];
++		const int64_t pair_end = bracket.closed ? bracket.close + 1 : bracket.close;
++		if (bracket.open < p_from && p_to <= bracket.close) {
++			// Elements.
++			int64_t from = bracket.open + 1;
++			int64_t j = from;
++			while (true) {
++				const bool at_end = j >= bracket.close;
++				if (at_end || _is_code(j, ',')) {
++					int64_t s = from;
++					int64_t e = MIN(MIN(j, bracket.close), len);
++					while (s < e && _is_blank_or_comment(s)) {
++						s++;
++					}
++					while (e > s && _is_blank_or_comment(e - 1)) {
++						e--;
++					}
++					_add_region(r_regions, s, e, p_from, p_to);
++					if (at_end || j >= p_from) {
++						break;
++					}
++					from = j + 1;
++					j++;
++					continue;
++				}
++				if (kind[j] == KIND_CODE && (text[j] == '(' || text[j] == '[' || text[j] == '{')) {
++					const int inner = _bracket_opening_at(j);
++					if (inner >= 0) {
++						j = brackets[inner].close + 1;
++						continue;
++					}
++				}
++				j++;
++			}
++			// Contents.
++			int64_t s = bracket.open + 1;
++			int64_t e = MIN(bracket.close, len);
++			while (s < e && _is_blank_or_comment(s)) {
++				s++;
++			}
++			while (e > s && _is_blank_or_comment(e - 1)) {
++				e--;
++			}
++			_add_region(r_regions, s, e, p_from, p_to);
++		}
++		_add_region(r_regions, bracket.open, pair_end, p_from, p_to);
++	}
++	// The statement.
++	{
++		int first = _line_at(p_from);
++		while (first > 0 && (lines[first].blank || _line_continues(lines[first], -1))) {
++			first--;
++		}
++		int last = first;
++		while (true) {
++			int next = last + 1;
++			while (next < (int)lines.size() && lines[next].blank) {
++				next++;
++			}
++			if (next >= (int)lines.size() || !_line_continues(lines[next], -1)) {
++				break;
++			}
++			last = next;
++		}
++		_add_region(r_regions, lines[first].first, lines[last].code_end, p_from, p_to);
++	}
++	// The enclosing blocks: their statements, the block with its header, the if / else chain.
++	for (int s = line_scope[_line_at(p_from)]; s >= 0; s = scopes[s].parent) {
++		const Scope &scope = scopes[s];
++		const int64_t end = _line_content_end(scope.last_line);
++		_add_region(r_regions, lines[scope.first_line].first, end, p_from, p_to);
++		_add_region(r_regions, lines[scope.header_line].first, end, p_from, p_to);
++		if (scope.chain_first != scope.chain_last) {
++			_add_region(r_regions, lines[scopes[scope.chain_first].header_line].first, _line_content_end(scopes[scope.chain_last].last_line), p_from, p_to);
++		}
++	}
++	// Functions and classes as the text objects see them (lambdas inside a statement too).
++	for (const Block &b : blocks) {
++		if (b.from > p_from) {
++			break;
++		}
++		_add_region(r_regions, b.from, b.to, p_from, p_to);
++		int64_t body = b.body_from;
++		while (body < b.to && _is_space(text[body])) {
++			body++;
++		}
++		_add_region(r_regions, body, b.to, p_from, p_to);
++	}
++	// All the statements of the buffer, then the buffer.
++	{
++		int first = 0;
++		while (first < (int)lines.size() && lines[first].blank) {
++			first++;
++		}
++		int last = (int)lines.size() - 1;
++		while (last > first && lines[last].blank) {
++			last--;
++		}
++		if (first < (int)lines.size()) {
++			_add_region(r_regions, lines[first].first, _line_content_end(last), p_from, p_to);
++		}
++		_add_region(r_regions, 0, len, p_from, p_to);
++	}
++}
++
++HelixRange HelixGDScript::expand(const HelixRange &p_range) const {
++	const int64_t from = p_range.from();
++	const int64_t to = p_range.to();
++	LocalVector<Span> regions;
++	_regions(from, to, regions);
++	bool found = false;
++	Span best;
++	for (const Span &s : regions) {
++		if (s.from == from && s.to == to) {
++			continue; // Not strictly larger.
++		}
++		if (!found || s.to - s.from < best.to - best.from) {
++			best = s;
++			found = true;
++		}
++	}
++	if (!found) {
++		return p_range;
++	}
++	return HelixRange(best.from, best.to).with_direction(p_range.is_forward());
++}
++
++HelixRange HelixGDScript::shrink(const HelixRange &p_range) const {
++	const int64_t from = p_range.from();
++	const int64_t to = MIN(p_range.to(), len);
++	int64_t first = from;
++	while (first < to && _is_space(text[first])) {
++		first++;
++	}
++	if (first >= to) {
++		return p_range;
++	}
++	LocalVector<Span> regions;
++	_regions(first, first + 1, regions);
++	bool found = false;
++	Span best;
++	for (const Span &s : regions) {
++		if (s.from != first || s.to > to || s.to - s.from >= to - from) {
++			continue;
++		}
++		if (!found || s.to - s.from > best.to - best.from) {
++			best = s;
++			found = true;
++		}
++	}
++	if (!found) {
++		return p_range;
++	}
++	return HelixRange(best.from, best.to).with_direction(p_range.is_forward());
++}
+diff --git a/editor/gui/helix_gdscript.h b/editor/gui/helix_gdscript.h
+new file mode 100644
+index 0000000..e2eb31a
+--- /dev/null
++++ b/editor/gui/helix_gdscript.h
+@@ -0,0 +1,159 @@
++/**************************************************************************/
++/*  helix_gdscript.h                                                      */
++/**************************************************************************/
++/*                         This file is part of:                          */
++/*                             GODOT ENGINE                               */
++/*                        https://godotengine.org                         */
++/**************************************************************************/
++/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
++/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
++/*                                                                        */
++/* Permission is hereby granted, free of charge, to any person obtaining  */
++/* a copy of this software and associated documentation files (the        */
++/* "Software"), to deal in the Software without restriction, including    */
++/* without limitation the rights to use, copy, modify, merge, publish,    */
++/* distribute, sublicense, and/or sell copies of the Software, and to     */
++/* permit persons to whom the Software is furnished to do so, subject to  */
++/* the following conditions:                                              */
++/*                                                                        */
++/* The above copyright notice and this permission notice shall be         */
++/* included in all copies or substantial portions of the Software.        */
++/*                                                                        */
++/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
++/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
++/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
++/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
++/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
++/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
++/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
++/**************************************************************************/
++
++#pragma once
++
++#include "core/templates/local_vector.h"
++#include "editor/gui/helix_text.h"
++
++// The structure of a GDScript buffer, read from its text alone: strings, comments, brackets,
++// logical lines and indentation. Helix gets its syntax-aware text objects (`mif`, `mia`...) from
++// a tree-sitter grammar; Helix mode has no parser at hand (it must also work on half-typed
++// code and stay independent of the GDScript module), so the same objects are found with text
++// rules. What each object covers follows Helix's `runtime/queries/gdscript/textobjects.scm`,
++// as recorded from Helix in the `ts/*` cases of the test corpus.
++//
++// One instance scans the buffer once (linear in its length) and then answers for any number
++// of ranges. It keeps no reference to the document.
++class HelixGDScript {
++public:
++	enum Object {
++		OBJECT_FUNCTION, // `f`: a `func` definition or lambda.
++		OBJECT_CLASS, // `t`: an inner `class`.
++		OBJECT_ARGUMENT, // `a`: an argument of a call or a parameter of a function.
++		OBJECT_COMMENT, // `c`
++	};
++
++private:
++	enum CharKind {
++		KIND_CODE,
++		KIND_STRING,
++		KIND_COMMENT,
++	};
++	struct Span {
++		int64_t from = 0;
++		int64_t to = 0;
++	};
++	struct Bracket {
++		int64_t open = 0;
++		int64_t close = 0; // Position of the closing bracket; the end of the text when it is missing.
++		int parent = -1;
++		bool closed = false;
++	};
++
++	String text;
++	int64_t len = 0;
++	int tab_width = 4;
++	LocalVector<uint8_t> kind; // CharKind of every character.
++	LocalVector<Span> comments; // `#` to the end of the line, in order.
++	LocalVector<Span> strings; // Quotes included, in order.
++	LocalVector<Bracket> brackets; // Sorted by `open`.
++
++	struct Line {
++		int64_t start = 0;
++		int64_t end = 0; // Position of its newline (the end of the text for the last line).
++		int64_t first = 0; // First non-blank character; `end` on a blank line.
++		int64_t code_end = 0; // End of its code: without trailing blanks and a trailing comment.
++		int indent = 0; // Visual columns of the indentation.
++		bool blank = false;
++		bool comment_only = false;
++		bool in_string = false; // Starts inside a multi-line string.
++		bool after_backslash = false; // The previous line ends with a line continuation.
++		int bracket = -1; // Innermost bracket open across the start of the line.
++	};
++	LocalVector<Line> lines;
++
++	// A definition with a header ending in `:` and a body: a `func` (lambdas too) or a `class`.
++	struct Block {
++		int64_t from = 0; // First character of the header (`func`, `static`, `class`, or an annotation on the same line).
++		int64_t body_from = 0;
++		int64_t to = 0; // End of the last statement of the body.
++		bool is_class = false;
++	};
++	LocalVector<Block> blocks; // Sorted by `from`.
++
++	void _scan();
++	void _scan_lines();
++	void _scan_blocks();
++	int _line_at(int64_t p_pos) const;
++	bool _is_word_at(int64_t p_pos, const char *p_word) const;
++	bool _line_continues(const Line &p_line, int p_base_bracket) const;
++	bool _block_object(int64_t p_pos, bool p_inside, bool p_class, Span &r_span) const;
++
++	// Any statement whose header ends in `:` with the lines indented under it (`if`, `for`,
++	// `while`, `match` and its branches, `func`, `class`...), for expand() / shrink().
++	struct Scope {
++		int header_line = 0;
++		int first_line = 0; // First line of the body.
++		int last_line = 0; // Last line of the body.
++		int body_indent = 0;
++		int parent = -1;
++		int last_comment = -1; // Last comment line that is a statement of this scope.
++		int chain_first = -1; // An `if` with its `elif` / `else` branches: the scopes of the
++		int chain_last = -1; // first and the last branch (itself when it stands alone).
++	};
++	LocalVector<Scope> scopes; // Sorted by `header_line`.
++	LocalVector<int> line_scope; // Innermost scope of every line (a header line is in its own scope); -1 at the top level.
++
++	void _scan_scopes();
++	int64_t _line_content_end(int p_line) const;
++	void _add_region(LocalVector<Span> &r_regions, int64_t p_from, int64_t p_to, int64_t p_inner_from, int64_t p_inner_to) const;
++	void _regions(int64_t p_from, int64_t p_to, LocalVector<Span> &r_regions) const;
++	bool _is_code(int64_t p_pos, char32_t p_c) const { return p_pos >= 0 && p_pos < len && kind[p_pos] == KIND_CODE && text[p_pos] == p_c; }
++	bool _is_blank_or_comment(int64_t p_pos) const;
++	int _bracket_opening_at(int64_t p_pos) const; // Index of the bracket opening at p_pos, or -1.
++	int _innermost_bracket(int64_t p_pos) const; // Innermost bracket with open <= p_pos <= close, or -1.
++	bool _is_argument_list(const Bracket &p_bracket) const;
++	bool _item_at(const Bracket &p_bracket, int64_t p_pos, Span &r_item) const;
++
++	int _comment_owner(int p_comment) const;
++	bool _comments_adjacent(int p_comment) const;
++	bool _comment_object(int64_t p_pos, bool p_inside, Span &r_span) const;
++	bool _argument_object(int64_t p_pos, Span &r_span) const;
++
++public:
++	// The smallest object of that kind containing the cursor of p_range (helix_core
++	// textobject_treesitter), as a forward range; p_range itself when there is none.
++	HelixRange textobject(const HelixDoc &p_doc, const HelixRange &p_range, bool p_inside, Object p_object) const;
++
++	// Helix's expand_selection / shrink_selection (<A-o> / <A-i>) walk the syntax tree. Without
++	// one, they walk a fixed ladder of enclosing regions, smallest first:
++	//   the word; the string literal; the comment, then the run of comments; the element between
++	//   commas of each enclosing bracket, the contents of the bracket, the bracket with its
++	//   brackets; the statement; the statements of the block it is in; that block with its
++	//   header; an if / elif / else chain; and so on outwards, up to the whole buffer.
++	// expand(): the smallest of these regions strictly containing p_range (p_range when there is
++	// none). shrink(): the largest one strictly inside p_range that starts at its first
++	// non-blank character (p_range when there is none). Both keep the direction of the range.
++	HelixRange expand(const HelixRange &p_range) const;
++	HelixRange shrink(const HelixRange &p_range) const;
++
++	HelixGDScript(const HelixDoc &p_doc, int p_tab_width);
++};
 diff --git a/editor/gui/helix_mode.cpp b/editor/gui/helix_mode.cpp
 new file mode 100644
-index 0000000..cc616e3
+index 0000000..eeba001
 --- /dev/null
 +++ b/editor/gui/helix_mode.cpp
-@@ -0,0 +1,4881 @@
+@@ -0,0 +1,5177 @@
 +/**************************************************************************/
 +/*  helix_mode.cpp                                                        */
 +/**************************************************************************/
@@ -899,6 +2072,7 @@ index 0000000..cc616e3
 +#include "core/os/keyboard.h"
 +#include "core/string/char_utils.h"
 +#include "core/templates/pair.h"
++#include "editor/gui/helix_gdscript.h"
 +#include "modules/modules_enabled.gen.h" // For regex.
 +#include "scene/gui/code_edit.h"
 +#include "servers/display/display_server.h"
@@ -992,6 +2166,11 @@ index 0000000..cc616e3
 +
 +void HelixMode::_on_lines_edited(int p_from, int p_to) {
 +	doc.invalidate();
++	if (enabled && pending.begins_with("gw")) {
++		// The buffer changed under the jump labels (reload, another editor of the same
++		// script...): their positions are stale.
++		cancel_pending();
++	}
 +}
 +
 +bool HelixMode::_alive() {
@@ -1121,6 +2300,9 @@ index 0000000..cc616e3
 +		return;
 +	}
 +	doc.invalidate();
++	if (pending.begins_with("gw")) {
++		cancel_pending(); // Jump labels of the replaced text.
++	}
 +	if (step_open) {
 +		step_version = text_edit->get_version();
 +		step_sel_set = false;
@@ -2001,6 +3183,9 @@ index 0000000..cc616e3
 +			// selection collapses to a cursor) also right after typing; otherwise the tracked
 +			// ranges would be applied to the clicked position (drawn, and kept on <esc>).
 +			_insert_check_nav();
++		}
++		if (mb.is_valid() && mb->is_pressed() && pending.begins_with("gw")) {
++			cancel_pending(); // A click takes the jump labels down.
 +		}
 +		return false;
 +	}
@@ -3247,8 +4432,18 @@ index 0000000..cc616e3
 +		_set_status("Diff is not available in current buffer");
 +		return;
 +	}
-+	if (p_ch == 't' || p_ch == 'f' || p_ch == 'a' || p_ch == 'c' || p_ch == 'T' || p_ch == 'e') {
++	const bool syntax_object = p_ch == 't' || p_ch == 'f' || p_ch == 'a' || p_ch == 'c';
++	if ((syntax_object && !gdscript) || p_ch == 'T' || p_ch == 'e') {
 +		_set_status("Tree-sitter text objects are not available in this buffer", true);
++		return;
++	}
++	if (syntax_object) {
++		// One scan of the buffer serves every selection.
++		const HelixGDScript syntax(doc, _tab_width());
++		const HelixGDScript::Object object = p_ch == 'f' ? HelixGDScript::OBJECT_FUNCTION : (p_ch == 't' ? HelixGDScript::OBJECT_CLASS : (p_ch == 'a' ? HelixGDScript::OBJECT_ARGUMENT : HelixGDScript::OBJECT_COMMENT));
++		_set_selection(_transform(sel, [&](const HelixRange &r) {
++			return syntax.textobject(doc, r, p_inside, object);
++		}));
 +		return;
 +	}
 +	_set_selection(_transform(sel, [&](const HelixRange &r) {
@@ -3284,6 +4479,12 @@ index 0000000..cc616e3
 +			case MOTION_TEXTOBJECT:
 +				_textobject(p_motion.inside, p_motion.ch, p_motion.count);
 +				break;
++			case MOTION_EXPAND:
++				_expand_selection();
++				break;
++			case MOTION_SHRINK:
++				_shrink_selection();
++				break;
 +			default:
 +				return;
 +		}
@@ -3291,6 +4492,57 @@ index 0000000..cc616e3
 +			break;
 +		}
 +	}
++}
++
++// helix-term expand_selection: every selection grows to the next enclosing region; the
++// selection it replaces is remembered for <A-i>.
++void HelixMode::_expand_selection() {
++	if (!gdscript) {
++		return; // No syntax to go by (Helix: no tree-sitter grammar).
++	}
++	const HelixGDScript syntax(doc, _tab_width());
++	HelixSelection current = sel;
++	_set_selection(_transform(sel, [&](const HelixRange &r) {
++		return syntax.expand(r);
++	}));
++	if (sel != current) {
++		if (object_selections.size() >= 1024) {
++			object_selections.remove_at(0);
++		}
++		object_selections.push_back(current);
++	}
++}
++
++// helix-term shrink_selection: back to the selection <A-o> replaced when the current one still
++// contains it, otherwise into the first inner region.
++void HelixMode::_shrink_selection() {
++	if (!gdscript) {
++		return;
++	}
++	if (!object_selections.is_empty()) {
++		HelixSelection previous = object_selections[object_selections.size() - 1];
++		object_selections.remove_at(object_selections.size() - 1);
++		bool contained = true;
++		for (int i = 0; i < previous.ranges.size() && contained; i++) {
++			const HelixRange &p = previous.ranges[i];
++			bool inside = false;
++			// Every remembered range must still lie within the text and within a current range.
++			for (int j = 0; j < sel.ranges.size() && !inside; j++) {
++				inside = sel.ranges[j].from() <= p.from() && sel.ranges[j].to() >= p.to();
++			}
++			contained = inside && p.to() <= doc.len();
++		}
++		if (contained) {
++			_set_selection(previous);
++			return;
++		}
++		// The selection moved on: what was remembered cannot be shrunk to any more.
++		object_selections.clear();
++	}
++	const HelixGDScript syntax(doc, _tab_width());
++	_set_selection(_transform(sel, [&](const HelixRange &r) {
++		return syntax.shrink(r);
++	}));
 +}
 +
 +void HelixMode::_replace_char(const String &p_with) {
@@ -4886,6 +6138,172 @@ index 0000000..cc616e3
 +	emit_signal(SNAME("host_command"), (int)p_cmd, args);
 +}
 +
++/* Jump labels (gw) */
++
++static const int JUMP_ALPHABET_SIZE = 26; // Helix's default jump-label-alphabet, a-z.
++
++// helix-term jump_to_word: the jump candidates are the visible words of two or more graphemes
++// made of word characters, collected one forward, one backward, alternately, starting at the
++// primary cursor (so the nearest words get the first labels). The word under the cursor is
++// not a candidate.
++void HelixMode::_jump_collect() {
++	jump_targets.clear();
++	jump_primary = sel.primary_range();
++	jump_extend = _extending();
++	const int limit = JUMP_ALPHABET_SIZE * JUMP_ALPHABET_SIZE;
++
++	int first_line = 0;
++	int last_line = doc.line_count() - 1;
++	if (text_edit->is_inside_tree() && text_edit->get_visible_line_count() > 0) {
++		first_line = CLAMP(text_edit->get_first_visible_line(), 0, last_line);
++		last_line = CLAMP(text_edit->get_last_full_visible_line(), first_line, last_line);
++	}
++	const int64_t start = doc.line_to_char(first_line);
++	const int64_t end = doc.line_to_char(last_line + 1);
++
++	auto all_word = [&](int64_t p_from, int64_t p_to) {
++		for (int64_t p = p_from; p < p_to; p++) {
++			if (!is_word(doc.char_at(p))) {
++				return false;
++			}
++		}
++		return true;
++	};
++	// Helix has no folds; a word on a line hidden in a fold gets no label here.
++	auto hidden = [&](int64_t p_pos) {
++		return _is_line_hidden(doc.char_to_line(p_pos));
++	};
++
++	const int64_t cur = cursor(doc, jump_primary);
++	// Helix always has the cursor in view. Here the view may have been scrolled away from it
++	// (mouse wheel, scroll bar, minimap): the search then starts at the edge of the view
++	// nearest to the cursor, so that the labels still go to the visible words.
++	const bool in_view = cur >= start && cur < end;
++	const int64_t seed = CLAMP(cur, start, end);
++	HelixRange fwd = HelixRange::point(seed);
++	HelixRange rev = HelixRange::point(seed);
++	if (in_view && cur < doc.len() && !HelixAlgo::is_whitespace(doc.char_at(cur))) {
++		HelixRange word_end = word_move(doc, fwd, 1, NEXT_WORD_END);
++		// Single grapheme words need a special case.
++		if (word_end.anchor == cur) {
++			fwd = word_end;
++		}
++		HelixRange word_start = word_move(doc, rev, 1, PREV_WORD_START);
++		if (word_start.anchor == doc.next_grapheme(cur)) {
++			rev = word_start;
++		}
++	}
++	while (true) {
++		bool changed = false;
++		while (fwd.head < end) {
++			HelixRange next = word_move(doc, fwd, 1, NEXT_WORD_END);
++			if (next == fwd) {
++				fwd.head = end; // End of the text: nothing more this way.
++				break;
++			}
++			fwd = next;
++			// At least two graphemes long and made of word characters ("=<" is a "word" of
++			// the word motions too).
++			int64_t g1 = doc.prev_grapheme(fwd.head);
++			int64_t g0 = doc.prev_grapheme(g1);
++			if (!(g0 < g1 && g1 < fwd.head && all_word(g0, fwd.head))) {
++				continue;
++			}
++			// Skip any leading whitespace.
++			while (fwd.anchor < fwd.head && !is_word(doc.char_at(fwd.anchor))) {
++				fwd.anchor++;
++			}
++			if (hidden(fwd.from())) {
++				continue;
++			}
++			changed = true;
++			jump_targets.push_back(fwd);
++			break;
++		}
++		if (jump_targets.size() >= limit) {
++			break;
++		}
++		while (rev.head > start) {
++			HelixRange prev = word_move(doc, rev, 1, PREV_WORD_START);
++			if (prev == rev) {
++				rev.head = start; // Start of the text.
++				break;
++			}
++			rev = prev;
++			int64_t g1 = doc.next_grapheme(rev.head);
++			int64_t g2 = doc.next_grapheme(g1);
++			if (!(rev.head < g1 && g1 < g2 && all_word(rev.head, g2))) {
++				continue;
++			}
++			while (rev.anchor > rev.head && !is_word(doc.char_at(rev.anchor - 1))) {
++				rev.anchor--;
++			}
++			if (hidden(rev.from())) {
++				continue;
++			}
++			changed = true;
++			jump_targets.push_back(rev);
++			break;
++		}
++		if (!changed || jump_targets.size() >= limit) {
++			break;
++		}
++	}
++}
++
++void HelixMode::_jump_to(int p_index) {
++	HelixRange range = jump_targets[p_index];
++	if (jump_extend) {
++		// extend_to_word: the selection grows from the far edge of what was selected.
++		int64_t anchor;
++		if (range.anchor < range.head) {
++			anchor = MIN(range.anchor, jump_primary.from());
++		} else {
++			anchor = MAX(range.anchor, jump_primary.to());
++		}
++		range = HelixRange(anchor, range.head);
++	} else {
++		range = range.with_direction(true);
++	}
++	_set_selection(HelixSelection::single(range.anchor, range.head));
++}
++
++PackedInt32Array HelixMode::get_jump_label_cells() const {
++	PackedInt32Array out;
++	if (!text_edit || jump_targets.is_empty() || !pending.begins_with("gw")) {
++		return out;
++	}
++	struct Cell {
++		int64_t pos = 0;
++		char32_t ch = 0;
++		bool operator<(const Cell &p_o) const { return pos < p_o.pos; }
++	};
++	Vector<Cell> cells;
++	cells.resize(jump_targets.size() * 2);
++	for (int i = 0; i < jump_targets.size(); i++) {
++		int64_t from = jump_targets[i].from();
++		Cell first;
++		first.pos = from;
++		first.ch = 'a' + i / JUMP_ALPHABET_SIZE;
++		Cell second;
++		second.pos = doc.next_grapheme(from);
++		second.ch = 'a' + i % JUMP_ALPHABET_SIZE;
++		cells.write[i * 2] = first;
++		cells.write[i * 2 + 1] = second;
++	}
++	cells.sort();
++	out.resize(cells.size() * 3);
++	int *w = out.ptrw();
++	for (int i = 0; i < cells.size(); i++) {
++		int line, col;
++		doc.pos_to_line_col(cells[i].pos, line, col);
++		w[i * 3] = line;
++		w[i * 3 + 1] = col;
++		w[i * 3 + 2] = (int)cells[i].ch;
++	}
++	return out;
++}
++
 +/* Dispatch tables */
 +
 +bool HelixMode::_dispatch_pending(const String &p_key) {
@@ -4929,8 +6347,36 @@ index 0000000..cc616e3
 +		}
 +		return true;
 +	}
++	if (p == "gw" || (p.length() == 3 && p.begins_with("gw"))) {
++		// Jump labels: two unmodified letters of the alphabet (a-z) name a label.
++		pending = String();
++		int index = p_key.length() == 1 && p_key[0] >= 'a' && p_key[0] <= 'z' ? (int)(p_key[0] - 'a') : -1;
++		if (p == "gw") {
++			// Bail if the given character cannot be a jump label.
++			if (index < 0 || index * JUMP_ALPHABET_SIZE > jump_targets.size()) {
++				jump_targets.clear();
++				return true;
++			}
++			pending = "gw" + p_key;
++			return false;
++		}
++		int outer = (int)(p[2] - 'a') * JUMP_ALPHABET_SIZE;
++		if (index >= 0 && outer + index < jump_targets.size()) {
++			_jump_to(outer + index);
++		}
++		jump_targets.clear();
++		return true;
++	}
 +	if (p == "g") {
 +		pending = String();
++		if (p_key == "w") {
++			_jump_collect();
++			if (!jump_targets.is_empty()) {
++				pending = "gw";
++				return false;
++			}
++			return true;
++		}
 +		if (p_key == "g") {
 +			_goto_file_start(ext);
 +		} else if (p_key == "e") {
@@ -5180,6 +6626,14 @@ index 0000000..cc616e3
 +		_extend_to_line_bounds();
 +	} else if (k == "<A-x>") {
 +		_shrink_to_line_bounds();
++	} else if (k == "<A-o>" || k == "<A-i>") {
++		// Motions, like in Helix: repeatable with <A-.>. Without syntax they do nothing.
++		if (gdscript) {
++			LastMotion m;
++			m.kind = k == "<A-o>" ? MOTION_EXPAND : MOTION_SHRINK;
++			shared.last_motion = m;
++			_run_motion(m, 1);
++		}
 +	} else if (k == "%") {
 +		_set_selection(HelixSelection::single(0, doc.len()));
 +	} else if (k == ";") {
@@ -5404,6 +6858,7 @@ index 0000000..cc616e3
 +		_hint(out, "p", "Goto previous buffer");
 +		_hint(out, "k", sel_mode ? "Extend up" : "Move up");
 +		_hint(out, "j", sel_mode ? "Extend down" : "Move down");
++		_hint(out, "w", "Jump to a two-character label");
 +	} else if (pending == "m") {
 +		_hint(out, "m", "Goto matching bracket");
 +		_hint(out, "s", "Surround add");
@@ -5447,6 +6902,12 @@ index 0000000..cc616e3
 +		_hint(out, "w", "Word");
 +		_hint(out, "W", "WORD");
 +		_hint(out, "p", "Paragraph");
++		if (gdscript) {
++			_hint(out, "t", "Type definition");
++			_hint(out, "f", "Function");
++			_hint(out, "a", "Argument/parameter");
++			_hint(out, "c", "Comment");
++		}
 +		_hint(out, "m", "Closest surrounding pair");
 +		_hint(out, "<space>", "... or any character acting as a pair");
 +	} else if (pending == "ms" || (pending.begins_with("mr") && pending.length() == 3)) {
@@ -5492,6 +6953,14 @@ index 0000000..cc616e3
 +
 +bool HelixMode::is_using_system_clipboard() const {
 +	return use_system_clipboard;
++}
++
++void HelixMode::set_gdscript(bool p_enabled) {
++	gdscript = p_enabled;
++}
++
++bool HelixMode::is_gdscript() const {
++	return gdscript;
 +}
 +
 +/* Annotated state */
@@ -5746,10 +7215,10 @@ index 0000000..cc616e3
 +}
 diff --git a/editor/gui/helix_mode.h b/editor/gui/helix_mode.h
 new file mode 100644
-index 0000000..37d6284
+index 0000000..b4190ca
 --- /dev/null
 +++ b/editor/gui/helix_mode.h
-@@ -0,0 +1,504 @@
+@@ -0,0 +1,531 @@
 +/**************************************************************************/
 +/*  helix_mode.h                                                          */
 +/**************************************************************************/
@@ -5897,12 +7366,15 @@ index 0000000..37d6284
 +	String status;
 +	bool status_error = false;
 +	bool use_system_clipboard = true;
++	bool gdscript = false;
 +
 +	enum MotionKind {
 +		MOTION_NONE,
 +		MOTION_FIND,
 +		MOTION_PARA,
 +		MOTION_TEXTOBJECT,
++		MOTION_EXPAND, // <A-o>
++		MOTION_SHRINK, // <A-i>
 +	};
 +	struct LastMotion {
 +		MotionKind kind = MOTION_NONE;
@@ -5995,6 +7467,19 @@ index 0000000..37d6284
 +	Vector<NativeCaret> exact_carets; // Native carets as left by _push_exact().
 +	HelixSelection pushed_sel; // Selection of the last _push_selection().
 +	void _end_native_command_deferred();
++
++	// Jump labels (gw). The labels are up exactly while `pending` is "gw" or "gw" + a letter.
++	Vector<HelixRange> jump_targets; // Candidate i has the label alphabet[i / 26], alphabet[i % 26].
++	HelixRange jump_primary; // Primary selection when gw was pressed.
++	bool jump_extend = false; // gw was pressed in select mode.
++	void _jump_collect();
++	void _jump_to(int p_index);
++
++	// Expand / shrink selection (<A-o> / <A-i>, GDScript buffers only): the selections <A-o>
++	// replaced, restored by <A-i> (helix-view View::object_selections).
++	Vector<HelixSelection> object_selections;
++	void _expand_selection();
++	void _shrink_selection();
 +
 +	// Full text for regex searches, rebuilt only when the buffer changed.
 +	mutable String text_cache;
@@ -6210,6 +7695,11 @@ index 0000000..37d6284
 +	bool is_status_message_error() const;
 +	// Number of selections (for the status bar, like Helix's "2 sels").
 +	int get_selection_count() const;
++	// Jump labels to draw while gw waits for its two label keys: flat [line, column, unicode]
++	// triples, one per label character (two per label), sorted by position. Each character is
++	// drawn in place of the buffer character at that line and column. Empty when no labels
++	// are up.
++	PackedInt32Array get_jump_label_cells() const;
 +
 +	// ---- rendering (the host's TextEdit modal draw provider calls this on every draw) ----
 +	// Helix's selection highlights (helix-term doc_selection_highlights) for lines
@@ -6228,6 +7718,12 @@ index 0000000..37d6284
 +	// <space>y/p/P/R use the system clipboard).
 +	void set_use_system_clipboard(bool p_enabled);
 +	bool is_using_system_clipboard() const;
++	// true: the buffer is GDScript, and the syntax text objects (`mi` / `ma` + `f` function,
++	// `t` class, `a` argument, `c` comment) work on it, found from the text (HelixGDScript).
++	// false (default): they report that tree-sitter is not available, like Helix does for a
++	// language without a grammar.
++	void set_gdscript(bool p_enabled);
++	bool is_gdscript() const;
 +
 +	// ---- prompt (search, regex select/split/keep/remove, ':' command line) ------------
 +	// When a command needs text input, the core switches to a prompt state and emits
@@ -8539,7 +10035,7 @@ index 067c3fb..66da21f 100644
  
  	void set_window_layout(Ref<ConfigFile> p_layout);
 diff --git a/editor/script/script_text_editor.cpp b/editor/script/script_text_editor.cpp
-index a609616..de5b557 100644
+index a609616..8dfea76 100644
 --- a/editor/script/script_text_editor.cpp
 +++ b/editor/script/script_text_editor.cpp
 @@ -46,6 +46,7 @@
@@ -8550,7 +10046,18 @@ index a609616..de5b557 100644
  #include "editor/inspector/editor_context_menu_plugin.h"
  #include "editor/inspector/editor_inspector.h"
  #include "editor/inspector/multi_node_edit.h"
-@@ -1304,6 +1305,32 @@ void ScriptTextEditor::_lookup_symbol(const String &p_symbol, int p_row, int p_c
+@@ -250,6 +251,10 @@ void ScriptTextEditor::set_edited_resource(const Ref<Resource> &p_res) {
+ 	code_editor->get_text_editor()->clear_undo_history();
+ 	code_editor->get_text_editor()->tag_saved_version();
+ 
++	// Helix mode's syntax text objects (mif, mia, <A-o>...) read GDScript from the text.
++	const ScriptLanguage *language = script->get_language();
++	code_editor->get_helix_mode()->set_gdscript(language && language->get_name() == "GDScript");
++
+ 	emit_signal(SNAME("name_changed"));
+ 	code_editor->update_line_and_column();
+ }
+@@ -1304,6 +1309,32 @@ void ScriptTextEditor::_lookup_symbol(const String &p_symbol, int p_row, int p_c
  	}
  }
  
@@ -8887,10 +10394,10 @@ index 3a607c1..ce91008 100644
  	void set_draw_fold_gutter(bool p_draw);
  	bool is_drawing_fold_gutter() const;
 diff --git a/scene/gui/text_edit.cpp b/scene/gui/text_edit.cpp
-index cd092bd..004a594 100644
+index cd092bd..360569b 100644
 --- a/scene/gui/text_edit.cpp
 +++ b/scene/gui/text_edit.cpp
-@@ -973,11 +973,44 @@ void TextEdit::_notification(int p_what) {
+@@ -973,11 +973,45 @@ void TextEdit::_notification(int p_what) {
  			}
  #endif // DISABLE_DEPRECATED
  
@@ -8924,6 +10431,7 @@ index cd092bd..004a594 100644
 +				}
 +			}
 +			LocalVector<ModalLineSpan> modal_line; // The spans on the line being drawn.
++			LocalVector<ModalLabel> modal_labels; // The label cells on the line being drawn.
 +			// In modal rendering only the primary caret's character (open or close brace) matches.
 +			const int brace_carets = modal ? 1 : get_caret_count();
 +
@@ -8936,7 +10444,7 @@ index cd092bd..004a594 100644
  					BraceMatchingData &brace_match = brace_matching.write[caret];
  
  					if (get_caret_line(caret) < 0 || get_caret_line(caret) >= text.size() || get_caret_column(caret) < 0) {
-@@ -1051,8 +1084,10 @@ void TextEdit::_notification(int p_what) {
+@@ -1051,8 +1085,10 @@ void TextEdit::_notification(int p_what) {
  						}
  					}
  
@@ -8949,7 +10457,7 @@ index cd092bd..004a594 100644
  						char32_t closec = 0;
  
  						if (c == ']') {
-@@ -1067,7 +1102,7 @@ void TextEdit::_notification(int p_what) {
+@@ -1067,7 +1103,7 @@ void TextEdit::_notification(int p_what) {
  							int stack = 1;
  
  							for (int i = get_caret_line(caret); i >= 0; i--) {
@@ -8958,7 +10466,7 @@ index cd092bd..004a594 100644
  								for (int j = from; j >= 0; j--) {
  									char32_t cc = text[i][j];
  									// Ignore any brackets inside a string.
-@@ -1119,10 +1154,8 @@ void TextEdit::_notification(int p_what) {
+@@ -1119,10 +1155,8 @@ void TextEdit::_notification(int p_what) {
  				}
  			}
  
@@ -8970,7 +10478,7 @@ index cd092bd..004a594 100644
  
  			// Check if highlighted words contain only whitespaces (tabs or spaces).
  			bool only_whitespaces_highlighted = highlighted_text.strip_edges().is_empty();
-@@ -1526,7 +1559,48 @@ void TextEdit::_notification(int p_what) {
+@@ -1526,7 +1560,52 @@ void TextEdit::_notification(int p_what) {
  
  					// Draw selections.
  					float char_w = theme_cache.font->get_char_size(' ', theme_cache.font_size).width;
@@ -8979,6 +10487,10 @@ index cd092bd..004a594 100644
 +						// Painted selection and cursor cells (also used for the glyph colors below).
 +						modal_line.clear();
 +						_modal_line_spans(modal_spans, line, modal_line);
++						modal_labels.clear();
++						if (!modal_label_cells.is_empty()) {
++							_modal_line_labels(line, modal_labels);
++						}
 +						const Vector2i row_range = TS->shaped_text_get_range(rid);
 +						const int line_len = text[line].length();
 +						const float line_end = TS->shaped_text_get_size(rid).width;
@@ -9020,7 +10532,7 @@ index cd092bd..004a594 100644
  						if (!clipped && has_selection(c) && line >= get_selection_from_line(c) && line <= get_selection_to_line(c)) {
  							int sel_from = (line > get_selection_from_line(c)) ? TS->shaped_text_get_range(rid).x : get_selection_from_column(c);
  							int sel_to = (line < get_selection_to_line(c)) ? TS->shaped_text_get_range(rid).y : get_selection_to_column(c);
-@@ -1596,6 +1670,15 @@ void TextEdit::_notification(int p_what) {
+@@ -1596,6 +1675,15 @@ void TextEdit::_notification(int p_what) {
  						int highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
  						int highlighted_text_len = highlighted_text.length();
  						while (highlighted_text_col != -1) {
@@ -9036,7 +10548,7 @@ index cd092bd..004a594 100644
  							const Vector<Vector2> sel = TS->shaped_text_get_selection(rid, highlighted_text_col + start, highlighted_text_col + highlighted_text_len + start);
  							for (int j = 0; j < sel.size(); j++) {
  								Rect2 rect = Rect2(sel[j].x + char_margin, ofs_y, sel[j].y - sel[j].x, row_height);
-@@ -1693,7 +1776,18 @@ void TextEdit::_notification(int p_what) {
+@@ -1693,7 +1781,18 @@ void TextEdit::_notification(int p_what) {
  						}
  						Color gl_color = current_color;
  
@@ -9056,7 +10568,7 @@ index cd092bd..004a594 100644
  							if (has_selection(c) && line >= get_selection_from_line(c) && line <= get_selection_to_line(c)) { // Selection
  								int sel_from = (line > get_selection_from_line(c)) ? TS->shaped_text_get_range(rid).x : get_selection_from_column(c);
  								int sel_to = (line < get_selection_to_line(c)) ? TS->shaped_text_get_range(rid).y : get_selection_to_column(c);
-@@ -1719,7 +1813,7 @@ void TextEdit::_notification(int p_what) {
+@@ -1719,7 +1818,7 @@ void TextEdit::_notification(int p_what) {
  									}
  
  									if ((brace_match.close_match_line == line && brace_match.close_match_column == glyphs[j].start) ||
@@ -9065,7 +10577,45 @@ index cd092bd..004a594 100644
  										if (brace_match.close_mismatch) {
  											gl_color = _get_brace_mismatch_color();
  										}
-@@ -1815,8 +1909,12 @@ void TextEdit::_notification(int p_what) {
+@@ -1739,6 +1838,37 @@ void TextEdit::_notification(int p_what) {
+ 							}
+ 						}
+ 
++						// Modal label cells (jump labels): a filled cell with the label character,
++						// instead of the buffer character's glyphs.
++						bool is_label = false;
++						for (uint32_t k = 0; modal && k < modal_labels.size(); k++) {
++							if (modal_labels[k].column != glyphs[j].start) {
++								continue;
++							}
++							is_label = true;
++							const float cell_width = glyphs[j].advance * glyphs[j].repeat;
++							// Once per character: on the first of its glyphs that takes space.
++							if (!clipped && cell_width > 0 && char_pos >= xmargin_beg && char_pos + cell_width <= xmargin_end) {
++								const float row_top = ofs_y - ldata->get_line_ascent(line_wrap_index) - (row_height - text_height) / 2;
++								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(char_pos, row_top, cell_width, row_height), modal_label_background);
++								theme_cache.font->draw_char(text_ci, Vector2(char_pos, ofs_y), modal_labels[k].character, theme_cache.font_size, modal_label_font);
++							}
++							break;
++						}
++						if (is_label) {
++							char_ofs += glyphs[j].advance * glyphs[j].repeat;
++							if (first_visible_char > glyphs[j].start) {
++								first_visible_char = glyphs[j].start;
++							}
++							if (last_visible_char < glyphs[j].end) {
++								last_visible_char = glyphs[j].end;
++							}
++							if ((char_ofs + char_margin) >= xmargin_end) {
++								break;
++							}
++							continue;
++						}
++
+ 						bool had_glyphs_drawn = false;
+ 						for (int k = 0; k < glyphs[j].repeat; k++) {
+ 							if (!clipped && (char_ofs + char_margin) >= xmargin_beg && (char_ofs + glyphs[j].advance + char_margin) <= xmargin_end) {
+@@ -1815,8 +1945,12 @@ void TextEdit::_notification(int p_what) {
  
  								if (get_caret_draw_pos(c).x >= xmargin_beg && get_caret_draw_pos(c).x <= xmargin_end) {
  									carets.write[c].visible = true;
@@ -9080,7 +10630,7 @@ index cd092bd..004a594 100644
  											//Block or underline caret, draw trailing carets at full height.
  											int h = theme_cache.font->get_height(theme_cache.font_size);
  
-@@ -1989,7 +2087,7 @@ void TextEdit::_notification(int p_what) {
+@@ -1989,7 +2123,7 @@ void TextEdit::_notification(int p_what) {
  		} break;
  
  		case MainLoop::NOTIFICATION_OS_IME_UPDATE: {
@@ -9089,7 +10639,7 @@ index cd092bd..004a594 100644
  				const String &new_ime_text = DisplayServer::get_singleton()->ime_get_text();
  				const Vector2i &new_ime_selection = DisplayServer::get_singleton()->ime_get_selection();
  				if (ime_text == new_ime_text && ime_selection == new_ime_selection) {
-@@ -3454,7 +3552,7 @@ void TextEdit::_update_ime_window_position() {
+@@ -3454,7 +3588,7 @@ void TextEdit::_update_ime_window_position() {
  	if (wid == DisplayServerEnums::INVALID_WINDOW_ID || !DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_IME)) {
  		return;
  	}
@@ -9098,7 +10648,7 @@ index cd092bd..004a594 100644
  		DisplayServer::get_singleton()->window_set_ime_active(false, wid);
  		return;
  	}
-@@ -4514,25 +4612,34 @@ void TextEdit::backspace(int p_caret) {
+@@ -4514,25 +4648,34 @@ void TextEdit::backspace(int p_caret) {
  	_backspace_internal(p_caret);
  }
  
@@ -9142,7 +10692,7 @@ index cd092bd..004a594 100644
  }
  
  void TextEdit::paste_primary_clipboard(int p_caret) {
-@@ -4719,6 +4826,17 @@ void TextEdit::begin_complex_operation() {
+@@ -4719,6 +4862,17 @@ void TextEdit::begin_complex_operation() {
  	complex_operation_count++;
  }
  
@@ -9160,7 +10710,7 @@ index cd092bd..004a594 100644
  void TextEdit::end_complex_operation() {
  	_push_current_op();
  
-@@ -5209,6 +5327,30 @@ TextEdit::CaretType TextEdit::get_caret_type() const {
+@@ -5209,6 +5363,30 @@ TextEdit::CaretType TextEdit::get_caret_type() const {
  	return caret_type;
  }
  
@@ -9191,7 +10741,7 @@ index cd092bd..004a594 100644
  void TextEdit::set_caret_blink_enabled(bool p_enabled) {
  	if (caret_blink_enabled == p_enabled) {
  		return;
-@@ -8305,6 +8447,11 @@ void TextEdit::_set_caret_pos_dirty(bool p_dirty) {
+@@ -8305,6 +8483,11 @@ void TextEdit::_set_caret_pos_dirty(bool p_dirty) {
  void TextEdit::_caret_changed(int p_caret) {
  	queue_redraw();
  
@@ -9203,7 +10753,7 @@ index cd092bd..004a594 100644
  	if (has_selection(p_caret)) {
  		_selection_changed(p_caret);
  	}
-@@ -9356,6 +9503,128 @@ void TextEdit::_draw_rect_unfilled(RID p_canvas_item, const Rect2 &p_rect, const
+@@ -9356,6 +9539,171 @@ void TextEdit::_draw_rect_unfilled(RID p_canvas_item, const Rect2 &p_rect, const
  	}
  }
  
@@ -9225,6 +10775,49 @@ index cd092bd..004a594 100644
 +	modal_draw_cursor_font = p_cursor_font;
 +	if (changed && modal_draw_provider.is_valid()) {
 +		queue_redraw();
++	}
++}
++
++void TextEdit::set_modal_label_cells(const PackedInt32Array &p_cells) {
++	if (modal_label_cells == p_cells) {
++		return;
++	}
++	modal_label_cells = p_cells;
++	if (modal_draw_provider.is_valid()) {
++		queue_redraw();
++	}
++}
++
++void TextEdit::set_modal_label_colors(const Color &p_background, const Color &p_font) {
++	if (modal_label_background == p_background && modal_label_font == p_font) {
++		return;
++	}
++	modal_label_background = p_background;
++	modal_label_font = p_font;
++	if (modal_draw_provider.is_valid() && !modal_label_cells.is_empty()) {
++		queue_redraw();
++	}
++}
++
++void TextEdit::_modal_line_labels(int p_line, LocalVector<ModalLabel> &r_labels) const {
++	// The cells are sorted by line: binary search the first one of this line.
++	const int count = modal_label_cells.size() / 3;
++	const int *cells = modal_label_cells.ptr();
++	int lo = 0;
++	int hi = count;
++	while (lo < hi) {
++		const int mid = (lo + hi) / 2;
++		if (cells[mid * 3] < p_line) {
++			lo = mid + 1;
++		} else {
++			hi = mid;
++		}
++	}
++	for (int i = lo; i < count && cells[i * 3] == p_line; i++) {
++		ModalLabel label;
++		label.column = cells[i * 3 + 1];
++		label.character = (char32_t)cells[i * 3 + 2];
++		r_labels.push_back(label);
 +	}
 +}
 +
@@ -9333,7 +10926,7 @@ index cd092bd..004a594 100644
  	placeholder_data_buf.instantiate();
  	carets.push_back(Caret());
 diff --git a/scene/gui/text_edit.h b/scene/gui/text_edit.h
-index 8470ccc..d07e62e 100644
+index 8470ccc..904133c 100644
 --- a/scene/gui/text_edit.h
 +++ b/scene/gui/text_edit.h
 @@ -30,6 +30,7 @@
@@ -9344,7 +10937,7 @@ index 8470ccc..d07e62e 100644
  #include "scene/gui/control.h"
  #include "scene/gui/popup_menu.h"
  #include "scene/gui/scroll_bar.h"
-@@ -462,6 +463,27 @@ private:
+@@ -462,6 +463,35 @@ private:
  	HashSet<int> multicaret_edit_ignore_carets;
  
  	CaretType caret_type = CaretType::CARET_TYPE_LINE;
@@ -9354,6 +10947,14 @@ index 8470ccc..d07e62e 100644
 +	Callable modal_draw_provider;
 +	Color modal_draw_colors[4];
 +	Color modal_draw_cursor_font;
++	PackedInt32Array modal_label_cells; // See set_modal_label_cells().
++	Color modal_label_background;
++	Color modal_label_font;
++	struct ModalLabel {
++		int column = 0;
++		char32_t character = 0;
++	};
++	void _modal_line_labels(int p_line, LocalVector<ModalLabel> &r_labels) const;
 +	struct ModalSpan {
 +		int kind = 0;
 +		int from_line = 0;
@@ -9372,7 +10973,7 @@ index 8470ccc..d07e62e 100644
  
  	bool draw_caret = true;
  	bool draw_caret_when_editable_disabled = false;
-@@ -661,6 +683,8 @@ private:
+@@ -661,6 +691,8 @@ private:
  
  	// FIXME: Helper method to draw unfilled rects, should be moved to RenderingServer.
  	void _draw_rect_unfilled(RID p_canvas_item, const Rect2 &p_rect, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false) const;
@@ -9381,7 +10982,7 @@ index 8470ccc..d07e62e 100644
  
  	/* Theme. */
  	Ref<StyleBox> _get_current_stylebox() const;
-@@ -910,6 +934,10 @@ public:
+@@ -910,6 +942,10 @@ public:
  
  	void begin_complex_operation();
  	void end_complex_operation();
@@ -9392,7 +10993,7 @@ index 8470ccc..d07e62e 100644
  
  	bool has_undo() const;
  	bool has_redo() const;
-@@ -950,6 +978,40 @@ public:
+@@ -950,6 +986,46 @@ public:
  	void set_caret_type(CaretType p_type);
  	CaretType get_caret_type() const;
  
@@ -9425,6 +11026,12 @@ index 8470ccc..d07e62e 100644
 +	void set_modal_draw_provider(const Callable &p_provider);
 +	// Background colors of the four drawn span kinds, and the font color on cursor cells.
 +	void set_modal_draw_colors(const Color &p_primary_selection, const Color &p_secondary_selection, const Color &p_primary_cursor, const Color &p_secondary_cursor, const Color &p_cursor_font);
++	// Internal, not exposed to scripting (used by the editor's Helix mode): label cells, drawn
++	// only while a modal draw provider is set. p_cells holds [line, column, unicode] triples
++	// sorted by position; the character at each line and column is drawn as `unicode` on a
++	// filled cell instead (jump labels), over any selection or cursor cell there.
++	void set_modal_label_cells(const PackedInt32Array &p_cells);
++	void set_modal_label_colors(const Color &p_background, const Color &p_font);
 +	// Internal, not exposed to scripting (used by the editor's Helix mode): called as
 +	// hook(op, begin) right before (begin = true) and after (false) cut (op 0), copy (1) and
 +	// paste (2), so the caller can adjust the selections these act on. Unset by default.
