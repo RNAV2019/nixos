@@ -290,6 +290,10 @@ in {
         # scale 1. Lectern (Chromium, X11-only) passes its own scale; see home/lectern.nix.
         xwayland.force_zero_scaling = true;
 
+        # Stay in SDR: fullscreen HDR video is tone-mapped rather than switching
+        # the panel into wide-gamut HDR, which wants a 10-bit output.
+        render.cm_auto_hdr = 0;
+
         misc = {
           vrr = 0;
 
