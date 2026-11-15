@@ -94,9 +94,12 @@ Item {
   property real now: 0
   property real wall: 0
   property real kick: 0
-  // The lens as it is set now. The style in front says what it wants (LyricStyle's `bloom`,
-  // `mono`...), and these follow over most of a second, so black and white comes up like a
-  // print developing and is not cut to.
+  // The lens as it is set now. A style says what it wants (LyricStyle's `bloom`, `grain`...)
+  // and the lens follows over a moment. The old print is not a style's to ask for at its first
+  // frame, though: how far the picture is one (`stock`, and `marks` for its dust and flicker)
+  // is read off the plan and the song's time, so it comes up across the change and is never
+  // cut to, and the lens is set between what the last plain style wanted (`_plain`) and the
+  // print (Theme's `lyricFilm...`) by that much.
   property real lensBloom: 0.45
   property real lensGrain: 0.05
   property real lensVignette: 0.4
@@ -108,6 +111,14 @@ Item {
   property real lensVeil: 0
   property real lensSoftness: 0
   property bool _lensSet: false
+  property real stock: 0
+  property real marks: 0
+  property var _plain: ({
+      bloom: 0.45,
+      grain: 0.05,
+      vignette: 0.4,
+      ground: 1
+    })
   property real level: 0
   // How far out of focus the whole picture is: 0 but round a change of style, where the lens
   // goes soft on the style leaving and comes sharp on the one arriving.
@@ -146,6 +157,8 @@ Item {
       });
     return segments;
   }
+  // Which of the plan's stretches are an old print.
+  readonly property var films: Director.looks(plan, catalogue, "film")
   readonly property int segIndex: Director.segmentAt(plan, now)
   readonly property var seg: plan[Math.min(segIndex, plan.length - 1)]
   readonly property real tierGain: seg.tier === "high" ? 1.15 : seg.tier === "calm" ? 0.6 : 0.85
@@ -327,21 +340,32 @@ Item {
     scene.kick = Theme.reduceMotion ? 0 : k * scene.tierGain;
     scene.stir += scene.kick * dt;
 
-    var k = scene._lensSet ? Math.min(1, dt * Theme.lyricLookRate) : 1;
+    var at = Math.min(scene.segIndex, scene.plan.length - 1);
+    var ease = scene._lensSet ? Math.min(1, dt * Theme.lyricLookRate) : 1;
     scene._lensSet = scene.frontItem !== null;
-    scene.lensBloom += (scene.look("bloom", 0.45) - scene.lensBloom) * k;
-    scene.lensGrain += (scene.look("grain", 0.05) - scene.lensGrain) * k;
-    scene.lensVignette += (scene.look("vignette", 0.4) - scene.lensVignette) * k;
-    scene.lensMono += (scene.look("mono", 0) - scene.lensMono) * k;
-    scene.lensDust += (scene.look("dust", 0) - scene.lensDust) * k;
-    scene.lensFlicker += (scene.look("flicker", 0) - scene.lensFlicker) * k;
-    scene.lensDepth += (scene.look("depth", 0) - scene.lensDepth) * k;
-    scene.lensGround += (scene.look("ground", 1) - scene.lensGround) * k;
-    scene.lensVeil += (scene.look("veil", 0) - scene.lensVeil) * k;
-    scene.lensSoftness += (scene.look("softness", 0) - scene.lensSoftness) * k;
+    scene.lensDepth += (scene.look("depth", 0) - scene.lensDepth) * ease;
+    // A print in front says nothing of what a plain style wants: the last one's stands.
+    var plain = scene._plain;
+    if (scene.films[at] !== true) {
+      plain.bloom += (scene.look("bloom", 0.45) - plain.bloom) * ease;
+      plain.grain += (scene.look("grain", 0.05) - plain.grain) * ease;
+      plain.vignette += (scene.look("vignette", 0.4) - plain.vignette) * ease;
+      plain.ground += (scene.look("ground", 1) - plain.ground) * ease;
+    }
+    var stock = Director.lookAt(scene.plan, scene.films, scene.now, Theme.lyricFilmLead, Theme.lyricFilmTail);
+    scene.stock = stock;
+    scene.marks = Director.lookAt(scene.plan, scene.films, scene.now, 0, Theme.lyricFilmMarks);
+    scene.lensBloom = Kinetic.lerp(plain.bloom, Theme.lyricFilmBloom, stock);
+    scene.lensGrain = Kinetic.lerp(plain.grain, Theme.lyricFilmGrain, stock);
+    scene.lensVignette = Kinetic.lerp(plain.vignette, Theme.lyricFilmVignette, stock);
+    scene.lensGround = Kinetic.lerp(plain.ground, Theme.lyricFilmGround, stock);
+    scene.lensVeil = Theme.lyricFilmVeil * stock;
+    scene.lensSoftness = Theme.lyricFilmSoftness * stock;
+    scene.lensMono = stock;
+    scene.lensDust = scene.marks;
+    scene.lensFlicker = scene.marks;
     // The song's own time says where the changes fall, so the lens is already going soft as
     // one comes. A stretch that carries on in the same style has no change to mark.
-    var at = Math.min(scene.segIndex, scene.plan.length - 1);
     var before = at > 0 && scene.plan[at - 1].style !== scene.seg.style;
     var after = at + 1 < scene.plan.length && scene.plan[at + 1].style !== scene.seg.style;
     var coming = after ? 1 - Kinetic.smooth(0, Theme.lyricRefocusIn, scene.seg.t1 - scene.now) : 0;

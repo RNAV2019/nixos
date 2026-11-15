@@ -1738,9 +1738,23 @@ Singleton {
   // glows.
   readonly property real lyricBloomSpread: 1.7
   readonly property real lyricBloomFloor: 0.22
-  // How fast the lens takes on a new style's settings (1/s): black and white, grain and the
-  // rest come up over most of a second and are not cut to.
+  // How fast the lens takes on a new style's own settings (1/s), its bloom and depth of field.
   readonly property real lyricLookRate: 3.5
+  // The old print (Lyrics/FilmStyle.qml): how the lens is set for it. Black and white, its dust
+  // and its flicker are all or nothing and have no number here.
+  readonly property real lyricFilmBloom: 1.1
+  readonly property real lyricFilmGrain: 0.34
+  readonly property real lyricFilmVignette: 0.74
+  readonly property real lyricFilmGround: 0.75
+  readonly property real lyricFilmVeil: 0.13
+  readonly property real lyricFilmSoftness: 1.7
+  // And how it comes and goes between a style that is a print and one that is not: along the
+  // song's own time, beginning this long before the change and done this long after it on the
+  // print's side (seconds), so the grey and the grain are never cut to. Its marks, the dust and
+  // the flicker, are wholly on the print's side: last to come and first to go.
+  readonly property real lyricFilmLead: 0.6
+  readonly property real lyricFilmTail: 1.6
+  readonly property real lyricFilmMarks: 2.2
   // A change of style is a pull of focus: the lens goes soft over the last of the style
   // leaving and comes sharp over the first of the one arriving (seconds of the song), by this
   // many hundredths of the stage's height at its softest, the picture this much larger and

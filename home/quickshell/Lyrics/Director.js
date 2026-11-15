@@ -209,3 +209,42 @@ function segmentAt(segments, now) {
       return i;
   return 0;
 }
+
+// Which of a plan's segments are of the look `look` (the catalogue's `look`), as a list of
+// booleans. A segment whose style the catalogue does not name (a pause) keeps the look of the
+// one before it, so an old print runs on through a pause and does not clear and come back.
+function looks(segments, catalogue, look) {
+  var kinds = {};
+  catalogue.forEach(function (c) {
+    kinds[c.name] = c.look === look;
+  });
+  var last = false;
+  return segments.map(function (s) {
+    if (kinds[s.style] !== undefined)
+      last = kinds[s.style];
+    return last;
+  });
+}
+
+// How far the picture has gone over to a look at `now`, 0..1, given which segments are of it
+// (`looks` above). Across a change the look comes up along an S, `lead` seconds before the
+// change and `tail` after it, so most of it happens on the side that is of the look; leaving,
+// it is the same change run backwards. The song's time alone decides it, like everything else.
+function lookAt(segments, flags, now, lead, tail) {
+  var at = segmentAt(segments, now);
+  var here = flags[at] ? 1 : 0;
+  var ease = function (p) {
+    p = p < 0 ? 0 : p > 1 ? 1 : p;
+    return p * p * (3 - 2 * p);
+  };
+  var v = here;
+  if (at > 0 && flags[at - 1] !== flags[at]) {
+    var before = flags[at] ? lead : tail;
+    v = 1 - here + (2 * here - 1) * ease((now - (segments[at].t0 - before)) / (lead + tail));
+  }
+  if (at + 1 < segments.length && flags[at + 1] !== flags[at]) {
+    var ahead = flags[at + 1] ? lead : tail;
+    v += (1 - here - v) * ease((now - (segments[at].t1 - ahead)) / (lead + tail));
+  }
+  return v;
+}

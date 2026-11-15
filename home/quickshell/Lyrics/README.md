@@ -115,6 +115,12 @@ The rules that keep every style honest:
   white, soft, grey-black, dusty and flickering (the lens's `mono`, `veil`, `softness`, `dust`
   and `flicker`), as `Reel`, `Ring`
   and `Titlecard` are; `spot`, `spotAt` and `spotSize` put the projector's lamp behind the words.
+  The look is not switched on with the style. Which stretches are a print is in the plan (the
+  catalogue's `look: "film"`; a pause keeps the look of what it follows), and the stage takes
+  the lens over to Theme's `lyricFilm...` settings along the song's time, starting a little
+  before the change and done a second and a half after it on the print's side
+  (`Director.lookAt`), the dust and flicker last to come and first to go. So a print is never
+  cut to or from, and a frame pinned anywhere in a change is the same every run.
 - **Letters** that come and go one by one are `LyricLetters`: a word drawn a letter at a time
   where the whole word would put them, in order or scattered (`scattered`), blinking out now and
   then (`flicker`), leaving one by one (`gone`).

@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 
 // A LyricStyle seen as an old print run through a projector: black and white, soft and
 // glowing, its blacks lifted to a grainy grey, with dust, scratches and the lamp's flicker (the
@@ -8,14 +9,19 @@ import QtQuick
 // so even without colour it is this song's. The styles built on it (Reel,
 // Ring, Titlecard) are the set pieces of one hand-made lyric film; they share this look so a
 // song can pass through all three and still seem one reel.
+//
+// The look is the stage's to bring up, not this style's to switch on: which stretches of the
+// song are a print is in the plan (the catalogue's `look: "film"`), and the lens goes over to
+// Theme's `lyricFilm...` settings across the change, along the song's time. What is set here
+// says the same thing for whoever reads a style's look off it.
 LyricStyle {
-  bloom: 1.1
+  bloom: Theme.lyricFilmBloom
   bloomKick: 0.12
-  grain: 0.34
-  vignette: 0.74
-  ground: 0.75
-  veil: 0.13
-  softness: 1.7
+  grain: Theme.lyricFilmGrain
+  vignette: Theme.lyricFilmVignette
+  ground: Theme.lyricFilmGround
+  veil: Theme.lyricFilmVeil
+  softness: Theme.lyricFilmSoftness
   mono: 1
   dust: 1
   flicker: 1

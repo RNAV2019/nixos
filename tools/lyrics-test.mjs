@@ -15,7 +15,7 @@ const fixture = process.argv[3] || join(here, "qs-verify/fixtures/lyrics-plus.js
 const load = (file, names) => new Function(readFileSync(join(dir, file), "utf8").replace(/^\.pragma library\s*$/m, "") + `\nreturn {${names}};`)();
 
 const Parse = load("Parse.js", "cleanTitle, cleanArtist, splitTitle, syllables, spreadWords, tierOf, fromLyricsPlus, fromLrclib, cacheKey, lineAt");
-const Director = load("Director.js", "hashText, rng, plan, segmentAt");
+const Director = load("Director.js", "hashText, rng, plan, segmentAt, looks, lookAt");
 const Emoji = load("Emoji.js", "lookup, annotate");
 const Palette = load("Palette.js", "roles, hueGap");
 const Kinetic = load("Kinetic.js", "spring, outBack, hash, pick, bare, pulse, smooth, span, rows, flick, scatter");
@@ -119,6 +119,19 @@ check("plan: looks come in runs", (() => {
   // With no leaning a style would follow its own look a third of the time (one of three others).
   return same / pairs > 0.45;
 })());
+{
+  // Four stretches: plain, film, a pause, plain. The pause keeps the print running.
+  const segs = [{style: "C", t0: -Infinity, t1: 10}, {style: "A", t0: 10, t1: 20}, {style: "Interlude", t0: 20, t1: 30}, {style: "C", t0: 30, t1: Infinity}];
+  const kinds = [{name: "A", look: "film"}, {name: "C"}];
+  const flags = Director.looks(segs, kinds, "film");
+  eq("look: a pause keeps the look before it", flags, [false, true, true, false]);
+  const at = t => Director.lookAt(segs, flags, t, 0.5, 1.5);
+  eq("look: settled either side", [at(5), at(9.5), at(11.5), at(25), at(28.5), at(30.5), at(40)], [0, 0, 1, 1, 1, 0, 0]);
+  check("look: mostly on the film side of the change", at(10) > 0.1 && at(10) < 0.25 && at(30) > 0.1 && at(30) < 0.25);
+  check("look: leaving is arriving run backwards", Math.abs(at(10 + 0.7) - at(30 - 0.7)) < 1e-9);
+  check("look: never jumps", (() => { for (let t = 0; t < 45; t += 0.01) if (Math.abs(at(t + 0.01) - at(t)) > 0.012) return false; return true; })());
+  eq("look: a lead of none starts at the change", [Director.lookAt(segs, flags, 10, 0, 2), Director.lookAt(segs, flags, 30, 0, 2)], [0, 0]);
+}
 check("plan: another song casts differently", JSON.stringify(Director.plan(model, catalogue, seed + 1).map(s => s.style)) !== JSON.stringify(plan.map(s => s.style)));
 
 // ---- the cover's colours ----
