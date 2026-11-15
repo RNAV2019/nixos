@@ -1,4 +1,0 @@
-# Captures that differ between two runs of the same tree (noise), for the clean-up's STATIC checks.
-panel-control-notifications  # tile text (Audio, Keyboard)/glyph edges shift a sub-pixel between runs
-phone-satellite-osd          # OSD percentage text and the phone glyph edge shift a sub-pixel between runs
-rebuild-done                 # rebuild pill's title, bar and elapsed-time text shift a sub-pixel (README's known flaky state)
