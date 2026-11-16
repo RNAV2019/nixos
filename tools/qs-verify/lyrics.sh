@@ -4,10 +4,11 @@
 # from the song's time alone, so a frame at 38.2 s is the same picture every run, and a row of
 # frames a fortieth of a second apart is the motion itself.
 #
-#   lyrics.sh up                          the harness, the lyric faces, the player and the song
+#   lyrics.sh up                          the harness, the player and the song
 #   lyrics.sh sync                        copy the tree's lyric files over the harness's and restart the shell
-#   lyrics.sh frames OUT STYLE T...       OUT/STYLE-T.png for each time T (seconds); STYLE "" casts by section
+#   lyrics.sh frames OUT STYLE T...       OUT/STYLE-T.png for each time T (seconds); STYLE is Poster, Drift or Punch
 #   lyrics.sh strip OUT STYLE FROM TO N   N frames from FROM to TO as one sheet, OUT/STYLE-FROM-TO.png
+#   lyrics.sh fade OUT AT...              OUT/fade-AT.png with the way in held at each AT (0 the desktop, 1 the stage)
 #   lyrics.sh probe STYLE AT [SECS]       play STYLE from AT for SECS (6) and say what a frame costs each thread
 #   lyrics.sh log                         what the shell has warned of since the last sync
 #   lyrics.sh down                        tear it all down
@@ -48,10 +49,6 @@ case $cmd in
     "$here/stop.sh" >/dev/null 2>&1 || true
     QS_THEME=${QS_THEME:-ariadne} "$here/run.sh" "$QSV_REPO/home/quickshell" >/dev/null
     load_env
-    fonts=$(nix build --no-link --print-out-paths --impure --expr \
-      "let f = builtins.getFlake \"$QSV_REPO\"; in (import f.inputs.nixpkgs { system = \"x86_64-linux\"; overlays = [ f.overlays.default ]; }).lyric-fonts")
-    mkdir -p "$HOME/.local/share/fonts"
-    cp "$fonts"/share/fonts/truetype/*.ttf "$HOME/.local/share/fonts/"
     cp "$here/fixtures/lyrics-plus.json" "$QSV_WORK/lyrics-plus.json"
     : >"$QSV_WORK/quickshell.log"
     "$here/restart.sh" >/dev/null
@@ -84,7 +81,7 @@ case $cmd in
     for t in "$@"; do
       qsipc lyrics pin "$t"
       sleep "${QS_SETTLE:-0.9}"
-      grim -o HEADLESS-1 "$out/${style:-cast}-$t.png"
+      grim -o HEADLESS-1 "$out/$style-$t.png"
     done
     ;;
   strip)
@@ -104,9 +101,25 @@ case $cmd in
     cols=$((n <= 4 ? n : n <= 12 ? 4 : 6))
     need_magick
     magick montage "$tmp"/*.png -resize 640x -tile "${cols}x" -geometry +4+4 -background '#202020' \
-      "$out/${style:-cast}-$from-$to.png"
+      "$out/$style-$from-$to.png"
     rm -rf "$tmp"
-    echo "$out/${style:-cast}-$from-$to.png"
+    echo "$out/$style-$from-$to.png"
+    ;;
+  fade)
+    load_env
+    out=$1
+    shift
+    mkdir -p "$out"
+    media_up
+    qsipc lyrics pin "${QS_PIN:-12}"
+    qsipc lyrics fade "$1"
+    [[ $(qsipc lyrics shown) == true ]] || qsipc lyrics toggle
+    for at in "$@"; do
+      qsipc lyrics fade "$at"
+      sleep "${QS_SETTLE:-0.9}"
+      grim -o HEADLESS-1 "$out/fade-$at.png"
+    done
+    qsipc lyrics fade -1
     ;;
   probe)
     # The harness draws on the CPU (llvmpipe), so its threads tell the work apart: the main thread
@@ -130,7 +143,7 @@ case $cmd in
     sleep "$secs"
     f1=$(qsipc lyrics frames) b=$(snap)
     qsipc lyrics pin "$at"
-    { echo "$a" | sed 's/^/a /'; echo "$b" | sed 's/^/b /'; } | awk -v frames=$((f1 - f0)) -v style="${style:-cast}" -v secs="$secs" '
+    { echo "$a" | sed 's/^/a /'; echo "$b" | sed 's/^/b /'; } | awk -v frames=$((f1 - f0)) -v style="$style" -v secs="$secs" '
       $1 == "a" { before[$2] += $3 }
       $1 == "b" { after[$2] += $3 }
       END {
@@ -157,7 +170,7 @@ case $cmd in
     "$here/stop.sh"
     ;;
   *)
-    sed -n '2,16p' "$0"
+    sed -n '2,17p' "$0"
     exit 2
     ;;
 esac

@@ -1715,78 +1715,36 @@ Singleton {
 
   // The lyric stage (Lyrics/): the screen given over to the words of what is playing. Its ground
   // is true black whatever the theme, since it is a show and not a surface, and its ink is a warm
-  // white leaning the cover's way. It comes and goes through a blur from the top down
-  // (Shaders/lyricfold.frag), and a change of style is a pull of focus with a short cross-fade
-  // under it.
+  // white leaning the cover's way. The desktop fades slowly to black and the words come up over
+  // the last of it; it goes back much faster than it came.
   readonly property color lyricGround: "#000000"
   readonly property color lyricInk: "#f5f0e8"
-  readonly property int lyricFadeIn: reduceMotion ? 1 : 950
-  readonly property int lyricFadeOut: reduceMotion ? 1 : 700
+  readonly property int lyricFadeIn: reduceMotion ? 1 : 2400
+  readonly property int lyricFadeOut: reduceMotion ? 1 : 450
+  // One style handing over to another (N and P), and one song's words to the next's.
   readonly property int lyricCut: reduceMotion ? 1 : 220
+  // The styles there are, in the order N and P step through them; the first is what it opens in.
+  readonly property var lyricStyles: ["Poster", "Drift", "Punch"]
   // A line counts as up this long before its first word, so it is in place when the voice is.
   readonly property real lyricLead: 0.3
   // The ground's light at rest, what a landing word adds, and what the player's loudness adds.
   readonly property real lyricGlow: 0.42
   readonly property real lyricGlowKick: 0.2
   readonly property real lyricGlowLevel: 0.25
-  // The ground is drawn at one part in this of the stage and stretched, the bloom at one in that.
+  // The ground is drawn at one part in this of the stage and stretched.
   readonly property int lyricGroundShrink: 8
-  readonly property int lyricBloomShrink: 6
-  // The soft plate (what a style puts out of focus) is drawn at one part in this.
-  readonly property int lyricSoftShrink: 4
-  // The bloom: how far apart its taps sit (in its own texels), and the luma under which nothing
-  // glows.
-  readonly property real lyricBloomSpread: 1.7
-  readonly property real lyricBloomFloor: 0.22
-  // How fast the lens takes on a new style's own settings (1/s), its bloom and depth of field.
-  readonly property real lyricLookRate: 3.5
-  // The old print (Lyrics/FilmStyle.qml): how the lens is set for it. Black and white, its dust
-  // and its flicker are all or nothing and have no number here.
-  readonly property real lyricFilmBloom: 1.1
-  readonly property real lyricFilmGrain: 0.34
-  readonly property real lyricFilmVignette: 0.74
-  readonly property real lyricFilmGround: 0.75
-  readonly property real lyricFilmVeil: 0.13
-  readonly property real lyricFilmSoftness: 1.7
-  // And how it comes and goes between a style that is a print and one that is not: along the
-  // song's own time, beginning this long before the change and done this long after it on the
-  // print's side (seconds), so the grey and the grain are never cut to. Its marks, the dust and
-  // the flicker, are wholly on the print's side: last to come and first to go.
-  readonly property real lyricFilmLead: 0.6
-  readonly property real lyricFilmTail: 1.6
-  readonly property real lyricFilmMarks: 2.2
-  // A change of style is a pull of focus: the lens goes soft over the last of the style
-  // leaving and comes sharp over the first of the one arriving (seconds of the song), by this
-  // many hundredths of the stage's height at its softest, the picture this much larger and
-  // this much darker.
-  readonly property real lyricRefocusIn: 0.3
-  readonly property real lyricRefocusOut: 0.5
-  readonly property real lyricRefocusBlur: 1.7
-  readonly property real lyricRefocusSwell: 0.035
-  readonly property real lyricRefocusDip: 0.32
   // How long the stage takes to take on a new cover's colours.
   readonly property int lyricColourFade: reduceMotion ? 1 : 900
   // How fast a landing word's kick dies away (1/s).
   readonly property real lyricKickDecay: 6.5
-  // The readout (a nudged offset, a pinned style) and how long it stays.
+  // The readout (a nudged offset, the style stepped to) and how long it stays.
   readonly property int lyricReadoutSize: 15
   readonly property int lyricReadoutHold: 1400
   // How long after the stage maps it asks for the keyboard (Lyrics/LyricStage.qml).
   readonly property int lyricTakeKeys: 120
   // One nudge of the lyrics against the player's clock, in seconds.
   readonly property real lyricNudge: 0.05
-
-  // The faces the styles are set in: the shell's own display face, and pkgs/lyric-fonts.
-  readonly property string lyricDisplayFont: "SF Compact Display"
-  readonly property string lyricGroteskFont: "Archivo Black"
-  readonly property string lyricCondensedFont: "Anton"
-  readonly property string lyricSerifFont: "Instrument Serif"
-  readonly property string lyricFatSerifFont: "DM Serif Display"
-  // The old print's three (Lyrics/FilmStyle.qml): a fat didone for its title lines, a monoline
-  // script written over them, and a wide bold serif for its cards. The tall serif is Instrument
-  // Serif upright, which the Ring style draws narrowed.
-  readonly property string lyricDidoneFont: "Abril Fatface"
-  readonly property string lyricScriptFont: "Allura"
-  readonly property string lyricCardFont: "Chonburi"
-  readonly property string lyricTallSerifFont: "Instrument Serif"
+  // The one family every style is set in: heavy for the words that carry a line, light for
+  // the ones that pass.
+  readonly property string lyricFont: "SF Compact Rounded"
 }

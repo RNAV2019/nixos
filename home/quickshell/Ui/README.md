@@ -440,7 +440,7 @@ The contracts a service file follows; a singleton file takes the contract as its
   player has them, and `holdPosition(who, held)`, by which each surface with a scrub bar keeps
   the position polled while it shows (`trackPosition`).
 - **`Lyrics`**: the timed words of what is playing, for the lyric stage (`Lyrics/README.md`).
-  Fetched only while something holds `wanted`: LyricsPlus for word timings and the song's parts,
+  Fetched only while something holds `wanted`: LyricsPlus for word timings,
   LRCLIB for line timings. `state` (`idle`, `loading`, `ready`, `none`), `model`, `source`.
   Each answer is kept in `Paths.lyricsDir`.
 - **`Provider`**: a launcher provider's base. `section`, `prefix`, `results`, `emptyResults`,

@@ -126,7 +126,7 @@
       # NixOS VM: tty1 autologin into Hyprland --locked-cmd, real Hyprland on virtio-gpu DRM.
       locked-login = import ./tests/locked-login.nix {inherit pkgs;};
 
-      # The lyric stage's plain logic (parsing, the plan, the curves) on the harness's fixture song.
+      # The lyric stage's plain logic (parsing, the cover's colours, the curves) on the harness's fixture song.
       lyrics-logic =
         pkgs.runCommand "lyrics-logic" {
           nativeBuildInputs = [pkgs.nodejs];

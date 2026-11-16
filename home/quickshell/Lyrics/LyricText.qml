@@ -7,19 +7,16 @@ import qs.Commons
 Text {
   id: root
 
-  // A face as { family, weight, italic, caps, size }, or null for the stage's display face.
-  property var face: null
-  // The pixel size before the face's own factor.
+  // The pixel size.
   property real size: 10
-  // Set false to keep a face that prefers capitals in mixed case.
-  property bool caps: face ? face.caps : false
+  // Space added between letters, in ems (negative draws them together).
+  property real tracking: 0
 
   renderType: Text.CurveRendering
   textFormat: Text.PlainText
   color: Theme.lyricInk
-  font.family: face ? face.family : Theme.lyricDisplayFont
-  font.weight: face ? face.weight : Font.Black
-  font.italic: face ? face.italic : false
-  font.pixelSize: Math.max(1, Math.round(size * (face ? face.size : 1)))
-  font.capitalization: caps ? Font.AllUppercase : Font.MixedCase
+  font.family: Theme.lyricFont
+  font.weight: Font.Black
+  font.pixelSize: Math.max(1, Math.round(size))
+  font.letterSpacing: tracking * Math.max(1, Math.round(size))
 }

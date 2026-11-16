@@ -10,7 +10,6 @@
 //   third    another the cover has, or one between the two
 //   ink      what words are set in: near white, leaning the cover's way
 //   dim      a word not yet sung
-//   tone     what an old print of this song is toned with, as a print is with sepia or selenium
 //   found    false when the cover has no colour to speak of (a black-and-white sleeve), and
 //            every part is then a grey, which is as true to it
 // With no cover at all (an empty list) it answers null, and the stage falls back on the theme.
@@ -73,11 +72,6 @@ function roles(colors) {
         h: lightest.h,
         s: tint,
         l: 0.5
-      },
-      tone: {
-        h: lightest.h,
-        s: 0,
-        l: 0.5
       }
     };
   }
@@ -138,11 +132,6 @@ function roles(colors) {
       h: accent.h,
       s: clamp(accent.s * 0.4, 0.12, 0.34),
       l: 0.56
-    },
-    tone: {
-      h: accent.h,
-      s: clamp(best.s * 0.3, 0.08, 0.2),
-      l: 0.5
     }
   };
 }

@@ -4,7 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
-import "../Lyrics/Emoji.js" as Emoji
 import "../Lyrics/Parse.js" as Parse
 
 // The words of what is playing, timed, for the lyric stage. Asked of LyricsPlus first, which
@@ -76,7 +75,7 @@ Singleton {
   // An answer for the song in hand. `fresh` ones are kept: in memory for the session, and on
   // disk in the one shape, whoever gave them.
   function take(model, fresh) {
-    root.model = Emoji.annotate(model);
+    root.model = model;
     root.state = "ready";
     if (!fresh)
       return;

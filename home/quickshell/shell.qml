@@ -212,8 +212,8 @@ ShellRoot {
   }
 
   // The lyric stage is a show on the whole screen, not an island surface, so it has its own
-  // target. `pin`, `style` and `fold` are for tests: a time to hold the song at, one style to
-  // play everything in, and a point to hold the way in at.
+  // target. `next` and `previous` are its N and P keys and `style` picks one by name; `pin` and
+  // `fade` are for tests: a time to hold the song at, and a point to hold the way in at.
   IpcHandler {
     target: "lyrics"
 
@@ -229,6 +229,22 @@ ShellRoot {
       return lyricStage.wanted;
     }
 
+    function next(): void {
+      lyricStage.step(1);
+    }
+
+    function previous(): void {
+      lyricStage.step(-1);
+    }
+
+    function style(name: string): void {
+      lyricStage.pick(name);
+    }
+
+    function current(): string {
+      return lyricStage.styleName;
+    }
+
     function frames(): int {
       return lyricStage.frames;
     }
@@ -237,12 +253,8 @@ ShellRoot {
       lyricStage.pinned = Number(seconds);
     }
 
-    function style(name: string): void {
-      lyricStage.forcedStyle = name;
-    }
-
-    function fold(amount: string): void {
-      lyricStage.pinnedFold = Number(amount);
+    function fade(amount: string): void {
+      lyricStage.pinnedFade = Number(amount);
     }
   }
 

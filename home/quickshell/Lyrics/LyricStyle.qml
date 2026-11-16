@@ -4,87 +4,51 @@ import "Kinetic.js" as Kinetic
 import "Parse.js" as Parse
 
 // What every style on the lyric stage is built on (Lyrics/Styles/*.qml). A style is handed the
-// stage and one segment of the song, and draws that segment's lines from the song's own time
-// (`now`): every position, size and fade is a function of `now` (Kinetic.js), never a running
-// animation, so a seek, a pause and a pinned test frame all show the same picture.
+// stage and a song's lines, and draws them from the song's own time (`now`): every position,
+// size and fade is a function of `now` (Kinetic.js), never a running animation, so a seek, a
+// pause and a pinned test frame all show the same picture.
 //
-// A style also says how the lens should treat it: the numbers below are read by LyricScene and
-// handed to Shaders/lyricpost.frag. The `...Kick` ones are added in proportion to the stage's
-// `kick`, which jumps as each word lands and dies away.
+// A style also says how the lens should treat it: `depth`, `depthAt` and `depthBand` are read
+// by LyricScene every frame and handed to Shaders/lyricpost.frag.
 Item {
   id: sty
 
   required property var stage
-  required property var seg
+  // The song's lines as they were when this style was put up: a style on its way out at a
+  // change of song goes on reading its own song.
+  required property var lines
 
   readonly property real now: stage.now
-  // The song's lines as they were when this style was cast: a style on its way out at a change
-  // of song goes on reading its own song.
-  required property var lines
-  readonly property int first: seg.firstLine
-  readonly property int last: seg.lastLine
-  readonly property int seed: seg.seed
   // One hundredth of the stage's height: the unit styles size themselves in.
   readonly property real u: height / 100
 
   // The song's colours, off its cover (Palette.js): what words are set in, the word in hand,
-  // two more the cover has, and a word not yet sung.
+  // and a word not yet sung.
   readonly property color ink: stage.ink
   readonly property color accent: stage.accent
-  readonly property color accent2: stage.accent2
-  readonly property color accent3: stage.accent3
   readonly property color dim: stage.dim
 
   // How early a line counts as the one in hand.
   property real lead: Theme.lyricLead
-  // The segment's line in hand, or -1 before its first.
-  readonly property int cur: {
-    if (first < 0)
-      return -1;
-    var i = Parse.lineAt(lines, now, lead);
-    return i < first ? -1 : Math.min(i, last);
-  }
+  // The line in hand, or -1 before the song's first.
+  readonly property int cur: lines.length > 0 ? Parse.lineAt(lines, now, lead) : -1
   readonly property var line: cur >= 0 ? lines[cur] : null
 
-  // The lens.
-  property real bloom: 0.45
-  property real bloomKick: 0.2
-  property real punchKick: 0
-  property real grain: 0.05
-  property real vignette: 0.4
-  // Depth of field for a column of lines: sharp in a band round the height `depthAt` (0..1),
-  // `depthBand` being half the band, and softer the further above or below it.
+  // The lens: everything above and below a band of the stage out of focus. `depthAt` is the
+  // band's middle as a height (0..1), `depthBand` half the band, `depth` how soft the rest is.
   property real depth: 0
   property real depthAt: 0.5
   property real depthBand: 0.08
-  // An old print: colour drained, dust and scratches, the lamp's flicker, and the lamp itself
-  // as a soft disc at `spotAt` (0..1 across and down), `spotSize` stage heights in radius.
-  property real mono: 0
-  property real dust: 0
-  property real flicker: 0
-  property real spot: 0
-  property real spotSize: 0.32
-  property point spotAt: Qt.point(0.5, 0.5)
-  // Black lifted to grey (0..1), and the whole picture softened by about this many pixels.
-  property real veil: 0
-  property real softness: 0
-  // The soft plate: whatever the style parents to `stage.softPlate` is drawn out of focus, by
-  // `softRadius` hundredths of the stage's height, and added to the picture as light. One
-  // blur for the whole stage, made once: set `softens` and it runs while this style is up.
-  property bool softens: false
-  property real softRadius: 0
   // The ground's light behind this style, as a share of the stage's own.
   property real ground: 1
 
-  // The line a pool's slot `k` of `n` draws, or -1: the pool covers the line in hand, the
-  // `n - 2` before it and the one after, each line always in the same slot, so a line keeps its
-  // items from the moment it is due until it is well gone.
-  function slotLine(k, n) {
-    if (first < 0)
-      return -1;
-    var base = cur < 0 ? first - 1 : cur;
-    for (var i = base - (n - 2); i <= base + 1; i++)
-      if (i >= first && i <= last && ((i % n) + n) % n === k)
+  // The line a pool's slot `k` of `n` draws, or -1. The pool covers the line in hand, the
+  // `after` lines that follow it and the `n - 1 - after` before it, each line always in the
+  // same slot, so a line keeps its items from the moment it is due until it is well gone.
+  function slotLine(k, n, after) {
+    var ahead = after === undefined ? 1 : after;
+    for (var i = cur - (n - 1 - ahead); i <= cur + ahead; i++)
+      if (i >= 0 && i < lines.length && ((i % n) + n) % n === k)
         return i;
     return -1;
   }
@@ -98,5 +62,17 @@ Item {
   // When word `j` of `line` gives way: the next word's start, or the line's own leaving.
   function until(line, j) {
     return j + 1 < line.words.length ? line.words[j + 1].t : line.out;
+  }
+
+  // When word `j` of `line` has been sung: the next word's start, or the line's end.
+  function sung(line, j) {
+    return j + 1 < line.words.length ? line.words[j + 1].t : line.end;
+  }
+
+  // A line with a pause after it: it is held a moment and then goes, where a line the next
+  // one follows closely is simply replaced by it.
+  function parting(line) {
+    var next = line.index + 1 < lines.length ? lines[line.index + 1] : null;
+    return next === null || line.out < next.t - 0.01;
   }
 }
