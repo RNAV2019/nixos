@@ -1,8 +1,9 @@
 #version 440
-// The lyric stage's ground: black, with the playing cover's colours drifting through it as slow
-// light. Drawn small and stretched (Lyrics/LyricScene.qml), so it costs next to nothing. The
-// light is three soft lobes that wander on a warped field and never fill the frame: on an OLED
-// panel most of this is unlit pixels.
+// The lyric stage's ground: the playing cover's own colours drifting over black as slow light, so
+// the stage is lit the way the sleeve is coloured. Drawn small and stretched
+// (Lyrics/LyricScene.qml), so it costs next to nothing. The light is three broad lobes that
+// wander on a warped field, the first (the colour the cover has most of) the broadest; between
+// them and at the corners it still falls away to black.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 
@@ -55,12 +56,13 @@ void main() {
     vec2 a = vec2(cos(t * 1.9) * 0.62, sin(t * 1.3) * 0.34) * vec2(aspect * 0.55, 1.0);
     vec2 b = vec2(cos(t * 1.1 + 2.4) * 0.7, sin(t * 1.7 + 1.1) * 0.4) * vec2(aspect * 0.55, 1.0);
     vec2 c = vec2(cos(t * 0.7 + 4.2) * 0.5, sin(t * 2.1 + 3.0) * 0.36) * vec2(aspect * 0.55, 1.0);
-    vec3 col = tintA.rgb * lobe(q, a, 0.36) + tintB.rgb * lobe(q, b, 0.32) + tintC.rgb * lobe(q, c, 0.27);
+    vec3 col = tintA.rgb * lobe(q, a, 0.62) + tintB.rgb * lobe(q, b, 0.5) + tintC.rgb * lobe(q, c, 0.4);
     // Streaks of the field itself, so the light has grain to it rather than three clean blobs.
     col *= 0.35 + 1.1 * fbm(q * 2.4 - t);
-    // Deepened, so the light falls away to black well before the next lobe begins.
+    // Deepened, which keeps each colour its own where two lobes overlap.
     col = pow(col * glow, vec3(1.5)) * 1.6;
-    // Where lobes meet they add up; the ground is kept a ground, never a lamp.
-    col = 0.36 * (1.0 - exp(-col * 2.6));
+    // Where lobes meet they add up; the ground is kept a ground, never a lamp, so white type
+    // still reads on its brightest part.
+    col = 0.5 * (1.0 - exp(-col * 2.6));
     fragColor = vec4(col, 1.0) * qt_Opacity;
 }

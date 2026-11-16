@@ -1728,7 +1728,7 @@ Singleton {
   // A line counts as up this long before its first word, so it is in place when the voice is.
   readonly property real lyricLead: 0.3
   // The ground's light at rest, what a landing word adds, and what the player's loudness adds.
-  readonly property real lyricGlow: 0.42
+  readonly property real lyricGlow: 0.75
   readonly property real lyricGlowKick: 0.2
   readonly property real lyricGlowLevel: 0.25
   // The ground is drawn at one part in this of the stage and stretched.

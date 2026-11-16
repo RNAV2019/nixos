@@ -6,10 +6,11 @@
 // In: the cover's few most common colours as { h, s, l } (hue, saturation and lightness, each
 // 0..1), in any order. Out: the parts those colours play, in the same form:
 //   accent   the cover's liveliest colour, lifted until it reads on black: the word in hand
-//   second   the colour furthest from it round the wheel that the cover really has
-//   third    another the cover has, or one between the two
 //   ink      what words are set in: near white, leaning the cover's way
 //   dim      a word not yet sung
+//   wash     the three colours the ground is lit with: the cover's own, at their own hue and
+//            saturation, the one the cover has most of first. Unlike the parts above they are
+//            not lifted to read as type, so a deep blue sleeve lights the ground deep blue
 //   found    false when the cover has no colour to speak of (a black-and-white sleeve), and
 //            every part is then a grey, which is as true to it
 // With no cover at all (an empty list) it answers null, and the stage falls back on the theme.
@@ -30,6 +31,70 @@ function lift(c) {
     s: clamp(c.s, 0.5, 0.9),
     l: clamp(c.l, 0.66, 0.78)
   };
+}
+
+// A colour of the cover as light for the ground: its own hue, a little more than its own
+// saturation, and the lightness at which that saturation is at its fullest. How bright the
+// ground is belongs to the stage, not to the cover.
+function light(c) {
+  return {
+    h: c.h,
+    s: clamp(c.s * 1.2, 0, 1),
+    l: 0.5
+  };
+}
+
+// The three the ground is lit with, from the cover's colours that count as colours. The first is
+// the hue the cover has most of: the quantiser hands back a few colours of about equal share,
+// so the hue most of them fall near is the one that covers the most of the sleeve.
+function wash(coloured) {
+  var main = coloured[0], mainScore = -1;
+  coloured.forEach(function (c) {
+    var near = 0;
+    coloured.forEach(function (d) {
+      if (hueGap(c.h, d.h) < 0.07)
+        near++;
+    });
+    var score = near + c.s * 0.5;
+    if (score > mainScore) {
+      main = c;
+      mainScore = score;
+    }
+  });
+  // The furthest from it that the cover has, and a third apart from both.
+  var far = null, farScore = 0;
+  coloured.forEach(function (c) {
+    var gap = hueGap(c.h, main.h);
+    if (gap >= 0.06 && gap * (0.3 + c.s) > farScore) {
+      far = c;
+      farScore = gap * (0.3 + c.s);
+    }
+  });
+  var rest = null, restScore = 0;
+  coloured.forEach(function (c) {
+    var gap = Math.min(hueGap(c.h, main.h), far !== null ? hueGap(c.h, far.h) : 1);
+    if (gap >= 0.04 && gap * (0.3 + c.s) > restScore) {
+      rest = c;
+      restScore = gap * (0.3 + c.s);
+    }
+  });
+  // A sleeve of one hue is lit with that hue alone, in three depths, not with neighbours it
+  // does not have.
+  var second = far !== null ? light(far) : {
+    h: main.h,
+    s: clamp(main.s * 1.2, 0, 1),
+    l: 0.36
+  };
+  var third = rest !== null ? light(rest) : far !== null ? {
+    h: main.h,
+    s: clamp(main.s * 1.2, 0, 1),
+    l: 0.38
+  } : {
+    h: main.h,
+    s: clamp(main.s, 0, 1),
+    l: 0.62
+  };
+  return [light(main), second, third];
 }
 
 function roles(colors) {
@@ -53,16 +118,6 @@ function roles(colors) {
         s: tint,
         l: 0.86
       },
-      second: {
-        h: lightest.h,
-        s: tint,
-        l: 0.68
-      },
-      third: {
-        h: lightest.h,
-        s: tint,
-        l: 0.5
-      },
       ink: {
         h: lightest.h,
         s: tint,
@@ -72,7 +127,20 @@ function roles(colors) {
         h: lightest.h,
         s: tint,
         l: 0.5
-      }
+      },
+      wash: [{
+          h: lightest.h,
+          s: tint,
+          l: 0.6
+        }, {
+          h: lightest.h,
+          s: tint,
+          l: 0.42
+        }, {
+          h: lightest.h,
+          s: tint,
+          l: 0.3
+        }]
     };
   }
 
@@ -86,43 +154,10 @@ function roles(colors) {
     }
   });
 
-  // The furthest from it that the cover has, if the cover has one far enough to tell apart.
-  var other = null, otherScore = 0;
-  coloured.forEach(function (c) {
-    var gap = hueGap(c.h, best.h);
-    var score = gap * (0.3 + c.s);
-    if (gap >= 0.06 && score > otherScore) {
-      other = c;
-      otherScore = score;
-    }
-  });
-  var second = other !== null ? other : {
-    h: (best.h + 0.09) % 1,
-    s: best.s,
-    l: best.l
-  };
-
-  // A third apart from both, or failing that one between them.
-  var spare = null, spareScore = 0;
-  coloured.forEach(function (c) {
-    var gap = Math.min(hueGap(c.h, best.h), hueGap(c.h, second.h));
-    if (gap >= 0.05 && gap * (0.3 + c.s) > spareScore) {
-      spare = c;
-      spareScore = gap * (0.3 + c.s);
-    }
-  });
-  var third = spare !== null ? spare : {
-    h: (best.h + 1 - 0.07) % 1,
-    s: best.s * 0.8,
-    l: best.l
-  };
-
   var accent = lift(best);
   return {
     found: true,
     accent: accent,
-    second: lift(second),
-    third: lift(third),
     ink: {
       h: accent.h,
       s: clamp(accent.s * 0.45, 0.14, 0.4),
@@ -132,6 +167,7 @@ function roles(colors) {
       h: accent.h,
       s: clamp(accent.s * 0.4, 0.12, 0.34),
       l: 0.56
-    }
+    },
+    wash: wash(coloured)
   };
 }

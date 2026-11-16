@@ -77,14 +77,21 @@ const parts = Palette.roles(sleeve);
 eq("palette: no cover, no parts", Palette.roles([]), null);
 check("palette: found colour", parts.found === true);
 check("palette: the accent is the liveliest, and reads on black", Palette.hueGap(parts.accent.h, 0.02) < 0.001 && parts.accent.l >= 0.66 && parts.accent.s >= 0.5, parts.accent);
-check("palette: the second is the furthest the cover has", Palette.hueGap(parts.second.h, 0.55) < 0.001, parts.second);
-check("palette: the third is apart from both", Palette.hueGap(parts.third.h, 0.12) < 0.001, parts.third);
+eq("palette: the ground is lit with the cover's own hues", parts.wash.map(c => c.h), [0.02, 0.55, 0.12]);
+check("palette: and at their own depth, not lifted like type", parts.wash.every(c => c.l === 0.5) && Math.abs(parts.wash[1].s - 0.72) < 1e-9, parts.wash);
+{
+  // Mostly blue with one red: the ground's first colour is the one the sleeve has most of,
+  // though the red is the livelier and is what the type takes.
+  const blues = Palette.roles([{h: 0.6, s: 0.6, l: 0.4}, {h: 0.62, s: 0.7, l: 0.5}, {h: 0.58, s: 0.5, l: 0.3}, {h: 0.0, s: 0.9, l: 0.55}]);
+  check("palette: the ground leads with the commonest hue", Palette.hueGap(blues.wash[0].h, 0.6) < 0.03 && Palette.hueGap(blues.wash[1].h, 0) < 0.001, blues.wash);
+  check("palette: the type takes the liveliest", Palette.hueGap(blues.accent.h, 0) < 0.001, blues.accent);
+}
 check("palette: ink is near white and leans the accent's way", parts.ink.l > 0.9 && parts.ink.s <= 0.4 && parts.ink.h === parts.accent.h, parts.ink);
 check("palette: dim is darker than ink", parts.dim.l < 0.65);
 const one = Palette.roles([{h: 0.6, s: 0.7, l: 0.5}, {h: 0.6, s: 0.5, l: 0.3}]);
-check("palette: one hue still gives three apart", Palette.hueGap(one.second.h, one.accent.h) > 0.05 && Palette.hueGap(one.third.h, one.accent.h) > 0.05, one);
+check("palette: a sleeve of one hue lights the ground in that hue alone", one.wash.every(c => Palette.hueGap(c.h, 0.6) < 0.001) && new Set(one.wash.map(c => c.l)).size === 3, one.wash);
 const grey = Palette.roles([{h: 0, s: 0.03, l: 0.9}, {h: 0, s: 0, l: 0.1}, {h: 0.3, s: 0.1, l: 0.5}]);
-check("palette: a black-and-white sleeve is greys", grey.found === false && grey.accent.s <= 0.08, grey);
+check("palette: a black-and-white sleeve is greys", grey.found === false && grey.accent.s <= 0.08 && grey.wash.every(c => c.s <= 0.08), grey);
 
 // ---- curves ----
 check("spring: starts at rest", Kinetic.spring(0, 30, 0.6) === 0 && Kinetic.spring(-1, 30, 0.6) === 0);

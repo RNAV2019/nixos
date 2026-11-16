@@ -147,9 +147,20 @@ Item {
   // new song's colours come up and are not switched to.
   property color ink: paint("ink", Theme.lyricInk)
   property color accent: paint("accent", Theme.accent)
-  property color accent2: paint("second", Qt.color(Theme.palette.gold))
-  property color accent3: paint("third", Qt.tint(Theme.accent, Theme.withAlpha(Qt.color(Theme.palette.gold), 0.5)))
   property color dim: paint("dim", Qt.hsla(0, 0, 0.55, 1))
+
+  // What the ground is lit with: the cover's own colours as they are on the sleeve, the one it
+  // has most of first, not lifted to read as type the way the ink and the accent are.
+  function lit(i, fallback) {
+    if (!scene.roles)
+      return fallback;
+    var c = scene.roles.wash[i];
+    return Qt.hsla(c.h, c.s, c.l, 1);
+  }
+
+  property color washA: lit(0, Theme.accent)
+  property color washB: lit(1, Qt.color(Theme.palette.gold))
+  property color washC: lit(2, Qt.tint(Theme.accent, Theme.withAlpha(Qt.color(Theme.palette.gold), 0.5)))
   Behavior on ink {
     ColorAnimation {
       duration: Theme.lyricColourFade
@@ -160,12 +171,17 @@ Item {
       duration: Theme.lyricColourFade
     }
   }
-  Behavior on accent2 {
+  Behavior on washA {
     ColorAnimation {
       duration: Theme.lyricColourFade
     }
   }
-  Behavior on accent3 {
+  Behavior on washB {
+    ColorAnimation {
+      duration: Theme.lyricColourFade
+    }
+  }
+  Behavior on washC {
     ColorAnimation {
       duration: Theme.lyricColourFade
     }
@@ -295,9 +311,9 @@ Item {
       property real aspect: scene.width / Math.max(1, scene.height)
       property real glow: (Theme.lyricGlow + Theme.lyricGlowKick * scene.kick + Theme.lyricGlowLevel * scene.level) * scene.look("ground", 1)
       property real stir: scene.stir
-      property color tintA: scene.accent
-      property color tintB: scene.accent2
-      property color tintC: scene.accent3
+      property color tintA: scene.washA
+      property color tintB: scene.washB
+      property color tintC: scene.washC
 
       fragmentShader: Qt.resolvedUrl("../Shaders/lyricground.frag.qsb")
     }

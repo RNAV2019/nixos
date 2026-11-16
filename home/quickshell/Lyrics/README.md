@@ -26,8 +26,9 @@ the state `lyrics-offset`).
   `~/.cache/quickshell/lyrics`, and publishes one `model`.
 - **`Parse.js`** turns either service's answer into that model: `lines` of `words`, every time in
   seconds, each line knowing when it ends (`end`) and when it should leave (`out`).
-- **`Palette.js`** reads the parts the cover's colours play: the ink, the accent, a dim, and
-  two more for the ground's light.
+- **`Palette.js`** reads the parts the cover's colours play: the ink, the accent and a dim for
+  the type, lifted to read, and the `wash`, three of the cover's colours as they are on the
+  sleeve, which is what the ground is lit with (the one the cover has most of is the broadest).
 - **`LyricStage.qml`** is the window, the keys and the way in and out. The window is clear and
   a black sheet fades up in it, so it is the desktop itself that fades, not a picture of it
   (`qs ipc call lyrics fade 0.4` holds the way in part-way for a look).
@@ -51,7 +52,7 @@ What `LyricStyle` gives you:
 | `cur`, `line` | the line in hand (`-1` / `null` before the first), counted from `lead` seconds before its first word |
 | `u` | a hundredth of the stage's height: size everything in it |
 | `ink` | what words are set in: near white, leaning the cover's way |
-| `accent` | the cover's liveliest colour, for the word in hand |
+| `accent` | the cover's liveliest colour, lifted to read on the ground, for the word in hand |
 | `dim` | a word not yet sung |
 | `slotLine(k, n, after)` | the line slot `k` of an `n`-slot pool draws (see Punch) |
 | `until(line, j)` | when word `j` gives way to the next |
@@ -80,8 +81,9 @@ The rules that keep every style honest:
   the face was there.
 - **Any line, any song.** One word or fourteen, a word of twenty letters, a line of half a
   second: fit to the stage's width, never run off it, never overlap what is still being read.
-- **Black is the ground.** The panel is an OLED and the picture is light on black: no filled
-  backdrops, nothing that sits still for the length of a song.
+- **The ground is the cover's.** It is lit in the sleeve's own colours, drifting, and never
+  brighter than white type reads on: no filled backdrops of a style's own, nothing that sits
+  still for the length of a song (the panel is an OLED).
 - **Keep it cheap.** It runs at 2880 x 1800 and 120 Hz on integrated graphics. Draw lines from a
   small pool of slots (`slotLine`), hide what is out of its life (`visible: false`), no
   `layer.enabled` or `MultiEffect` per word, no `Canvas`.
