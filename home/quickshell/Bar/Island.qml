@@ -409,12 +409,13 @@ FrostedSurface {
 
   // Clicking empty island space pins the card open; controls on top act without disturbing it.
   //
-  // A line of lyrics is not empty space. A click on it opens the Now playing panel, which grows
-  // out of the line, and the mouse's back and forward buttons skip, as on the open card's track
-  // block. And the card opens over it only for a pointer that came to it: a line grows and
-  // shrinks with every phrase, so the pill can turn up under a pointer at rest beside it, which
-  // the compositor reports as the pointer entering as soon as it is nudged. So over a line the
-  // wait for the card starts once the pointer has travelled islandLyricHoverTravel on the pill.
+  // The words of a song are not empty space, and a click on them does nothing: the card opens
+  // under the pointer before a click can land on them, so there is no click they could answer
+  // that the card does not take. And the card opens over them only for a pointer that came to
+  // them: a line grows and shrinks with every phrase, so the pill can turn up under a pointer at
+  // rest beside it, which the compositor reports as the pointer entering as soon as it is
+  // nudged. So over a line the wait for the card starts once the pointer has travelled
+  // islandLyricHoverTravel on the pill.
   MouseArea {
     id: hover
 
@@ -425,8 +426,7 @@ FrostedSurface {
     anchors.fill: parent
     enabled: !root.suppressed && !root.dropArmed
     hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
-    acceptedButtons: Qt.LeftButton | Qt.ForwardButton | Qt.BackButton
+    cursorShape: root.lyricUp ? Qt.ArrowCursor : Qt.PointingHandCursor
     onContainsMouseChanged: {
       if (containsMouse) {
         // The pointer is known to be here: the ordinary rules from now on.
@@ -453,19 +453,8 @@ FrostedSurface {
       if (!root.pinned && !root.hoverOpen)
         openDelay.restart();
     }
-    onClicked: function (event) {
-      if (root.lyricUp) {
-        openDelay.stop();
-        if (event.button === Qt.ForwardButton)
-          Media.next();
-        else if (event.button === Qt.BackButton)
-          Media.previous();
-        else
-          Bus.toggleSurface("media");
-      } else if (event.button === Qt.LeftButton) {
-        root.pinned = !root.pinned;
-      }
-    }
+    onClicked: if (!root.lyricUp)
+      root.pinned = !root.pinned
   }
 
   Rectangle {

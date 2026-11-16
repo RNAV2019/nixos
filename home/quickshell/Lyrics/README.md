@@ -75,9 +75,9 @@ mark stays, at the line's end; only the equaliser goes with the clock.
 
 Over a line the hover card still opens, since it is where the clock is, but only for a pointer
 that means it: it must travel 4 px on the pill and then stay 300 ms (70 ms on the plain pill). A
-line that grows under a pointer at rest does not open it. A click on a line opens the Now playing
-panel, out of the line's shape, and the mouse's back and forward buttons skip; pinning the card
-is still a click on the open card.
+line that grows under a pointer at rest does not open it. A click on the words does
+nothing (the card is open under the pointer before one could land on them); pinning the card is
+a click on the open card, and the Now playing panel a click on its track block, as ever.
 
 Words come from LyricsPlus (word timings) or LRCLIB (line timings, the words then spread by
 syllable), asked once a song and kept in `~/.cache/quickshell/lyrics`. A song neither has shows
