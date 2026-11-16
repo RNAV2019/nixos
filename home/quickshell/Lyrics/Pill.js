@@ -1,7 +1,8 @@
 .pragma library
 
 // The lyric pill's plain logic: how a song's lines are cut to what the pill can hold, when each
-// comes up and goes, and what a word looks like at a moment of the song. Everything is a function
+// comes up and goes, what the pill is while nobody sings, and what a word looks like at a moment
+// of the song. Everything is a function
 // of the song's time, so the pill at 38.2 s is the same picture every run. No QML imports:
 // tools/lyrics-test.mjs evaluates this file under node.
 //
@@ -30,6 +31,21 @@ var FALL = 0.42;
 var SETTLE = 0.7;
 // How many letters wide the soft front of the fill is.
 var SOFT = 2.2;
+// With nobody singing and a line still to come, three dots stand in the pill and are lit one by
+// one over the last COUNT seconds before the voice, so the eye knows when to come back.
+var COUNT = 6;
+// A song is named at its start: its title comes up TITLE_IN into it and stands until the first
+// line, or for TITLE_FOR if the dots would then have DOTS_LEAST to themselves. An intro shorter
+// than TITLE_LEAST is not named at all.
+var TITLE_IN = 0.2;
+var TITLE_FOR = 7;
+var TITLE_LEAST = 2.5;
+var DOTS_LEAST = 2;
+// The dots come in a moment after what was there has started to go, and are gone as the line's
+// room is made.
+var DOTS_AFTER = 0.12;
+var DOTS_IN = 0.22;
+var DOTS_OUT = 0.14;
 // A word held this long is as heavy as a word gets; one shorter than HELD_FROM has no weight.
 var HELD_FROM = 0.45;
 var HELD_FULL = 1.55;
@@ -182,6 +198,80 @@ function wideFor(list, now) {
   return now < list[i].stop + (list[i].toRest ? LATE : 0) ? i : -1;
 }
 
+// When the song's title is up, as a phrase is (`start`, `stop`, `fromRest`), or null for a song
+// that starts singing too soon to be named.
+function opening(list) {
+  if (list.length === 0)
+    return null;
+  var until = list[0].start - EARLY;
+  if (until < TITLE_LEAST)
+    return null;
+  return {
+    start: TITLE_IN,
+    stop: until - TITLE_FOR < DOTS_LEAST ? until : TITLE_FOR,
+    fromRest: true
+  };
+}
+
+// What the pill is at `now`, `titled` being opening()'s answer for the song:
+//   { kind: "line", index }                      the phrase it is wide for
+//   { kind: "title", index: -1, from, until }    the song named, at its start
+//   { kind: "dots", index, from, until, countFrom, countUntil }   nobody singing, phrase `index` to come
+//   { kind: "plain", index: -1 }                 no more words: the clock's pill
+function faceAt(list, now, titled) {
+  var i = last(list, now, function (p) {
+    return p.start - (p.fromRest ? EARLY : 0);
+  });
+  if (i >= 0 && now < list[i].stop + (list[i].toRest ? LATE : 0))
+    return {
+      kind: "line",
+      index: i
+    };
+  if (i + 1 >= list.length)
+    return {
+      kind: "plain",
+      index: -1
+    };
+  var next = list[i + 1];
+  var from = i >= 0 ? list[i].stop + LATE : 0;
+  if (i < 0 && titled) {
+    if (now < titled.stop)
+      return {
+        kind: "title",
+        index: -1,
+        from: titled.start,
+        until: titled.stop
+      };
+    from = titled.stop;
+  }
+  var countUntil = next.t - LEAD;
+  return {
+    kind: "dots",
+    index: i + 1,
+    from: from,
+    until: next.start - EARLY,
+    countFrom: Math.max(from, countUntil - COUNT),
+    countUntil: countUntil
+  };
+}
+
+// ---- the dots ----
+
+// How much of dot `i` (0..2) is lit, how far it is through its idle breath (0 once the count is
+// on), and how much of all three is there at all. `face` is a "dots" answer of faceAt.
+function dotLit(face, i, now) {
+  var each = (face.countUntil - face.countFrom) / 3;
+  return each > 0 ? smooth((now - (face.countFrom + i * each)) / each) : 1;
+}
+
+function dotBreath(face, i, now) {
+  return now < face.countFrom ? 0.5 + 0.5 * Math.sin((now - face.from) * 2.2 - i * 0.7) : 0;
+}
+
+function dotsShown(face, now) {
+  return smooth((now - face.from - DOTS_AFTER) / DOTS_IN) * (1 - smooth((now - (face.until - DOTS_OUT)) / DOTS_OUT));
+}
+
 // The last phrase to have come up by `now`, or -1: it and the one before it are all that can be
 // on screen.
 function latest(list, now) {
@@ -215,7 +305,7 @@ function weight(word) {
 }
 
 // The `index`th word's way in, 0..1 and eased, and how far through its way out the whole
-// phrase is, 0..1 and even: the line fades early in it and moves late (Lyrics/LyricLine.qml),
+// phrase is, 0..1 and even: the line fades early in it and moves late (Lyrics/LyricFace.qml),
 // so the line coming up under it is never read through it.
 function arrived(phrase, index, now) {
   return phrase ? outCubic((now - (phrase.start + (phrase.fromRest ? 0 : FOLLOW) + index * STAGGER)) / ARRIVE) : 0;

@@ -1,4 +1,6 @@
 import QtQuick
+import qs.Commons
+import qs.Lyrics
 import qs.Services
 
 // The one collapsed renderer used by transient surfaces and handoff stills, so a surface
@@ -17,6 +19,14 @@ Item {
   property bool progressDriven: false
   property real amount: 1
   property var origin: null
+  // Down while the owner draws nothing at all (a parked window): the words of a song are worked
+  // out every frame, and are not for a pill nobody can see.
+  property bool live: true
+
+  // The pill is a song's just now (a line of lyrics, the dots, the title), not the clock's.
+  // Opening, by what the island was showing when it was taken; closing, by what it will be
+  // showing when it is uncovered, unless the way back is to the open card.
+  readonly property bool faced: root.progressDriven ? Lyrics.faced && !root.fromCard : root.origin !== null ? root.origin.fromFace : Lyrics.faced
 
   // The clock's width as drawn and the time it shows, for what is laid out against it (the
   // open card's date and gauges, Ui/IslandSurfaceBase.qml).
@@ -37,16 +47,43 @@ Item {
 
     anchors.fill: parent
     origin: root.origin
-    shown: root.shown
+    shown: root.shown && !root.faced
     progressDriven: root.progressDriven
-    amount: root.amount
+    amount: root.faced ? 0 : root.amount
   }
+
+  // The song in the clock's place, as the bar's island draws it, coming and going as the marks do.
+  Loader {
+    y: (parent.height - height) / 2
+    width: parent.width
+    height: Theme.barHeight
+    active: root.faced && root.live
+
+    sourceComponent: LyricFace {
+      // A surface is never narrower than the words it carries, and does not crop this to its shape.
+      shaded: false
+      presence: root.progressDriven && !root.faceCut ? root.amount : root.shown ? 1 : 0
+
+      Behavior on presence {
+        enabled: !root.faceCut && !root.progressDriven
+
+        ContentFade {}
+      }
+    }
+  }
+
+  // The words fade where the clock would be cut: a shape taken from the island had them up.
+  readonly property bool faceCut: root.origin !== null && (root.origin.handedOver || root.origin.held)
+  readonly property real faceSide: Theme.islandLyricSide(root.recording, root.camera, root.microphone)
 
   PillMarks {
     anchors.fill: parent
-    clockLeft: parent.width / 2 - clock.clockWidth / 2
-    clockRight: parent.width / 2 + clock.clockWidth / 2
-    mediaActive: root.mediaActive
+    // Under a song the equaliser goes with the clock and the marks that stay hang off the room
+    // kept either side of the words (Bar/Island.qml).
+    equaliserEdge: parent.width / 2 - clock.clockWidth / 2
+    clockLeft: root.faced ? root.faceSide : parent.width / 2 - clock.clockWidth / 2
+    clockRight: root.faced ? parent.width - root.faceSide : parent.width / 2 + clock.clockWidth / 2
+    mediaActive: root.mediaActive && !root.faced
     playing: root.playing
     recording: root.recording
     camera: root.camera

@@ -273,7 +273,9 @@ The key rules, all in `Panel.take`:
 - **`Ring`**: a circle's progress, `value` 0..1 from twelve o'clock; **`Spinner`** is a
   quarter of one turning.
 - **`PillMarks`**, **`IslandClock`**, **`RollingClock`**, **`CollapsedPill`**: the shut pill and
-  what it carries over to a surface. You only touch these for the pill itself.
+  what it carries over to a surface. You only touch these for the pill itself. While a song
+  plays the shut pill may be its words and not the clock (`Lyrics/LyricFace.qml`); `CollapsedPill`
+  then draws those, so a surface still hands back the pill the bar owns.
 - **`DigitRoll`**: the clock's roll for a `Text` that already exists (the OSD's reading through
   `IslandPill.rollReading`): changed glyphs roll, the newest text always wins.
 - **`ArtFade`**: a picture whose `source` changes on a cross-fade, the last held until the next
@@ -442,8 +444,10 @@ The contracts a service file follows; a singleton file takes the contract as its
 - **`Lyrics`**: the timed words of what is playing, and where the song is in them, for the island's
   pill (`Lyrics/README.md`). Fetched only while `enabled` (ALT + L): LyricsPlus for word timings,
   LRCLIB for line timings; each answer is kept in `Paths.lyricsDir`. `state` (`idle`, `loading`,
-  `ready`, `none`), `model`, `source`; `phrases` (the lines cut to the pill), `now`, `index` (the
-  phrase the pill is wide for), `latest`, `up`, and `pinned` for tests.
+  `ready`, `none`), `model`, `source`; `phrases` (the lines cut to the pill), `now`, `face`
+  (`line`, `dots`, `title`, `plain`), `facing`, `faced`, `index`, `latest`, and `pinned` for
+  tests. `pillWidth` is the shut pill's width whatever it shows: the island and
+  `IslandOrigin.collapsedWidth` both read it.
 - **`Provider`**: a launcher provider's base. `section`, `prefix`, `results`, `emptyResults`,
   `activate(row, modifiers)`; the row shape and the scope rules are in `Services/Omnibox.qml`.
 - **`Activities/MomentSource`**: one source of moments. `kind`, `show(spec)`, `withdraw()`,

@@ -8,7 +8,7 @@ import "../Lyrics/Parse.js" as Parse
 import "../Lyrics/Pill.js" as Pill
 
 // The words of what is playing, timed, and where the song is in them: what the island's pill
-// shows a line at a time (Lyrics/LyricLine.qml). Asked of LyricsPlus first, which times every
+// shows a line at a time, and what it shows while nobody sings (Lyrics/LyricFace.qml). Asked of LyricsPlus first, which times every
 // word and names the song's parts, then of LRCLIB, which times lines only (the words are then
 // spread across each line). Both ask for no key. Nothing is fetched while the words are switched
 // off (`enabled`, ALT + L), an answer is kept on disk so a song is asked for once, and a song
@@ -57,36 +57,77 @@ Singleton {
 
   // The lines as the pill shows them, cut to its width (Pill.js's phrases); empty unless ready.
   property var phrases: []
+  // When the song's title is up at its start (Pill.opening), or null.
+  property var titled: null
   // The song's time in seconds, read every frame while there are words to show; `pinned` holds
   // it at a moment instead (tests, -1 follows the player).
   property real now: 0
   property real pinned: -1
-  // The phrase the pill is wide for (-1: the plain pill), and the last to have come up (-1: none
-  // yet): it and the one before it are all that can be on screen.
+  // What the pill is just now (Pill.faceAt): `face` is "line" (a phrase being sung), "dots"
+  // (nobody singing, a line to come), "title" (the song named at its start) or "plain" (the
+  // clock's pill), and `facing` the whole answer, replaced only when it changes. `index` is the
+  // phrase the pill is wide for (-1 unless a line), and `latest` the last to have come up (-1:
+  // none yet): it and the one before it are all that can be on screen.
+  property string face: "plain"
+  property var facing: null
   property int index: -1
   property int latest: -1
-  // The pill carries a line just now. Not while the music is paused: the words wait with it.
-  readonly property bool up: ticking && index >= 0
+  // The song is being followed. Not while it is paused: the words wait with it.
   readonly property bool ticking: enabled && phrases.length > 0 && (pinned >= 0 || (Media.playing && Media.positionKnown))
+  // The shut pill is not the clock's: a line, the dots or the title. Never under a lock, which
+  // takes the island as the clock's pill.
+  readonly property bool faced: ticking && face !== "plain" && !Bus.locking && !Bus.lockClosing
+
+  // How wide what the pill shows is, without the room either side of it; 0 for the clock's pill.
+  readonly property real faceWidth: {
+    if (!root.faced)
+      return 0;
+    if (root.face === "line")
+      return root.index >= 0 && root.index < root.phrases.length ? root.phrases[root.index].width : 0;
+    return root.face === "title" ? root.titleWidth : Theme.islandLyricDots;
+  }
+
+  // The shut pill's width, whatever it shows: what the island rests at, and what every surface
+  // that grows out of it starts from and comes back to (Ui/IslandOrigin.qml).
+  readonly property real pillWidth: faced ? Math.ceil(faceWidth) + 2 * Theme.islandLyricSide(Recorder.recording, Privacy.camera, Privacy.microphone) : Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
 
   property real _estimate: 0
 
   FontMetrics {
-    id: face
+    id: face15
 
     font.family: Theme.uiFont
     font.pixelSize: Theme.islandLyricSize
     font.weight: Theme.weightSemi
   }
 
+  FontMetrics {
+    id: byline
+
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.islandLyricSize
+    font.weight: Theme.weightMedium
+  }
+
   // The gap between two words, which is the face's own space.
-  readonly property real wordGap: face.advanceWidth(" ")
+  readonly property real wordGap: face15.advanceWidth(" ")
+
+  // The song as the pill names it: its title, and its artist beside it where both fit. A title
+  // too long for the pill is cut to it (the Text elides) and stands alone.
+  readonly property string titleText: root.track.title
+  readonly property real titleNatural: Math.ceil(face15.advanceWidth(root.titleText))
+  readonly property real artistNatural: Math.ceil(byline.advanceWidth(root.track.artist))
+  readonly property bool artistShown: root.track.artist !== "" && root.titleNatural + Theme.islandLyricTitleGap + root.artistNatural <= Theme.islandLyricMaxText
+  readonly property real titleShown: Math.min(root.titleNatural, Theme.islandLyricMaxText)
+  readonly property real titleWidth: root.titleShown + (root.artistShown ? Theme.islandLyricTitleGap + root.artistNatural : 0)
 
   // A word is as wide as its Text will be, which is a whole number of px; the gap is not.
   function plan() {
-    root.phrases = root.model ? Pill.phrases(root.model.lines, function (text) {
-      return text === " " ? root.wordGap : Math.ceil(face.advanceWidth(text));
+    var list = root.model ? Pill.phrases(root.model.lines, function (text) {
+      return text === " " ? root.wordGap : Math.ceil(face15.advanceWidth(text));
     }, Theme.islandLyricMaxText) : [];
+    root.titled = Pill.opening(list);
+    root.phrases = list;
   }
 
   onModelChanged: root.plan()
@@ -102,6 +143,8 @@ Singleton {
 
   function tick(dt) {
     if (!root.ticking) {
+      root.face = "plain";
+      root.facing = null;
       root.index = -1;
       root.latest = -1;
       return;
@@ -116,9 +159,12 @@ Singleton {
     else
       root._estimate += dt + (raw - root._estimate) * Math.min(1, dt * 4);
     root.now = root._estimate;
-    var wide = Pill.wideFor(root.phrases, root.now);
-    if (wide !== root.index)
-      root.index = wide;
+    var f = Pill.faceAt(root.phrases, root.now, root.titled);
+    if (root.facing === null || f.kind !== root.facing.kind || f.index !== root.facing.index) {
+      root.facing = f;
+      root.index = f.kind === "line" ? f.index : -1;
+      root.face = f.kind;
+    }
     var last = Pill.latest(root.phrases, root.now);
     if (last !== root.latest)
       root.latest = last;

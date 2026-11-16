@@ -15,10 +15,11 @@ import "../Ui/MorphScan.js" as MorphScan
 // Now playing panel, which carries those three on (handContents) and, closed with the pointer
 // still on the card, gives the island back to it (returnContents, returned).
 //
-// Shut, while a song with timed lyrics plays, the pill is the line being sung and nothing else:
-// as wide as the line and no taller, the clock and the equaliser back in every pause (lyricUp,
-// Lyrics/LyricLine.qml). It is then not the resting pill, so a surface that takes the island
-// grows out of the shape it is wearing, as it does out of the open card.
+// Shut, while a song with timed lyrics plays, the pill is the song's and not the clock's: the line
+// being sung and nothing else, as wide as the line and no taller; three dots while nobody sings;
+// the song's title at its start (lyricUp, Lyrics/LyricFace.qml). That is still the resting pill,
+// only a wider or narrower one (Services/Lyrics.qml `pillWidth`), and every surface that grows
+// out of the island starts from it and comes back to it, drawing the same words as it does.
 FrostedSurface {
   id: root
 
@@ -118,44 +119,26 @@ FrostedSurface {
   readonly property bool resting: Math.abs(heightSpring.value - Theme.barHeight) < 0.5 && Math.abs(widthSpring.value - collapsedWidth) < 0.5
   readonly property bool onOffer: !suppressed && (expanded || dropArmed || !resting)
 
-  // Read by the surface growing out of this shape: the drop well has no clock up, and nor has
-  // a line of lyrics. By what is drawn, not by lyricUp: a surface's claim takes the words down
-  // before it reads this, and for those first frames they are still what the pill shows.
-  readonly property bool clockShown: !dropArmed && lyricPresence < 0.5
+  // Read by the surface growing out of this shape: the drop well has nothing of the pill's up.
+  readonly property bool clockShown: !dropArmed
+  // And whether what is up is a song's (a line of lyrics, the dots, the title) and not the clock:
+  // the surface's first frames then draw that. By what is drawn, since a claim may change the rest.
+  readonly property bool faceShown: lyricPresence > 0.5
 
   // ---- the words of what is playing ----
 
-  // The island is something else just now, or is under something else. Not while it is only
-  // claimed: until the surface that asked for it is on screen the pill stays as it is, words and
-  // all, as the open card does, and that surface grows out of the line's shape.
-  readonly property bool lyricBlocked: suppressed || returning || awaitingPointer || expanded || dropArmed || Bus.locking || Bus.lockClosing
-  // After that the plain pill stands a moment before the words take it again, so a card or a
-  // panel is seen to close into the pill it came from.
-  property bool lyricSettled: true
-
-  onLyricBlockedChanged: {
-    if (lyricBlocked) {
-      lyricReturn.stop();
-      lyricSettled = false;
-    } else {
-      lyricReturn.restart();
-    }
-  }
-
-  Timer {
-    id: lyricReturn
-
-    interval: Theme.islandLyricReturn
-    onTriggered: root.lyricSettled = !root.lyricBlocked
-  }
-
-  readonly property bool lyricUp: Lyrics.up && !lyricBlocked && lyricSettled
-  // The room either side of the line, and the pill's width with it.
+  // The pill is a song's just now. Not while it is the open card or the drop well. Under a
+  // surface it goes on being whatever the song makes it, unseen, so it is right on the frame
+  // the surface uncovers it.
+  readonly property bool lyricUp: Lyrics.faced && !expanded && !dropArmed
+  // The words are what is drawn. The open card on its way shut keeps its clock until it is
+  // nearly the pill, and only then gives way to them.
+  readonly property bool lyricShown: lyricUp && openness < Theme.islandLyricFromCard
+  // The room either side of the words, for the marks that stay.
   readonly property real lyricSide: Theme.islandLyricSide(Recorder.recording, Privacy.camera, Privacy.microphone)
-  readonly property real lyricWidth: lyric.textWidth + 2 * lyricSide
 
-  // 0 the plain pill, 1 the words: the clock and the equaliser give way on it.
-  property real lyricPresence: lyricUp ? 1 : 0
+  // 0 the clock's pill, 1 the song's: the clock and the equaliser give way on it.
+  property real lyricPresence: lyricShown ? 1 : 0
 
   Behavior on lyricPresence {
     ContentFade {}
@@ -325,14 +308,15 @@ FrostedSurface {
     }
   }
 
-  readonly property int collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
+  // The shut pill's width: the clock's and its marks', or a song's line, dots or title.
+  readonly property real collapsedWidth: Lyrics.pillWidth
 
   // On the same spring as every surface that grows out of it; see Ui/MorphSpring.qml.
   MorphSpring {
     id: widthSpring
 
     label: "island.w"
-    target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.lyricUp ? root.lyricWidth : root.collapsedWidth
+    target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.collapsedWidth
   }
 
   MorphSpring {
@@ -413,12 +397,10 @@ FrostedSurface {
     }
   }
 
-  // The line being sung, in place of the clock. Under the pointer's area below, not over it: a
-  // Text set as styled text takes hover for itself (it may hold a link), and over it the pill
-  // heard the pointer only in the gaps between the words.
-  LyricLine {
-    id: lyric
-
+  // The song, in place of the clock. Under the pointer's area below, not over it: a Text set as
+  // styled text takes hover for itself (it may hold a link), and over it the pill heard the
+  // pointer only in the gaps between the words.
+  LyricFace {
     y: root.midline - height / 2
     width: root.width
     height: Theme.barHeight
@@ -506,7 +488,7 @@ FrostedSurface {
     y: root.midline - height / 2
     width: root.width
     height: Theme.barHeight
-    mediaActive: Media.active && !root.lyricUp
+    mediaActive: Media.active && !Lyrics.faced
     equaliserEdge: root.clockLeft
     clockLeft: root.clockLeft + (root.lyricSide - root.clockLeft) * root.lyricPresence
     clockRight: {
@@ -711,7 +693,7 @@ FrostedSurface {
 
     // Gives way to the drop well, and to a line of lyrics, on the same cross-fade as the rest
     // of the pill.
-    opacity: root.dropArmed || root.lyricUp ? 0 : 1
+    opacity: root.dropArmed || root.lyricShown ? 0 : 1
     visible: opacity > 0
 
     Behavior on opacity {

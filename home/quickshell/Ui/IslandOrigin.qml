@@ -44,8 +44,14 @@ QtObject {
   // How soft that surface was showing them, taken in the middle of a morph of its own (px of blur).
   property real fromBlur: 0
 
-  // The pill the surface starts from and returns to, which is wider while something plays.
-  readonly property real collapsedWidth: Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
+  // Whether the island was showing a song (a line of lyrics, the dots, the title) and not its
+  // clock when it was taken. The surface's first frames draw the same, so they match the pill
+  // they cover (Ui/CollapsedPill.qml).
+  property bool fromFace: false
+
+  // The pill the surface starts from and returns to: wider while something plays, and as wide
+  // as the line while it is the words of a song (Services/Lyrics.qml).
+  readonly property real collapsedWidth: Lyrics.pillWidth
 
   // Where the pill rests; the surface is placed by this so it starts from and returns to it.
   readonly property real offsetX: Bus.pillOffsetX
@@ -348,6 +354,7 @@ QtObject {
     fromMorph = null;
     fromBlur = 0;
     fromClock = true;
+    fromFace = false;
     fromPointer = false;
     Bus.clearIslandHolder(screenName, origin);
     Bus.islandDropped(screenName);
@@ -366,6 +373,7 @@ QtObject {
     fromMorph = null;
     fromBlur = 0;
     fromClock = true;
+    fromFace = false;
     fromWidth = width;
     fromHeight = height;
     Bus.clearIslandHolder(screenName, origin);
@@ -383,6 +391,9 @@ QtObject {
     fromBlur = 0;
     fromClock = true;
     fromPointer = false;
+    // What the island is showing, read before the claim as the card is.
+    var island = Bus.islandFor(screenName);
+    fromFace = island !== null && island.faceShown === true;
     adopt();
     Bus.claimIsland(screenName, width, height, radius, duration);
     // After the claim, in which whoever held the island let it go.

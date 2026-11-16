@@ -224,6 +224,11 @@ ShellRoot {
       return Lyrics.index >= 0 ? Lyrics.phrases[Lyrics.index].text : "";
     }
 
+    // What the pill is: "line", "dots", "title" or "plain".
+    function face(): string {
+      return Lyrics.faced ? Lyrics.face : "plain";
+    }
+
     function pin(seconds: string): void {
       Lyrics.pinned = Number(seconds);
     }

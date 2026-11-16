@@ -400,7 +400,7 @@ Singleton {
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
-  // The words of what is playing, in the shut pill (Lyrics/LyricLine.qml, Lyrics/Pill.js): while a
+  // The words of what is playing, in the shut pill (Lyrics/LyricFace.qml, Lyrics/Pill.js): while a
   // line is sung the pill is that line and nothing else, as wide as it and no taller, and the
   // clock and the equaliser are back in every pause. The words are ink only: a word not yet sung
   // is faint, the one being sung fills letter by letter at full strength, and one sung eases back
@@ -425,9 +425,23 @@ Singleton {
   // The pill's ends shade words that have not room yet (the shape is still on its way) over
   // this width.
   readonly property int islandLyricShade: 16
-  // After the island has been something else (the open card, under a panel, the drop well), the
-  // plain pill stands this long before the words take it again.
-  readonly property int islandLyricReturn: 320
+  // With nobody singing and a line to come, three dots stand in for the words (Pill.js): each
+  // this size, this far apart, in this much room (the pill is that and its insets), unlit at this
+  // share of the ink and this share of its size, and breathing by these while they wait.
+  readonly property real lyricDotSize: 5
+  readonly property real lyricDotGap: 6
+  readonly property int islandLyricDots: 35
+  readonly property real lyricDotUnlit: 0.3
+  readonly property real lyricDotSmall: 0.86
+  readonly property real lyricDotBreathAlpha: 0.12
+  readonly property real lyricDotBreathSize: reduceMotion ? 0 : 0.08
+  // At its start the song is named: its title in the words' own face, the artist beside it this
+  // far off and this much fainter.
+  readonly property int islandLyricTitleGap: 9
+  readonly property real lyricArtistAlpha: 0.5
+  // The open card on its way shut gives the pill to the words once it is this near the pill
+  // (of its openness): until then it is still the card's clock.
+  readonly property real islandLyricFromCard: 0.3
   // Over a line the hover card waits this long, not islandHoverOpenDelay, and only for a pointer
   // that has moved this far (px) on the pill since it came onto it (Bar/Island.qml).
   readonly property int islandLyricHoverDelay: 300

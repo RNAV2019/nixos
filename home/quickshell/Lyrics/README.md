@@ -1,17 +1,20 @@
 # Lyrics
 
 The words of what is playing, in the island's pill. While a song with timed lyrics plays, the
-shut pill is the line being sung and nothing else: it grows to the line's width, no taller, and
-the clock and the equaliser are back in every pause. ALT + L switches it off and on
+shut pill is the song's and not the clock's: the line being sung and nothing else, grown to the
+line's width and no taller; three dots while nobody sings; the song's title at its start. The
+clock and the equaliser are back when the last line has been sung, when the music is paused, and
+for a song with no timed lyrics. ALT + L switches it off and on
 (`qs ipc call lyrics toggle`), and the choice is kept in `~/.local/state/shell/lyrics`.
 
 | File | What it is |
 | --- | --- |
 | `Parse.js` | A lyrics service's answer as one shape: lines, each word with its start and length. |
-| `Pill.js` | Lines cut to the pill's width (phrases), when each comes and goes, and a word at a moment. |
-| `LyricLine.qml` | The line as the pill draws it: two rows, the one up and the one leaving. |
+| `Pill.js` | Lines cut to the pill's width (phrases), when each comes and goes, what the pill is while nobody sings, and a word at a moment. |
+| `LyricFace.qml` | What the pill draws in the clock's place: the line (two rows, the one up and the one leaving), the dots, the title. |
 | `../Services/Lyrics.qml` | Fetching and keeping the words, the on/off switch, and the song's clock. |
-| `../Bar/Island.qml` | `lyricUp`: when the pill is a line, and what gives way to it. |
+| `../Bar/Island.qml` | `lyricUp`: when the pill is the song's, and what gives way to it. |
+| `../Ui/CollapsedPill.qml` | The same face, drawn by a surface on its way out of the pill or back into it. |
 
 Both `.js` files are plain (no QML imports) and are run under node by `tools/lyrics-test.mjs`
 (`nix flake check`, `checks.lyrics-logic`).
@@ -38,14 +41,35 @@ A line too wide for the pill (`Theme.islandLyricMaxText`, the open card's width 
 is cut into the fewest even stretches that fit, at a comma where there is one, and each stretch is
 shown as its own phrase as it is sung.
 
+## While nobody sings
+
+`Pill.faceAt` says what the pill is at a moment of the song; `Lyrics.face` carries it.
+
+- **The title.** At the song's start the pill names it: the title in the words' own face, the
+  artist beside it and fainter where both fit. It stands until the first line, or for seven
+  seconds where the intro is long enough to leave the dots two more. A song that starts singing
+  inside two and a half seconds is not named.
+- **The dots.** With a line still to come (the rest of an intro, a pause between verses), three
+  dots in a small pill. They breathe while they wait and are lit one by one over the last six
+  seconds before the voice, so the eye knows when to come back.
+- **The clock's pill.** After the last line there is nothing to wait for.
+
 ## What gives way to what
 
-The words are the resting pill's and nothing else's. The open card, a panel or the volume bar
-over the island, the drop well and the lock all take them down (`lyricBlocked`), and the plain
-pill stands 320 ms after any of them before the words take it again. A surface that takes the
-island while a line is up grows out of the line's shape (the pill is then not `resting`, so it is
-on offer like the open card, with `clockShown` false). A camera, microphone or recording mark
-stays, at the line's end; only the equaliser goes with the clock. Paused, the plain pill is back.
+The song's face is still the resting pill, only a wider or narrower one: `Lyrics.pillWidth` is
+the shut pill's width whatever it shows, the island rests at it, and every surface that grows out
+of the island starts from it and comes back to it (`IslandOrigin.collapsedWidth`). Because the
+face is drawn from the song's time alone, a surface draws the same words as the island would
+(`Ui/CollapsedPill.qml`, by `IslandOrigin.fromFace` on the way out and `Lyrics.faced` on the way
+back): a panel's first frame matches the line it covers and the words fade as it grows, and
+closing it shrinks straight into the line, the dots or the title, which the island under it has
+gone on following unseen.
+
+The open hover card and the drop well are the island's own shapes and take the face down
+(`lyricUp`). The card on its way shut keeps its clock until it is nearly the pill, then gives way
+to the words, and lands on the line's width without stopping at the clock's. A lock takes the
+island as the clock's pill (`Lyrics.faced` is down for it). A camera, microphone or recording
+mark stays, at the line's end; only the equaliser goes with the clock.
 
 ## The pointer
 
@@ -63,4 +87,6 @@ the plain pill.
 
 `tools/qs-verify/lyrics.sh` runs the pill on the headless harness with a mock player and the
 fixture song: `up`, `sync`, `frames OUT T...` (the island with the song held at each moment, via
-`qs ipc call lyrics pin`), `strip`, `play`, `down`.
+`qs ipc call lyrics pin`), `strip`, `play`, `down`. In the fixture the title is up until 7.6 s,
+the dots stand from 56.6 to 63.6 s, and the last line has gone by 137 s; `qs ipc call lyrics
+face` says which it is.

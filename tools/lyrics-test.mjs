@@ -15,7 +15,7 @@ const fixture = process.argv[3] || join(here, "qs-verify/fixtures/lyrics-plus.js
 const load = (file, names) => new Function(readFileSync(join(dir, file), "utf8").replace(/^\.pragma library\s*$/m, "") + `\nreturn {${names}};`)();
 
 const Parse = load("Parse.js", "cleanTitle, cleanArtist, splitTitle, syllables, spreadWords, tierOf, fromLyricsPlus, fromLrclib, cacheKey, lineAt");
-const Pill = load("Pill.js", "cuts, phrases, wideFor, latest, fill, swell, settled, weight, arrived, left, swept, escaped, LEAD, EARLY, LATE");
+const Pill = load("Pill.js", "cuts, phrases, wideFor, latest, opening, faceAt, dotLit, dotBreath, dotsShown, fill, swell, settled, weight, arrived, left, swept, escaped, LEAD, EARLY, LATE, COUNT, TITLE_FOR");
 
 let failed = 0;
 function check(name, ok, detail) {
@@ -109,6 +109,34 @@ eq("wideFor: mid song", Pill.wideFor(whole, 38.6), 6);
 eq("wideFor: held a moment after a line nothing follows", [Pill.wideFor(whole, whole[9].stop + Pill.LATE - 0.01), Pill.wideFor(whole, whole[9].stop + Pill.LATE + 0.01)], [9, -1]);
 eq("wideFor: the pause between verses", Pill.wideFor(whole, 60), -1);
 eq("latest: the last to come up", [Pill.latest(whole, 5), Pill.latest(whole, 38.6), Pill.latest(whole, 60)], [-1, 6, 9]);
+
+// ---- the pill: while nobody sings ----
+const titled = Pill.opening(whole);
+check("opening: the song is named from its start until the first line's room is made", titled !== null && titled.start < 0.5 && Math.abs(titled.stop - (whole[0].start - Pill.EARLY)) < 1e-9, titled);
+{
+  const late = whole.map(p => ({...p, start: p.start + 20, stop: p.stop + 20, t: p.t + 20}));
+  eq("opening: a long intro is named for a while, then counted in", Pill.opening(late).stop, Pill.TITLE_FOR);
+  const soon = whole.map(p => ({...p, start: p.start - 7, stop: p.stop - 7, t: p.t - 7}));
+  eq("opening: a song that sings at once is not named", Pill.opening(soon), null);
+  eq("opening: no lines", Pill.opening([]), null);
+  eq("faceAt: after the title, the dots", [Pill.faceAt(late, 3, Pill.opening(late)).kind, Pill.faceAt(late, 10, Pill.opening(late)).kind, Pill.faceAt(late, 10, Pill.opening(late)).from], ["title", "dots", Pill.TITLE_FOR]);
+  eq("faceAt: an intro not named is counted in from the start", [Pill.faceAt(soon, 0.2, null).kind, Pill.faceAt(soon, 0.2, null).from], ["dots", 0]);
+}
+eq("faceAt: the title, then the first line", [Pill.faceAt(whole, 3, titled).kind, Pill.faceAt(whole, 9, titled).kind, Pill.faceAt(whole, 9, titled).index], ["title", "line", 0]);
+eq("faceAt: agrees with wideFor wherever a line is up", [9, 13, 38.6, 55, 70, 120].map(t => Pill.faceAt(whole, t, titled).index), [9, 13, 38.6, 55, 70, 120].map(t => Pill.wideFor(whole, t)));
+{
+  const gap = Pill.faceAt(whole, 60, titled);
+  eq("faceAt: the pause between verses is the dots, for the line to come", [gap.kind, gap.index], ["dots", 10]);
+  check("faceAt: the dots stand from when the last line has gone until the next one's room is made", Math.abs(gap.from - (whole[9].stop + Pill.LATE)) < 1e-9 && Math.abs(gap.until - (whole[10].start - Pill.EARLY)) < 1e-9, gap);
+  check("faceAt: the count ends as the line comes up, and is never longer than the pause", Math.abs(gap.countUntil - whole[10].start) < 1e-9 && gap.countFrom >= gap.from && gap.countUntil - gap.countFrom <= Pill.COUNT + 1e-9, gap);
+  eq("dots: unlit before the count, lit in turn, all lit at its end", [Pill.dotLit(gap, 0, gap.countFrom), Pill.dotLit(gap, 2, gap.countFrom), Pill.dotLit(gap, 0, gap.countUntil), Pill.dotLit(gap, 2, gap.countUntil)], [0, 0, 1, 1]);
+  const mid = (gap.countFrom + gap.countUntil) / 2;
+  check("dots: the first is lit before the second, the second before the third", Pill.dotLit(gap, 0, mid) === 1 && Pill.dotLit(gap, 1, mid) > 0 && Pill.dotLit(gap, 1, mid) < 1 && Pill.dotLit(gap, 2, mid) === 0);
+  check("dots: come in after the line has gone and are gone as the next one's room is made", Pill.dotsShown(gap, gap.from) === 0 && Pill.dotsShown(gap, (gap.from + gap.until) / 2) === 1 && Pill.dotsShown(gap, gap.until) === 0);
+  check("dots: breathe only while they wait", Pill.dotBreath(gap, 0, gap.countUntil - 0.1) === 0 && Array.from({length: 50}, (_, i) => Pill.dotBreath({...gap, countFrom: 1e9}, 1, gap.from + i / 10)).every(x => x >= 0 && x <= 1));
+}
+eq("faceAt: after the last line, the plain pill", Pill.faceAt(whole, 145, titled).kind, "plain");
+eq("faceAt: no lines, the plain pill", Pill.faceAt([], 3, null).kind, "plain");
 
 // ---- the pill: a word at a moment ----
 const word = {t: 10, d: 1, text: "afterglow"};

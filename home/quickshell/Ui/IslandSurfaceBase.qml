@@ -1264,6 +1264,7 @@ PanelWindow {
         // Closing, the clock and marks arrive with the shape rather than on a timer of their own.
         progressDriven: !win.open && !origin.held
         amount: win.pillAmount
+        live: !win.parked
       },
       // The open hover card's date, weather and gauges, where the card stands: the card's own
       // are covered from this surface's first frame, so they go from here as its clock does,
