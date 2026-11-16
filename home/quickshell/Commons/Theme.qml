@@ -428,6 +428,10 @@ Singleton {
   // After the island has been something else (the open card, under a panel, the drop well), the
   // plain pill stands this long before the words take it again.
   readonly property int islandLyricReturn: 320
+  // Over a line the hover card waits this long, not islandHoverOpenDelay, and only for a pointer
+  // that has moved this far (px) on the pill since it came onto it (Bar/Island.qml).
+  readonly property int islandLyricHoverDelay: 300
+  readonly property int islandLyricHoverTravel: 4
 
   // The mini calendar the expanded card carries while nothing plays: five days centred on
   // today on a 32 px pitch; the plate is 1.14 pitches wide, for the three-letter label.

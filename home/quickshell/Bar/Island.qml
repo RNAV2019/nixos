@@ -82,10 +82,13 @@ FrostedSurface {
 
   // Opening is quick; closing has hysteresis so a pointer crossing the pill's edge does not
   // flicker the card shut.
+  // Over a line of lyrics the card is slower to open (islandLyricHoverDelay): the pill is then
+  // several times its plain width and in the way of a pointer crossing the top of the screen, and
+  // the words should not come down for one that is only passing.
   Timer {
     id: openDelay
 
-    interval: Theme.islandHoverOpenDelay
+    interval: root.lyricUp ? Theme.islandLyricHoverDelay : Theme.islandHoverOpenDelay
     onTriggered: if (!root.suppressed && hover.containsMouse)
       root.hoverOpen = true
   }
@@ -410,14 +413,38 @@ FrostedSurface {
     }
   }
 
+  // The line being sung, in place of the clock. Under the pointer's area below, not over it: a
+  // Text set as styled text takes hover for itself (it may hold a link), and over it the pill
+  // heard the pointer only in the gaps between the words.
+  LyricLine {
+    id: lyric
+
+    y: root.midline - height / 2
+    width: root.width
+    height: Theme.barHeight
+    presence: root.lyricPresence
+  }
+
   // Clicking empty island space pins the card open; controls on top act without disturbing it.
+  //
+  // A line of lyrics is not empty space. A click on it opens the Now playing panel, which grows
+  // out of the line, and the mouse's back and forward buttons skip, as on the open card's track
+  // block. And the card opens over it only for a pointer that came to it: a line grows and
+  // shrinks with every phrase, so the pill can turn up under a pointer at rest beside it, which
+  // the compositor reports as the pointer entering as soon as it is nudged. So over a line the
+  // wait for the card starts once the pointer has travelled islandLyricHoverTravel on the pill.
   MouseArea {
     id: hover
+
+    // Where the pointer came onto a line of lyrics, and whether it has travelled from there.
+    property point cameIn: Qt.point(0, 0)
+    property bool travelled: false
 
     anchors.fill: parent
     enabled: !root.suppressed && !root.dropArmed
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
+    acceptedButtons: Qt.LeftButton | Qt.ForwardButton | Qt.BackButton
     onContainsMouseChanged: {
       if (containsMouse) {
         // The pointer is known to be here: the ordinary rules from now on.
@@ -425,7 +452,9 @@ FrostedSurface {
           console.info("island ev pointerHere " + Date.now());
         root.awaitingPointer = false;
         closeGrace.stop();
-        if (!root.pinned)
+        hover.cameIn = Qt.point(mouseX, mouseY);
+        hover.travelled = !root.lyricUp;
+        if (!root.pinned && hover.travelled)
           openDelay.restart();
       } else {
         openDelay.stop();
@@ -433,7 +462,28 @@ FrostedSurface {
           closeGrace.restart();
       }
     }
-    onClicked: root.pinned = !root.pinned
+    onPositionChanged: {
+      if (hover.travelled || !containsMouse)
+        return;
+      if (Math.abs(mouseX - hover.cameIn.x) + Math.abs(mouseY - hover.cameIn.y) < Theme.islandLyricHoverTravel)
+        return;
+      hover.travelled = true;
+      if (!root.pinned && !root.hoverOpen)
+        openDelay.restart();
+    }
+    onClicked: function (event) {
+      if (root.lyricUp) {
+        openDelay.stop();
+        if (event.button === Qt.ForwardButton)
+          Media.next();
+        else if (event.button === Qt.BackButton)
+          Media.previous();
+        else
+          Bus.toggleSurface("media");
+      } else if (event.button === Qt.LeftButton) {
+        root.pinned = !root.pinned;
+      }
+    }
   }
 
   Rectangle {
@@ -445,16 +495,6 @@ FrostedSurface {
     color: Theme.accent
     visible: root.pinned && root.expanded
     opacity: 0.9
-  }
-
-  // The line being sung, in place of the clock.
-  LyricLine {
-    id: lyric
-
-    y: root.midline - height / 2
-    width: root.width
-    height: Theme.barHeight
-    presence: root.lyricPresence
   }
 
   // The equaliser, recording and privacy marks either side of the clock. Shown only while

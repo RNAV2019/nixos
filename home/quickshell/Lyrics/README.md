@@ -47,6 +47,14 @@ island while a line is up grows out of the line's shape (the pill is then not `r
 on offer like the open card, with `clockShown` false). A camera, microphone or recording mark
 stays, at the line's end; only the equaliser goes with the clock. Paused, the plain pill is back.
 
+## The pointer
+
+Over a line the hover card still opens, since it is where the clock is, but only for a pointer
+that means it: it must travel 4 px on the pill and then stay 300 ms (70 ms on the plain pill). A
+line that grows under a pointer at rest does not open it. A click on a line opens the Now playing
+panel, out of the line's shape, and the mouse's back and forward buttons skip; pinning the card
+is still a click on the open card.
+
 Words come from LyricsPlus (word timings) or LRCLIB (line timings, the words then spread by
 syllable), asked once a song and kept in `~/.cache/quickshell/lyrics`. A song neither has shows
 the plain pill.
