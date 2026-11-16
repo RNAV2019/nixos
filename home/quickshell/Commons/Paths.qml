@@ -17,7 +17,7 @@ Singleton {
   // FileView cannot make parent directories itself.
   readonly property string stateDir: home + "/.local/state/shell"
 
-  // Timed lyrics the stage has shown, one file a song (Services/Lyrics.qml).
+  // Timed lyrics of songs that have played, one file a song (Services/Lyrics.qml).
   readonly property string lyricsDir: (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache") + "/quickshell/lyrics"
 
   Process {

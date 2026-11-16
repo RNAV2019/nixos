@@ -439,7 +439,7 @@ The contracts a service file follows; a singleton file takes the contract as its
 - **`Media`**: what is playing (MPRIS). Besides the transport: `shuffle`, `loop` and whether the
   player has them, and `holdPosition(who, held)`, by which each surface with a scrub bar keeps
   the position polled while it shows (`trackPosition`).
-- **`Lyrics`**: the timed words of what is playing, for the lyric stage (`Lyrics/README.md`).
+- **`Lyrics`**: the timed words of what is playing, read by `Lyrics/Parse.js`.
   Fetched only while something holds `wanted`: LyricsPlus for word timings,
   LRCLIB for line timings. `state` (`idle`, `loading`, `ready`, `none`), `model`, `source`.
   Each answer is kept in `Paths.lyricsDir`.

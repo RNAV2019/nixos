@@ -1712,39 +1712,4 @@ Singleton {
   readonly property real keysScrimAlpha: 0.45
   readonly property real keysGrowFrom: 0.97
   readonly property real keysOmega: pressOmega
-
-  // The lyric stage (Lyrics/): the screen given over to the words of what is playing. Its ground
-  // is true black whatever the theme, since it is a show and not a surface, and its ink is a warm
-  // white leaning the cover's way. The desktop fades slowly to black and the words come up over
-  // the last of it; it goes back much faster than it came.
-  readonly property color lyricGround: "#000000"
-  readonly property color lyricInk: "#f5f0e8"
-  readonly property int lyricFadeIn: reduceMotion ? 1 : 2400
-  readonly property int lyricFadeOut: reduceMotion ? 1 : 450
-  // One style handing over to another (N and P), and one song's words to the next's.
-  readonly property int lyricCut: reduceMotion ? 1 : 220
-  // The styles there are, in the order N and P step through them; the first is what it opens in.
-  readonly property var lyricStyles: ["Poster", "Drift", "Punch"]
-  // A line counts as up this long before its first word, so it is in place when the voice is.
-  readonly property real lyricLead: 0.3
-  // The ground's light at rest, what a landing word adds, and what the player's loudness adds.
-  readonly property real lyricGlow: 0.75
-  readonly property real lyricGlowKick: 0.2
-  readonly property real lyricGlowLevel: 0.25
-  // The ground is drawn at one part in this of the stage and stretched.
-  readonly property int lyricGroundShrink: 8
-  // How long the stage takes to take on a new cover's colours.
-  readonly property int lyricColourFade: reduceMotion ? 1 : 900
-  // How fast a landing word's kick dies away (1/s).
-  readonly property real lyricKickDecay: 6.5
-  // The readout (a nudged offset, the style stepped to) and how long it stays.
-  readonly property int lyricReadoutSize: 15
-  readonly property int lyricReadoutHold: 1400
-  // How long after the stage maps it asks for the keyboard (Lyrics/LyricStage.qml).
-  readonly property int lyricTakeKeys: 120
-  // One nudge of the lyrics against the player's clock, in seconds.
-  readonly property real lyricNudge: 0.05
-  // The one family every style is set in: heavy for the words that carry a line, light for
-  // the ones that pass.
-  readonly property string lyricFont: "SF Compact Rounded"
 }

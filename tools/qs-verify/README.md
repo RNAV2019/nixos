@@ -137,9 +137,6 @@ OLED orbit would move the pill one pixel every three minutes).
 - **The real lock screen.** PAM and the session lock are only seen through the real lock. Its picture
   is covered on the `lockpreview` stage (see above); `busy`, `fault`, a change of minute (`time`
   twice) and the way in and out are not shot, only the three settled states.
-- **The lyric stage.** It never rests (its ground drifts and its words move), so it is not
-  shot here. `lyrics.sh` drives it on the same harness instead: it pins the song at a moment
-  and captures, and every style draws from the song's time alone (`home/quickshell/Lyrics/README.md`).
 - **Motion.** One settled frame per state; transitions, springs and handoffs are covered by the
   separate 120 Hz recorder and checker in `motion/` (`motion/README.md`: `record.sh`, `check.mjs`,
   `video.py`, `shader-smoke.sh`).

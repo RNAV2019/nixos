@@ -1,6 +1,6 @@
 .pragma library
 
-// Turns what a lyrics service answers into the one shape the lyric stage draws from. No QML
+// Turns what a lyrics service answers into the one shape lyrics are drawn from. No QML
 // imports: tools/lyrics-test.mjs evaluates this file under node.
 //
 // The shape, all times in seconds:
@@ -85,7 +85,7 @@ function spreadWords(text, t, room) {
   });
 }
 
-// "Verse", "Pre-Chorus", "Chorus"... as how hard the stage should hit.
+// "Verse", "Pre-Chorus", "Chorus"... as how hard that part of the song hits.
 function tierOf(name) {
   var n = String(name || "").toLowerCase().replace(/[^a-z]/g, "");
   if (n.indexOf("pre") === 0)

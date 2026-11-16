@@ -167,9 +167,9 @@ chmod +x "$QSV_WORK/bin/cliphist"
 printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1\tssh ryan@192.168.1.20\n' >"$QSV_WORK/cliphist.list"
 
 # `curl`, which the weather service asks Open-Meteo with: a fixed reading (11 degrees, part cloud,
-# night), so the harness never reaches the network. The lyric stage asks two lyrics services
+# night), so the harness never reaches the network. The lyrics service asks two sources
 # through it too: each is answered from `$QS_VERIFY_WORK/lyrics-plus.json` or `lyrics-lrclib.json`
-# when a state has put one there (lib.sh lyrics_fixture), and fails like a 404 otherwise. A cover
+# when a state has put one there, and fails like a 404 otherwise. A cover
 # a player keeps on the web is fetched through it as well: `http://qsv.test/art/NAME` is answered
 # with `$QS_VERIFY_WORK/art/NAME` into the file `--output` names, or like a 404. Nothing
 # runs it for the weather until a place is stored (`qs ipc call weather set`), which the scratch

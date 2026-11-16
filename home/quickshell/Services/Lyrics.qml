@@ -6,7 +6,7 @@ import Quickshell.Io
 import qs.Commons
 import "../Lyrics/Parse.js" as Parse
 
-// The words of what is playing, timed, for the lyric stage. Asked of LyricsPlus first, which
+// The words of what is playing, timed. Asked of LyricsPlus first, which
 // times every word and names the song's parts, then of LRCLIB, which times lines only (the words
 // are then spread across each line). Both ask for no key. Nothing is fetched unless something
 // holds `wanted`, an answer is kept on disk so a song is asked for once, and a song neither has
@@ -14,14 +14,14 @@ import "../Lyrics/Parse.js" as Parse
 Singleton {
   id: root
 
-  // Held by whoever shows lyrics (the stage, while it is up).
+  // Held by whoever shows lyrics, while it shows them.
   property bool wanted: false
 
   // "idle" (nothing asked), "loading", "ready" (`model` is set) or "none" (no timed lyrics).
   property string state: "idle"
-  // Parse.js's shape, every word marked with its picture where it has one; null unless ready.
+  // Parse.js's shape; null unless ready.
   property var model: null
-  // Who answered: "Apple", "QQ Music", "LRCLIB"..., for the stage's small print.
+  // Who answered: "Apple", "QQ Music", "LRCLIB"...
   readonly property string source: model ? model.source : ""
 
   // The song as a lyrics service files it: a video's "Artist - Title (Official Video)" taken apart.
@@ -91,7 +91,7 @@ Singleton {
 
   // `known` when a service answered that it has no such song (curl's 22, or an answer with no
   // timed lines): only then is the song not asked for again. A fetch that never got through
-  // (offline, a timeout) is tried again the next time the stage comes up.
+  // (offline, a timeout) is tried again the next time the song is asked for.
   function none(known) {
     if (known) {
       var missing = root._missing;
