@@ -439,10 +439,11 @@ The contracts a service file follows; a singleton file takes the contract as its
 - **`Media`**: what is playing (MPRIS). Besides the transport: `shuffle`, `loop` and whether the
   player has them, and `holdPosition(who, held)`, by which each surface with a scrub bar keeps
   the position polled while it shows (`trackPosition`).
-- **`Lyrics`**: the timed words of what is playing, read by `Lyrics/Parse.js`.
-  Fetched only while something holds `wanted`: LyricsPlus for word timings,
-  LRCLIB for line timings. `state` (`idle`, `loading`, `ready`, `none`), `model`, `source`.
-  Each answer is kept in `Paths.lyricsDir`.
+- **`Lyrics`**: the timed words of what is playing, and where the song is in them, for the island's
+  pill (`Lyrics/README.md`). Fetched only while `enabled` (ALT + L): LyricsPlus for word timings,
+  LRCLIB for line timings; each answer is kept in `Paths.lyricsDir`. `state` (`idle`, `loading`,
+  `ready`, `none`), `model`, `source`; `phrases` (the lines cut to the pill), `now`, `index` (the
+  phrase the pill is wide for), `latest`, `up`, and `pinned` for tests.
 - **`Provider`**: a launcher provider's base. `section`, `prefix`, `results`, `emptyResults`,
   `activate(row, modifiers)`; the row shape and the scope rules are in `Services/Omnibox.qml`.
 - **`Activities/MomentSource`**: one source of moments. `kind`, `show(spec)`, `withdraw()`,

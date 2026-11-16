@@ -400,6 +400,35 @@ Singleton {
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
 
+  // The words of what is playing, in the shut pill (Lyrics/LyricLine.qml, Lyrics/Pill.js): while a
+  // line is sung the pill is that line and nothing else, as wide as it and no taller, and the
+  // clock and the equaliser are back in every pause. The words are ink only: a word not yet sung
+  // is faint, the one being sung fills letter by letter at full strength, and one sung eases back
+  // a little so the word in the voice is always the brightest thing in the pill.
+  readonly property int islandLyricSize: 15
+  // The least the words keep off the pill's ends, and the most room they may take: with the
+  // inset either side, the open card's width.
+  readonly property int islandLyricInset: 20
+  readonly property int islandLyricMaxText: islandExpandedWidth - 2 * islandLyricInset
+  readonly property real lyricUnsungAlpha: 0.34
+  readonly property real lyricSungAlpha: 0.8
+  // A word comes up from this far under its place and a line leaves this far over it; the word
+  // being sung stands this far proud of the line, and one that is held grows by this share, or
+  // by lyricHeldGrowMost px if that is less (a long word would close on its neighbours).
+  readonly property real lyricRise: reduceMotion ? 0 : 7
+  readonly property real lyricLeaveRise: reduceMotion ? 0 : 8
+  readonly property real lyricLift: reduceMotion ? 0 : 1.1
+  readonly property real lyricHeldGrow: reduceMotion ? 0 : 0.04
+  readonly property real lyricHeldGrowMost: 1.6
+  // The clock draws back by this share as it gives way to the words.
+  readonly property real lyricClockDip: 0.08
+  // The pill's ends shade words that have not room yet (the shape is still on its way) over
+  // this width.
+  readonly property int islandLyricShade: 16
+  // After the island has been something else (the open card, under a panel, the drop well), the
+  // plain pill stands this long before the words take it again.
+  readonly property int islandLyricReturn: 320
+
   // The mini calendar the expanded card carries while nothing plays: five days centred on
   // today on a 32 px pitch; the plate is 1.14 pitches wide, for the three-letter label.
   readonly property int islandCalDays: 5
@@ -1290,16 +1319,27 @@ Singleton {
   // pill's own side padding, keeping islandMarkInset clear of the end, and the pill only
   // widens, evenly, once the heavier side outgrows it.
   function islandCollapsedWidth(media, recording, camera, microphone) {
-    function side(widths) {
-      var room = 0;
-      for (var i = 0; i < widths.length; i++)
-        room += (i === 0 ? islandMarkClockGap : islandMarkGap) + widths[i];
-      return room > 0 ? room + islandMarkInset : 0;
-    }
-    var left = side((media ? [islandEqualiserWidth] : []).concat(camera ? [privacyGlyphSize] : []));
-    var right = side((recording ? [recorderDotSize] : []).concat(microphone ? [privacyGlyphSize] : []));
+    var left = islandMarkRoom((media ? [islandEqualiserWidth] : []).concat(camera ? [privacyGlyphSize] : []));
+    var right = islandMarkRoom((recording ? [recorderDotSize] : []).concat(microphone ? [privacyGlyphSize] : []));
     var overflow = Math.max(0, Math.max(left, right) - islandSideInset);
     return islandIdleWidth + 2 * overflow;
+  }
+
+  // The room one side's marks take off the pill's middle, the outermost kept clear of its end.
+  function islandMarkRoom(widths) {
+    var room = 0;
+    for (var i = 0; i < widths.length; i++)
+      room += (i === 0 ? islandMarkClockGap : islandMarkGap) + widths[i];
+    return room > 0 ? room + islandMarkInset : 0;
+  }
+
+  // The room either side of the words while the pill carries a line of lyrics: its own inset,
+  // or what the marks that outlast the clock need (a camera, a recording, a microphone; the
+  // equaliser goes with the clock). Both sides the same, so the line stays centred.
+  function islandLyricSide(recording, camera, microphone) {
+    var left = islandMarkRoom(camera ? [privacyGlyphSize] : []);
+    var right = islandMarkRoom((recording ? [recorderDotSize] : []).concat(microphone ? [privacyGlyphSize] : []));
+    return Math.max(islandLyricInset, left, right);
   }
 
   readonly property int workspacePadding: 14

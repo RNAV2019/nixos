@@ -207,6 +207,28 @@ ShellRoot {
     }
   }
 
+  // The words of what is playing, in the island's pill (Services/Lyrics.qml). `pin` is for
+  // tests: a moment to hold the song at (seconds; -1 follows the player again).
+  IpcHandler {
+    target: "lyrics"
+
+    function toggle(): void {
+      Lyrics.toggle();
+    }
+
+    function shown(): bool {
+      return Lyrics.enabled;
+    }
+
+    function line(): string {
+      return Lyrics.index >= 0 ? Lyrics.phrases[Lyrics.index].text : "";
+    }
+
+    function pin(seconds: string): void {
+      Lyrics.pinned = Number(seconds);
+    }
+  }
+
   IpcHandler {
     target: "lock"
 

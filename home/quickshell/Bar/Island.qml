@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Bar.Widgets
 import qs.Commons
+import qs.Lyrics
 import qs.Services
 import qs.Ui
 import "../Ui/MorphScan.js" as MorphScan
@@ -13,6 +14,11 @@ import "../Ui/MorphScan.js" as MorphScan
 // something plays, the card's left is its cover, title and artist, and a click there opens the
 // Now playing panel, which carries those three on (handContents) and, closed with the pointer
 // still on the card, gives the island back to it (returnContents, returned).
+//
+// Shut, while a song with timed lyrics plays, the pill is the line being sung and nothing else:
+// as wide as the line and no taller, the clock and the equaliser back in every pause (lyricUp,
+// Lyrics/LyricLine.qml). It is then not the resting pill, so a surface that takes the island
+// grows out of the shape it is wearing, as it does out of the open card.
 FrostedSurface {
   id: root
 
@@ -109,8 +115,48 @@ FrostedSurface {
   readonly property bool resting: Math.abs(heightSpring.value - Theme.barHeight) < 0.5 && Math.abs(widthSpring.value - collapsedWidth) < 0.5
   readonly property bool onOffer: !suppressed && (expanded || dropArmed || !resting)
 
-  // Read by the surface growing out of this shape: the drop well has no clock up.
-  readonly property bool clockShown: !dropArmed
+  // Read by the surface growing out of this shape: the drop well has no clock up, and nor has
+  // a line of lyrics. By what is drawn, not by lyricUp: a surface's claim takes the words down
+  // before it reads this, and for those first frames they are still what the pill shows.
+  readonly property bool clockShown: !dropArmed && lyricPresence < 0.5
+
+  // ---- the words of what is playing ----
+
+  // The island is something else just now, or is under something else. Not while it is only
+  // claimed: until the surface that asked for it is on screen the pill stays as it is, words and
+  // all, as the open card does, and that surface grows out of the line's shape.
+  readonly property bool lyricBlocked: suppressed || returning || awaitingPointer || expanded || dropArmed || Bus.locking || Bus.lockClosing
+  // After that the plain pill stands a moment before the words take it again, so a card or a
+  // panel is seen to close into the pill it came from.
+  property bool lyricSettled: true
+
+  onLyricBlockedChanged: {
+    if (lyricBlocked) {
+      lyricReturn.stop();
+      lyricSettled = false;
+    } else {
+      lyricReturn.restart();
+    }
+  }
+
+  Timer {
+    id: lyricReturn
+
+    interval: Theme.islandLyricReturn
+    onTriggered: root.lyricSettled = !root.lyricBlocked
+  }
+
+  readonly property bool lyricUp: Lyrics.up && !lyricBlocked && lyricSettled
+  // The room either side of the line, and the pill's width with it.
+  readonly property real lyricSide: Theme.islandLyricSide(Recorder.recording, Privacy.camera, Privacy.microphone)
+  readonly property real lyricWidth: lyric.textWidth + 2 * lyricSide
+
+  // 0 the plain pill, 1 the words: the clock and the equaliser give way on it.
+  property real lyricPresence: lyricUp ? 1 : 0
+
+  Behavior on lyricPresence {
+    ContentFade {}
+  }
 
   // What a surface that carries the card on takes over from it (Ui/IslandOrigin.qml adopt): what
   // is playing, read as a content morph reads a surface (Ui/MorphScan.js) but in the card's own
@@ -283,7 +329,7 @@ FrostedSurface {
     id: widthSpring
 
     label: "island.w"
-    target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.collapsedWidth
+    target: root.dropArmed ? Theme.nearbyDropTargetWidth : root.expanded ? Theme.islandExpandedWidth : root.lyricUp ? root.lyricWidth : root.collapsedWidth
   }
 
   MorphSpring {
@@ -401,16 +447,32 @@ FrostedSurface {
     opacity: 0.9
   }
 
+  // The line being sung, in place of the clock.
+  LyricLine {
+    id: lyric
+
+    y: root.midline - height / 2
+    width: root.width
+    height: Theme.barHeight
+    presence: root.lyricPresence
+  }
+
   // The equaliser, recording and privacy marks either side of the clock. Shown only while
   // shut: the open card has its own equaliser, and the other marks there would be a second
-  // subject.
+  // subject. Under a line of lyrics the equaliser goes with the clock, and the marks that stay
+  // hang off the line's ends instead: the room kept either side of it.
   PillMarks {
     x: 0
     y: root.midline - height / 2
     width: root.width
     height: Theme.barHeight
-    clockLeft: root.clockLeft
-    clockRight: root.clockLeft + clockLabel.width * clockLabel.scale
+    mediaActive: Media.active && !root.lyricUp
+    equaliserEdge: root.clockLeft
+    clockLeft: root.clockLeft + (root.lyricSide - root.clockLeft) * root.lyricPresence
+    clockRight: {
+      var edge = root.clockLeft + clockLabel.width * clockLabel.scale;
+      return edge + (root.width - root.lyricSide - edge) * root.lyricPresence;
+    }
     visible: leftExtent + rightExtent > 0 && opacity > 0
     opacity: root.expanded || root.dropArmed ? 0 : 1
 
@@ -607,8 +669,9 @@ FrostedSurface {
   RollingClock {
     id: clockLabel
 
-    // Gives way to the drop well on the same cross-fade as the rest of the pill.
-    opacity: root.dropArmed ? 0 : 1
+    // Gives way to the drop well, and to a line of lyrics, on the same cross-fade as the rest
+    // of the pill.
+    opacity: root.dropArmed || root.lyricUp ? 0 : 1
     visible: opacity > 0
 
     Behavior on opacity {
@@ -628,7 +691,8 @@ FrostedSurface {
     }
     y: root.midline - 8 * root.openness - height / 2
     transformOrigin: Item.Center
-    scale: shownSize / Theme.islandDisplaySize
+    // Draws back a little as it gives way to the words.
+    scale: shownSize / Theme.islandDisplaySize * (1 - Theme.lyricClockDip * root.lyricPresence)
     text: Qt.formatDateTime(clock.date, "HH:mm")
     color: Theme.text
     font.family: Theme.uiFont

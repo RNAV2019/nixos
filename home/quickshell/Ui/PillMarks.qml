@@ -21,6 +21,9 @@ Item {
   // The clock's shown edges, in this item's coordinates; the marks hang off them.
   property real clockLeft: 0
   property real clockRight: 0
+  // What the equaliser hangs off, when that is not what the other marks hang off: under a line
+  // of lyrics it goes where it stands, beside the clock, while the rest ride out to the line's ends.
+  property real equaliserEdge: clockLeft
 
   // How far each side reaches past the clock, leading gaps included. Animated, on the pace
   // the pill's width springs at.
@@ -55,7 +58,7 @@ Item {
     lead: Theme.islandMarkClockGap
     size: equaliser.implicitWidth
     height: equaliser.implicitHeight
-    x: root.clockLeft - lead * presence - size
+    x: root.equaliserEdge - lead * presence - size
 
     Equaliser {
       id: equaliser

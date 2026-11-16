@@ -5,17 +5,39 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import "../Lyrics/Parse.js" as Parse
+import "../Lyrics/Pill.js" as Pill
 
-// The words of what is playing, timed. Asked of LyricsPlus first, which
-// times every word and names the song's parts, then of LRCLIB, which times lines only (the words
-// are then spread across each line). Both ask for no key. Nothing is fetched unless something
-// holds `wanted`, an answer is kept on disk so a song is asked for once, and a song neither has
-// is not asked for again until the shell restarts.
+// The words of what is playing, timed, and where the song is in them: what the island's pill
+// shows a line at a time (Lyrics/LyricLine.qml). Asked of LyricsPlus first, which times every
+// word and names the song's parts, then of LRCLIB, which times lines only (the words are then
+// spread across each line). Both ask for no key. Nothing is fetched while the words are switched
+// off (`enabled`, ALT + L), an answer is kept on disk so a song is asked for once, and a song
+// neither has is not asked for again until the shell restarts.
 Singleton {
   id: root
 
-  // Held by whoever shows lyrics, while it shows them.
-  property bool wanted: false
+  // Whether the pill shows the words at all (ALT + L). Kept across restarts; on until told
+  // otherwise.
+  property bool enabled: true
+
+  function toggle() {
+    root.enabled = !root.enabled;
+    saved.save(root.enabled ? "1" : "0");
+  }
+
+  PersistedValue {
+    id: saved
+
+    name: "lyrics"
+
+    onRestored: text => {
+      if (text === "0")
+        root.enabled = false;
+    }
+  }
+
+  // Nothing is asked of a lyrics service until the saved choice is known.
+  readonly property bool wanted: enabled && saved.loaded
 
   // "idle" (nothing asked), "loading", "ready" (`model` is set) or "none" (no timed lyrics).
   property string state: "idle"
@@ -30,6 +52,77 @@ Singleton {
 
   readonly property string plusUrl: "https://lyricsplus.prjktla.my.id/v2/lyrics/get"
   readonly property string lrclibUrl: "https://lrclib.net/api/get"
+
+  // ---- where the song is ----
+
+  // The lines as the pill shows them, cut to its width (Pill.js's phrases); empty unless ready.
+  property var phrases: []
+  // The song's time in seconds, read every frame while there are words to show; `pinned` holds
+  // it at a moment instead (tests, -1 follows the player).
+  property real now: 0
+  property real pinned: -1
+  // The phrase the pill is wide for (-1: the plain pill), and the last to have come up (-1: none
+  // yet): it and the one before it are all that can be on screen.
+  property int index: -1
+  property int latest: -1
+  // The pill carries a line just now. Not while the music is paused: the words wait with it.
+  readonly property bool up: ticking && index >= 0
+  readonly property bool ticking: enabled && phrases.length > 0 && (pinned >= 0 || (Media.playing && Media.positionKnown))
+
+  property real _estimate: 0
+
+  FontMetrics {
+    id: face
+
+    font.family: Theme.uiFont
+    font.pixelSize: Theme.islandLyricSize
+    font.weight: Theme.weightSemi
+  }
+
+  // The gap between two words, which is the face's own space.
+  readonly property real wordGap: face.advanceWidth(" ")
+
+  // A word is as wide as its Text will be, which is a whole number of px; the gap is not.
+  function plan() {
+    root.phrases = root.model ? Pill.phrases(root.model.lines, function (text) {
+      return text === " " ? root.wordGap : Math.ceil(face.advanceWidth(text));
+    }, Theme.islandLyricMaxText) : [];
+  }
+
+  onModelChanged: root.plan()
+
+  FrameAnimation {
+    running: root.ticking
+    onTriggered: root.tick(Math.min(0.1, frameTime))
+  }
+
+  onTickingChanged: root.tick(0)
+  onPhrasesChanged: root.tick(0)
+  onPinnedChanged: root.tick(0)
+
+  function tick(dt) {
+    if (!root.ticking) {
+      root.index = -1;
+      root.latest = -1;
+      return;
+    }
+    // The player extrapolates its own position between reports; this glides after it rather
+    // than copying it, so a report that lands a few milliseconds off does not jerk the words.
+    var raw = Media.positionKnown && Media.player ? Media.player.position : 0;
+    if (root.pinned >= 0)
+      root._estimate = root.pinned;
+    else if (dt <= 0 || Math.abs(raw - root._estimate) > 0.5)
+      root._estimate = raw;
+    else
+      root._estimate += dt + (raw - root._estimate) * Math.min(1, dt * 4);
+    root.now = root._estimate;
+    var wide = Pill.wideFor(root.phrases, root.now);
+    if (wide !== root.index)
+      root.index = wide;
+    var last = Pill.latest(root.phrases, root.now);
+    if (last !== root.latest)
+      root.latest = last;
+  }
 
   // The song `state` and `model` are about.
   property string _key: ""
