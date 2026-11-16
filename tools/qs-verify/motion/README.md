@@ -164,6 +164,7 @@ The `launcher-scroll` scenario adds twelve fixture apps matching one query and a
 
 `nearby-switch` (Send <-> Receive by the arrow keys, frames in `OUT/nearby-switch-*.png`) and `lock-reveal` (the lock
 preview's reveal in, then out through `qsipc lockpreview unlock`; log labels `lock.flight`, `lock.swell`,
-`lock.wobble` and `lock.rise`, 0 with the clock in the pill and 1 with it mid-screen (the clock's stretch is
-`lockWobble` times wobble less flight), and `lock.pill.w`, the pill's width in device px)
+`lock.wobble`, `lock.rise` and `lock.trail`, 0 with the clock in the pill and 1 with it mid-screen (the clock's
+stretch is `lockWobble` times wobble less flight; its glass turns its light and deepens its lens by flight less
+trail), and `lock.pill.w`, the pill's width in device px)
 never touch the real lock.

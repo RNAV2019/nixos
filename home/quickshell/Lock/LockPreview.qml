@@ -65,6 +65,8 @@ Scope {
         flight: reveal.flight
         swell: reveal.swell
         wobble: reveal.wobble
+        trail: reveal.trail
+        glint: reveal.glint
         rise: reveal.rise
         away: reveal.widthAway
         leaving: reveal.leaving

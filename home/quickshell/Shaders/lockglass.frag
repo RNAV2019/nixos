@@ -22,6 +22,9 @@
 // little light is caught in the band, fading in from the line. Nothing has a colour of the
 // glass's own: over a grey desktop the glass is grey.
 //
+// In flight the caller turns `light` and deepens `lens` and `bend` with the motion, and as the
+// clock lands a band of light crosses it once (`glint`).
+//
 // The outline is feathered over a pixel or two, so the glass sits in the backdrop instead of
 // looking cut out of it. `solid` turns the whole digit to plain ink with a crisp outline, which
 // is what leaves and enters the pill. Output is premultiplied alpha.
@@ -52,6 +55,12 @@ layout(std140, binding = 0) uniform buf {
     vec4 ink;        // the digits' plain colour (premultiplied by Qt)
     vec4 pick;       // which channels of `glyphs` and `soft` hold the coverage of the layer drawn here
     vec4 window;     // the row it shows through, item px down: none above x, all from y to z, none below w
+    float glint;     // 1 while the band of light is crossing, else 0
+    vec2 glintWay;   // the way it travels on screen, a unit vector (y down)
+    vec2 glintAt;    // its middle along that way from the item's middle, and its reach, item px
+    float glintEdge; // how far it lights the line on edges the light does not face (1: fully)
+    float glintCatch; // the light it leaves in the band behind the line
+    float glintFace; // how much it lifts the face
 };
 
 layout(binding = 1) uniform sampler2D glyphs;
@@ -197,7 +206,18 @@ void main() {
     body *= 1.0 - shade * shadeBand * (0.4 + 0.6 * max(-facing, 0.0));
     body += lineColour * catchLight * max(facing, 0.0) * exp(-inner / (0.4 * band));
     float lit = rimFloor + (1.0 - rimFloor) * facing * facing;
-    float across = inner / max(0.08 * band, 0.75);
+    // The band of light that crosses the clock as it lands: where it is, every edge is lit as
+    // the ones facing the light are, the band behind the line catches some of it whichever way
+    // the edge faces, and the face lifts a little. Neutral on the face, the line's colour at the
+    // edge.
+    float passing = 0.0;
+    if (glint > 0.0) {
+        float q = (dot((qt_TexCoord0 - 0.5) * itemSize, glintWay) - glintAt.x) / max(glintAt.y, 1.0);
+        passing = glint * exp(-q * q);
+    }
+    body += lineColour * glintCatch * passing * exp(-inner / (0.6 * band)) + glintFace * passing;
+    lit = mix(lit, 1.0, clamp(glintEdge * passing, 0.0, 1.0));
+    float across = inner / (max(0.08 * band, 0.75) * (1.0 + 0.6 * passing));
     float line = exp(-across * across);
     body = mix(body, lineColour, clamp(rim * lit * line, 0.0, 1.0));
     body = shoulder(max(body, 0.0));

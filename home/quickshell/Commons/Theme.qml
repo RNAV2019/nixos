@@ -999,6 +999,30 @@ Singleton {
   readonly property real lockGlassLightY: -0.5
   readonly property real lockGlassFrom: 0.12
   readonly property real lockGlassTo: 0.6
+  // The glass answers the flight (Ryan, 2026-11-16: the way in and out should be more alive, the
+  // glass reacting to the motion). What moves it is how far the clock is ahead of a slower,
+  // looser spring that trails it (lockTrail*, Lock/LockReveal.qml `trail`): about a third of the
+  // journey while it travels, a seventh the other way just after it lands, then nothing. The
+  // light turns by lockGlassSwing radians for a whole journey of lead, so the bright rims slide
+  // round the digits' curves as it flies, run a little past where they rest and come back; the
+  // face magnifies lockGlassLensLead more and the edge band reaches lockGlassBendLead further
+  // (as a share of itself) for the same, so what shows through swells while it moves and eases
+  // off as it lands. At rest all of it is exactly nothing.
+  readonly property real lockGlassSwing: 1.8
+  readonly property real lockGlassLensLead: 0.2
+  readonly property real lockGlassBendLead: 1.2
+  // As it lands a band of light crosses the clock once, along the light's own diagonal, upper
+  // left to lower right (lockGlint ms, starting lockGlintDelay into the flight and slowing as it
+  // goes): where it passes every edge is lit, whichever way it faces, the band behind the line
+  // catches light (lockGlintCatch) and the face lifts a little (lockGlintFace). It is
+  // lockGlintWidth of a digit's height wide (the Gaussian's reach). Only on the way in: on the
+  // way home the clock is ink again before a band could cross it.
+  readonly property int lockGlint: 620
+  readonly property int lockGlintDelay: 70
+  readonly property real lockGlintWidth: 0.55
+  readonly property real lockGlintEdge: 1.0
+  readonly property real lockGlintCatch: 0.4
+  readonly property real lockGlintFace: 0.05
   // Its shadow: black, blurred and dropped by these shares of a digit's height; faint, as
   // Apple's clock has hardly any.
   readonly property real lockClockShadowAlpha: 0.15
@@ -1101,18 +1125,30 @@ Singleton {
   readonly property real lockScrimBottomReach: 0.29
 
   // The lock's clocks (Lock/LockReveal.qml), read off the video at 60 fps, then loosened:
-  // Ryan wanted the clock's way out of the pill bubbly (2026-11-12), then found the first take
-  // (8% past the middle, 15% past its size, a wobble that pinned its limit as it left) too
-  // aggressive the same day; this is the softer second take. The ground (blur, scrim) comes up
-  // over lockIn; the flight starts lockFlightDelay in, on a spring that runs about 3.7% past
-  // the middle of the screen and settles (lockFlightDamping; the video's was 0.8, 1.5% past).
-  // The clock's size rides a looser spring of its own (lockSwell*, about 6% past its resting
-  // size), and it wobbles as it goes: stretched by lockWobble times the lead of a third,
-  // quicker spring (lockWobble*) over the flight, about 6% at most a tenth of a second in,
-  // squashed under 1% as it lands, with no second bounce to see; lockWobbleMax only guards
-  // against a lead the springs never reach. Home is tighter (lockFlightOmegaOut,
-  // lockFlightDampingOut) with a gentler wobble (lockWobble*Out, about 5%), the pill's rise
-  // back trailing at lockRiseOmegaOut. The ground clears over lockOut once the clock is home.
+  // Ryan wanted the clock's way out of the pill bubbly (2026-11-12), found the first take (8%
+  // past the middle, 15% past its size, a wobble that pinned its limit as it left) too
+  // aggressive the same day, and the softer second take (3.7%, 6%, 6%) not alive enough four
+  // days on (2026-11-16: more spring, "noticeable but calm"). This is the third, between the
+  // two. The ground (blur, scrim) comes up over lockIn; the flight starts lockFlightDelay in, on
+  // a spring that runs about 5.4% past the middle of the screen and settles (lockFlightDamping;
+  // the video's was 0.8, 1.5% past). The clock's size rides a looser spring of its own
+  // (lockSwell*, about 10% past its resting size, then 1% under it), and it wobbles as it goes:
+  // stretched by lockWobble times the lead of a third, quicker spring (lockWobble*) over the
+  // flight, about 8% at most a tenth of a second in, squashed 1.4% as it lands; lockWobbleMax
+  // only guards against a lead the springs never reach.
+  //
+  // Home is tighter (lockFlightOmegaOut, lockFlightDampingOut: the clock cannot run past the
+  // pill it lands in), so its life is at either end. It takes a breath as it goes: its place
+  // starts for the pill at once, but its size is first sent lockSwellWindUp the wrong way for
+  // lockWindUpHold, so it is still growing, about 5% over, as it starts to rise, and then
+  // collapses on a quicker, stiffer spring (lockSwell*Out) that has it back at the flight's own
+  // size before it reaches the pill: it never arrives too big for it. And the pill is knocked
+  // by the catch: its rise back (lockRise*Out) arrives with the clock, runs about 7% past where
+  // the island rests, a few px up, and settles before the ground has cleared. The ground clears
+  // over lockOut once the clock is home.
+  //
+  // lockTrail* is the slow spring the glass is read against (lockGlassSwing above): on the same
+  // journey, a third of a second to its first crossing, a full second to rest.
   // The way in starts on the lock surface's first frame, or this long after it was asked for.
   readonly property int lockPresentWait: 400
   readonly property int lockIn: 140
@@ -1120,17 +1156,24 @@ Singleton {
   readonly property int lockOut: 300
   readonly property real lockFlightOmega: 18
   readonly property real lockFlightOmegaOut: 16
-  readonly property real lockFlightDamping: 0.72
+  readonly property real lockFlightDamping: 0.68
   readonly property real lockFlightDampingOut: 0.8
-  readonly property real lockSwellOmega: 19
-  readonly property real lockSwellDamping: 0.66
+  readonly property real lockSwellOmega: 18
+  readonly property real lockSwellDamping: 0.59
+  readonly property real lockSwellOmegaOut: 24
+  readonly property real lockSwellDampingOut: 0.9
+  readonly property real lockSwellWindUp: 0.2
+  readonly property int lockWindUpHold: 40
   readonly property real lockWobbleOmega: 22
-  readonly property real lockWobbleDamping: 0.6
-  readonly property real lockWobble: 0.3
-  readonly property real lockWobbleMax: 0.08
+  readonly property real lockWobbleDamping: 0.56
+  readonly property real lockWobble: 0.36
+  readonly property real lockWobbleMax: 0.1
   readonly property real lockWobbleOmegaOut: 19
-  readonly property real lockWobbleDampingOut: 0.7
-  readonly property real lockRiseOmegaOut: 13
+  readonly property real lockWobbleDampingOut: 0.62
+  readonly property real lockRiseOmegaOut: 12
+  readonly property real lockRiseDampingOut: 0.65
+  readonly property real lockTrailOmega: 10
+  readonly property real lockTrailDamping: 0.5
   // The pill's width: to the lock glyph (10% past, then back), a dot at a time, down to the
   // checking lozenge, and back out to the island (15% past).
   readonly property real lockWidthOmegaIn: 28

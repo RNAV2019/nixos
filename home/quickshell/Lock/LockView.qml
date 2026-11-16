@@ -30,6 +30,8 @@ Item {
   property real flight: 0
   property real swell: 0
   property real wobble: 0
+  property real trail: 0
+  property real glint: 0
   property real rise: 0
   property bool away: false
   property bool leaving: false
@@ -687,6 +689,25 @@ Item {
       readonly property real sizeX: size * (1 - stretch)
       readonly property real sizeY: size * (1 + stretch)
 
+      // The glass in motion (Theme.lockGlassSwing): `lead` is how far the clock is ahead of the
+      // spring trailing it, toward wherever it is headed. The light turns with it (one way going
+      // out, the other coming home), and the lens and the edge band's reach deepen with it. At
+      // rest the lead is exactly nothing and every one of these is its token.
+      readonly property real lead: view.trail * (view.leaving ? -1 : 1)
+      readonly property real lightTurn: Theme.lockGlassSwing * view.trail
+      readonly property point light: Qt.point(Theme.lockGlassLightX * Math.cos(lightTurn) - Theme.lockGlassLightY * Math.sin(lightTurn), Theme.lockGlassLightX * Math.sin(lightTurn) + Theme.lockGlassLightY * Math.cos(lightTurn))
+      readonly property real lens: Math.max(0, Theme.lockGlassLens + Theme.lockGlassLensLead * lead)
+      readonly property real bend: digits * Theme.lockGlassBend * Math.max(0.5, 1 + Theme.lockGlassBendLead * lead)
+      // The band of light crossing as it lands (Theme.lockGlint): it travels the way the light
+      // falls, from wholly off the plate's lit corner to wholly off the far one. `glintAt` is
+      // its middle, in the plate's px along that way from the plate's own middle, and its reach.
+      readonly property bool glinting: view.glint > 0 && view.glint < 1
+      readonly property real lightLength: Math.sqrt(Theme.lockGlassLightX * Theme.lockGlassLightX + Theme.lockGlassLightY * Theme.lockGlassLightY)
+      readonly property point glintWay: Qt.point(-Theme.lockGlassLightX / lightLength, -Theme.lockGlassLightY / lightLength)
+      readonly property real glintReach: digits * Theme.lockGlintWidth
+      readonly property real glintSpan: (Math.abs(glintWay.x) * plate.width + Math.abs(glintWay.y) * plate.height) / 2 + 2.5 * glintReach
+      readonly property point glintAt: Qt.point(glintSpan * (2 * view.glint - 1), glintReach)
+
       // The line as its glyphs advance, less the tracking the last one trails: its width.
       readonly property real lineWidth: clockLine.advanceWidth - tracking
 
@@ -1250,9 +1271,9 @@ Item {
             property real bevel: softCover.blurMax
             property real band: clockBox.digits * Theme.lockGlassBand
             property real feather: clockBox.digits * Theme.lockGlassFeather
-            property real bend: clockBox.digits * Theme.lockGlassBend
+            property real bend: clockBox.bend
             property real smear: Theme.lockGlassSmear
-            property real lens: Theme.lockGlassLens
+            property real lens: clockBox.lens
             property real soften: clockBox.digits * Theme.lockGlassSoften
             property real reach: clockBox.digits * Theme.lockGlassReach
             property real veil: Theme.lockGlassVeil
@@ -1263,7 +1284,13 @@ Item {
             property real shade: Theme.lockGlassShade
             property real catchLight: Theme.lockGlassCatch
             property real solid: clockBox.solid
-            property point light: Qt.point(Theme.lockGlassLightX, Theme.lockGlassLightY)
+            property point light: clockBox.light
+            property real glint: clockBox.glinting ? 1 : 0
+            property point glintWay: clockBox.glintWay
+            property point glintAt: clockBox.glintAt
+            property real glintEdge: Theme.lockGlintEdge
+            property real glintCatch: Theme.lockGlintCatch
+            property real glintFace: Theme.lockGlintFace
             property color ink: Theme.lockTextPrimary
             property vector4d pick: index === 0 ? Qt.vector4d(1, 0, 0, 0) : Qt.vector4d(0, 1, 0, 0)
             property vector4d window: clockBox.rolling ? clockBox.rollWindow : clockBox.openWindow
