@@ -1,10 +1,14 @@
 import QtQuick
-import QtQuick.Effects
 import Quickshell.Services.Pipewire
+import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
 
+// What is playing, in the control centre: the track's cover bled in from the card's left at its
+// full height, and beside it a column of where the sound goes, the title and artist, the scrub
+// bar and the transport. With no cover the column takes the whole card; with nothing playing it
+// says so, and the transport waits.
 Item {
   id: root
 
@@ -20,7 +24,12 @@ Item {
     return sink.nickname || sink.description || sink.name;
   }
 
-  readonly property bool hasArt: art.hasArt
+  // The column starts past the cover's far end, on clean ground, and at the card's own inset
+  // where there is no cover; it moves over as a cover comes or goes.
+  readonly property real columnLeft: Theme.controlMediaInset + (Theme.controlMediaColumnLeft - Theme.controlMediaInset) * bleed.presence
+  readonly property real columnRight: width - Theme.controlMediaInset
+  readonly property real columnMid: (columnLeft + columnRight) / 2
+  readonly property color quietInk: Theme.withAlpha(Theme.text, Theme.mediaSecondaryAlpha)
 
   implicitHeight: Theme.controlMediaHeight
 
@@ -28,7 +37,7 @@ Item {
     objects: root.sink ? [root.sink] : []
   }
 
-  // Masked together so the blur cannot bleed past the card's corners.
+  // The card's ground and the cover on it, cropped together to the card's corners.
   RoundedClip {
     anchors.fill: parent
     radius: Theme.controlMediaRadius
@@ -38,79 +47,58 @@ Item {
       color: Theme.surfaceRaised
     }
 
-    // Overscanned: a blur sampling the card's own edge fades it out.
-    Item {
-      id: crop
+    CoverBleed {
+      id: bleed
 
-      x: -40
-      y: -40
-      width: parent.width + 80
-      height: parent.height + 80
-      visible: false
-      layer.enabled: true
-
-      // A new cover fades in over the last one here, under the blur.
-      ArtFade {
-        id: art
-
-        anchors.fill: parent
-        source: Media.artUrl
-      }
-    }
-
-    MultiEffect {
-      x: crop.x
-      y: crop.y
-      width: crop.width
-      height: crop.height
-      source: crop
-      // The blurred cover arrives and leaves on a fade, with the scrim below following it.
-      opacity: art.presence
-      visible: opacity > 0
-      blurEnabled: true
-      blur: 0.6
-      blurMax: 48
-      blurMultiplier: 1
-    }
-
-    Rectangle {
-      anchors.fill: parent
-      color: Theme.withAlpha(Theme.canvas, 0.2 + 0.38 * art.presence)
+      width: Theme.controlMediaBleedWidth
+      height: parent.height
+      ground: Theme.surfaceRaised
     }
   }
 
   Text {
-    x: 16
-    y: 13
+    id: outputGlyph
+
+    objectName: "outputGlyph"
+    x: root.columnLeft
+    y: Theme.controlMediaOutputMid - height / 2
     text: Volume.glyphFor(root.sink)
-    color: Theme.inkSecondary
+    color: root.quietInk
     font.family: Theme.iconFont
-    font.pixelSize: Theme.controlMediaCaptionSize
+    font.pixelSize: Theme.controlMediaOutputGlyph
   }
 
   Text {
-    x: 36
-    y: 13
-    width: Math.max(0, root.width - x - 16)
+    objectName: "output"
+    x: outputGlyph.x + Theme.controlMediaOutputGlyph + Theme.controlMediaOutputGap
+    y: Theme.controlMediaOutputMid - height / 2
+    width: Math.max(0, equaliser.x - 12 - x)
     text: root.output
-    color: Theme.inkSecondary
+    color: root.quietInk
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaCaptionSize
     elide: Text.ElideRight
   }
 
-  Text {
-    id: title
+  Equaliser {
+    id: equaliser
 
-    // An anchor of its own inside the card's: the Now playing panel's title is this one.
+    x: root.columnRight - width
+    y: Theme.controlMediaOutputMid - height / 2
+    playing: Media.playing
+    restsFlat: true
+  }
+
+  Text {
+    // An anchor of its own inside the card's: the hover card's title is this one.
     property string morphRole: "title"
     property string morphKey: "media.title"
 
-    x: 16
-    y: 36
-    width: Math.max(0, transport.x - x - 12)
+    x: root.columnLeft
+    y: Theme.controlMediaTitleMid - height / 2
+    width: Math.max(0, root.columnRight - x)
     text: Media.active ? Media.title : "Nothing playing"
-    color: Theme.inkPrimary
+    color: Theme.text
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaTitleSize
     font.weight: Theme.weightSemi
@@ -121,73 +109,97 @@ Item {
     property string morphRole: "artist"
     property string morphKey: "media.artist"
 
-    x: title.x
-    y: 61
-    width: title.width
+    x: root.columnLeft
+    y: Theme.controlMediaArtistMid - height / 2
+    width: Math.max(0, root.columnRight - x)
     visible: Media.artist !== ""
     text: Media.artist
-    color: Theme.inkSecondary
+    color: root.quietInk
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaArtistSize
     elide: Text.ElideRight
   }
 
-  // Previous, play/pause and next as three equal discs, centred on the title block.
-  Row {
-    id: transport
-
-    x: root.width - width - 16
-    y: 56 - height / 2
-    spacing: Theme.controlMediaButtonGap
-
-    Repeater {
-      model: [
-        {
-          kind: "previous",
-          name: "Previous track"
-        },
-        {
-          kind: "toggle",
-          name: "Play or pause"
-        },
-        {
-          kind: "next",
-          name: "Next track"
-        }
-      ]
-
-      Button {
-        id: button
-
-        required property var modelData
-
-        kind: Button.Disc
-        size: Button.Large
-        // Large enough that play's triangle keeps the ink the hand-drawn one had (about 13 x 15).
-        iconSize: 30
-        icon: Icons.transportGlyph(button.modelData.kind === "toggle" ? (Media.playing ? "pause" : "play") : button.modelData.kind)
-        // The Now playing panel's transport is these three.
-        morphKey: "media." + button.modelData.kind
-        enabled: Media.active
-        accessibleName: modelData.kind === "toggle" ? (Media.playing ? "Pause" : "Play") : modelData.name
-        onClicked: {
-          if (modelData.kind === "previous")
-            Media.previous();
-          else if (modelData.kind === "next")
-            Media.next();
-          else
-            Media.toggle();
-        }
-      }
-    }
-  }
-
-  // The scrub bar, shared with the Now playing panel.
+  // The scrub bar, hills and all, with what is left counted down.
   MediaScrub {
-    x: 16
-    width: root.width - 32
+    x: root.columnLeft
+    width: Math.max(0, root.columnRight - x)
     height: parent.height
     trackY: Theme.controlMediaTrackY
-    timeY: Theme.controlMediaTimeY
+    timeY: Theme.controlMediaTimeMid - timeHeight / 2
+    countsDown: true
+    padded: false
+  }
+
+  // Shuffle and repeat at the column's ends, each only where the player has it: quiet until on.
+  Button {
+    x: root.columnLeft
+    y: Theme.controlMediaTransportMid - height / 2
+    visible: Media.shuffleSupported
+    kind: Button.Icon
+    icon: Icons.shuffle
+    iconSize: Theme.controlMediaModeGlyph
+    baseColor: Media.shuffle ? Theme.accent : Theme.subtle
+    hoverColor: Media.shuffle ? Theme.accent : Theme.text
+    morphKey: "media.shuffle"
+    checkable: true
+    checked: Media.shuffle
+    accessibleName: "Shuffle"
+    onClicked: Media.toggleShuffle()
+  }
+
+  Button {
+    x: root.columnRight - width
+    y: Theme.controlMediaTransportMid - height / 2
+    visible: Media.loopSupported
+    kind: Button.Icon
+    icon: Media.loop === "track" ? Icons.repeatOne : Icons.repeat
+    iconSize: Theme.controlMediaModeGlyph
+    baseColor: Media.loop !== "none" ? Theme.accent : Theme.subtle
+    hoverColor: Media.loop !== "none" ? Theme.accent : Theme.text
+    morphKey: "media.repeat"
+    checkable: true
+    checked: Media.loop !== "none"
+    accessibleName: Media.loop === "track" ? "Repeat this track" : Media.loop === "playlist" ? "Repeat all" : "Repeat"
+    onClicked: Media.cycleLoop()
+  }
+
+  Button {
+    x: root.columnMid - Theme.controlMediaSkipOffset - width / 2
+    y: Theme.controlMediaTransportMid - height / 2
+    kind: Button.Disc
+    icon: Icons.previous
+    iconSize: Theme.controlMediaSkipGlyph
+    morphKey: "media.previous"
+    enabled: Media.active
+    accessibleName: "Previous track"
+    onClicked: Media.previous()
+  }
+
+  // The one accent in the card: a filled pill made a disc.
+  Button {
+    x: root.columnMid - width / 2
+    y: Theme.controlMediaTransportMid - height / 2
+    width: Theme.controlMediaPlaySize
+    height: Theme.controlMediaPlaySize
+    kind: Button.Primary
+    icon: Media.playing ? Icons.pause : Icons.play
+    iconSize: Theme.controlMediaPlayGlyph
+    morphKey: "media.toggle"
+    enabled: Media.active
+    accessibleName: Media.playing ? "Pause" : "Play"
+    onClicked: Media.toggle()
+  }
+
+  Button {
+    x: root.columnMid + Theme.controlMediaSkipOffset - width / 2
+    y: Theme.controlMediaTransportMid - height / 2
+    kind: Button.Disc
+    icon: Icons.next
+    iconSize: Theme.controlMediaSkipGlyph
+    morphKey: "media.next"
+    enabled: Media.active
+    accessibleName: "Next track"
+    onClicked: Media.next()
   }
 }

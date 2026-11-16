@@ -49,13 +49,9 @@ panel-nearby-kde-receive  866  72  188  188
 panel-nearby-kde-sending-quiet  924  278  72  72
 # The hover card's clock in the states with something playing or the weather up.
 card-*                 925   28  80  30
-# The Now playing panel while it plays: the equaliser's bars, and the scrub bar with its hills
-# and its two times, which run on the shell's own clock.
-panel-media           1184   28  22  24
-panel-media            908  100 308  46
 # The control centre's notification list under its media card: by then it holds what the run has
 # sent, each with its age.
-panel-control-media-paused  720  560  480  460
+panel-control-media-paused  720  608  480  412
 # The launcher search field's caret when a scope's chip is on it (clipboard, emoji).
 launcher-clipboard     740   32  50  26
 launcher-emoji         740   32  50  26

@@ -50,7 +50,7 @@ PanelWindow {
   // key item here, so the one it handles is the same whether a content item or it has focus.
   property list<Item> contentKeyTargets
 
-  // Whether this surface carries on what the bar's hover card shows (the Now playing panel: the
+  // Whether this surface carries on what the bar's hover card shows (none does now; when one did, the
   // cover, the title and the artist). Out of the open card its contents then grow out of the
   // card's as they would out of another surface's: the card hands over a reading of them
   // (Bar/Island.qml handContents, Ui/IslandOrigin.qml adopt) and the pairs fly.

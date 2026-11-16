@@ -6,8 +6,8 @@ import qs.Services
 // to it, and runs out into the surface's ground under a gradient of that ground a pixel wider
 // than the picture, so the words beside it stand on the ground and never on a cut edge. The
 // surface's own rounded shape crops it; paused, it goes under a dim. With no cover there is
-// nothing here at all (`presence`). The hover card's and the Now playing panel's are one anchor
-// to a content morph, so the one grows into the other.
+// nothing here at all (`presence`). The hover card's and the control centre's media card's are
+// one anchor to a content morph.
 Item {
   id: root
 
@@ -18,6 +18,8 @@ Item {
   readonly property bool morphGroup: true
 
   property string source: Media.artUrl
+  // The ground the picture runs out into: the surface's own, or a card's standing on it.
+  property color ground: Theme.surface
   property bool dimmed: Media.active && !Media.playing
 
   // How much picture there is, 0 with none: a new cover fades in over the last (Ui/ArtFade.qml).
@@ -66,22 +68,22 @@ Item {
 
       GradientStop {
         position: 0
-        color: Theme.withAlpha(Theme.surface, 0)
+        color: Theme.withAlpha(root.ground, 0)
       }
 
       GradientStop {
         position: 0.42
-        color: Theme.withAlpha(Theme.surface, 0.08)
+        color: Theme.withAlpha(root.ground, 0.08)
       }
 
       GradientStop {
         position: 0.74
-        color: Theme.withAlpha(Theme.surface, 0.72)
+        color: Theme.withAlpha(root.ground, 0.72)
       }
 
       GradientStop {
         position: 1
-        color: Theme.surface
+        color: root.ground
       }
     }
   }

@@ -11,9 +11,10 @@ import "../Ui/MorphScan.js" as MorphScan
 // scales but the clock: each block is drawn at its true size, rides the card's live edge, and
 // flies in on its own stretch of the open (saneAspect's shared-element card), while the growing
 // shape uncovers it and the track block clips, revealing the title letter by letter. While
-// something plays, the card's left is its cover, title and artist, and a click there opens the
-// Now playing panel, which carries those three on (handContents) and, closed with the pointer
-// still on the card, gives the island back to it (returnContents, returned).
+// something plays, the card's left is its cover, title and artist, and a click there plays or
+// pauses it. A surface that sets `takesCard` could carry those three on (handContents) and,
+// closed with the pointer still on the card, give the island back to it (returnContents,
+// returned); none does since the Now playing panel went into the control centre.
 //
 // Shut, while a song with timed lyrics plays, the pill is the song's and not the clock's: the line
 // being sung and nothing else, as wide as the line and no taller; three dots while nobody sings;
@@ -144,6 +145,16 @@ FrostedSurface {
     ContentFade {}
   }
 
+  // A lock takes the island as the clock's pill: its own pill starts on the island in its picture
+  // of the desktop, and its clock flies out of this one's (Lock/LockView.qml). So a lock asked
+  // for while the pill is a song's waits (Bus.lockHeld) until the words have gone, the clock is
+  // back and the shape is at rest, as it waits for an open panel to close. Not for the open card
+  // or the drop well, which it takes as they are.
+  readonly property bool lockSettling: Bus.locking && !expanded && !dropArmed && (!resting || lyricPresence > 0)
+  readonly property string lockHoldKey: "island:" + screenName
+
+  onLockSettlingChanged: Bus.holdLock(lockHoldKey, lockSettling)
+
   // What a surface that carries the card on takes over from it (Ui/IslandOrigin.qml adopt): what
   // is playing, read as a content morph reads a surface (Ui/MorphScan.js) but in the card's own
   // coordinates, since the taker stands on this shape in a window of its own. Null with nothing
@@ -160,7 +171,7 @@ FrostedSurface {
 
   // ---- taking the island back ----
   //
-  // A surface that grew out of this card and carried it on (Now playing) closes back into it
+  // A surface that grew out of this card and carried it on (one that sets `takesCard`) closes back into it
   // when the pointer is still on the card (Ui/IslandSurfaceBase.qml startReturn): its shape
   // comes down to the card's, what it took travels back, and this card is what it uncovers.
 
@@ -237,8 +248,11 @@ FrostedSurface {
 
   onScreenNameChanged: Bus.setIsland(screenName, root)
   Component.onCompleted: Bus.setIsland(screenName, root)
-  Component.onDestruction: if (Bus.islandFor(screenName) === root)
-    Bus.setIsland(screenName, null)
+  Component.onDestruction: {
+    Bus.holdLock(lockHoldKey, false);
+    if (Bus.islandFor(screenName) === root)
+      Bus.setIsland(screenName, null);
+  }
 
   onOnOfferChanged: {
     if (onOffer)
@@ -562,7 +576,7 @@ FrostedSurface {
           opacity: shown
 
           Text {
-            // A content-morph anchor (Ui/MorphScan.js): the Now playing panel's title is this one.
+            // A content-morph anchor (Ui/MorphScan.js): the media card's title is this one.
             property string morphRole: "title"
             property string morphKey: "media.title"
 
@@ -654,8 +668,7 @@ FrostedSurface {
       openness: root.openness
     }
 
-    // A click on what is playing opens the Now playing panel, which grows out of this card with
-    // the cover, title and artist carried on; the mouse's back and forward buttons skip.
+    // A click on what is playing plays or pauses it; the mouse's back and forward buttons skip.
     MouseArea {
       x: 0
       y: 0
@@ -670,7 +683,7 @@ FrostedSurface {
         else if (event.button === Qt.BackButton)
           Media.previous();
         else
-          Bus.toggleSurface("media");
+          Media.toggle();
       }
     }
   }

@@ -59,8 +59,7 @@ take the pill's clock and marks off their timed fade while closing.
   first. Give it `key`, `openWidth`, `openHeight`, `openRadius` and a body (a `Panel`).
   `focusTarget` names the item that takes the keyboard on open (a text field); `passThrough`
   narrows the input region to the card; `wanted` lets an owner (the polkit prompt) open it;
-  `openable` says whether a toggle may open it just now (Now playing, only while something
-  plays); `takesCard` says it carries on what the hover card shows, and goes back into that
+  `openable` says whether a toggle may open it just now; `takesCard` says it carries on what the hover card shows, and goes back into that
   card when closed with the pointer still on it (below). `hide(true)` closes to the pill
   whatever it grew out of (a click off the card).
 - **`TransientSurface`**: a pill that opens by itself. Bind `wanted`; it grows out of the
@@ -90,7 +89,7 @@ and pairs them with its own (`MorphScan.match`):
   `header` and `footer`; `SectionLabel`; `Segmented`; `TextField`; `LevelTrack`; `IslandPill`,
   keyed `pill`; `BigSlider`; `MediaCard`, keyed `media`; `CoverBleed`, keyed `media.cover`). A
   `Text` can be one by declaring the two properties itself: what is playing is `media.title` and
-  `media.artist` in the hover card, the media card and the Now playing panel, whose transport
+  `media.artist` in the hover card and the control centre's media card, whose transport
   buttons are `media.previous`, `media.toggle` and `media.next`. An anchor inside an anchor is its own,
   role prefixed (`header.button`). A part is named by its item's `objectName`, else by type and
   ordinal, so name a primitive's texts when their order varies (`IslandPill`, `PanelFooter`).
@@ -161,7 +160,8 @@ and pairs them with its own (`MorphScan.match`):
 
 **The hover card hands on what is playing.** The bar's island is not a surface, and a panel that
 grows out of the open card takes only its shape (`IslandOrigin.adopt`, `Bus.islandCardFor`) and
-its clock; the rest of the card is cut. A surface that sets `takesCard` (Now playing) draws the
+its clock; the rest of the card is cut. A surface that sets `takesCard` (none does since the Now playing panel went into the control
+centre's media card; the mechanism is kept) draws the
 card's date, weather and gauges itself where the card stood (`Bar/Widgets/CardExtras.qml`, the
 same item the island draws, as `cardFace` in the surface's fill), so they go on its first frames
 as the clock does, not on a cut, and also takes
@@ -207,8 +207,7 @@ return, so a pointer that goes while the panel is still on its way back shuts th
 
 Recording and reviewing these: `tools/qs-verify/motion/transitions.sh OUTDIR A:B ...` records each
 handover in the headless harness, and `sheet.py OUTDIR` turns each into a 12-frame contact sheet
-(+0..+500 ms). The way back to the card is `card,card-click:escape`, then
-`card,card-click,escape:card-leave` for the card shutting once the pointer goes. wf-recorder must not be given `-r`: a forced rate rewrites timestamps, so a dropped
+(+0..+500 ms).  wf-recorder must not be given `-r`: a forced rate rewrites timestamps, so a dropped
 frame squeezes the timeline into a fake lurch. Sheets sample with rounding, not floor.
 
 The taker re-reads its own contents while the ghosts fly (a list that loads, a carousel that
@@ -282,13 +281,14 @@ The key rules, all in `Panel.take`:
   is ready; `presence` fades it over what stands in for no picture (the media card, a cover);
   `sourceSize` bounds what is decoded.
 - **`CoverBleed`**: the playing track's cover bled in from a surface's start edge and run out
-  into its ground (the hover card's left, the Now playing panel's): size it, and it does the rest,
+  into its ground (the hover card's left, the control centre's media card's, whose `ground` is the
+  card's own): size it, and it does the rest,
   dim when paused and nothing at all with no cover (`presence`). Its picture is decoded at
   `Theme.coverSourceSize` wherever it is drawn, so a morph's ghost of it is the cached one.
 - **`CardExtras`** (`Bar/Widgets`): the open hover card's date, weather and gauges, for a card
   the size of the item: the island's own, and a `takesCard` surface's copy of them.
-- **`MediaScrub`**: the scrub bar of what is playing, with its hills: the control centre's media
-  card and the Now playing panel. Its width is the track's; `trackY` and `timeY` place the track
+- **`MediaScrub`**: the scrub bar of what is playing, with its hills, on the control centre's media
+  card. Its width is the track's; `trackY` and `timeY` place the track
   and the times, `countsDown` and `padded` say how the times read, `nudge(seconds)` is the
   keyboard's step. Whoever shows one holds `Media.holdPosition(name, true)` meanwhile.
 - **`LoginPill`**: the polkit prompt's pill. The lock screen has none: it is the island itself

@@ -439,6 +439,8 @@ Singleton {
   // far off and this much fainter.
   readonly property int islandLyricTitleGap: 9
   readonly property real lyricArtistAlpha: 0.5
+  // How long the clock's pill stands after a lock lets go before the words take it again.
+  readonly property int islandLyricAfterLock: 500
   // The open card on its way shut gives the pill to the words once it is this near the pill
   // (of its openness): until then it is still the card's clock.
   readonly property real islandLyricFromCard: 0.3
@@ -747,18 +749,37 @@ Singleton {
   readonly property int controlSliderGap: 17
   readonly property int controlSliderGlyphLeft: 13
 
-  // The media card; the gap separates each block from the next.
+  // The media card (Control/MediaCard.qml); the gap separates each block from the next. The cover
+  // is bled in from the card's left at its full height, and a column of output, title, artist,
+  // scrub bar and transport runs from controlMediaColumnLeft, past the cover's far end, to the
+  // card's inset (from the inset on both sides where there is no cover). Rows by their middles.
   readonly property int controlBlockGap: 15
-  readonly property int controlMediaHeight: 140
-  readonly property int controlMediaRadius: 14
-  readonly property int controlMediaTitleSize: 19
-  readonly property int controlMediaArtistSize: 12
+  readonly property int controlMediaHeight: 188
+  // The card's corners are the tiles' above it, so the control centre is one family of shapes.
+  readonly property int controlMediaRadius: controlTileRadius
+  readonly property int controlMediaInset: 16
+  readonly property int controlMediaBleedWidth: 200
+  readonly property int controlMediaColumnLeft: 208
+  readonly property real controlMediaOutputMid: 26
+  readonly property int controlMediaOutputGlyph: 14
+  readonly property int controlMediaOutputGap: 6
   readonly property int controlMediaCaptionSize: 11
-  // Transport: three equal discs to the right of the title, after One UI 9's player.
-  readonly property int controlMediaButtonGap: 8
-  // The scrub bar, also after One UI 9: a thick track, a solid thumb, and translucent hills
-  // that ride the played part while music plays.
-  readonly property int controlMediaTrackY: 98
+  readonly property real controlMediaTitleMid: 55
+  readonly property int controlMediaTitleSize: 19
+  readonly property real controlMediaArtistMid: 77
+  readonly property int controlMediaArtistSize: 13
+  readonly property real controlMediaTimeMid: 121
+  readonly property real controlMediaTransportMid: 153
+  // Play or pause on an accent disc, previous and next on neutral ones this far either side of
+  // its middle, and shuffle and repeat as bare glyphs at the column's ends.
+  readonly property int controlMediaPlaySize: 44
+  readonly property int controlMediaPlayGlyph: 26
+  readonly property int controlMediaSkipGlyph: 22
+  readonly property int controlMediaSkipOffset: 54
+  readonly property int controlMediaModeGlyph: 18
+  // The scrub bar, after One UI 9: a thick track, a solid thumb, and translucent hills that ride
+  // the played part while music plays.
+  readonly property int controlMediaTrackY: 105
   readonly property int controlMediaTrackHeight: 6
   readonly property real controlMediaTrackAlpha: 0.2
   readonly property int controlMediaThumbSize: 18
@@ -767,7 +788,6 @@ Singleton {
   readonly property real controlMediaThumbRing: 2.5
   readonly property real controlMediaThumbPressScale: 1.2
   readonly property int controlMediaHillHeight: 14
-  readonly property int controlMediaTimeY: 111
 
   readonly property int controlSectionGap: 23
   readonly property int controlSectionHeight: 22
@@ -797,7 +817,7 @@ Singleton {
   readonly property int displaysCanvasHeight: 188
   readonly property int displaysCanvasPadX: 32
   readonly property int displaysCanvasPadY: 28
-  readonly property int displaysCanvasRadius: controlMediaRadius
+  readonly property int displaysCanvasRadius: 14
   readonly property int displaysTileRadius: wallpaperTileRadius
   readonly property real displaysTileVeil: 0.3
   readonly property int displaysPlateHeight: 22
@@ -1619,45 +1639,16 @@ Singleton {
   readonly property int eqFallBase: 400
   readonly property int eqFallStagger: 50
 
-  // ---- what is playing (Ui/CoverBleed.qml, Bar/Island.qml, Media/MediaPanel.qml) ----
+  // ---- what is playing (Ui/CoverBleed.qml, Bar/Island.qml, Control/MediaCard.qml) ----
 
-  // The cover is decoded no bigger than this, the panel's bleed on a 2x screen; one size
-  // everywhere, so the card's, the panel's and a morph's ghost of either are one cached picture.
+  // The cover is decoded no bigger than this, the media card's bleed on a 2x screen and more;
+  // one size everywhere, so the hover card's, the media card's and a morph's ghost of either are
+  // one cached picture.
   readonly property int coverSourceSize: 512
   // A paused track's cover goes under this much black.
   readonly property real coverPausedDim: 0.5
   // The second line beside a cover: the text colour let down, where subtle would sink next to it.
   readonly property real mediaSecondaryAlpha: 0.62
-
-  // The Now playing panel: the cover bled in from the left, and a column of output, title,
-  // artist, scrub bar and transport from mediaColumnLeft to mediaColumnRight, which starts past
-  // the cover's far end as the card's lines do. Rows by their middles.
-  readonly property int mediaWidth: panelColumnWidth
-  readonly property int mediaHeight: 196
-  readonly property int mediaRadius: panelRadius
-  readonly property int mediaBleedWidth: 214
-  readonly property int mediaColumnLeft: 222
-  readonly property int mediaColumnRight: 502
-  readonly property real mediaOutputMid: 30
-  readonly property int mediaOutputGlyph: 14
-  readonly property int mediaOutputGap: 6
-  readonly property int mediaCaptionSize: 11
-  readonly property real mediaTitleMid: 60
-  readonly property int mediaTitleSize: 19
-  readonly property real mediaArtistMid: 82
-  readonly property int mediaArtistSize: 13
-  readonly property int mediaTrackY: 110
-  readonly property real mediaTimeMid: 126
-  readonly property real mediaTransportMid: 160
-  // Play or pause on an accent disc, previous and next on neutral ones this far either side of
-  // its middle, and shuffle and repeat as bare glyphs at the column's ends.
-  readonly property int mediaPlaySize: 44
-  readonly property int mediaPlayGlyph: 26
-  readonly property int mediaSkipGlyph: 22
-  readonly property int mediaSkipOffset: 54
-  readonly property int mediaModeGlyph: 18
-  // A player that passes through "stopped" between two tracks does not shut the panel.
-  readonly property int mediaGoneGrace: 600
 
   // The island's small round gauge (a reading like battery or volume) and where its label sits.
   readonly property int islandGaugeSize: 48

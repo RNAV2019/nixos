@@ -68,7 +68,10 @@ gone on following unseen.
 The open hover card and the drop well are the island's own shapes and take the face down
 (`lyricUp`). The card on its way shut keeps its clock until it is nearly the pill, then gives way
 to the words, and lands on the line's width without stopping at the clock's. A lock takes the
-island as the clock's pill (`Lyrics.faced` is down for it). A camera, microphone or recording
+island as the clock's pill (`Lyrics.faced` is down for it): asked for while the pill is a song's,
+it waits (`Bus.lockHeld`, as for anything still coming to rest) until the words have gone and the
+clock's pill is back, so the lock's own pill starts on it and its clock flies out of the pill's.
+Unlocked, the clock lands in its pill and the words take it again half a second later. A camera, microphone or recording
 mark stays, at the line's end; only the equaliser goes with the clock.
 
 ## The pointer
@@ -77,7 +80,7 @@ Over a line the hover card still opens, since it is where the clock is, but only
 that means it: it must travel 4 px on the pill and then stay 300 ms (70 ms on the plain pill). A
 line that grows under a pointer at rest does not open it. A click on the words does
 nothing (the card is open under the pointer before one could land on them); pinning the card is
-a click on the open card, and the Now playing panel a click on its track block, as ever.
+a click on the open card, and a click on its track block plays or pauses.
 
 Words come from LyricsPlus (word timings) or LRCLIB (line timings, the words then spread by
 syllable), asked once a song and kept in `~/.cache/quickshell/lyrics`. A song neither has shows

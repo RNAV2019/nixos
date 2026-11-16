@@ -263,7 +263,7 @@ Item {
       return e.x >= c.x - 2 && e.y >= c.y - 2 && e.x + e.w <= c.x + c.w + 2 && e.y + e.h <= c.y + c.h + 2;
     };
     // And once more, last, for a held box that a bigger arriving one lies well across without
-    // holding it (the Now playing panel's title, which starts on its cover's far end): painted
+    // holding it (a title that starts on its cover's far end): painted
     // over, the start of the words showed at their landing place while their ghost was still on
     // its way. Small things arriving on a big held one (a glyph on that cover) still show.
     var across = function (e, c) {

@@ -6,7 +6,7 @@ artist are too long for any line, and one with no cover.
 
 It starts playing the first track 1:36 into its 2:32. PlayPause, Play, Pause, Stop, Next,
 Previous, Seek and SetPosition do what they say (Next and Previous step round the tracks), and
-Shuffle and LoopStatus can be written, so everything in the Now playing panel has something to
+Shuffle and LoopStatus can be written, so everything on the control centre's media card has something to
 turn. Driven from a script with busctl, e.g.
   busctl --user call org.mpris.MediaPlayer2.qsv /org/mpris/MediaPlayer2 \
     org.mpris.MediaPlayer2.Player PlayPause

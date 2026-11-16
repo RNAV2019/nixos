@@ -42,7 +42,7 @@ Singleton {
   readonly property string artUrl: active && player.trackArtUrl ? player.trackArtUrl : ""
 
   // MPRIS never pushes position, so poll only while a progress bar is on screen: whoever shows
-  // one (the control centre, the Now playing panel, each per output) holds this by its own name.
+  // one (the control centre, per output) holds this by its own name.
   readonly property bool trackPosition: Object.keys(positionHolders).length > 0
   property var positionHolders: ({})
 

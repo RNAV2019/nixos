@@ -72,7 +72,7 @@ Singleton {
   readonly property string next: "skip_next"
   readonly property string play: "play_arrow"
   readonly property string pause: "pause"
-  // The Now playing panel's quiet pair; repeat shows the one track when it is that one it repeats.
+  // The media card's quiet pair; repeat shows the one track when it is that one it repeats.
   readonly property string shuffle: "shuffle"
   readonly property string repeat: "repeat"
   readonly property string repeatOne: "repeat_one"

@@ -2,8 +2,8 @@ import QtQuick
 import qs.Commons
 import qs.Services
 
-// The scrub bar of whatever is playing (Services/Media.qml), for the control centre's media card
-// and the Now playing panel. MPRIS reports position about once a second, so the thumb runs on
+// The scrub bar of whatever is playing (Services/Media.qml), for the control centre's media card.
+// MPRIS reports position about once a second, so the thumb runs on
 // its own clock between reports and is pulled back only when a report disagrees; a drag previews
 // the time and seeks once, on release. Hills ride the played part while music plays. The item's
 // width is the track's; `trackY` and `timeY` place the track's centre line and the times in it.

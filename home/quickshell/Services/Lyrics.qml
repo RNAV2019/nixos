@@ -74,9 +74,33 @@ Singleton {
   property int latest: -1
   // The song is being followed. Not while it is paused: the words wait with it.
   readonly property bool ticking: enabled && phrases.length > 0 && (pinned >= 0 || (Media.playing && Media.positionKnown))
-  // The shut pill is not the clock's: a line, the dots or the title. Never under a lock, which
-  // takes the island as the clock's pill.
-  readonly property bool faced: ticking && face !== "plain" && !Bus.locking && !Bus.lockClosing
+  // The shut pill is not the clock's: a line, the dots or the title. Never for a lock, which
+  // takes the island as the clock's pill and gives it back as that: its clock flies out of the
+  // pill's and home into it. So the face is down from the moment a lock is asked for, and stays
+  // down a beat after the lock has let go, so the clock is seen to land before the words take
+  // its place.
+  readonly property bool faced: ticking && face !== "plain" && !Bus.locking && !Bus.lockClosing && !afterLock
+  property bool afterLock: false
+
+  Connections {
+    target: Bus
+
+    function onLockingChanged() {
+      if (Bus.locking) {
+        lockBeat.stop();
+        root.afterLock = true;
+      } else {
+        lockBeat.restart();
+      }
+    }
+  }
+
+  Timer {
+    id: lockBeat
+
+    interval: Theme.islandLyricAfterLock
+    onTriggered: root.afterLock = Bus.locking
+  }
 
   // How wide what the pill shows is, without the room either side of it; 0 for the clock's pill.
   readonly property real faceWidth: {
