@@ -11,10 +11,20 @@ turn. Driven from a script with busctl, e.g.
   busctl --user call org.mpris.MediaPlayer2.qsv /org/mpris/MediaPlayer2 \
     org.mpris.MediaPlayer2.Player PlayPause
 The position stands still unless it is set: the shell runs its own clock between reports.
+
+With QSV_PLAYER=stepped it keeps time as Sonora tells it instead, for the song's clock
+(home/quickshell/Services/Lyrics.qml): the track really plays, the position it gives is renewed
+once a second, a new track is "Playing" from the moment it is asked for but stands at 0 while it
+loads (QSV_LOAD seconds, 1.5 unless said), and nothing says when the loading is over. Where the
+track really is can be asked, which no real player answers:
+  busctl --user call org.mpris.MediaPlayer2.qsv /org/mpris/MediaPlayer2 \
+    org.mpris.MediaPlayer2.Player TruePosition
 """
 
 import asyncio
+import os
 import sys
+import time
 
 from dbus_fast import BusType, Variant
 from dbus_fast.aio import MessageBus
@@ -34,6 +44,8 @@ TRACKS = [
     {"title": "Untitled Demo", "artist": "Nobody Yet", "album": "", "length": 61, "art": ""},
 ]
 SECOND = 1_000_000  # MPRIS counts in microseconds
+STEPPED = os.environ.get("QSV_PLAYER") == "stepped"
+LOAD = float(os.environ.get("QSV_LOAD", "1.5"))
 
 
 class Root(ServiceInterface):
@@ -85,6 +97,29 @@ class Player(ServiceInterface):
         self.position = 96 * SECOND
         self.shuffle = False
         self.loop = "None"
+        # Stepped: the track was at `base` seconds when the clock read `since`, and has run on
+        # from there while playing (a `since` still to come is a track still loading).
+        self.base = 96.0
+        self.since = time.monotonic()
+
+    def true(self):
+        if self.status != "Playing":
+            return self.base
+        return self.base + max(0.0, time.monotonic() - self.since)
+
+    def settle(self, base, wait=0.0):
+        """Stepped: the track is at `base` now, and what it gives as its position says so."""
+        self.base = base
+        self.since = time.monotonic() + wait
+        self.position = int(base * SECOND)
+
+    async def step(self):
+        """Stepped: renews the position given each time the track passes a whole second."""
+        while True:
+            at = self.true()
+            if int(at) != self.position // SECOND:
+                self.position = int(at * SECOND)
+            await asyncio.sleep(0.02)
 
     def metadata(self):
         t = TRACKS[self.track]
@@ -104,11 +139,19 @@ class Player(ServiceInterface):
 
     def play(self, status):
         if status != self.status:
+            if STEPPED:
+                at = self.true()
+                self.status = status
+                self.settle(at)
             self.status = status
             self.tell(PlaybackStatus=status)
 
     def skip(self, by):
         self.track = (self.track + by) % len(TRACKS)
+        if STEPPED:
+            self.settle(0.0, LOAD)
+            self.tell(Metadata=self.metadata())
+            return
         self.position = 0
         self.tell(Metadata=self.metadata())
         self.Seeked(0)
@@ -139,13 +182,23 @@ class Player(ServiceInterface):
 
     @method()
     def Seek(self, offset: "x"):
-        self.position = max(0, self.position + offset)
+        if STEPPED:
+            self.settle(max(0.0, self.true() + offset / SECOND))
+        else:
+            self.position = max(0, self.position + offset)
         self.Seeked(self.position)
 
     @method()
     def SetPosition(self, track: "o", position: "x"):
-        self.position = max(0, position)
+        if STEPPED:
+            self.settle(max(0.0, position / SECOND))
+        else:
+            self.position = max(0, position)
         self.Seeked(self.position)
+
+    @method()
+    def TruePosition(self) -> "x":
+        return int(self.true() * SECOND) if STEPPED else self.position
 
     @method()
     def OpenUri(self, uri: "s"):
@@ -237,8 +290,11 @@ class Player(ServiceInterface):
 async def main():
     bus = await MessageBus(bus_type=BusType.SESSION).connect()
     bus.export("/org/mpris/MediaPlayer2", Root())
-    bus.export("/org/mpris/MediaPlayer2", Player())
+    player = Player()
+    bus.export("/org/mpris/MediaPlayer2", player)
     await bus.request_name("org.mpris.MediaPlayer2.qsv")
+    if STEPPED:
+        asyncio.get_event_loop().create_task(player.step())
     await asyncio.get_event_loop().create_future()
 
 

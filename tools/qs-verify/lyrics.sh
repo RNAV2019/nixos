@@ -9,11 +9,15 @@
 #   lyrics.sh frames OUT T...       OUT/T.png, the island with the song held at each T (seconds)
 #   lyrics.sh strip OUT FROM TO N   N frames from FROM to TO stacked as one sheet, OUT/FROM-TO.png
 #   lyrics.sh play OUT FROM SECS    let the song run from FROM and take the island every 100 ms
+#   lyrics.sh clock [SECS]          start the song anew and, each second, say where it really is
+#                                   and where the shell has it (needs the stepped player, below)
 #   lyrics.sh log                   what the shell has warned of since the last sync
 #   lyrics.sh down                  tear it all down
 #
 # QS_VERIFY_WORK picks the harness (default /tmp/qsv-lyrics): give each tree at work its own.
-# QS_SCALE and QS_THEME are run.sh's. The song is fixtures/lyrics-plus.json (25 lines: verse
+# QS_SCALE and QS_THEME are run.sh's. QSV_PLAYER=stepped at `up` makes the mock player keep time
+# as Sonora tells it (mock-mpris.py), which `clock` is for. The song is the fixtures' (written by
+# fixtures/make-lyrics.mjs; 25 lines and a backing voice: verse
 # from 8 s, pre-chorus 27.2, chorus 36.8, a pause from 56.5, verse 64, chorus 83.2, bridge 102.4,
 # chorus 116.8). A held song moves the shape by its spring, in the wall's time: `frames` waits
 # QS_SETTLE (0.9 s) for it, and `strip` only as long as it is told (0.25 s), so a strip across a
@@ -39,7 +43,7 @@ case $cmd in
     "$here/stop.sh" >/dev/null 2>&1 || true
     QS_THEME=${QS_THEME:-ariadne} "$here/run.sh" "$QSV_REPO/home/quickshell" >/dev/null
     load_env
-    cp "$here/fixtures/lyrics-plus.json" "$QSV_WORK/lyrics-plus.json"
+    cp "$here"/fixtures/lyrics-apple.json "$here"/fixtures/lyrics-apple.ttml "$here"/fixtures/lyrics-lrclib.json "$QSV_WORK/"
     : >"$QSV_WORK/quickshell.log"
     "$here/restart.sh" >/dev/null
     media_up
@@ -106,6 +110,18 @@ case $cmd in
     magick "$tmp"/*.png -append "$out/play-$from.png"
     rm -rf "$tmp"
     echo "$out/play-$from.png"
+    ;;
+  clock)
+    load_env
+    media_up
+    qsipc lyrics pin -1
+    # Round the player's four tracks and back to the song: a new track, still loading.
+    for _ in 1 2 3 4; do mp Next; done
+    for _ in $(seq 1 "${1:-10}"); do
+      sleep 1
+      really=$(busctl --user call "$MP_NAME" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player TruePosition | awk '{ printf "%.2f", $2 / 1000000 }')
+      echo "really $really   shell: $(qsipc lyrics clock)"
+    done
     ;;
   log)
     load_env

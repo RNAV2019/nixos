@@ -126,12 +126,12 @@
       # NixOS VM: tty1 autologin into Hyprland --locked-cmd, real Hyprland on virtio-gpu DRM.
       locked-login = import ./tests/locked-login.nix {inherit pkgs;};
 
-      # How a lyrics service's answer is read and how the pill shows it (Lyrics/Parse.js, Pill.js), on the harness's fixture song.
+      # How the lyrics sources are read, which sheet is taken and how the pill shows it (Lyrics/*.js), on the harness's fixture song.
       lyrics-logic =
         pkgs.runCommand "lyrics-logic" {
           nativeBuildInputs = [pkgs.nodejs];
         } ''
-          node ${./tools/lyrics-test.mjs} ${./home/quickshell/Lyrics} ${./tools/qs-verify/fixtures/lyrics-plus.json} && touch "$out"
+          node ${./tools/lyrics-test.mjs} ${./home/quickshell/Lyrics} ${./tools/qs-verify/fixtures} && touch "$out"
         '';
 
       # The launcher calculator's phrasings, through CalcPhrase.js and a real qalc.

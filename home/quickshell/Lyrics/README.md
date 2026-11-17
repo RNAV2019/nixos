@@ -9,20 +9,24 @@ for a song with no timed lyrics. ALT + L switches it off and on
 
 | File | What it is |
 | --- | --- |
-| `Parse.js` | A lyrics service's answer as one shape: lines, each word with its start and length. |
+| `Sheets.js` | What each source answers, read into sheets: Apple Music's TTML, LRCLIB's word file, LRC. |
+| `Rank.js` | Which sheet is for the recording that is playing, and which of those to show. |
+| `Parse.js` | Names as players give them, and a sheet as the one shape the pill draws: lines, each word with its start and length. |
+| `Clock.js` | What a reading of the player's position says about where the song really is. |
 | `Pill.js` | Lines cut to the pill's width (phrases), when each comes and goes, what the pill is while nobody sings, and a word at a moment. |
 | `LyricFace.qml` | What the pill draws in the clock's place: the line (two rows, the one up and the one leaving), the dots, the title. |
 | `../Services/Lyrics.qml` | Fetching and keeping the words, the on/off switch, and the song's clock. |
 | `../Bar/Island.qml` | `lyricUp`: when the pill is the song's, and what gives way to it. |
 | `../Ui/CollapsedPill.qml` | The same face, drawn by a surface on its way out of the pill or back into it. |
 
-Both `.js` files are plain (no QML imports) and are run under node by `tools/lyrics-test.mjs`
+The `.js` files are plain (no QML imports) and are run under node by `tools/lyrics-test.mjs`
 (`nix flake check`, `checks.lyrics-logic`).
 
 ## How a line is drawn
 
 Everything a word does is a function of the song's time (`Lyrics.now`, the player's position read
-every frame and glided after), so the pill at 38.2 s is the same picture every run.
+every frame, set right against the player and glided after; see "The song's time"), so the pill
+at 38.2 s is the same picture every run.
 
 - **Coming up.** A phrase is up `LEAD` (0.25 s) before its first word, never before the phrase in
   front has been sung through. Its words rise 7 px into place, 30 ms apart.
@@ -82,14 +86,55 @@ line that grows under a pointer at rest does not open it. A click on the words d
 nothing (the card is open under the pointer before one could land on them); pinning the card is
 a click on the open card, and a click on its track block plays or pauses.
 
-Words come from LyricsPlus (word timings) or LRCLIB (line timings, the words then spread by
-syllable), asked once a song and kept in `~/.cache/quickshell/lyrics`. A song neither has shows
-the plain pill.
+## Where the words come from
+
+From where Sonora's lyrics panel gets them, chosen by its rules (its `crates/music/src/lyrics`),
+so the pill and the panel show the same sheet. Two sources are asked at once, neither needing a
+key or an account, with the song's title, artists, album and length:
+
+- **Apple Music's own sheets**, through the public catalogue of them Sonora asks
+  (`lyrics-api.binimum.org`): the recordings it has under the name, each with where its TTML
+  sheet is. The one that is playing is asked for (`Rank.pick`): timed word by word before timed
+  by line, then the nearest in length. Voices behind a line are lines of their own, in brackets,
+  where they are sung clear of it.
+- **LRCLIB's search**: every upload for the song. An upload has an LRC timed by line and may
+  have a word file timing every word; the file is read only for the upload that is shown.
+
+`Rank.js` then decides. A sheet counts only if it is the song (title and one artist alike, by
+their letters) and the recording: a length within ten seconds of the player's, since another
+take keeps another time, and a wrong sheet is worse than none. Of those, a sheet that runs the
+length of the song beats one that stops early; Apple's beats an upload; then the score, which
+favours words timed one by one and the closest length. An upload timed word by word is set on
+the lines of the best line-timed upload (`Rank.conform`), since those are the ones people
+proofread. Apple's whole sheet is taken the moment it arrives; anything else waits for both
+sources. A song neither has shows the plain pill.
+
+The answer is kept in `~/.cache/quickshell/lyrics`, so a song is asked for once; one chosen
+while a source could not be reached is kept for the session only. `qs ipc call lyrics source`
+says whose sheet is up and how it is timed.
+
+## The song's time
+
+A player's position is run on by the shell between the player's reports, so it is as good as the
+last report. Sonora's is not good to the second: a track is "Playing" while it still loads, the
+position it gives is renewed once a second, and it says the track has jumped only when it is two
+seconds out. Run on from one such reading, the words were up to two seconds early for the whole
+of a song that took a moment to start. So while there are words to show the player is asked
+directly (`Services/Lyrics.qml`, "the song's clock"): a burst of eighteen readings over a second
+and a bit, when the song starts or jumps and every twelve seconds after. A position that moved
+with the readings is exact; one renewed in steps is exact as it steps (`Clock.js`).
+`Lyrics.correction` is what the run-on position is out by. A player that is known to move finely
+and stands still through a burst is waiting, and the song's time waits with it
+(`Lyrics.holding`). A player whose position never moves between its reports is left as it is.
+`qs ipc call lyrics clock` says where the song is and what it was set right by.
 
 ## Testing
 
 `tools/qs-verify/lyrics.sh` runs the pill on the headless harness with a mock player and the
-fixture song: `up`, `sync`, `frames OUT T...` (the island with the song held at each moment, via
-`qs ipc call lyrics pin`), `strip`, `play`, `down`. In the fixture the title is up until 7.6 s,
+fixture song, which the harness's `curl` answers for both sources: `up`, `sync`, `frames OUT
+T...` (the island with the song held at each moment, via `qs ipc call lyrics pin`), `strip`,
+`play`, `down`. With `QSV_PLAYER=stepped` at `up` the mock player keeps time as Sonora tells it
+(a second and a half of loading, a position renewed once a second), and `clock` starts the song
+anew and prints, second by second, where it really is and where the shell has it. In the fixture the title is up until 7.6 s,
 the dots stand from 56.6 to 63.6 s, and the last line has gone by 137 s; `qs ipc call lyrics
 face` says which it is.

@@ -442,8 +442,9 @@ The contracts a service file follows; a singleton file takes the contract as its
   player has them, and `holdPosition(who, held)`, by which each surface with a scrub bar keeps
   the position polled while it shows (`trackPosition`).
 - **`Lyrics`**: the timed words of what is playing, and where the song is in them, for the island's
-  pill (`Lyrics/README.md`). Fetched only while `enabled` (ALT + L): LyricsPlus for word timings,
-  LRCLIB for line timings; each answer is kept in `Paths.lyricsDir`. `state` (`idle`, `loading`,
+  pill (`Lyrics/README.md`). Fetched only while `enabled` (ALT + L), from Sonora's own sources by its rules:
+  Apple Music's sheet for the recording, else the best LRCLIB upload; each answer is kept in
+  `Paths.lyricsDir`. `correction` and `holding` set the player's position right against the player. `state` (`idle`, `loading`,
   `ready`, `none`), `model`, `source`; `phrases` (the lines cut to the pill), `now`, `face`
   (`line`, `dots`, `title`, `plain`), `facing`, `faced`, `index`, `latest`, and `pinned` for
   tests. `pillWidth` is the shut pill's width whatever it shows: the island and

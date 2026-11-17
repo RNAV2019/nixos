@@ -39,6 +39,8 @@ Singleton {
 
   readonly property string artist: active && player.trackArtist ? player.trackArtist : ""
 
+  readonly property string album: active && player.trackAlbum ? player.trackAlbum : ""
+
   readonly property string artUrl: active && player.trackArtUrl ? player.trackArtUrl : ""
 
   // MPRIS never pushes position, so poll only while a progress bar is on screen: whoever shows

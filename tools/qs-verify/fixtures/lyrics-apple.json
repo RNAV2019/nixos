@@ -1,0 +1,26 @@
+{
+ "results": [
+  {
+   "track_name": "Glass Harbour (Live)",
+   "artist_name": "Mira Okafor",
+   "album_name": "Tidewater Live",
+   "duration": 171,
+   "id": "QSV000000002",
+   "isrc": "QSV000000002",
+   "lyricsUrl": "https://lrc.red/s/QSV000000002.ttml",
+   "timing_type": "word"
+  },
+  {
+   "track_name": "Glass Harbour",
+   "artist_name": "Mira Okafor",
+   "album_name": "Tidewater",
+   "duration": 152,
+   "id": "QSV000000001",
+   "isrc": "QSV000000001",
+   "lyricsUrl": "https://lrc.red/s/QSV000000001.ttml",
+   "timing_type": "word"
+  }
+ ],
+ "source": "HIT-LRC-RED",
+ "total": 2
+}

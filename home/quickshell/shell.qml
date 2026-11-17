@@ -206,7 +206,8 @@ ShellRoot {
   }
 
   // The words of what is playing, in the island's pill (Services/Lyrics.qml). `pin` is for
-  // tests: a moment to hold the song at (seconds; -1 follows the player again).
+  // tests: a moment to hold the song at (seconds; -1 follows the player again). `source` and
+  // `clock` say where the words came from and how the song's time stands.
   IpcHandler {
     target: "lyrics"
 
@@ -229,6 +230,16 @@ ShellRoot {
 
     function pin(seconds: string): void {
       Lyrics.pinned = Number(seconds);
+    }
+
+    // Whose sheet the words are ("Apple Music", "LRCLIB"), and how it is timed; "" with none.
+    function source(): string {
+      return Lyrics.model ? Lyrics.source + (Lyrics.model.wordTimed ? ", by word" : ", by line") : Lyrics.state;
+    }
+
+    // The song's time and what the player's own position is being set right by, in seconds.
+    function clock(): string {
+      return "now " + Lyrics.now.toFixed(2) + (Lyrics.holding >= 0 ? " held" : " corrected " + Lyrics.correction.toFixed(2));
     }
   }
 

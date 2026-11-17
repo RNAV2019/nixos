@@ -4,13 +4,19 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "../Lyrics/Clock.js" as Clock
 import "../Lyrics/Parse.js" as Parse
 import "../Lyrics/Pill.js" as Pill
+import "../Lyrics/Rank.js" as Rank
+import "../Lyrics/Sheets.js" as Sheets
 
 // The words of what is playing, timed, and where the song is in them: what the island's pill
-// shows a line at a time, and what it shows while nobody sings (Lyrics/LyricFace.qml). Asked of LyricsPlus first, which times every
-// word and names the song's parts, then of LRCLIB, which times lines only (the words are then
-// spread across each line). Both ask for no key. Nothing is fetched while the words are switched
+// shows a line at a time, and what it shows while nobody sings (Lyrics/LyricFace.qml). They come
+// from where Sonora's lyrics panel gets them, chosen by its rules, so the pill and the panel
+// show the same sheet: Apple Music's own, timed word by word, from a public catalogue of them,
+// and failing that the best of LRCLIB's uploads for the recording (Lyrics/Rank.js). Only a sheet
+// for the recording that is playing is taken, by its length: another take of the song keeps
+// another time. Neither source asks for a key. Nothing is fetched while the words are switched
 // off (`enabled`, ALT + L), an answer is kept on disk so a song is asked for once, and a song
 // neither has is not asked for again until the shell restarts.
 Singleton {
@@ -43,15 +49,28 @@ Singleton {
   property string state: "idle"
   // Parse.js's shape; null unless ready.
   property var model: null
-  // Who answered: "Apple", "QQ Music", "LRCLIB"...
+  // Who answered: "Apple Music" or "LRCLIB".
   readonly property string source: model ? model.source : ""
 
   // The song as a lyrics service files it: a video's "Artist - Title (Official Video)" taken apart.
   readonly property var track: Parse.splitTitle(Media.title, Media.artist)
   readonly property string key: Media.active && root.track.title !== "" ? Parse.cacheKey(root.track.title, root.track.artist, Media.length) : ""
+  // The song as the sources are asked for it and their answers are held against (Rank.js).
+  readonly property var query: ({
+      title: root.track.title,
+      artist: root.track.artists,
+      album: Media.album,
+      duration: Media.length
+    })
 
-  readonly property string plusUrl: "https://lyricsplus.prjktla.my.id/v2/lyrics/get"
-  readonly property string lrclibUrl: "https://lrclib.net/api/get"
+  // The catalogue of Apple Music's sheets Sonora asks (it answers with where each sheet is),
+  // and LRCLIB's search, which answers with every upload it has for the song.
+  readonly property string appleUrl: "https://lyrics-api.binimum.org/"
+  readonly property string lrclibUrl: "https://lrclib.net/api/search"
+  // Whose sheet is taken first when both have one the length of the song.
+  readonly property var order: ["Apple Music", "LRCLIB"]
+  // What a request says it is from: the shell's kind, and nothing of whose it is.
+  readonly property string agent: "quickshell-lyrics/2"
 
   // ---- where the song is ----
 
@@ -173,11 +192,16 @@ Singleton {
       root.latest = -1;
       return;
     }
-    // The player extrapolates its own position between reports; this glides after it rather
-    // than copying it, so a report that lands a few milliseconds off does not jerk the words.
-    var raw = Media.positionKnown && Media.player ? Media.player.position : 0;
+    // The player's position is run on between its reports (and set right against the player by
+    // `correction`, below); this glides after it rather than copying it, so a report that lands
+    // a few milliseconds off does not jerk the words.
+    var told = Media.positionKnown && Media.player ? Media.player.position : 0;
+    root.follow(told);
+    var raw = root.holding >= 0 ? root.holding : told + root.correction;
     if (root.pinned >= 0)
       root._estimate = root.pinned;
+    else if (root.holding >= 0)
+      root._estimate = root.holding;
     else if (dt <= 0 || Math.abs(raw - root._estimate) > 0.5)
       root._estimate = raw;
     else
@@ -194,16 +218,176 @@ Singleton {
       root.latest = last;
   }
 
+  // ---- the song's clock, set right ----
+
+  // Between a player's reports its position is run on from the last one, which is as good as
+  // the report was. Some are not good to the second: Sonora says a track is playing while it is
+  // still loading it, renews the position it gives once a second, and says it has jumped only
+  // when it is two seconds out, so run on from one reading the words can be up to two seconds
+  // early for the whole of a song that took a moment to start. So the player is asked: a burst
+  // of readings over a second and a bit, each held as it comes against where the run-on
+  // position was at that instant (Lyrics/Clock.js). `correction` is what they say the run-on
+  // position is out by, in seconds. A player whose position does not move between its reports
+  // gives nothing to go by and is left alone, unless it is one seen to move finely, in which
+  // case it is waiting (a track loading, a stream that stalled) and the song's time waits with
+  // it: `holding` is where, in seconds, and -1 when the song is running.
+  property real correction: 0
+  property real holding: -1
+  // Players whose position has been seen to move by a second or less at a time, by bus name:
+  // only those are held when it stands still through a burst, since one renewed every few
+  // seconds stands still through most bursts while playing perfectly well.
+  property var _fine: ({})
+  property real _toldLast: -1
+  property real _toldWall: 0
+  // What the readings are about: a new one each time the run-on position is set anew, so a
+  // burst begun before then is dropped.
+  property int _epoch: 0
+  // Bursts in which nothing moved since the epoch began, by a player not known to move finely:
+  // it is asked a few times more, then left to the slow round.
+  property int _still: 0
+  // How many readings a burst takes and how far apart; together longer than a second, so a
+  // position renewed once a second steps at least once inside it.
+  readonly property int clockReadings: 18
+  readonly property real clockEvery: 0.075
+  readonly property string clockBus: Media.player && Media.player.dbusName ? Media.player.dbusName : ""
+  readonly property real clockRate: Media.player && Media.player.rate > 0 ? Media.player.rate : 1
+  readonly property bool clockWanted: root.ticking && root.pinned < 0 && root.clockBus !== ""
+
+  // What was known of the run-on position's error is void: it starts from nothing again.
+  function forget() {
+    root._epoch++;
+    root._still = 0;
+    root._toldLast = -1;
+    root.correction = 0;
+    root.holding = -1;
+  }
+
+  // A run-on position that jumps was set anew by the player (a seek, a new track, a resume):
+  // the player is asked again at once.
+  function follow(told) {
+    var wall = Date.now() / 1000;
+    var jumped = root._toldLast >= 0 && Math.abs(told - root._toldLast - root.clockRate * (wall - root._toldWall)) > 0.3;
+    if (jumped) {
+      root.forget();
+      clockAsk.restart();
+    }
+    root._toldLast = told;
+    root._toldWall = wall;
+  }
+
+  onClockWantedChanged: {
+    root.forget();
+    if (root.clockWanted)
+      clockAsk.restart();
+  }
+  onClockBusChanged: root.forget()
+
+  // A moment after anything changes, then every twelve seconds while there are words to show.
+  Timer {
+    id: clockAsk
+
+    interval: 150
+    onTriggered: if (root.clockWanted)
+      clock.run()
+  }
+
+  Timer {
+    interval: 12000
+    repeat: true
+    running: root.clockWanted
+    onTriggered: clock.run()
+  }
+
+  QueuedProcess {
+    id: clock
+
+    property int epoch: -1
+    property var before: null
+    property int readings: 0
+    property int steps: 0
+
+    command: ["env", "LC_ALL=C", "bash", "-c", 'for i in $(seq "$2"); do printf "%s " "$EPOCHREALTIME"; busctl --user get-property "$1" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player Position || exit 1; sleep "$3"; done', "clock", root.clockBus, String(root.clockReadings), String(root.clockEvery)]
+
+    onRunningChanged: {
+      if (!clock.running)
+        return;
+      clock.epoch = root._epoch;
+      clock.before = null;
+      clock.readings = 0;
+      clock.steps = 0;
+    }
+
+    stdout: SplitParser {
+      onRead: function (row) {
+        var reading = Clock.parse(row);
+        if (reading === null || clock.epoch !== root._epoch || !root.clockWanted || !Media.player)
+          return;
+        var before = clock.before;
+        clock.before = reading;
+        clock.readings++;
+        if (before === null)
+          return;
+        var said = Clock.step(before, reading, Media.player.position, Date.now() / 1000, root.clockRate);
+        if (!said.moved)
+          return;
+        clock.steps++;
+        if (said.stride > 0 && said.stride < 1.1 * root.clockRate && !root._fine[root.clockBus]) {
+          var fine = root._fine;
+          fine[root.clockBus] = true;
+          root._fine = fine;
+        }
+        if (said.ahead === null)
+          return;
+        // A live position says the same thing every reading, give or take the bus: it is not
+        // followed through every hundredth.
+        if (root.holding >= 0 || !said.live || Math.abs(said.ahead - root.correction) > 0.02) {
+          root.holding = -1;
+          root.correction = said.ahead;
+        }
+      }
+    }
+
+    onExited: function (code) {
+      if (code !== 0 || clock.epoch !== root._epoch || !root.clockWanted || clock.readings < 4 || clock.steps > 0)
+        return;
+      // Nothing moved all burst long.
+      if (root._fine[root.clockBus]) {
+        root.holding = clock.before.position;
+        clockAsk.restart();
+      } else if (root._still < 3) {
+        root._still++;
+        clockAsk.restart();
+      }
+    }
+  }
+
+  // ---- fetching ----
+
   // The song `state` and `model` are about.
   property string _key: ""
   property var _memo: ({})
   property var _missing: ({})
+  // The lookup in flight: the song it is for ("" with none), what it asks for, what has come
+  // back, and who has yet to answer.
+  property string _asked: ""
+  property var _query: null
+  property var _hits: []
+  property bool _appleOpen: false
+  property bool _lrclibOpen: false
+  // A source could not be reached, so "nothing" is not yet known.
+  property bool _unreached: false
+  property var _match: null
 
-  function query(names) {
-    var q = names.title + "=" + encodeURIComponent(root.track.title) + "&" + names.artist + "=" + encodeURIComponent(root.track.artist);
-    if (Media.length > 0)
-      q += "&duration=" + Math.round(Media.length);
-    return q;
+  function url(base, pairs) {
+    var parts = [];
+    for (var i = 0; i < pairs.length; i++)
+      if (pairs[i][1] !== "")
+        parts.push(pairs[i][0] + "=" + encodeURIComponent(pairs[i][1]));
+    return base + "?" + parts.join("&");
+  }
+
+  function seconds(query) {
+    return query && query.duration > 0 ? String(Math.floor(query.duration)) : "";
   }
 
   function cachePath(key) {
@@ -220,6 +404,7 @@ Singleton {
     if (root.key === root._key)
       return;
     root._key = root.key;
+    root._asked = "";
     root.model = null;
     if (root._memo[root.key] !== undefined) {
       root.take(root._memo[root.key], false);
@@ -235,6 +420,60 @@ Singleton {
   onWantedChanged: root.refresh()
   onKeyChanged: root.refresh()
 
+  // Asks both sources at once for the song in hand.
+  function ask() {
+    root._asked = root._key;
+    root._query = root.query;
+    root._hits = [];
+    root._unreached = false;
+    root._match = null;
+    root._appleOpen = true;
+    root._lrclibOpen = true;
+    appleFind.byAlbum = root._query.album !== "";
+    appleFind.run();
+    lrclib.run();
+  }
+
+  // One source has said all it will: `hits` are its sheets, and `reached` whether it answered
+  // at all (having nothing is an answer).
+  function answered(source, hits, reached) {
+    if (!reached)
+      root._unreached = true;
+    if (hits.length > 0)
+      root._hits = root._hits.concat(hits);
+    if (source === "apple")
+      root._appleOpen = false;
+    else
+      root._lrclibOpen = false;
+    // Choosing among the sheets is work of its own: it has the next turn, so the reading that
+    // came before it and the choosing do not fall in one frame.
+    Qt.callLater(root.settle);
+  }
+
+  // Takes the best sheet there is once it cannot be bettered: the first source's whole sheet
+  // the moment it is in, anything else when every source has answered.
+  function settle() {
+    // Not for a song skipped since the answer came: its lookup is no longer the one in flight.
+    if (root.state !== "loading" || root._asked !== root._key)
+      return;
+    var waiting = root._appleOpen || root._lrclibOpen;
+    // With a source still to answer, only the first source's sheet could settle it.
+    if (waiting && !root._hits.some(function (hit) {
+      return hit.source === root.order[0];
+    }))
+      return;
+    var best = Rank.best(root._query, root._hits, root.order, Sheets.resolved);
+    if (best !== null && ((best.source === root.order[0] && Rank.fullySynced(root._query, best)) || !waiting)) {
+      var model = Parse.fromSheet(best);
+      if (model !== null) {
+        root.take(model, true);
+        return;
+      }
+    }
+    if (!waiting)
+      root.none(!root._unreached);
+  }
+
   // An answer for the song in hand. `fresh` ones are kept: in memory for the session, and on
   // disk in the one shape, whoever gave them.
   function take(model, fresh) {
@@ -245,16 +484,20 @@ Singleton {
     var memo = root._memo;
     memo[root._key] = model;
     root._memo = memo;
+    // Chosen while a source could not be reached, it is good for the session only: the next
+    // one asks again, in case that source has the better sheet.
+    if (root._unreached)
+      return;
     writer.path = root.cachePath(root._key);
     writer.setText(JSON.stringify({
-      version: 1,
+      version: 2,
       model: model
     }));
   }
 
-  // `known` when a service answered that it has no such song (curl's 22, or an answer with no
-  // timed lines): only then is the song not asked for again. A fetch that never got through
-  // (offline, a timeout) is tried again the next time the song is asked for.
+  // `known` when every source answered and none has the song: only then is it not asked for
+  // again. A fetch that never got through (offline, a timeout, a source that is down) is tried
+  // again the next time the song is asked for.
   function none(known) {
     if (known) {
       var missing = root._missing;
@@ -276,14 +519,15 @@ Singleton {
       try {
         kept = JSON.parse(reader.text());
       } catch (e) {}
-      if (kept && kept.version === 1 && kept.model && kept.model.lines && kept.model.lines.length > 0)
+      // Version 1 was the sources before these, which could be a sheet for another recording.
+      if (kept && kept.version === 2 && kept.model && kept.model.lines && kept.model.lines.length > 0)
         root.take(kept.model, false);
       else
-        plus.run();
+        root.ask();
     }
 
     onLoadFailed: if (reader.path === root.cachePath(root._key))
-      plus.run()
+      root.ask()
   }
 
   FileView {
@@ -295,31 +539,56 @@ Singleton {
   }
 
   // curl, never the GUI thread; an answer for a song since skipped is dropped, and the run
-  // queued behind it asks for the new one.
-  QueuedProcess {
-    id: plus
+  // queued behind it asks for the new one. Its exit says how it went: 0 an answer, 22 the
+  // source saying it has no such thing, anything else that it was not reached.
 
-    property int lastCode: 0
+  // The catalogue, for the recordings it has of the song: by its album first, which tells two
+  // editions apart, then without, since the catalogue may name the album otherwise.
+  QueuedProcess {
+    id: appleFind
+
+    property bool byAlbum: true
 
     stamp: root._key
-    command: ["curl", "--silent", "--show-error", "--fail", "--max-time", "12", root.plusUrl + "?" + root.query({
-        title: "title",
-        artist: "artist"
-      })]
+    command: ["curl", "--silent", "--show-error", "--fail", "--location", "--max-time", "12", "--user-agent", root.agent, root.url(root.appleUrl, [["track", root.query.title], ["artist", root.query.artist], ["album", appleFind.byAlbum ? root.query.album : ""], ["duration", root.seconds(root.query)]])]
 
     stdout: StdioCollector {
-      id: plusOut
+      id: appleFound
     }
 
     onExited: function (code) {
-      plus.lastCode = code;
-      if (plus.stale || root.state !== "loading")
+      if (appleFind.stale || root.state !== "loading" || root._asked !== root._key || !root._appleOpen)
         return;
-      var model = code === 0 ? Parse.fromLyricsPlus(plusOut.text) : null;
-      if (model !== null)
-        root.take(model, true);
-      else
-        lrclib.run();
+      var matches = code === 0 ? Sheets.appleMatches(appleFound.text) : null;
+      var mine = matches !== null ? Rank.pick(root._query, matches) : null;
+      if (mine !== null) {
+        root._match = mine;
+        appleSheet.run();
+      } else if (appleFind.byAlbum && (matches !== null || code === 22)) {
+        appleFind.byAlbum = false;
+        Qt.callLater(appleFind.run);
+      } else {
+        root.answered("apple", [], matches !== null || code === 22);
+      }
+    }
+  }
+
+  // The sheet of the recording the catalogue matched.
+  QueuedProcess {
+    id: appleSheet
+
+    stamp: root._key
+    command: ["curl", "--silent", "--show-error", "--fail", "--location", "--max-time", "12", "--user-agent", root.agent, root._match ? root._match.url : ""]
+
+    stdout: StdioCollector {
+      id: appleSheetOut
+    }
+
+    onExited: function (code) {
+      if (appleSheet.stale || root.state !== "loading" || root._asked !== root._key || !root._appleOpen || root._match === null)
+        return;
+      var hit = code === 0 ? Sheets.appleHit(root._match, appleSheetOut.text) : null;
+      root.answered("apple", hit !== null ? [hit] : [], code === 0 || code === 22);
     }
   }
 
@@ -327,23 +596,20 @@ Singleton {
     id: lrclib
 
     stamp: root._key
-    command: ["curl", "--silent", "--show-error", "--fail", "--max-time", "12", root.lrclibUrl + "?" + root.query({
-        title: "track_name",
-        artist: "artist_name"
-      })]
+    command: ["curl", "--silent", "--show-error", "--fail", "--location", "--max-time", "12", "--user-agent", root.agent, root.url(root.lrclibUrl, [["track_name", root.query.title], ["artist_name", root.query.artist]])]
 
     stdout: StdioCollector {
       id: lrclibOut
     }
 
     onExited: function (code) {
-      if (lrclib.stale || root.state !== "loading")
+      if (lrclib.stale || root.state !== "loading" || root._asked !== root._key || !root._lrclibOpen)
         return;
-      var model = code === 0 ? Parse.fromLrclib(lrclibOut.text) : null;
-      if (model !== null)
-        root.take(model, true);
-      else
-        root.none((code === 0 || code === 22) && (plus.lastCode === 0 || plus.lastCode === 22));
+      var query = root._query;
+      var hits = code === 0 ? Sheets.lrclibHits(lrclibOut.text, function (upload) {
+        return Rank.matched(query, upload);
+      }) : null;
+      root.answered("lrclib", hits !== null ? hits : [], hits !== null || code === 22);
     }
   }
 }

@@ -167,9 +167,10 @@ chmod +x "$QSV_WORK/bin/cliphist"
 printf '3\thttps://nixos.org/manual/nixos/stable\n2\tmeeting notes for friday\n1\tssh ryan@192.168.1.20\n' >"$QSV_WORK/cliphist.list"
 
 # `curl`, which the weather service asks Open-Meteo with: a fixed reading (11 degrees, part cloud,
-# night), so the harness never reaches the network. The lyrics service asks two sources
-# through it too: each is answered from `$QS_VERIFY_WORK/lyrics-plus.json` or `lyrics-lrclib.json`
-# when a state has put one there, and fails like a 404 otherwise. A cover
+# night), so the harness never reaches the network. The lyrics service asks its sources
+# through it too: the Apple Music catalogue is answered from `$QS_VERIFY_WORK/lyrics-apple.json`,
+# a sheet it points to from `lyrics-apple.ttml`, and LRCLIB from `lyrics-lrclib.json`, each
+# when a state has put one there and like a 404 otherwise. A cover
 # a player keeps on the web is fetched through it as well: `http://qsv.test/art/NAME` is answered
 # with `$QS_VERIFY_WORK/art/NAME` into the file `--output` names, or like a 404. Nothing
 # runs it for the weather until a place is stored (`qs ipc call weather set`), which the scratch
@@ -189,7 +190,8 @@ fi
 echo "$last" >>"$(dirname "$0")/../curl.urls"
 case "$last" in
   http://qsv.test/art/*) cp "$(dirname "$0")/../art/${last##*/}" "$out" 2>/dev/null || exit 22; exit 0 ;;
-  *lyricsplus*) cat "$(dirname "$0")/../lyrics-plus.json" 2>/dev/null || exit 22; exit 0 ;;
+  *.ttml) cat "$(dirname "$0")/../lyrics-apple.ttml" 2>/dev/null || exit 22; exit 0 ;;
+  *lyrics-api.binimum*) cat "$(dirname "$0")/../lyrics-apple.json" 2>/dev/null || exit 22; exit 0 ;;
   *lrclib*) cat "$(dirname "$0")/../lyrics-lrclib.json" 2>/dev/null || exit 22; exit 0 ;;
 esac
 echo '{"latitude":51.48,"longitude":0.0,"current":{"time":"2026-01-01T22:00","interval":900,"temperature_2m":11.3,"weather_code":2,"is_day":0}}'
