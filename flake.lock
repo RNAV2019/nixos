@@ -34,6 +34,21 @@
         "type": "github"
       }
     },
+    "crane": {
+      "locked": {
+        "lastModified": 1793836618,
+        "narHash": "sha256-TREenflwEjxOSq292FYwbc3kEm7TDRtXCZRNWEdjBmg=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "79fd63528501446749c09f08cad486a58c7d173e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -404,17 +419,18 @@
     },
     "sonora": {
       "inputs": {
+        "crane": "crane",
         "nixpkgs": [
           "nixpkgs"
         ],
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1794329104,
-        "narHash": "sha256-miXNfgp3xBLQrSeCmXozpLPpbT3WKy4SK4ileMGX7G4=",
+        "lastModified": 1795008346,
+        "narHash": "sha256-wdkyXKmL3CWSMyDeVEucMdL4IpTn7KbXPeKXnMvD/do=",
         "owner": "sonorahq",
         "repo": "sonora",
-        "rev": "198d40b25f6d661a48492d799c6735335be5637f",
+        "rev": "590359d2820a76c44db49c9de2ed031a35f0c627",
         "type": "github"
       },
       "original": {
