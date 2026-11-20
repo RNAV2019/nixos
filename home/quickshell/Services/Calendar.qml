@@ -179,47 +179,11 @@ Singleton {
 
     stdout: StdioCollector {
       onStreamFinished: {
-        var lines = text.split("\n");
         if (text.trim() === "") {
           root.loading = false;
           return;
         }
-
-        var cols = {};
-        var head = lines[0].split("\t");
-        for (var c = 0; c < head.length; c++)
-          cols[head[c].trim()] = c;
-
-        function field(parts, name) {
-          var i = cols[name];
-          return i === undefined || i >= parts.length ? "" : parts[i].trim();
-        }
-
-        var out = [];
-        for (var i = 1; i < lines.length; i++) {
-          if (lines[i].trim() === "")
-            continue;
-          var p = lines[i].split("\t");
-
-          var sd = field(p, "start_date");
-          if (sd === "")
-            continue;
-          var st = field(p, "start_time");
-          var ed = field(p, "end_date");
-          var et = field(p, "end_time");
-
-          // ical-agenda leaves both times empty for an all-day event.
-          var allDay = st === "";
-
-          out.push({
-            start: root.parse(sd, st),
-            end: root.parse(ed !== "" ? ed : sd, et),
-            allDay: allDay,
-            title: field(p, "title"),
-            calendar: field(p, "calendar"),
-            location: field(p, "location")
-          });
-        }
+        var out = root.rows(text);
 
         var next = Object.assign({}, root.months);
         next[fetch.key] = out;
@@ -254,6 +218,48 @@ Singleton {
     }
   }
 
+  // ical-agenda's TSV (a header line naming the columns, then one event a line) as events.
+  function rows(text) {
+    var lines = text.split("\n");
+
+    var cols = {};
+    var head = lines[0].split("\t");
+    for (var c = 0; c < head.length; c++)
+      cols[head[c].trim()] = c;
+
+    function field(parts, name) {
+      var i = cols[name];
+      return i === undefined || i >= parts.length ? "" : parts[i].trim();
+    }
+
+    var out = [];
+    for (var i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === "")
+        continue;
+      var p = lines[i].split("\t");
+
+      var sd = field(p, "start_date");
+      if (sd === "")
+        continue;
+      var st = field(p, "start_time");
+      var ed = field(p, "end_date");
+      var et = field(p, "end_time");
+
+      // ical-agenda leaves both times empty for an all-day event.
+      var allDay = st === "";
+
+      out.push({
+        start: root.parse(sd, st),
+        end: root.parse(ed !== "" ? ed : sd, et),
+        allDay: allDay,
+        title: field(p, "title"),
+        calendar: field(p, "calendar"),
+        location: field(p, "location")
+      });
+    }
+    return out;
+  }
+
   // Built field by field rather than handed to Date(), which parses a bare date as UTC
   // and would put a late evening event on the wrong day.
   function parse(date, time) {
@@ -262,5 +268,57 @@ Singleton {
     return new Date(parseInt(d[0], 10), parseInt(d[1], 10) - 1, parseInt(d[2], 10), parseInt(t[0], 10), parseInt(t[1], 10));
   }
 
-  Component.onCompleted: root.load()
+  // ---- today, for the island ----
+
+  // Today's events on a fetch of their own, apart from the month on screen, read again every five
+  // minutes and at midnight. ical-agenda keeps the feed ten minutes, so most reads cost nothing.
+  property var todayEvents: []
+
+  // The event the hover card names: the first timed one today that has not ended, the one under
+  // way included. All-day events are left out; they are the day, not a time in it.
+  readonly property var nextEvent: {
+    var now = clock.date;
+    var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    var best = null;
+    for (var i = 0; i < root.todayEvents.length; i++) {
+      var e = root.todayEvents[i];
+      if (e.allDay || e.end <= now || e.start >= tomorrow)
+        continue;
+      if (best === null || e.start < best.start)
+        best = e;
+    }
+    return best;
+  }
+
+  function loadToday() {
+    if (todayFetch.running)
+      return;
+    var d = root.stamp(root.todayDate);
+    todayFetch.command = ["ical-agenda", d, d];
+    todayFetch.running = true;
+  }
+
+  onDayStampChanged: root.loadToday()
+
+  Timer {
+    interval: 5 * 60 * 1000
+    running: true
+    repeat: true
+    onTriggered: root.loadToday()
+  }
+
+  Process {
+    id: todayFetch
+
+    stdout: StdioCollector {
+      onStreamFinished: root.todayEvents = text.trim() === "" ? [] : root.rows(text)
+    }
+
+    stderr: StdioCollector {}
+  }
+
+  Component.onCompleted: {
+    root.load();
+    root.loadToday();
+  }
 }

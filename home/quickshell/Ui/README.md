@@ -154,9 +154,8 @@ and pairs them with its own (`MorphScan.match`):
   `ping-pong` scenarios.
 - the taker's first frame, up before its clock runs, wears the corners it took over, not its own.
 - B's contents never move: the growing card uncovers them (a tile at the edge is seen cut until it is
-  reached). Elements that mean the same thing in two panels but play different roles (a device's name
-  as a label in Nearby and as the Phone panel's title) are left unpaired by choice: a flight across the
-  card read worse than the cut and cascade.
+  reached). Elements that mean the same thing in two panels but play different roles are left unpaired
+  by choice: a flight across the card read worse than the cut and cascade.
 
 **The hover card hands on what is playing.** The bar's island is not a surface, and a panel that
 grows out of the open card takes only its shape (`IslandOrigin.adopt`, `Bus.islandCardFor`) and
@@ -313,7 +312,7 @@ All pressable controls are on **`ButtonBase`**: hover and press tracking, the pr
 - **`Switch`**: `checked`, `toggled(value)`.
 - **`TextField`**: `kind` `Panel` (on a ground) or `Bare`; `accepted`, `cancelled`, `keyPressed`.
 - **`Tile`**: `kind` `Control` (pill with a badge; `stacked` puts the badge above the words for a
-  narrow cell, as in the phone panel), `Choice` (square one-of-three), `Carousel`
+  narrow cell), `Choice` (square one-of-three), `Carousel`
   (picture with a ring), `Device` (disc with a progress ring); `active`, `current`.
 - **`ListRow`**: `kind` `Grouped` (control centre pill; `groupPosition` rounds a stack's outer
   corners), `Hairline` (the board's row) or `Flat` (the file picker's). Lead `glyph`, `label`,
@@ -382,7 +381,7 @@ focus that arrived by Tab, and fades. Do not hand-roll these; if a new control n
 - **`SubviewSlide`**: the control centre's slide between a panel's home view and one sub-view
   (drill-in left, back right, no cross-fade), one `ProgressSpring` carrying both. It owns the two
   views' `x` and `visible`; `subReady` makes it wait for a Loader; `name` labels it in the log.
-  Used by the control centre, Nearby (send/receive and the picker) and the phone panel. Nearby draws
+  Used by the control centre and Nearby (send/receive and the picker). Nearby draws
   its header once outside the slide and clips only the body below it, so what both directions share stays still.
 - **Shaders** (`Shaders/*.frag`, each with a committed `.frag.qsb`): `roundedclip` crops a
   surface's fixed content box to the moving card (`boxSize`, `boxOrigin`, `itemSize`, `radius`,

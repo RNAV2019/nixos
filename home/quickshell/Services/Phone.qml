@@ -8,21 +8,16 @@ import qs.Commons
 // The phone, through KDE Connect. Quickshell has no D-Bus client, so `phone-bridge events`
 // (pkgs/phone-bridge) watches kdeconnectd on the session bus and prints the whole picture as a
 // JSON line whenever it changes: paired devices that are reachable (or asking to pair), each
-// with its battery, mobile signal and the notifications it has up. The controls go the other
-// way, straight to the daemon with `busctl`, so each is one visible D-Bus call.
+// with its battery. Sending files goes the other way, straight to the daemon with `busctl`, so
+// it is one visible D-Bus call.
 //
 // The phone is the first paired and reachable smartphone (else tablet). Bar/PhoneSatellite.qml
-// buds out of the island while there is one; Phone/PhonePanel.qml is what it opens.
+// buds out of the island while there is one, its battery on a ring; Nearby sends to it.
 //
 // Transfers come from the same process: it serves KDE's job tracker, so kdeconnectd's progress
 // for what it sends and receives arrives as `transfer` lines, which Services/Nearby.qml takes
 // into its own list. A send that finishes inside the tracker's half-second delay is never
 // reported, so a share shows as sending from the call and is taken as done if no job turns up.
-//
-// What KDE Connect cannot say, the panel does without: the phone's own Wi-Fi is not reported,
-// but a LAN link means it shares this machine's network, so that network's name stands in; a
-// ring cannot be stopped from here. Text copied on either side reaches the other through KDE
-// Connect's own clipboard sync, so there is nothing to send by hand.
 Singleton {
   id: root
 
@@ -58,30 +53,10 @@ Singleton {
   readonly property bool connected: phone !== null
   readonly property string deviceId: phone ? phone.id : ""
   readonly property string name: phone ? phone.name : ""
-  // "Wi-Fi" for a LAN link, "Bluetooth", or "".
-  readonly property string link: phone ? phone.link : ""
   readonly property bool hasBattery: phone !== null && phone.battery !== null
   readonly property int charge: hasBattery ? phone.battery.charge : -1
   readonly property bool charging: hasBattery && phone.battery.charging
   readonly property bool low: hasBattery && !charging && charge <= Theme.phoneLowBattery
-
-  // "5G", "LTE"... and 0-4 bars, -1 before the phone has reported any. KDE Connect sends the type
-  // as "Unknown" when Android will not let it read the network (its phone-state permission), but
-  // the bars still come through: that type is dropped, so the reading falls back on the bars.
-  readonly property string cellularType: {
-    var type = phone && phone.cellular ? phone.cellular.type : "";
-    return type === "Unknown" ? "" : type;
-  }
-  readonly property int cellularStrength: phone && phone.cellular ? phone.cellular.strength : -1
-  // What the Mobile reading says: the network when the phone names it, else the signal in words.
-  readonly property string cellularLabel: cellularStrength < 0 ? "Off on phone" : cellularType !== "" ? cellularType : ["No signal", "Weak signal", "Fair signal", "Good signal", "Strong signal"][Math.min(4, cellularStrength)]
-
-  // The network the phone is on, when the link says it is this machine's.
-  readonly property string wifiName: link === "Wi-Fi" && NetworkInfo.activeNetwork ? NetworkInfo.activeNetwork.name : ""
-
-  // The phone's notifications, newest first; only reassigned when one changes, so the panel's
-  // rows are not rebuilt by a battery reading.
-  property var notifications: []
 
   // What the bridge says about a transfer (see phone-bridge.py), and a placeholder that a real
   // one replaces.
@@ -103,9 +78,6 @@ Singleton {
     var devices = state.devices || [];
     root.phone = root._pick(devices);
     root.devices = devices;
-    var next = root.phone !== null ? root.phone.notifications : [];
-    if (JSON.stringify(next) !== JSON.stringify(root.notifications))
-      root.notifications = next;
   }
 
   // ---- the bridge process ----
@@ -137,12 +109,6 @@ Singleton {
   // ---- calling kdeconnectd ----
 
   Command {
-    id: ringCall
-
-    label: "Ring phone"
-  }
-
-  Command {
     id: shareCall
 
     label: "Send files to phone"
@@ -164,25 +130,6 @@ Singleton {
 
   function _plugin(name) {
     return "/modules/kdeconnect/devices/" + deviceId + "/" + name;
-  }
-
-  // The phone rings until someone picks it up, and nothing here can stop it, so the button
-  // only says so for a while.
-  property bool ringing: false
-
-  function ring() {
-    if (!connected)
-      return;
-    root._call(ringCall, _plugin("findmyphone"), "org.kde.kdeconnect.device.findmyphone", "ring");
-    root.ringing = true;
-    ringReset.restart();
-  }
-
-  Timer {
-    id: ringReset
-
-    interval: 8000
-    onTriggered: root.ringing = false
   }
 
   // The share that has been called and not yet shown by a job, as a transfer of its own.
@@ -250,136 +197,4 @@ Singleton {
     }
     cancelCall.exec(["busctl", "--user", "call", "org.kde.JobViewServer", "/JobViewServer", "org.kde.PhoneBridge", "cancel", "s", id]);
   }
-
-  // ---- the phone's storage ----
-
-  // The panel's message when the phone would not share its files, "" when there is none.
-  property string browseError: ""
-  property bool mounting: false
-
-  // What a mount is for: "open" in the file manager, or "pick" for the wallpaper chooser.
-  property string _mountFor: ""
-
-  signal mounted(string path, string purpose)
-  signal mountFailed(string purpose)
-
-  // The daemon's SFTP mount of the phone, started if it is not up: `mountAndWait` says whether
-  // it is, and `getMountError` why not. Its default directory handler is not used, since it is
-  // whatever the desktop has for folders (a terminal, here); the file manager is named.
-  function mount(purpose) {
-    if (!connected || mounting)
-      return;
-    root.browseError = "";
-    root.mounting = true;
-    root._mountFor = purpose;
-    mountCall.exec(root._busctl("sftp", "mountAndWait"));
-  }
-
-  function browse() {
-    root.mount("open");
-  }
-
-  function _busctl(plugin, member) {
-    return ["busctl", "--user", "--json=short", "call", "org.kde.kdeconnect", root._plugin(plugin), "org.kde.kdeconnect.device." + plugin, member];
-  }
-
-  // The value of `busctl --json=short`'s single reply, or null.
-  function _reply(text) {
-    try {
-      return JSON.parse(text).data[0];
-    } catch (err) {
-      return null;
-    }
-  }
-
-  function _mountFailed(message) {
-    root.mounting = false;
-    if (/permission/i.test(message))
-      root.browseError = "Allow file access in KDE Connect on your phone";
-    else
-      root.browseError = "Could not open the phone's files";
-    root.mountFailed(root._mountFor);
-  }
-
-  Command {
-    id: mountCall
-
-    label: "Mount phone"
-    stdout: StdioCollector {
-      onStreamFinished: {
-        if (root._reply(text) === true)
-          mountPointCall.exec(root._busctl("sftp", "mountPoint"));
-        else
-          mountErrorCall.exec(root._busctl("sftp", "getMountError"));
-      }
-    }
-  }
-
-  Command {
-    id: mountPointCall
-
-    label: "Phone mount point"
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var path = root._reply(text);
-        if (typeof path !== "string" || path === "") {
-          root._mountFailed("");
-          return;
-        }
-        root.mounting = false;
-        if (root._mountFor === "open")
-          Launch.run(["nautilus", path], "nautilus");
-        root.mounted(path, root._mountFor);
-      }
-    }
-  }
-
-  Command {
-    id: mountErrorCall
-
-    label: "Phone mount error"
-    stdout: StdioCollector {
-      onStreamFinished: root._mountFailed(root._reply(text) || "")
-    }
-  }
-
-  // ---- the wallpaper drawn on the phone preview ----
-
-  // The picture the user chose, as a file in the state directory: a copy, so it outlives the
-  // phone (the original is on its storage). One at a time, named afresh for each so the image
-  // cache does not keep the old one.
-  readonly property string wallpaper: wallpaperState.value !== "" ? "file://" + wallpaperState.value : ""
-
-  function setWallpaper(path) {
-    var ext = /\.([A-Za-z0-9]+)$/.exec(String(path));
-    var to = Paths.stateDir + "/phone-wallpaper-" + Date.now() + "." + (ext ? ext[1].toLowerCase() : "img");
-    wallpaperCopy.copyTo = to;
-    wallpaperCopy.exec(["sh", "-c", 'cp -- "$1" "$2" && find "$3" -maxdepth 1 -name "phone-wallpaper-*" ! -path "$2" -delete', "sh", path, to, Paths.stateDir]);
-  }
-
-  Command {
-    id: wallpaperCopy
-
-    property string copyTo: ""
-
-    label: "Copy phone wallpaper"
-  }
-
-  Connections {
-    target: wallpaperCopy
-
-    function onExited(code) {
-      if (code === 0)
-        wallpaperState.save(wallpaperCopy.copyTo);
-    }
-  }
-
-  PersistedValue {
-    id: wallpaperState
-
-    name: "phone-wallpaper"
-  }
-
-  onConnectedChanged: if (!connected)
-    root.ringing = false
 }

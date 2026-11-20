@@ -4,7 +4,7 @@
 # drives the UI and returns, leaving the recorder to cut the log and video. A scenario for a
 # feature that a later task adds still drives the UI now. record.sh calls reset_ui between runs.
 
-SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite satellite-click lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
+SCENARIOS="satellite-hover-panel ping-pong ping-pong-slow open-close open-twice abc abc-slow retoggle-prepresent retoggle retoggle-fast subview osd-over-open carousel satellite lock-satellite lock-osd-satellite lock-panel controls subview-keys click-off-early click-through toast-stack dictation-levels launcher-scroll nearby-switch lock-reveal"
 
 wpctl() { command wpctl "$@" 2>/dev/null; }
 # MARKS (set by record.sh) collects "toggle NAME epoch_ms" lines, to time the first motion after an ipc.
@@ -16,7 +16,7 @@ toggle() {
 # Close everything and park the pointer, as shoot.sh does between states.
 reset_ui() {
   local k
-  for k in launcher control wallpaper profiles calendar nearby recorder theme phone media; do
+  for k in launcher control wallpaper profiles calendar nearby recorder theme media; do
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
@@ -158,7 +158,7 @@ sc_carousel() {
   sleep 1.0
 }
 
-# The phone satellite: docking, the hover card, the volume OSD beside it, the phone panel.
+# The phone satellite: docking, the hover card, the volume OSD beside it, a panel taking the island.
 sc_satellite() {
   ph_up
   sleep 1.0
@@ -172,31 +172,10 @@ sc_satellite() {
   wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.65
   sleep 2.5
   wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.40
-  toggle phone
+  toggle control
   sleep 1.6
-  qsipc phone close >/dev/null 2>&1
+  qsipc control close >/dev/null 2>&1
   sleep 1.2
-}
-
-# A click on the docked satellite draws it in and opens the phone panel (log: surface.phone.showing).
-sc_satellite_click() {
-  ph_up
-  sleep 1.5
-  cursor "${SAT_X:-1046}" "${SAT_Y:-26}"
-  sleep 0.5
-  click
-  sleep 1.8
-  qsipc phone close >/dev/null 2>&1
-  sleep 1.6
-  # Again, warm: the first click pays for the panel's window and contents being built.
-  cursor 200 900
-  sleep 0.6
-  cursor "${SAT_X:-1046}" "${SAT_Y:-26}"
-  sleep 0.6
-  click
-  sleep 1.8
-  qsipc phone close >/dev/null 2>&1
-  sleep 1.0
 }
 
 # A lock taken while the OSD is up: the bar carries the satellite (phone.blend runs, Bus.lockHeld waits on it).
@@ -269,8 +248,7 @@ sc_controls() {
 
 # Escape and Backspace through the sliding sub-views (frames land in $OUT/subview-keys-*.png):
 # the control centre drilled into Wi-Fi and backed out by Escape 60 ms into the slide, then by
-# Escape and by Backspace once settled; the Nearby picker and the phone panel's picker backed out
-# by Escape. Each lands on its home view, which the frames show.
+# Escape and by Backspace once settled; the Nearby picker backed out by Escape. Each lands on its home view, which the frames show.
 sc_subview_keys() {
   local shot="$OUT/subview-keys"
   sleep 0.5
@@ -302,19 +280,6 @@ sc_subview_keys() {
   sleep 1.4
   grim "$shot-nearby-home.png"
   qsipc nearby close >/dev/null 2>&1
-  sleep 1.0
-  ph_up
-  toggle phone
-  sleep 1.6
-  keys -k Right
-  sleep 0.3
-  keys -k Return
-  sleep 1.6
-  grim "$shot-phone-picker.png"
-  keys -k Escape
-  sleep 1.4
-  grim "$shot-phone-home.png"
-  qsipc phone close >/dev/null 2>&1
   sleep 1.0
 }
 

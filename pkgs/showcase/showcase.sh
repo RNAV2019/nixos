@@ -29,7 +29,6 @@ self=$(realpath "${BASH_SOURCE[0]}")
 # calendar and every timestamp come out the same.
 theme=ariadne
 wallpaper=in-memory-of-summer-8.jpg
-phone_wallpaper=in-memory-of-summer-6.jpg
 clock="2026-10-21 10:08:00"
 width=1920
 height=1200
@@ -278,7 +277,7 @@ if [ "${1:-}" = --inner ]; then
   # ---- the stills ----
 
   # reset_ui: every surface closed and the pointer parked, so a still starts from the desktop.
-  surfaces=(launcher control calendar nearby wallpaper theme profiles recorder phone)
+  surfaces=(launcher control calendar nearby wallpaper theme profiles recorder)
   reset_ui() {
     local s
     for s in "${surfaces[@]}"; do ipc "$s" close 2>/dev/null || true; done
@@ -424,7 +423,6 @@ if [ "${1:-}" = --inner ]; then
   }
   t_lock() { ipc lockpreview preview false; }
   # With the phone connected.
-  s_phone() { ipc phone toggle; }
   s_nearby_phone() {
     ipc nearby send "$HOME/Pictures/Trip/lisbon.jpg"
     hold 0.6
@@ -527,11 +525,10 @@ if [ "${1:-}" = --inner ]; then
 
     # The phone, last: it stays connected from here on, which the stills above must not see.
     focus_ws 3
-    if want phone-satellite || want phone || want nearby-phone || want sharing; then
+    if want phone-satellite || want nearby-phone || want sharing; then
       phone_up
       hold 3
       still phone-satellite 1.5 s_island
-      still phone 1.8 s_phone
       still nearby-phone 1.8 s_nearby_phone
       still sharing 1.3 s_sharing t_sharing
     fi
@@ -618,14 +615,10 @@ if [ "${1:-}" = --inner ]; then
     rb_done
     hold 4.2
 
-    # The phone buds out of the island, and opens into its panel.
+    # The phone buds out of the island, its battery on a ring.
     mark phone
     phone_up
-    hold 1.8
-    ipc phone toggle
-    hold 2
-    ipc phone close
-    hold 0.3
+    hold 2.4
 
     # Wallpaper, then the whole desktop recoloured: Rose Pine and back to Ariadne.
     mark wallpaper
@@ -796,10 +789,6 @@ build_home() {
     -fill none \
     -draw 'stroke-linecap round stroke-linejoin round polyline 150,390 256,128 362,390' \
     -draw 'stroke-linecap round line 190,305 322,305' "jpg:$home/.face"
-  # The picture drawn on the demo phone's preview.
-  magick "$repo/backgrounds/$theme/$phone_wallpaper" -resize 1080x -quality 88 \
-    "$home/.local/state/shell/phone-wallpaper-demo.jpg"
-  echo "$HOME/.local/state/shell/phone-wallpaper-demo.jpg" >"$home/.local/state/shell/phone-wallpaper"
   # What the phone's storage and the pictures folder hold, for the file pickers.
   mkdir -p "$home/phone-storage" "$home/Pictures/Trip"
   local i=0 name

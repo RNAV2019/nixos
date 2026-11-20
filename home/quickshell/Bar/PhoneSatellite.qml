@@ -13,10 +13,10 @@ import "../Ui/Motion.js" as Motion
 // into rounded tips, and the disc settles into its dock with a little give. Coming in, a pull
 // that grows as the gap closes draws it home; on contact the neck re-forms and the pill's end
 // swells and relaxes. Shaders/satellite.frag draws it. A full panel taking the island draws it
-// back in, at once (Theme.phonePull0Taken); clicking it does the same. The phone panel is asked for
-// on the click, while the disc is still at rest, and held as the pill it grows out of until the
-// disc touches the pill (Bus.holdPresent), so the panel grows out as the disc sinks in and the
-// panel's first frame, the dear one, is not paid for in the middle of the disc's flight.
+// back in, at once (Theme.phonePull0Taken).
+//
+// It is a reading, the phone's battery on a ring, and nothing to press: it takes no pointer, so
+// the bar's input mask leaves it out.
 //
 // This item holds the logic and the geometry. The geometry goes to Bus.satellite every frame it
 // changes; the bar's SatelliteLayer draws it, and a transient surface's window draws it instead
@@ -128,15 +128,10 @@ Item {
 
   // ---- out or in ----
 
-  // A click draws it in first; see openPanel(). `landing` from the click until the disc touches
-  // the pill, which is as long as the panel it asked for is held back.
-  property bool retreating: false
-  property bool landing: false
-
   readonly property bool panelUp: Bus.islandCovered(screenName) || Bus.islandOpenFor(screenName)
   // A lock does not draw it in: like the bar it stays, so the snapshot behind the lock screen
   // carries it where it sat.
-  readonly property bool wantOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp && !retreating
+  readonly property bool wantOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp
 
   readonly property real satRadius: Theme.phoneSatelliteSize / 2
   // The disc starts a little inside the edge and grows to full size over the first 70% of its
@@ -163,7 +158,7 @@ Item {
       maxHold: Theme.phoneMaxHold / 1000,
       neckK: Theme.phoneNeckK,
       neckOn: Theme.phoneNeckOn / 1000,
-      pull0: root.retreating || root.panelUp ? Theme.phonePull0Taken : Theme.phonePull0,
+      pull0: root.panelUp ? Theme.phonePull0Taken : Theme.phonePull0,
       pull1: Theme.phonePull1,
       pullDrag: Theme.phonePullDrag,
       mergeOmega: Theme.phoneMergeOmega,
@@ -173,7 +168,7 @@ Item {
       // The pill's end swells as the disc comes home, and wobbles as it relaxes. Not when a panel is
       // taking the island: the pill is about to grow into the panel, and a swell and a wobble in
       // the frames before it does read as the pill being squashed.
-      bulgeKick: root.retreating || root.panelUp ? 0 : Motion.satelliteKick(Theme.phoneBulge, Theme.phoneBulgeOmega, Theme.phoneBulgeDamping),
+      bulgeKick: root.panelUp ? 0 : Motion.satelliteKick(Theme.phoneBulge, Theme.phoneBulgeOmega, Theme.phoneBulgeDamping),
       bulgeOmega: Theme.phoneBulgeOmega,
       bulgeZeta: Theme.phoneBulgeDamping,
       bulgeVRef: Theme.phoneBulgeVRef,
@@ -241,63 +236,12 @@ Item {
 
   onSettlingChanged: Bus.holdLock(holdKey, settling)
   Component.onDestruction: {
-    if (landing)
-      Bus.holdPresent("phone", false);
     Bus.holdLock(holdKey, false);
     Bus.setSatellite(screenName, null);
   }
 
-  // Docked: out, settled near enough to take a click.
+  // Docked: out and settled near enough for the battery ring.
   readonly property bool docked: wantOut && p > 0.9
-
-  // The disc touches the pill: the panel, up since the click, is let go.
-  onPChanged: if (landing && p < Theme.phoneOpenAt)
-    land()
-
-  function land() {
-    landing = false;
-    landGiveUp.stop();
-    Bus.holdPresent("phone", false);
-  }
-
-  // The disc is home well inside this; a hold must never outlive what it waits for.
-  Timer {
-    id: landGiveUp
-
-    interval: 400
-    onTriggered: root.land()
-  }
-
-  onPanelUpChanged: if (panelUp)
-    retreating = false
-
-  // The panel did not come (another output had focus, say): come back out.
-  Timer {
-    id: retreatGiveUp
-
-    interval: 1500
-    onTriggered: root.retreating = false
-  }
-
-  // The pointer on the docked disc is most often a click coming: the phone panel's window is made
-  // ready (parked), so the click does not wait out a window being built after the disc is home.
-  readonly property bool hovered: docked && layer.hovered
-  onHoveredChanged: if (hovered)
-    Bus.warmSurface("phone")
-
-  function openPanel() {
-    if (!docked)
-      return;
-    landing = true;
-    landGiveUp.restart();
-    Bus.holdPresent("phone", true);
-    retreating = true;
-    retreatGiveUp.restart();
-    // A panel taking the island turns the disc back by itself (panelUp), reduced motion at once.
-    Bus.toggleSurface("phone");
-    if (landing && p < Theme.phoneOpenAt)
-      land();
-  }
 
   // ---- geometry ----
 
@@ -348,8 +292,7 @@ Item {
       windowTop: windowTop,
       p: pc,
       docked: docked,
-      ring: ringShown,
-      hover: layer.hovered
+      ring: ringShown
     };
   }
 
@@ -391,17 +334,8 @@ Item {
     id: layer
 
     g: root.geo
-    interactive: true
     screenName: root.screenName
     hostId: "bar"
     wanted: !root.followingTransient
-    onClicked: root.openPanel()
   }
-
-  // The bar's input mask takes this once the disc is nearly home (docked, p > 0.9, as before the
-  // spring): one fixed rectangle at the rest position, not a region that follows the disc.
-  readonly property bool hitActive: docked && geo !== null
-  readonly property real hitX: eff ? (eff.edge - startInset + travel) - satRadius : 0
-  readonly property real hitY: eff ? (eff.top + (eff.transient ? eff.height : Math.min(eff.height, Theme.barHeight)) / 2) - satRadius : 0
-  readonly property real hitSize: Theme.phoneSatelliteSize
 }

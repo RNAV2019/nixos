@@ -137,8 +137,8 @@ chmod +x "$QSV_WORK/bin/nearby"
 echo '{"event":"status","status":{"mode":"android","visible":false,"remaining":null,"scanning":false,"busy":false,"name":"test-laptop","download_dir":"/tmp/Downloads","android":{"running":true,"port":47713,"error":null},"apple":{"available":true,"receiving":false,"visible":null,"reason":null,"error":null}}}' >"$QSV_WORK/nearby.baseline"
 
 
-# The phone panel's Browse opens the phone's mount in `nautilus`, started in a systemd scope.
-# Neither runs: the scope launcher logs what it was asked to start, and shoot.sh checks the log.
+# Apps the shell starts in a systemd scope do not run: the scope launcher logs what it was asked
+# to start.
 cat >"$QSV_WORK/bin/systemd-run" <<STUB
 #!/bin/sh
 while [ \$# -gt 0 ] && [ "\$1" != "--" ]; do shift; done
@@ -154,7 +154,7 @@ printf '#!/bin/sh\necho "Error: the compositor offers no screencopy (qs-verify s
   >"$QSV_WORK/bin/wl-screenrec"
 chmod +x "$QSV_WORK/bin/wl-screenrec"
 
-# `cliphist`, which the phone panel lists the newest clips from: a fixed history, nothing stored.
+# `cliphist`, which the launcher's clipboard scope lists: a fixed history, nothing stored.
 cat >"$QSV_WORK/bin/cliphist" <<STUB
 #!/bin/sh
 case "\$1" in

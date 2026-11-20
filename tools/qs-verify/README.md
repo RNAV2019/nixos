@@ -67,15 +67,11 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 - Moments: plugged in, Wi-Fi sign-in.
 - The keybinds cheatsheet, alone and over an open control centre.
 - Notification toasts: basic, critical, long text; the control centre's notification list.
-- The phone (last, so nothing before it sees it): the satellite docked, hovered, on a low battery
-  and riding the volume OSD, and the phone panel at rest, with the pointer over a notification and
-  ringing, with low battery, with mobile off, after Browse is refused (the note), with the wallpaper
-  picker on the phone's storage, on the laptop and with no file access, and with a chosen wallpaper;
-  the satellite beside the open hover card; and Nearby over KDE Connect (choose files, sending with
+- The phone (last, so nothing before it sees it): the satellite docked, with the pointer on it
+  (it takes no pointer, so nothing changes), on a low battery and riding the volume OSD; the
+  satellite beside the open hover card; and Nearby over KDE Connect (choose files, sending with
   and without a reading, sent, no phone, receiving) with the sharing pill receiving and saved. The
-  mock plays kdeconnectd's job tracker through the bridge's `org.kde.JobViewServer`, and two checks
-  (not screenshots) confirm Browse starts `nautilus` on the mount and that choosing a wallpaper
-  leaves exactly one copy in the state dir.
+  mock plays kdeconnectd's job tracker through the bridge's `org.kde.JobViewServer`.
 
 - What is playing (last of all, with the phone gone again, so no state above is taken in another
   order than before): the hover card with a player and the weather (playing, paused) and with
@@ -111,9 +107,9 @@ Diff images (red where the pixels differ, over the faded original) go to `NEW_DI
 | toasts | `env -u LD_LIBRARY_PATH notify-send` on the private session bus |
 | what is playing | `mock-mpris.py`, an MPRIS player on the private session bus with four tracks (two with generated covers, one with long names, one with no cover), driven through its own methods (`mp PlayPause`, lib.sh); up only for the states that want it |
 | weather | a stub `curl` on PATH that answers every request with one fixed Open-Meteo reading, so nothing reaches the network; a place is stored with the shell's own `weather set` ipc for the card states and cleared after |
-| phone satellite, phone panel, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
+| phone satellite, Nearby over KDE Connect | the real `phone-bridge` (on PATH, built from this repo) reading `pkgs/phone-bridge/tests/mock-kdeconnectd.py` on the private session bus, driven through its `org.mock.Control` `Apply` method; a stub `cliphist` lists three fixed clips |
 | launcher scopes | typing the scope's word and Return in the launcher; `cliphist` reads `$QS_VERIFY_WORK/cliphist.list`, which `fixtures/cliphist.list` replaces for `launcher-clipboard` only |
-| file pickers, staged send | `fixture_files` (lib.sh) fills `~/Downloads`; Return on "Choose files" and the picker's own keys (`j`, space, `h`, `k`, `l`) through `wtype`; `qs ipc call nearby send PATH`; the phone is brought up again for `picker-images` and removed |
+| file pickers, staged send | `fixture_files` (lib.sh) fills `~/Downloads`; Return on "Choose files" and the picker's own keys (`j`, space, `h`, `k`, `l`) through `wtype`; `qs ipc call nearby send PATH` |
 | Displays with two monitors | `mock-hyprland.sh` answers Hyprland's IPC sockets (`j/monitors` from `fixtures/hypr-monitors.json`) through `socat`, and the shell is restarted with `HYPRLAND_INSTANCE_SIGNATURE=qsv` (and the boot-lock marker `quickshell-secured-qsv`, or the shell locks itself); both are removed afterwards. Sway's own outputs play no part: `Displays` reads `Quickshell.Hyprland` |
 | lock | the `lockpreview` ipc (`background`, `time`, `preview`, `password`, `busy`, `refuse`, `unlock`) over `$QS_VERIFY_WORK/lockbg-HEADLESS-1.png` (a copy of the compositor's background) and the scratch `wallpaper/current`; each state ends with `unlock`, then `preview false` |
 | pointer | `vpointer.c`, a persistent `zwlr_virtual_pointer` (headless sway has no pointer; without one there is no hover or click) |

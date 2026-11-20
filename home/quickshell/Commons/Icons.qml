@@ -45,18 +45,6 @@ Singleton {
   readonly property string keyboard: "keyboard"
   readonly property string mouse: "mouse"
 
-  // The phone panel (Phone/PhonePanel.qml): KDE Connect's actions, the phone's mobile signal
-  // by bars (0-4), clipboard rows and notification avatars.
-  readonly property string ringVolume: "ring_volume"
-  readonly property string uploadFile: "upload_file"
-  readonly property string folderOpen: "folder_open"
-  readonly property var cellular: ["signal_cellular_0_bar", "signal_cellular_1_bar", "signal_cellular_2_bar", "signal_cellular_3_bar", "signal_cellular_4_bar"]
-  readonly property string cellularOff: "signal_cellular_off"
-  readonly property string mail: "mail"
-  readonly property string chat: "chat"
-  readonly property string notifications: "notifications"
-  readonly property string info: "info"
-
   readonly property string volumeMuted: "volume_off"
   readonly property string headphone: "headphones"
   readonly property var volume: ["volume_mute", "volume_down", "volume_up"]
@@ -115,9 +103,6 @@ Singleton {
   readonly property string weatherRain: "rainy"
   readonly property string weatherSnow: "weather_snowy"
   readonly property string weatherThunder: "thunderstorm"
-
-  readonly property var batteryCharging: ["battery_android_bolt"]
-  readonly property var batteryDefault: ["battery_android_0", "battery_android_1", "battery_android_2", "battery_android_3", "battery_android_4", "battery_android_5", "battery_android_6", "battery_android_full"]
 
   // The Wi-Fi mark lit to a signal strength (0..1) in three levels, the rest of it dim: the
   // wedge alone, the inner arc from wifiFair, the outer from wifiGood. Struck through with no

@@ -15,7 +15,7 @@ nix run nixpkgs#nodejs -- --test 'tools/qs-verify/motion/*.test.mjs'   # check.m
 `QS_VERIFY_WORK`, default `/tmp/qsv-motion`) with `QS_THEME=ariadne QS_REFRESH=120 QS_MOTION_LOG=1`,
 resets the UI before each scenario, and tears down at the end (`QS_KEEP=1` keeps it up). Scenarios:
 `open-twice` (cold then warm open; with the `.marks` file `first h change` is toggle to first motion), `click-off-early` (a click 200 ms into an open dismisses), `click-through`. Others:
-`satellite-hover-panel ping-pong ping-pong-slow open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview subview-keys osd-over-open carousel controls satellite satellite-click lock-satellite lock-osd-satellite lock-panel toast-stack dictation-levels launcher-scroll reduce`
+`satellite-hover-panel ping-pong ping-pong-slow open-close abc abc-slow retoggle-prepresent retoggle retoggle-fast subview subview-keys osd-over-open carousel controls satellite lock-satellite lock-osd-satellite lock-panel toast-stack dictation-levels launcher-scroll reduce`
 (`all` = every one). `reduce` restarts the harness with `QUICKSHELL_REDUCE_MOTION=1` and records the
 whole set into `OUT_DIR/reduce/`; check it with `check.mjs OUT_DIR/reduce --max-anim-ms 80`.
 
@@ -91,8 +91,7 @@ being one) and the area of island-coloured pixels in the 44 columns before it. T
 drops frames, so steps between frames are not the spring's: repeated frames are skipped, and a pop is a
 step more than 2.5 times both neighbouring steps and over 1.5 px (edge) or 2% of a full disc (area).
 It also reads the OSD pill growing beside the disc and a lock covering the screen, so read the flags
-by frame number against the scenario, and compare with the parent's capture. `satellite-click` drives
-a click on the docked disc (log: `surface.phone.showing`).
+by frame number against the scenario, and compare with the parent's capture.
 
 ## Baselines (main 8567e52, taken 2026-11-05)
 

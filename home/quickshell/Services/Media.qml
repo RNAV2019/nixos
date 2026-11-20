@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
+import qs.Commons
 
 Singleton {
   id: root
@@ -34,6 +35,24 @@ Singleton {
   readonly property bool active: player !== null && player.playbackState !== MprisPlaybackState.Stopped
 
   readonly property bool playing: player !== null && player.isPlaying
+
+  // What the island announces: a song paused for Theme.islandPauseRelease (10 minutes) is let go,
+  // as a finished activity is, so the pill drops its equaliser and the hover card shows the day
+  // instead of the track. Playing again brings it straight back. The control centre's media card
+  // keeps the paused song: that is where it is picked up again.
+  readonly property bool announced: active && !released
+  property bool released: false
+
+  Timer {
+    interval: Theme.islandPauseRelease
+    running: root.active && !root.playing
+    onTriggered: root.released = true
+  }
+
+  onPlayingChanged: if (playing)
+    released = false
+  onActiveChanged: if (!active)
+    released = false
 
   readonly property string title: active && player.trackTitle ? player.trackTitle : ""
 

@@ -12,7 +12,7 @@ import qs.Services
 Item {
   id: root
 
-  property bool mediaActive: Media.active
+  property bool mediaActive: Media.announced
   property bool playing: Media.playing
   property bool recording: Recorder.recording
   property bool camera: Privacy.camera

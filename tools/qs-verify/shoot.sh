@@ -46,7 +46,7 @@ wpctl() { command wpctl "$@" 2>/dev/null; }
 
 reset_ui() {
   local k
-  for k in launcher control wallpaper profiles calendar nearby recorder theme phone; do
+  for k in launcher control wallpaper profiles calendar nearby recorder theme; do
     qsipc "$k" close >/dev/null 2>&1
   done
   qsipc authpreview hide >/dev/null 2>&1
@@ -491,95 +491,6 @@ setup_phone_satellite_hover() { cursor 1045 26; }
 setup_phone_satellite_low() { ph '{"op":"battery","dev":"s24","charge":14,"charging":false}'; }
 teardown_phone_low() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
 setup_phone_satellite_osd() { setup_osd_volume; }
-setup_panel_phone() { open_panel phone; }
-setup_panel_phone_hover_tile() {
-  open_panel phone
-  sleep 1.6
-  cursor "$PH_SEND_X" "$PH_ACTIONS_Y"
-}
-setup_panel_phone_ringing() {
-  open_panel phone
-  sleep 1.6
-  cursor "$PH_RING_X" "$PH_ACTIONS_Y"
-  sleep 0.3
-  click
-}
-
-# Screen positions in the phone panel (opened at 700, 8): the wallpaper disc, and the centres of the
-# action tiles (Ring, Send files, Browse; their row sits 154 px down in the card, 90 tall).
-PH_DISC_X=776 PH_DISC_Y=222
-PH_RING_X=906 PH_SEND_X=1026 PH_BROWSE_X=1146 PH_ACTIONS_Y=207
-PH_BROWSE_Y=$PH_ACTIONS_Y
-# In the 960 px picker (opened at 480, 8): the Phone and Laptop cells, and the empty state's button.
-PK_PHONE_X=1331 PK_LAPTOP_X=1389 PK_SWITCH_Y=36
-PK_BROWSE_LAPTOP_X=960 PK_BROWSE_LAPTOP_Y=245
-
-setup_phone_low() { ph '{"op":"battery","dev":"s24","charge":14,"charging":false}'; open_panel phone; }
-setup_phone_mobile_off() {
-  ph '{"op":"cellular","dev":"s24","type":"","strength":-1}'
-  sleep 1
-  open_panel phone
-}
-# KDE Connect without the phone-state permission: the type comes as "Unknown", the bars still do.
-setup_phone_mobile_unknown() {
-  ph '{"op":"cellular","dev":"s24","type":"Unknown","strength":4}'
-  sleep 1
-  open_panel phone
-}
-# Charging: the longest reading line, "78% · charging", has to fit its tile without an ellipsis.
-setup_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":true}'; open_panel phone; }
-teardown_phone_charging() { ph '{"op":"battery","dev":"s24","charge":78,"charging":false}'; }
-teardown_phone_mobile() { ph '{"op":"cellular","dev":"s24","type":"5G","strength":3}'; }
-setup_phone_browse_blocked() {
-  ph '{"op":"sftp","dev":"s24","grant":false}'
-  open_panel phone
-  sleep 1.6
-  cursor "$PH_BROWSE_X" "$PH_BROWSE_Y"
-  sleep 0.3
-  click
-  sleep 1.2
-  cursor 200 900
-}
-teardown_phone_access() { ph "{\"op\":\"sftp\",\"dev\":\"s24\",\"grant\":true,\"mount\":\"$PH_STORAGE\"}"; }
-phone_wallpaper_picker() { # open the panel and the wallpaper chooser, then wait for the phone's listing
-  open_panel phone
-  sleep 1.6
-  cursor "$PH_DISC_X" "$PH_DISC_Y"
-  sleep 0.3
-  click
-  sleep 2.2
-  cursor 200 900
-}
-setup_phone_picker_phone() {
-  phone_wallpaper_picker
-  type_text "jjjjj"
-}
-setup_phone_picker_laptop() {
-  phone_wallpaper_picker
-  cursor "$PK_LAPTOP_X" "$PK_SWITCH_Y"
-  sleep 0.3
-  click
-  sleep 1.5
-  cursor 200 900
-  type_text "jjjjj"
-}
-setup_phone_picker_blocked() {
-  ph '{"op":"sftp","dev":"s24","grant":false}'
-  phone_wallpaper_picker
-}
-# Choose mountains.jpg from the phone: the file is copied into the state dir and drawn.
-setup_phone_wallpaper() {
-  phone_wallpaper_picker
-  type_text "jjjjj"
-  sleep 0.4
-  keys -k Return
-  sleep 2.5
-}
-one_wallpaper_copy() {
-  local n
-  n=$(find "$HOME/.local/state/shell" -maxdepth 1 -name 'phone-wallpaper-*' | wc -l)
-  [[ $n -eq 1 ]] && [[ $(cat "$HOME/.local/state/shell/phone-wallpaper") == "$(find "$HOME/.local/state/shell" -maxdepth 1 -name 'phone-wallpaper-*')" ]]
-}
 # With the phone there KDE Connect is the default; Android, picked on the header, is written down
 # and the shell restarted on the same state.
 android_pick_kept() {
@@ -602,34 +513,6 @@ setup_nearby_kde_after_restart() {
   QS_VERIFY_WORK=$QSV_WORK "$QSV_DIR/restart.sh" >/dev/null
   open_panel nearby
 }
-browse_opens_nautilus() {
-  reset_ui
-  : >"$QSV_WORK/launched.log"
-  open_panel phone
-  sleep 1.6
-  cursor "$PH_BROWSE_X" "$PH_BROWSE_Y"
-  sleep 0.3
-  click
-  sleep 2
-  grep -qx "nautilus $PH_STORAGE" "$QSV_WORK/launched.log"
-}
-
-# The keyboard walks the action tiles (Ring, Send files, Browse): two steps right and Return
-# presses Browse.
-phone_keys_browse() {
-  reset_ui
-  : >"$QSV_WORK/launched.log"
-  open_panel phone
-  sleep 1.6
-  keys -k Right
-  sleep 0.3
-  keys -k Right
-  sleep 0.3
-  keys -k Return
-  sleep 2
-  grep -qx "nautilus $PH_STORAGE" "$QSV_WORK/launched.log"
-}
-
 # ---- Nearby over KDE Connect (the phone is up, so KDE Connect is the default platform) ----
 
 # The phone's tile, with three files staged (the panel at 700, 8; the tile column's centre).
@@ -736,24 +619,6 @@ setup_picker_files() {
   keys -k Return
   sleep 1.3
   keys -k j -k space
-}
-# The phone panel's wallpaper chooser, on the laptop side: only folders and pictures are listed,
-# so the three text files stay out. It opens in ~/Pictures; h goes up to the home folder with
-# Pictures focused, two up is Downloads, and l enters it. (Typing "~" drops now and then.)
-setup_picker_images() {
-  phone_wallpaper_picker
-  cursor "$PK_LAPTOP_X" "$PK_SWITCH_Y"
-  sleep 0.3
-  click
-  sleep 1.5
-  cursor 200 900
-  keys -k h
-  sleep 0.8
-  keys -k k -k k
-  sleep 0.3
-  keys -k l
-  sleep 0.8
-  keys -k j
 }
 # Two files sent in with `nearby send`, with a device to send them to.
 setup_nearby_send_staged() {
@@ -891,19 +756,6 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot phone-satellite-hover 1.2 0.3 setup_phone_satellite_hover
   shot phone-satellite-low 1.2 0.3 setup_phone_satellite_low teardown_phone_low
   shot phone-satellite-osd 0.9 0.15 setup_phone_satellite_osd teardown_osd_volume
-  shot panel-phone 1.8 0.3 setup_panel_phone
-  shot panel-phone-hover-tile 1.0 0.3 setup_panel_phone_hover_tile
-  shot panel-phone-ringing 1.0 0.3 setup_panel_phone_ringing
-  shot panel-phone-low 1.8 0.3 setup_phone_low teardown_phone_low
-  shot panel-phone-charging 1.8 0.3 setup_phone_charging teardown_phone_charging
-  shot panel-phone-mobile-off 1.8 0.3 setup_phone_mobile_off teardown_phone_mobile
-  shot panel-phone-mobile-unknown 1.8 0.3 setup_phone_mobile_unknown teardown_phone_mobile
-  shot panel-phone-browse-blocked 1.8 0.3 setup_phone_browse_blocked teardown_phone_access
-  shot panel-phone-picker-phone 1.0 0.3 setup_phone_picker_phone
-  shot panel-phone-picker-laptop 1.0 0.3 setup_phone_picker_laptop
-  shot panel-phone-picker-blocked 1.0 0.3 setup_phone_picker_blocked teardown_phone_access
-  check phone-browse-nautilus browse_opens_nautilus
-  check phone-keys-browse phone_keys_browse
   shot panel-nearby-kde-choose 1.5 0.3 setup_nearby_kde_choose
   shot panel-nearby-kde-sending 1.0 0.3 setup_nearby_kde_sending teardown_nearby_kde_job
   shot panel-nearby-kde-sending-quiet 1.0 0.3 setup_nearby_kde_sending_quiet teardown_nearby_kde_job
@@ -913,9 +765,6 @@ if [[ -z $ONLY || $ONLY == *phone* || $ONLY == *kde* ]]; then
   shot sharing-kde-receiving 1.3 0.3 setup_sharing_kde_receiving teardown_kde_down
   shot sharing-kde-saved 1.0 0.3 setup_sharing_kde_saved teardown_kde_down
   shot panel-nearby-kde-receive 1.8 0.3 setup_nearby_kde_receive teardown_kde_down
-  # Last: the chosen picture stays on the phone preview from here on.
-  shot panel-phone-wallpaper 1.0 0.3 setup_phone_wallpaper
-  check phone-one-wallpaper-copy one_wallpaper_copy
   # Last of all, since it restarts the shell: the Android pick outlives it.
   check nearby-android-kept android_pick_kept
   shot panel-nearby-android-kept 1.5 0.3 setup_nearby_android_kept
@@ -947,8 +796,7 @@ if [[ -z $ONLY || $ONLY == card-* || $ONLY == *media* ]]; then
 fi
 
 # After the states above, which see the shell as it was before these existed: the launcher
-# scopes, the pickers and a staged send (the phone comes back for the wallpaper chooser and goes
-# again), Displays with two monitors, and the lock last, since a lock scenario leaks into any
+# scopes, the pickers and a staged send, Displays with two monitors, and the lock last, since a lock scenario leaks into any
 # state after it.
 if [[ -z $ONLY || $ONLY == launcher-* || $ONLY == picker-* || $ONLY == nearby-send-staged || $ONLY == displays-two || $ONLY == lock-* ]]; then
   fixture_files
@@ -956,12 +804,6 @@ if [[ -z $ONLY || $ONLY == launcher-* || $ONLY == picker-* || $ONLY == nearby-se
   shot launcher-emoji 1.2 0.3 setup_launcher_emoji
   shot picker-files 1.2 0.3 setup_picker_files teardown_nearby
   shot nearby-send-staged 1.5 0.3 setup_nearby_send_staged teardown_nearby
-  if [[ -z $ONLY || $ONLY == picker-images ]]; then
-    ph_up
-    shot picker-images 1.0 0.3 setup_picker_images
-    ph '{"op":"remove","id":"s24"}'
-    sleep 2.5
-  fi
   if [[ -z $ONLY || $ONLY == displays-two ]]; then
     hypr_up
     shot displays-two 1.8 0.3 setup_control_displays_two

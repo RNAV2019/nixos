@@ -160,7 +160,7 @@ FrostedSurface {
   // coordinates, since the taker stands on this shape in a window of its own. Null with nothing
   // playing. The clock, the date and the gauges are not handed on: they go as the card goes.
   function handContents() {
-    if (!Media.active || dropArmed || !card.visible)
+    if (!Media.announced || dropArmed || !card.visible)
       return null;
     var at = root.mapToItem(null, 0, 0);
     var read = MorphScan.scan(playing, null, playing.opacity).filter(function (a) {
@@ -194,7 +194,7 @@ FrostedSurface {
 
   // Whether there is something to give the island back to.
   function canTakeBack() {
-    return Media.active && !dropArmed && !Bus.locking && !Bus.lockClosing && screenName !== "";
+    return Media.announced && !dropArmed && !Bus.locking && !Bus.lockClosing && screenName !== "";
   }
 
   // The start of a return: stands the card open where it will be, at once and unseen, and
@@ -491,7 +491,7 @@ FrostedSurface {
     y: root.midline - height / 2
     width: root.width
     height: Theme.barHeight
-    mediaActive: Media.active && !Lyrics.faced
+    mediaActive: Media.announced && !Lyrics.faced
     equaliserEdge: root.clockLeft
     clockLeft: root.clockLeft + (root.lyricSide - root.clockLeft) * root.lyricPresence
     clockRight: {
@@ -527,7 +527,7 @@ FrostedSurface {
       id: playing
 
       anchors.fill: parent
-      opacity: Media.active ? 1 : 0
+      opacity: Media.announced ? 1 : 0
       visible: opacity > 0
 
       Behavior on opacity {
@@ -631,14 +631,27 @@ FrostedSurface {
       }
     }
 
-    // With nothing playing the track block's room carries the week instead, from the same
-    // left inset, clipped short of the clock like the track block.
+    // With nothing playing the track block's room carries today's next event, set like the track
+    // block, or the week when the day has none left; from the same left inset, clipped short of
+    // the clock like the track block.
     Item {
+      id: idle
+
+      readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
+      // 1 the event, 0 the week, crossing on the same swap as the track block.
+      property real eventShown: Calendar.nextEvent !== null ? 1 : 0
+
+      Behavior on eventShown {
+        Morph {
+          duration: Theme.stateSwap
+        }
+      }
+
       x: 16
       width: Math.max(0, root.centreLeft - 12 - x)
       height: parent.height
       clip: true
-      opacity: Media.active ? 0 : 1
+      opacity: Media.announced ? 0 : 1
       visible: opacity > 0
 
       Behavior on opacity {
@@ -648,12 +661,21 @@ FrostedSurface {
       }
 
       MiniCalendar {
-        readonly property real shown: root.reveal(root.sideFrom, root.sideTo)
-
-        x: -root.sideFlight * (1 - shown)
+        x: -root.sideFlight * (1 - idle.shown)
         y: root.midline - height / 2
         today: clock.date
-        opacity: shown
+        opacity: idle.shown * (1 - idle.eventShown)
+        visible: opacity > 0
+      }
+
+      NextEvent {
+        x: Theme.islandEventLeft - idle.x - root.sideFlight * (1 - idle.shown)
+        width: Math.max(0, root.openCentreLeft - 28 - Theme.islandEventLeft)
+        height: parent.height
+        event: Calendar.nextEvent
+        now: clock.date
+        opacity: idle.shown * idle.eventShown
+        visible: opacity > 0
       }
     }
 
@@ -674,7 +696,7 @@ FrostedSurface {
       y: 0
       width: Math.max(0, root.centreLeft - 12)
       height: parent.height
-      enabled: Media.active && root.expanded
+      enabled: Media.announced && root.expanded
       cursorShape: Qt.PointingHandCursor
       acceptedButtons: Qt.LeftButton | Qt.ForwardButton | Qt.BackButton
       onClicked: function (event) {

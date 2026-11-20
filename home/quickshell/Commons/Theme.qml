@@ -399,6 +399,12 @@ Singleton {
   readonly property real islandSideFlight: 6
   readonly property int islandHoverOpenDelay: 70
   readonly property int islandHoverCloseDelay: 120
+  // The hover card's next event (Bar/Widgets/NextEvent.qml) counts down in minutes from this many out.
+  readonly property int islandEventSoon: 60
+  // Where its words start: the week strip's first letters.
+  readonly property int islandEventLeft: 24
+  // A paused song stops being the island's after this long (Services/Media.qml announced).
+  readonly property int islandPauseRelease: 600000
 
   // The words of what is playing, in the shut pill (Lyrics/LyricFace.qml, Lyrics/Pill.js): while a
   // line is sung the pill is that line and nothing else, as wide as it and no taller, and the
@@ -732,7 +738,7 @@ Singleton {
   readonly property int controlTileTextLeft: 54
   readonly property int controlTileLabelSize: 13
   readonly property int controlTileSubSize: 11
-  // A tile too narrow for its badge and words side by side (the phone panel's 108 px thirds)
+  // A tile too narrow for its badge and words side by side (about a third of a panel's row)
   // stacks them: the badge above, the label and the line under it, on a rounded rectangle. The
   // padding is even on all four sides. The radius is the shell's middle step (rows, power tiles):
   // at the card's own 26 the grid read as soft pills. The words may run 8 px short of the edge.
@@ -1628,9 +1634,6 @@ Singleton {
   // A Nearby device card's progress catching up: live and dismissed, neither overshooting.
   readonly property int nearbyCardLive: 260
   readonly property int nearbyCardDismiss: 200
-  // The phone panel's ringing pulse: one ring's expansion, and the wait between rings.
-  readonly property int phoneRingPulse: 1200
-  readonly property int phoneRingStagger: 600
 
   // The island's equaliser: each bar rises on its own tween, then falls, staggered across
   // the row so the set waves rather than jumps.
@@ -1655,7 +1658,7 @@ Singleton {
   readonly property int islandGaugeRadius: 21
   readonly property int islandGaugeLabelY: 38
 
-  // ---- the phone (Bar/PhoneSatellite.qml, Phone/PhonePanel.qml) ----
+  // ---- the phone satellite (Bar/PhoneSatellite.qml) ----
 
   // The satellite: a pill-tall disc this far off the right edge of whatever the island is
   // wearing, with the battery as a ring inside its rim.
@@ -1703,7 +1706,7 @@ Singleton {
   // Coming in: the pull on a loose disc, px/s^2, and what is added as the gap closes (squared),
   // with a little drag; then, joined, a critically damped spring home.
   readonly property real phonePull0: 500
-  // The same when a panel takes the island or the disc is clicked: it is wanted in now, so it
+  // The same when a panel takes the island: it is wanted in now, so it
   // sets off at once rather than gathering way (the gap closes in about 80 ms, not 170).
   readonly property real phonePull0Taken: 2600
   readonly property real phonePull1: 7000
@@ -1726,61 +1729,8 @@ Singleton {
   // Rests within this many px of its end (so the settling hand-off to the snapped grid is not
   // chasing a tail).
   readonly property real phoneRestEps: 0.05
-  // How far back into its retreat a clicked satellite is before the panel grows, as satellite
-  // progress: as it touches the pill, so the panel grows out as the disc sinks in; at half way,
-  // the disc was home and the pill had swelled and settled before anything grew. The panel is
-  // asked for on the click and held until here (Bar/PhoneSatellite.qml): its first frame stalls
-  // every window for a frame or more, and asked for here that froze the disc in mid flight.
-  readonly property real phoneOpenAt: 0.7
-
-  // The panel (board "Phone panel"): the phone drawn on the left, a 3 x 2 grid beside it (readings
-  // above, stacked control tiles for the actions below) with the grid's foot on the phone's, so
-  // the card is the phone and its inset, top and bottom. One rhythm: 20 round the card and
-  // between the phone and the grid, 16 from the header to the grid, 12 between tiles and inside
-  // them, 8 from a badge to its words.
-  readonly property int phoneWidth: panelColumnWidth
-  readonly property int phoneRadius: panelRadius
-  readonly property int phoneInset: 20
-  readonly property int phoneDeviceWidth: 112
-  readonly property int phoneDeviceHeight: 224
-  readonly property int phoneDeviceRadius: 9
-  readonly property int phoneScreenInset: 4
-  readonly property int phoneScreenRadius: 5
-  readonly property int phoneStatusLeft: phoneInset + phoneDeviceWidth + phoneInset
+  // A Hairline list row (Ui/ListRow.qml).
   readonly property int phoneRowHeight: 44
-  readonly property real phoneCaptionSize: 11.5
-  // The header: the name's box top puts its cap top on the phone's top edge; the status line sits
-  // 4 px under the name's box.
-  readonly property int phoneNameTop: 16
-  readonly property int phoneStatusTop: 40
-  // On the lock screen the date is 11 px at 0.9, and the disc that opens the wallpaper picker
-  // sits at the foot of the screen, on its axis, with the notification stubs 8 above it. The
-  // camera gets a hairline ring so it shows on a black picture.
-  readonly property int phoneDateSize: 11
-  readonly property int phoneDiscSize: 32
-  readonly property int phoneDiscBottom: 10
-  readonly property real phoneCameraRingAlpha: 0.2
-  readonly property real phoneDiscRingAlpha: 0.22
-  // A reading (battery, mobile, Wi-Fi): flat, 72 tall, a bare glyph beside its label (the glyph
-  // row's top, the value's top), and an ink wash that lifts it off the card.
-  readonly property int phoneReadingHeight: 72
-  readonly property int phoneReadingGlyphTop: 14
-  readonly property int phoneReadingValueTop: 38
-  readonly property int phoneReadingGlyphGap: 7
-  readonly property int phoneReadingBarHeight: 3
-  readonly property real phoneReadingWashAlpha: 0.03
-  readonly property real phoneReadingValueAlpha: 0.8
-  // Browse's tile and glyph take the note's gold while the phone refuses it.
-  readonly property real phoneBlockedOutlineAlpha: 0.5
-  readonly property real phoneBlockedGlyphAlpha: 0.9
-  readonly property real phoneActionGlyphAlpha: 0.9
-  // The note Browse leaves when the phone refuses: 36 tall, 12 under the grid, 12 inside, and the
-  // card 48 taller while it is up.
-  readonly property int phoneNoteBarHeight: 36
-  readonly property int phoneNoteBarGap: 12
-  readonly property int phoneNotePad: 12
-  // How many of the phone's notifications the preview's screen draws as stubs.
-  readonly property int phoneNotesMax: 2
 
   // The keybinds cheatsheet (Keys/KeysSheet.qml). A keycap is 22 tall and 6 round, with 7 either
   // side of a word and 4 to the next cap. A line is 30 tall, its label 12 after the last cap; a

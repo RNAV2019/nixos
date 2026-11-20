@@ -4,10 +4,10 @@ import qs.Commons
 import qs.Services
 
 // The phone satellite as it is drawn: the body (Ui/SatelliteShape.qml) and the disc's face (its
-// hover wash, battery ring and glyph) from one geometry `g`, the entry Bar/PhoneSatellite.qml keeps
-// in Bus.satellite. Two kinds of window host one each: the bar's, under the transients, and a
+// battery ring and glyph) from one geometry `g`, the entry Bar/PhoneSatellite.qml keeps in
+// Bus.satellite. Two kinds of window host one each: the bar's, under the transients, and a
 // transient surface's, over its outline. `yOffset` turns the bar window's y into the host window's.
-// Only the bar's takes the pointer.
+// It is a reading only: it takes no pointer.
 //
 // Hand-over without a gap: a host that becomes `wanted` claims the satellite on its output
 // (Bus.claimSatelliteHost) and reports when a frame showing it has been swapped in its window; the
@@ -18,15 +18,12 @@ Item {
 
   property var g: null
   property real yOffset: 0
-  property bool interactive: false
   // Which output, and which host this is (unique per window).
   property string screenName: ""
   property string hostId: ""
   // This host is the one the satellite rides now.
   property bool wanted: true
-  // Drawing: wanted, or handing over and the taker has no frame on screen yet. A host that is not
-  // drawing keeps its pointer area, so a satellite riding a transient can still be clicked through
-  // the bar.
+  // Drawing: wanted, or handing over and the taker has no frame on screen yet.
   readonly property bool shown: wanted || (lingering && pending)
 
   readonly property bool pending: Bus.satelliteHandoverPending(screenName)
@@ -115,8 +112,6 @@ Item {
     onTriggered: root.lingering = false
   }
 
-  signal clicked
-
   readonly property real ratio: QsWindow.window && QsWindow.window.devicePixelRatio > 0 ? QsWindow.window.devicePixelRatio : 1
   readonly property real satRadius: Theme.phoneSatelliteSize / 2
 
@@ -148,16 +143,6 @@ Item {
       anchors.fill: parent
       visible: root.shown
 
-      Rectangle {
-        anchors.fill: parent
-        radius: width / 2
-        color: Theme.withAlpha(Theme.highlightMed, root.g && root.g.hover && root.g.docked ? 0.45 : 0)
-
-        Behavior on color {
-          Tint {}
-        }
-      }
-
       Ring {
         anchors.fill: parent
         stroke: Theme.phoneRingWidth
@@ -183,17 +168,5 @@ Item {
         }
       }
     }
-
-    MouseArea {
-      id: hit
-
-      anchors.fill: parent
-      enabled: root.interactive && root.g !== null && root.g.docked
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: root.clicked()
-    }
   }
-
-  readonly property bool hovered: hit.containsMouse
 }

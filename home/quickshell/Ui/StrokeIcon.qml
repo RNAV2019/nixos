@@ -42,7 +42,7 @@ Item {
   readonly property string dimPath: twoTone ? path.substring(toneBar + 1) : ""
 
   // Where the drawing starts inside the box and how wide it is, for whoever lines something up
-  // with the ink rather than the box (the phone panel's readings).
+  // with the ink rather than the box.
   readonly property real inkLeft: isGlyph ? (size - ink.advanceWidth) / 2 + ink.tightBoundingRect.x : drawn.boundingRect.x * size / 24
   readonly property real inkWidth: isGlyph ? ink.tightBoundingRect.width : drawn.boundingRect.width * size / 24
 

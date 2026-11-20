@@ -10,7 +10,7 @@ import qs.Ui
 // enter sends what is marked - or, with nothing marked, the focused file or folder. Escape
 // backs out to the panel. The mouse works too: click focuses, double-click enters or marks.
 //
-// With `images` it picks one picture, as the phone panel's wallpaper chooser does: only folders
+// With `images` it picks one picture (nothing asks for that since the phone panel went): only folders
 // and images are listed, enter on an image accepts it, and `source` ("phone" or "laptop") puts a
 // switch in the header, the phone side being confined to the SFTP mount in `phoneRoot`.
 Item {

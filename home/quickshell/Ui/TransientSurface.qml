@@ -33,7 +33,7 @@ IslandSurfaceBase {
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
   // The phone satellite while it rides this transient: drawn here, over the card's outline, and
-  // not in the card's clipped contents. The bar keeps the pointer area under it.
+  // not in the card's clipped contents.
   readonly property var satelliteGeometry: Bus.satelliteFor(win.screenName)
   readonly property bool hostsSatellite: win.tall && satelliteGeometry !== null && satelliteGeometry.follow === "transient" && Bus.transientSurfaceFor(win.screenName) === surface
 

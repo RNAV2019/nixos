@@ -179,7 +179,7 @@ Item {
     // ---- the island, as the bar draws it and as the lock leaves it ----
 
     // On the device-pixel grid, as the island's own width is (Ui/FrostedSurface.qml snap).
-    readonly property real islandWidth: px(Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone))
+    readonly property real islandWidth: px(Theme.islandCollapsedWidth(Media.announced, Recorder.recording, Privacy.camera, Privacy.microphone))
     readonly property int shownDots: Math.min(view.password.length, Theme.lockIslandMaxDots)
     // The dots as drawn. Enter wipes the password at once, but the row is held as it stood
     // while its dots fade where they are (the pill closes over them), and is emptied after.

@@ -31,7 +31,7 @@ mkdir -p "$1"
 OUT=$(cd "$1" && pwd)
 shift
 
-PANELS=${PANELS:-"launcher control calendar session profiles recorder theme wallpaper nearby phone"}
+PANELS=${PANELS:-"launcher control calendar session profiles recorder theme wallpaper nearby"}
 PAIRS=("$@")
 if ((${#PAIRS[@]} == 0)); then
   for a in $PANELS; do
@@ -49,7 +49,7 @@ PHONE_UP=0
 
 # Closes what the last pair raised (every panel with no argument), and clears the transients.
 reset_all() {
-  local k keys=${1:-launcher control wallpaper profiles calendar nearby recorder theme phone session}
+  local k keys=${1:-launcher control wallpaper profiles calendar nearby recorder theme session}
   for k in $keys; do
     case $k in
       osd-* | toast | close-* | dictation* | sharing | rebuild | moment-next | rest | card | card-click | escape | pointer-below | card-leave) ;;
@@ -117,14 +117,6 @@ raise() {
       ;;
     toast) env -u LD_LIBRARY_PATH notify-send -t 1500 -a Mail "Lena Ortiz" "Draft for Monday is in the shared folder" ;;
     moment-plugged) qsipc activities plug $((40 + RANDOM % 50)) $((20 + RANDOM % 90)) >/dev/null ;;
-    phone)
-      if ((!PHONE_UP)); then
-        ph_up
-        PHONE_UP=1
-        sleep 1.0
-      fi
-      qsipc phone toggle >/dev/null
-      ;;
     *) qsipc "$1" toggle >/dev/null ;;
   esac
 }

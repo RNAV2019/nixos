@@ -132,7 +132,7 @@ Singleton {
 
   // The shut pill's width, whatever it shows: what the island rests at, and what every surface
   // that grows out of it starts from and comes back to (Ui/IslandOrigin.qml).
-  readonly property real pillWidth: faced ? Math.ceil(faceWidth) + 2 * Theme.islandLyricSide(Recorder.recording, Privacy.camera, Privacy.microphone) : Theme.islandCollapsedWidth(Media.active, Recorder.recording, Privacy.camera, Privacy.microphone)
+  readonly property real pillWidth: faced ? Math.ceil(faceWidth) + 2 * Theme.islandLyricSide(Recorder.recording, Privacy.camera, Privacy.microphone) : Theme.islandCollapsedWidth(Media.announced, Recorder.recording, Privacy.camera, Privacy.microphone)
 
   property real _estimate: 0
 

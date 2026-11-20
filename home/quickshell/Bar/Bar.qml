@@ -50,13 +50,6 @@ Variants {
       Region {
         item: island.suppressed ? null : island
       }
-
-      Region {
-        x: satellite.hitX
-        y: satellite.hitY
-        width: satellite.hitActive ? satellite.hitSize : 0
-        height: satellite.hitActive ? satellite.hitSize : 0
-      }
     }
 
     Workspaces {
