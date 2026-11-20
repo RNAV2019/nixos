@@ -7,6 +7,8 @@ Item {
   property bool playing: false
   // Paused, the bars lie down as four quiet dots, where the shut pill's stand at their rest.
   property bool restsFlat: false
+  // Their colour lying down.
+  property color restColor: Theme.subtle
 
   // The bars' idle heights, one per bar: a descending rhythm that still reads as a wave.
   readonly property var restHeights: [7, 12, 15, 9]
@@ -41,7 +43,7 @@ Item {
         width: root.barWidth
         height: level
         radius: width / 2
-        color: root.restsFlat && !root.playing ? Theme.subtle : Theme.accent
+        color: root.restsFlat && !root.playing ? root.restColor : Theme.accent
 
         Behavior on color {
           ColorAnimation {

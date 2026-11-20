@@ -29,7 +29,16 @@ Item {
   readonly property real columnLeft: Theme.controlMediaInset + (Theme.controlMediaColumnLeft - Theme.controlMediaInset) * bleed.presence
   readonly property real columnRight: width - Theme.controlMediaInset
   readonly property real columnMid: (columnLeft + columnRight) / 2
-  readonly property color quietInk: Theme.withAlpha(Theme.text, Theme.mediaSecondaryAlpha)
+  // How much of the ground is the cover's (Ui/MediaGround.qml): the inks move with it, from the
+  // theme's quiet ones on the plain card to ones that hold their contrast on colour.
+  readonly property real onArt: ground.presence
+
+  function blend(a, b, t) {
+    return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
+  }
+  readonly property color quietInk: Theme.withAlpha(Theme.text, Theme.mediaSecondaryAlpha + (Theme.controlMediaInkAlpha - Theme.mediaSecondaryAlpha) * onArt)
+  readonly property color timeInk: root.blend(Theme.inkSecondary, Theme.withAlpha(Theme.text, Theme.controlMediaInkAlpha), onArt)
+  readonly property color offIcon: root.blend(Theme.subtle, Theme.withAlpha(Theme.text, Theme.controlMediaIconAlpha), onArt)
 
   implicitHeight: Theme.controlMediaHeight
 
@@ -47,12 +56,22 @@ Item {
       color: Theme.surfaceRaised
     }
 
+    MediaGround {
+      id: ground
+
+      anchors.fill: parent
+      bleedWidth: Theme.controlMediaBleedWidth
+      columnLeft: Theme.controlMediaColumnLeft
+      inks: [[Theme.text, 1, 4.5], [Theme.text, Theme.controlMediaInkAlpha, 4.5], [Theme.text, Theme.controlMediaIconAlpha, 3], [Theme.accent, 1, 3]]
+    }
+
     CoverBleed {
       id: bleed
 
       width: Theme.controlMediaBleedWidth
       height: parent.height
       ground: Theme.surfaceRaised
+      fadesOut: ground.active
     }
   }
 
@@ -87,6 +106,7 @@ Item {
     y: Theme.controlMediaOutputMid - height / 2
     playing: Media.playing
     restsFlat: true
+    restColor: root.offIcon
   }
 
   Text {
@@ -129,6 +149,7 @@ Item {
     timeY: Theme.controlMediaTimeMid - timeHeight / 2
     countsDown: true
     padded: false
+    timeInk: root.timeInk
   }
 
   // Shuffle and repeat at the column's ends, each only where the player has it: quiet until on.
@@ -139,7 +160,7 @@ Item {
     kind: Button.Icon
     icon: Icons.shuffle
     iconSize: Theme.controlMediaModeGlyph
-    baseColor: Media.shuffle ? Theme.accent : Theme.subtle
+    baseColor: Media.shuffle ? Theme.accent : root.offIcon
     hoverColor: Media.shuffle ? Theme.accent : Theme.text
     morphKey: "media.shuffle"
     checkable: true
@@ -155,7 +176,7 @@ Item {
     kind: Button.Icon
     icon: Media.loop === "track" ? Icons.repeatOne : Icons.repeat
     iconSize: Theme.controlMediaModeGlyph
-    baseColor: Media.loop !== "none" ? Theme.accent : Theme.subtle
+    baseColor: Media.loop !== "none" ? Theme.accent : root.offIcon
     hoverColor: Media.loop !== "none" ? Theme.accent : Theme.text
     morphKey: "media.repeat"
     checkable: true

@@ -181,6 +181,8 @@ in {
 
     blanket
 
+    inkscape
+
     brightnessctl
     playerctl
     pavucontrol

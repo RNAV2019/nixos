@@ -68,6 +68,7 @@ Scope {
         trail: reveal.trail
         glint: reveal.glint
         rise: reveal.rise
+        barLift: reveal.barLift
         away: reveal.widthAway
         leaving: reveal.leaving
         flying: reveal.flying
@@ -140,6 +141,7 @@ Scope {
         root.refusals = 0;
         root.faults = 0;
         reveal.reset();
+        reveal.barAbsent = root.background.length === 0;
         root.active = true;
         reveal.arm();
         return;

@@ -21,6 +21,9 @@ Item {
   // The ground the picture runs out into: the surface's own, or a card's standing on it.
   property color ground: Theme.surface
   property bool dimmed: Media.active && !Media.playing
+  // Standing on a ground made of its own picture (Ui/MediaGround.qml): the far end fades the
+  // picture itself out, on the same curve, instead of laying `ground` over it.
+  property bool fadesOut: false
 
   // How much picture there is, 0 with none: a new cover fades in over the last (Ui/ArtFade.qml).
   readonly property real presence: art.presence
@@ -31,6 +34,15 @@ Item {
   // device-pixel ratio (when it first maps at a fractional scale, which also reloads the
   // picture) is an item deleted under Qt's walk of the scene, and that crashed the shell.
   layer.enabled: true
+  layer.effect: fadesOut ? fadeOut : null
+
+  Component {
+    id: fadeOut
+
+    ShaderEffect {
+      fragmentShader: Qt.resolvedUrl("../Shaders/coverfade.frag.qsb")
+    }
+  }
 
   ArtFade {
     id: art
@@ -60,7 +72,7 @@ Item {
     objectName: "fade"
     width: parent.width + 1
     height: parent.height
-    opacity: art.presence
+    opacity: root.fadesOut ? 0 : art.presence
     visible: opacity > 0
 
     gradient: Gradient {

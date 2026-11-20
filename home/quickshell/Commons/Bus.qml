@@ -10,6 +10,8 @@ Singleton {
   property bool locking: false
 
   signal surfacesClosingForLock
+  // The lock surfaces are gone and the desktop is in view again (Lock/Lock.qml).
+  signal lockReleased
 
   // A lock asked for while a panel is open (Lock/Lock.qml): the panel closes on its own way
   // down first, and the lock begins once the island is the pill again, where the lock's own

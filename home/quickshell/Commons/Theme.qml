@@ -794,6 +794,25 @@ Singleton {
   readonly property real controlMediaThumbRing: 2.5
   readonly property real controlMediaThumbPressScale: 1.2
   readonly property int controlMediaHillHeight: 14
+  // The card's ground is made of the cover (Ui/MediaGround.qml, Ryan 2026-11-20): "edge" carries
+  // the cover's right edge on across the card, "whole" lays the whole cover under it blurred,
+  // "solid" keeps the card's own fill with the cover fading into it.
+  // Read at this share of the card's px and decoded this small (most of the blur is the
+  // downscale), read this far inside the cover's edge, and blurred over these radii.
+  readonly property string controlMediaGround: "edge"
+  readonly property real controlMediaGroundTexels: 0.25
+  readonly property real controlMediaGroundTexelsWhole: 0.1
+  readonly property int controlMediaGroundDecode: 96
+  readonly property real controlMediaGroundEdgeInset: 0.04
+  readonly property real controlMediaGroundBlurEdge: 22
+  readonly property real controlMediaGroundBlurWhole: 70
+  // On that ground the second line (output, artist, times) is the text at this alpha, and the
+  // quiet icons (shuffle and repeat off, the resting equaliser) at this; the ground is let down
+  // under them until each keeps WCAG's ratio (4.5:1 for words, 3:1 for icons and the accent)
+  // with this much to spare.
+  readonly property real controlMediaInkAlpha: 0.8
+  readonly property real controlMediaIconAlpha: 0.55
+  readonly property real controlMediaInkMargin: 0.25
 
   readonly property int controlSectionGap: 23
   readonly property int controlSectionHeight: 22
@@ -1112,7 +1131,8 @@ Singleton {
   // The glyph stays in love this long after a refusal.
   readonly property int lockRefusalHold: 1100
   // The longest a manual lock waits for something still coming to rest (Bus.lockHeld) before
-  // it captures the desktop anyway: the phone satellite's return takes about 400 ms.
+  // it captures the desktop anyway. The phone satellite never holds it: one drawn in when the
+  // lock begins stays in until the lock lifts (Bar/PhoneSatellite.qml lockKeepsIn).
   readonly property int lockSettleMax: 700
   // The longest a manual lock waits for an open panel to close on its own way down before it
   // locks anyway (Bus.lockClosing): a full panel is back at the pill in about half a second.
@@ -1120,6 +1140,9 @@ Singleton {
   // A panel closing for a lock is landed on the pill once it is this close to it, rather than
   // settled out to the last pixel (Ui/IslandSurfaceBase.qml lockLanding).
   readonly property real lockCloseSlack: 3
+  // A panel closing for a lock goes this much quicker again than an ordinary close, and may pass
+  // morphOmega: the lock is what the user is waiting for (Ryan, 2026-11-20).
+  readonly property real lockCloseQuicken: 1.6
 
   // The login pill (the polkit prompt's, Ui/LoginPill.qml): avatar, name over the password
   // line, submit disc. Offsets are from the pill's own top-left; the radius is height / 2.
@@ -1229,6 +1252,13 @@ Singleton {
   // The width starts this long after the flight does, out and back.
   readonly property int lockWidthInDelay: 30
   readonly property int lockWidthOutDelay: 70
+  // A lock with no capture behind it (the boot lock) has no workspaces pill in its picture; it
+  // drops in from above the top edge as the ground clears (Ryan, 2026-11-20), from far enough up
+  // that its shadow is all but gone, about 1.5% (a px) past its rest, and is within 0.3 px by
+  // about 430 ms, which holds the lock that much past lockOut.
+  readonly property real lockBarDropLift: barMarginTop + barHeight + 40
+  readonly property real lockBarDropOmega: 18
+  readonly property real lockBarDropDamping: 0.8
 
   // The Nearby panel (boards 16a-16h). The 520 column carries two segmented tracks over
   // a send body (the Choose files button or the staged rows, then the devices) or a receive

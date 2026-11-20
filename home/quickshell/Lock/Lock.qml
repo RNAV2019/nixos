@@ -25,6 +25,10 @@ Scope {
   property string snapshotPath: ""
   property string snapshotCleanupPath: ""
   property bool snapshotPending: false
+  // What awww is showing on each output as the capture is taken, output name to file. The lock
+  // fills the capture's island with this (Lock/LockView.qml patch), so it is the picture under
+  // the pill even when it is not Wallpapers.url: set by hand with awww img, one per output.
+  property var shownWallpapers: ({})
   readonly property bool secure: lockContext.secure
 
   // quickshell forks its PAM worker without exec (quickshell-mirror/quickshell #964), so
@@ -45,6 +49,7 @@ Scope {
       root.snapshotCleanupPath = root.snapshotPath;
       root.snapshotPath = "";
       lockContext.locked = false;
+      Bus.lockReleased();
       if (root.snapshotCleanupPath.length > 0)
         snapshotCleanup.running = true;
     }
@@ -68,6 +73,7 @@ Scope {
     root.refusals = 0;
     root.faults = 0;
     reveal.reset();
+    reveal.barAbsent = root.snapshotPath.length === 0;
     lockContext.locked = true;
     passwordPam.start();
     // Covers the boot lock too: a worker wedged before its prompt never asks for a password.
@@ -80,7 +86,14 @@ Scope {
   function captureSnapshot() {
     settleCap.stop();
     root.snapshotPending = false;
+    root.shownWallpapers = {};
+    wallpaperQuery.running = true;
     snapshotCapture.running = true;
+  }
+
+  function shownWallpaper(screen) {
+    var path = screen ? root.shownWallpapers[screen.name] : undefined;
+    return path ? "file://" + path : Wallpapers.url;
   }
 
   function requestManualLock() {
@@ -240,6 +253,27 @@ Scope {
     }
   }
 
+  // Lines like ": eDP-1: 2880x1800, scale: 1, currently displaying: image: /path"; an output
+  // showing a colour, or no awww at all, falls back to Wallpapers.url.
+  Process {
+    id: wallpaperQuery
+
+    command: ["awww", "query"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var shown = {};
+        var lines = text.split("\n");
+        for (var i = 0; i < lines.length; i++) {
+          var m = lines[i].match(/^[:\s]*([^:\s][^:]*):.*currently displaying: image: (.+)$/);
+          if (m)
+            shown[m[1].trim()] = m[2].trim();
+        }
+        root.shownWallpapers = shown;
+      }
+    }
+  }
+
   Process {
     id: snapshotCleanup
 
@@ -359,6 +393,7 @@ Scope {
         outputScreen: surface.screen
         captured: root.snapshotPath.length > 0 && surface.screen !== null
         backgroundSource: captured ? "file://" + root.snapshotPath + "-" + surface.screen.name + ".png" : Wallpapers.url
+        patchSource: root.shownWallpaper(surface.screen)
         password: root.password
         busy: root.busy
         refusals: root.refusals
@@ -370,6 +405,7 @@ Scope {
         trail: reveal.trail
         glint: reveal.glint
         rise: reveal.rise
+        barLift: reveal.barLift
         away: reveal.widthAway
         leaving: reveal.leaving
         flying: reveal.flying

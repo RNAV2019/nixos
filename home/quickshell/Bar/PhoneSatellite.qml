@@ -130,8 +130,28 @@ Item {
 
   readonly property bool panelUp: Bus.islandCovered(screenName) || Bus.islandOpenFor(screenName)
   // A lock does not draw it in: like the bar it stays, so the snapshot behind the lock screen
-  // carries it where it sat.
-  readonly property bool wantOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp
+  // carries it where it sat. Nor does a lock bring it out: drawn in when the lock is asked for
+  // (behind the panel the lock closes, or not yet connected at the boot lock) it stays in until
+  // the lock has lifted, then buds out on the desktop. The lock's picture fills the satellite's
+  // place with the wallpaper anyway, so waiting for it to come out was waiting for nothing
+  // (Ryan, 2026-11-20).
+  readonly property bool freeOut: Phone.connected && (Bus.sessionReady || Bus.locking) && !panelUp
+  property bool lockKeepsIn: false
+  readonly property bool wantOut: freeOut && !lockKeepsIn
+
+  readonly property bool lockPending: Bus.lockClosing || Bus.locking
+  onLockPendingChanged: {
+    if (lockPending && !freeOut)
+      lockKeepsIn = true;
+  }
+
+  Connections {
+    target: Bus
+
+    function onLockReleased() {
+      root.lockKeepsIn = false;
+    }
+  }
 
   readonly property real satRadius: Theme.phoneSatelliteSize / 2
   // The disc starts a little inside the edge and grows to full size over the first 70% of its
@@ -193,6 +213,8 @@ Item {
       driver.start();
   }
   Component.onCompleted: {
+    if (lockPending && !freeOut)
+      lockKeepsIn = true;
     snapSim();
     syncEff();
   }

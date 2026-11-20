@@ -3,6 +3,7 @@ import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Hyprland
+import qs.Bar.Widgets
 import qs.Commons
 import qs.Services
 import qs.Ui
@@ -37,6 +38,8 @@ Item {
   property bool leaving: false
   property bool flying: false
   property bool snapping: false
+  // How far above its rest the workspaces pill drawn for a capture-less lock is (LockReveal.qml).
+  property real barLift: Theme.lockBarDropLift
 
   // A time to show instead of the clock's, "HH:mm" (the rehearsal stage's, to play a change of
   // minute on demand); empty follows the clock.
@@ -45,6 +48,9 @@ Item {
   // The screen this view draws on - the lock surface's or the preview's.
   property var outputScreen
   property string backgroundSource: Wallpapers.url
+  // The wallpaper as the compositor showed it when the capture was taken, for the patch over the
+  // capture's island (Lock.qml asks awww); Wallpapers.url where nothing better is known.
+  property string patchSource: Wallpapers.url
   // The background is a capture of the desktop, so it carries the bar's own island.
   property bool captured: false
   // The capture could not be read (an output plugged in while locked has none): the wallpaper
@@ -137,6 +143,13 @@ Item {
 
     Keys.onPressed: function (event) {
       view.pointerShown = false;
+      // Escape or Ctrl+Backspace empties the field: the dots go and the padlock is back.
+      var clear = event.key === Qt.Key_Escape || (event.key === Qt.Key_Backspace && (event.modifiers & Qt.ControlModifier));
+      if (clear && !readOnly) {
+        view.passwordEdited("");
+        event.accepted = true;
+        return;
+      }
       event.accepted = false;
     }
   }
@@ -289,7 +302,7 @@ Item {
 
           anchors.fill: parent
           visible: false
-          source: view.standing ? Wallpapers.url : ""
+          source: view.standing ? view.patchSource : ""
           fillMode: Image.PreserveAspectCrop
           asynchronous: true
         }
@@ -1300,6 +1313,17 @@ Item {
         }
       }
     }
+  }
+
+  // The bar's workspaces pill, for a lock with no capture to carry it (the boot lock): it waits
+  // above the top edge and drops into the bar's own place as the ground clears (Lock/LockReveal.qml
+  // barLift), so the bar's pill, at rest behind the lock all along, takes over without a pop.
+  // A picture only: a click here must not switch workspaces under the lock.
+  Workspaces {
+    visible: !view.standing && view.barLift < Theme.lockBarDropLift
+    enabled: false
+    x: snap(10 + Bus.workspacesOffsetX)
+    y: snap(Theme.barMarginTop + Bus.workspacesOffsetY - view.barLift)
   }
 
   SystemClock {

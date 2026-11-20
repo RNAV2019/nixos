@@ -656,6 +656,9 @@ PanelWindow {
     var o = Motion.pace(dw, dh, Theme.morphOmega, Theme.morphOmegaCalm);
     if (closing) {
       o = Math.min(Theme.morphOmega, o * Theme.morphCloseQuicken);
+      // The lock waits on this close (Bus.lockClosing), so it is quicker still.
+      if (Bus.lockClosing)
+        o *= Theme.lockCloseQuicken;
       return {
         w: o,
         h: o,

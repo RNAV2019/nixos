@@ -15,6 +15,8 @@ Item {
   property real timeY: 0
   // The far label counts down what is left, behind a minus, where it otherwise gives the length.
   property bool countsDown: false
+  // The times' ink: a ground of the cover asks for more than the theme's secondary.
+  property color timeInk: Theme.inkSecondary
   // "02:05", as One UI writes it; off, the minutes stand as they are ("2:05").
   property bool padded: true
 
@@ -168,7 +170,7 @@ Item {
     objectName: "elapsed"
     y: scrub.timeY
     text: scrub.clock(scrub.fraction * Media.length)
-    color: Theme.inkSecondary
+    color: scrub.timeInk
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaCaptionSize
     font.features: {
@@ -182,7 +184,7 @@ Item {
     y: scrub.timeY
     // A true minus, the width of a digit, not a hyphen.
     text: scrub.countsDown ? "−" + scrub.clock(Math.max(0, (1 - scrub.fraction) * Media.length)) : scrub.clock(Media.length)
-    color: Theme.inkSecondary
+    color: scrub.timeInk
     font.family: Theme.uiFont
     font.pixelSize: Theme.controlMediaCaptionSize
     font.features: {

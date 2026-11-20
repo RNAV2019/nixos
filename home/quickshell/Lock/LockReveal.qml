@@ -48,6 +48,18 @@ Item {
   // Up once the way out has begun clearing the ground: the flight is still settling then, and
   // must not start the clearing (and raise revealOutFinished) a second time.
   property bool clearing: false
+  // Up once the ground has cleared; revealOutFinished may still wait on the workspaces' drop.
+  property bool cleared: false
+
+  // Set by the host for each lock: no surface stands on a capture (the boot lock, or a capture
+  // that failed), so the bar's workspaces pill is in nothing behind the lock and would pop in as
+  // it lets go. The lock surfaces draw it themselves instead, dropping in from above the top
+  // edge as the ground clears, and the lock lets go only once it has landed, where the bar's
+  // own pill has stood behind the lock all along.
+  property bool barAbsent: false
+  // How far above its rest the workspaces pill is, in px: lockBarDropLift until the ground
+  // starts to clear, then down to 0 on a spring that runs a px or two past and settles.
+  readonly property real barLift: barDropSpring.value
 
   // Up from arm() until a surface has a frame on screen: the way in starts from the frame the
   // user sees, not from the moment the surface was asked for (a lock surface takes a while to
@@ -79,6 +91,7 @@ Item {
     armFallback.stop();
     groundOut.stop();
     clearing = false;
+    cleared = false;
     leaving = false;
     windUp.stop();
     windingUp = false;
@@ -122,6 +135,7 @@ Item {
     widthAway = false;
     leaving = false;
     clearing = false;
+    cleared = false;
     snapping = false;
     // Stay opaque while the lock is secured, so the compositor never shows a black frame.
     ground = 0;
@@ -136,6 +150,26 @@ Item {
   }
 
   onFlightChanged: landed()
+
+  // The ground is clear; let go now, or once the workspaces pill has landed.
+  function finishOut() {
+    if (!cleared || (barAbsent && barDropSpring.running))
+      return;
+    cleared = false;
+    revealOutFinished();
+  }
+
+  MorphSpring {
+    id: barDropSpring
+
+    label: "lock.bar.drop"
+    target: reveal.clearing ? 0 : Theme.lockBarDropLift
+    animate: !reveal.snapping
+    omega: Theme.lockBarDropOmega
+    damping: Theme.lockBarDropDamping
+
+    onRunningChanged: reveal.finishOut()
+  }
 
   MorphSpring {
     id: flightSpring
@@ -275,7 +309,10 @@ Item {
     }
 
     ScriptAction {
-      script: reveal.revealOutFinished()
+      script: {
+        reveal.cleared = true;
+        reveal.finishOut();
+      }
     }
   }
 }
