@@ -18,6 +18,8 @@ final: prev: {
   sf-pro = final.callPackage ./sf-pro {};
   # Apple's SF Compact, the shell's UI face.
   sf-compact = final.callPackage ./sf-compact {};
+  # Pixeloid and ArcadeClassic, for the Astro Burgers game.
+  astro-burgers-fonts = final.callPackage ./astro-burgers-fonts {};
   # Offline dictation: nixpkgs' build, given its typing tools.
   handy = final.callPackage ./handy {inherit (prev) handy;};
   # Godot with Helix keybindings built into its code editors.

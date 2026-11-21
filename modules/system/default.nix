@@ -188,6 +188,8 @@
     sf-compact
     # SF Pro, which the OpenPencil designs name.
     sf-pro
+    # Pixeloid and ArcadeClassic, which the Astro Burgers game uses.
+    astro-burgers-fonts
   ];
 
   fonts.fontconfig = {

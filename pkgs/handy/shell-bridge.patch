@@ -1,8 +1,8 @@
 diff --git a/src-tauri/src/actions.rs b/src-tauri/src/actions.rs
-index cce7cfe..28f620f 100644
+index 748d17c..71b5866 100644
 --- a/src-tauri/src/actions.rs
 +++ b/src-tauri/src/actions.rs
-@@ -457,7 +457,10 @@ impl ShortcutAction for TranscribeAction {
+@@ -558,7 +558,10 @@ impl ShortcutAction for TranscribeAction {
          match settings.overlay_style {
              OverlayStyle::Live if model_supports_streaming => utils::show_streaming_overlay(app),
              OverlayStyle::Live | OverlayStyle::Minimal => show_recording_overlay(app),
@@ -15,18 +15,18 @@ index cce7cfe..28f620f 100644
          // Everything above runs before capture can begin, so each span here is
          // added keypress->capture latency.
 diff --git a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
-index 898770b..9d54b5e 100644
+index 50a7efd..cef1553 100644
 --- a/src-tauri/src/lib.rs
 +++ b/src-tauri/src/lib.rs
-@@ -19,6 +19,7 @@ mod paste_tx;
+@@ -23,6 +23,7 @@ mod paste_tx;
  pub mod portable;
  mod secure_input;
  mod settings;
 +mod shell_bridge;
  mod shortcut;
  mod signal_handle;
- mod transcription_coordinator;
-@@ -1025,6 +1026,8 @@ pub fn run(cli_args: CliArgs) {
+ mod system_languages;
+@@ -1095,6 +1096,8 @@ pub fn run(cli_args: CliArgs) {
                  settings.overlay_style != settings::OverlayStyle::None,
              );
  
@@ -36,10 +36,10 @@ index 898770b..9d54b5e 100644
              // device listing opens the GPU, which on macOS loads ggml's Metal library
              // and compiles it when the system shader cache does not have it yet, so it
 diff --git a/src-tauri/src/managers/transcription.rs b/src-tauri/src/managers/transcription.rs
-index 32de0c5..17082da 100644
+index e00c854..aebeeac 100644
 --- a/src-tauri/src/managers/transcription.rs
 +++ b/src-tauri/src/managers/transcription.rs
-@@ -1165,6 +1165,10 @@ impl TranscriptionManager {
+@@ -953,6 +953,10 @@ impl TranscriptionManager {
  
      /// Emit a working-phase event to the streaming overlay (spinner + label).
      pub fn emit_stream_working(&self, kind: StreamWorkKind) {
@@ -50,19 +50,19 @@ index 32de0c5..17082da 100644
          let _ = StreamPhaseEvent {
              phase: StreamPhase::Working,
              kind: Some(kind),
-@@ -1173,6 +1177,7 @@ impl TranscriptionManager {
-     }
+@@ -1408,6 +1412,7 @@ fn agreed_language(transcripts: &[Transcript]) -> Option<String> {
+ }
  
-     fn emit_stream_text(&self, committed: &str, tentative: &str) {
-+        crate::shell_bridge::text(committed, tentative);
-         let _ = StreamTextEvent {
-             committed: committed.to_string(),
-             tentative: tentative.to_string(),
+ fn emit_stream_text(app_handle: &AppHandle, committed: &str, tentative: &str) {
++    crate::shell_bridge::text(committed, tentative);
+     let _ = StreamTextEvent {
+         committed: committed.to_string(),
+         tentative: tentative.to_string(),
 diff --git a/src-tauri/src/overlay.rs b/src-tauri/src/overlay.rs
-index 292acce..34b2f12 100644
+index 945a878..79b5e24 100644
 --- a/src-tauri/src/overlay.rs
 +++ b/src-tauri/src/overlay.rs
-@@ -486,6 +486,8 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
+@@ -508,6 +508,8 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
  }
  
  fn show_overlay_state(app_handle: &AppHandle, state: &str) {
@@ -71,7 +71,7 @@ index 292acce..34b2f12 100644
      // Whether the overlay shows at all is governed by overlay_style; position
      // only chooses Top vs Bottom placement. Checked here (off the main thread)
      // so the common overlay-disabled case never pays for a main-thread hop.
-@@ -597,6 +599,8 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
+@@ -621,6 +623,8 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
  /// first sample chunk. Audio feedback uses the same backend readiness signal,
  /// but this targeted event is skipped when overlays are disabled.
  pub fn emit_recording_ready(app_handle: &AppHandle) {
@@ -80,16 +80,16 @@ index 292acce..34b2f12 100644
      if !OVERLAY_ENABLED.load(Ordering::Relaxed) {
          return;
      }
-@@ -687,6 +691,8 @@ static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
+@@ -763,6 +767,8 @@ static OVERLAY_SESSION_LIVE: AtomicBool = AtomicBool::new(false);
  
  /// Hides the recording overlay window with fade-out animation
  pub fn hide_recording_overlay(app_handle: &AppHandle) {
 +    crate::shell_bridge::hide();
 +
+     OVERLAY_SESSION_SHOWING.store(false, Ordering::SeqCst);
+     OVERLAY_SESSION_LIVE.store(false, Ordering::SeqCst);
      // Always hide the overlay regardless of settings - if setting was changed while recording,
-     // we still want to hide it properly
-     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
-@@ -728,6 +734,8 @@ pub fn update_overlay_enabled_cache(enabled: bool) {
+@@ -806,6 +812,8 @@ pub fn update_overlay_enabled_cache(enabled: bool) {
  }
  
  pub fn emit_levels(app_handle: &AppHandle, levels: &[f32]) {
