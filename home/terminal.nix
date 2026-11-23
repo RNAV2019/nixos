@@ -70,6 +70,10 @@
 
         # focus_pane_{left,down,up,right} already default to prefix+h/j/k/l.
 
+        # Move the current tab towards the front or the back of the tab bar.
+        move_tab_previous = "prefix+shift+<";
+        move_tab_next = "prefix+shift+>";
+
         # herdr has a modal resize mode instead of per-direction binds.
         resize_mode = "prefix+r";
       };
